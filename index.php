@@ -35,7 +35,7 @@ header("Content-Type: text/html");
 </head>
 
 <body>
-    <h1 class="text-center">General Science Challenge</h1>
+    <h1 class="text-center">G Routine</h1>
 
 
     <div class="container container-xs" id="app" v-cloak>
