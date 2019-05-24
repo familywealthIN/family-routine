@@ -52,7 +52,11 @@ self.addEventListener('activate', event => {
 // from the network before returning it to the page.
 self.addEventListener('fetch', event => {
   // Skip cross-origin requests, like those for Google Analytics.
-  if (event.request.url.startsWith(self.location.origin)) {
+  if (event.request.url.startsWith(self.location.origin) 
+  && event.request.url.indexOf(self.location.origin + "/api.php") < 0 
+  && event.request.url.indexOf(self.location.origin + "/default.json") < 0 
+  && event.request.method != "POST" ) {
+    console.log(event.request.url);
     event.respondWith(
       caches.match(event.request).then(cachedResponse => {
         if (cachedResponse) {

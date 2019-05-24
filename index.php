@@ -66,34 +66,41 @@ header("Content-Type: text/html");
             },
             props: ['tasklist', 'lid'],
             template: `
-                <ul class="list-unstyled">
-                    <li v-for="task,index in tasklist" class="pt-3 pb-3 bb">
-                        <div class="media">
-                            <div class="media-left">
-                                <button
-                                    :idx="index"
-                                    type="button"
-                                    class="btn btn-circle btn-lg"
-                                    :class="{
-                                     'btn-default': !task.ticked,
-                                     'btn-success': task.ticked,
-                                     'btn-danger disabled': task.passed,
-                                     'disabled': task.wait,
-                                    }"
-                                    @click="checkClick">
-                                    <span v-if="task.ticked"><i class="fa fa-check"></i></span>
-                                    <span v-if="task.passed && !task.ticked"><i class="fa fa-times"></i></span>
-                                    <span v-if="!task.ticked && !task.passed && !task.wait"><i class="fa fa-question"></i></span>
-                                    <span v-if="task.wait"><i class="fa fa-ellipsis-h"></i></span>
-                                </button>
+            <div>
+                <div v-if="tasklist.length">
+                    <ul class="list-unstyled">
+                        <li v-for="task,index in tasklist" class="pt-3 pb-3 bb">
+                            <div class="media">
+                                <div class="media-left">
+                                    <button
+                                        :idx="index"
+                                        type="button"
+                                        class="btn btn-circle btn-lg"
+                                        :class="{
+                                        'btn-default': !task.ticked,
+                                        'btn-success': task.ticked,
+                                        'btn-danger disabled': task.passed,
+                                        'disabled': task.wait,
+                                        }"
+                                        @click="checkClick">
+                                        <span v-if="task.ticked"><i class="fa fa-check"></i></span>
+                                        <span v-if="task.passed && !task.ticked"><i class="fa fa-times"></i></span>
+                                        <span v-if="!task.ticked && !task.passed && !task.wait"><i class="fa fa-question"></i></span>
+                                        <span v-if="task.wait"><i class="fa fa-ellipsis-h"></i></span>
+                                    </button>
+                                </div>
+                                <div class="media-body">
+                                    <h4 class="media-heading">{{task.name}}</h4>
+                                    <p class="text-muted"><i class="fa fa-clock"></i> {{task.time}}</p>
+                                </div>
                             </div>
-                            <div class="media-body">
-                                <h4 class="media-heading">{{task.name}}</h4>
-                                <p class="text-muted"><i class="fa fa-clock"></i> {{task.time}}</p>
-                            </div>
-                        </div>
-                    </li>
-                </ul>
+                        </li>
+                    </ul>
+                </div>
+                <div v-else class="text-center center-block">
+                    <img src="https://loading.io/spinners/coolors/lg.palette-rotating-ring-loader.gif" alt="Loading...">
+                </div>
+            </div>
             `,
             methods: {
                 checkClick: function (e) {
@@ -136,23 +143,32 @@ header("Content-Type: text/html");
                                 var lastEntry = this.routineData.length - 1;
                                 console.log(this.routineData);
                                 if (!this.routineData.length) {
-                                    this.routineData = [{
-                                        day: moment().format('DD-MM-YYYY'),
-                                        tasklist: this.tasklist
-                                    }];
-                                    this.setData();
+                                    axios.get('default.json')
+                                            .then((rData) => {
+                                                this.routineData.push({
+                                                    day: moment().format('DD-MM-YYYY'),
+                                                    tasklist: rData.data
+                                                });
+                                            })
+                                            .then(() => this.setData())
+                                            .then(() => resolve());
+                                    
                                 } else {
                                     if (typeof this.routineData[lastEntry].day !== 'undefined' && this.routineData[lastEntry].day !== moment().format('DD-MM-YYYY')) {
-                                        this.routineData.push({
-                                            day: moment().format('DD-MM-YYYY'),
-                                            tasklist: this.tasklist
-                                        });
-                                        this.setData();
+                                        axios.get('default.json')
+                                            .then((rData) => {
+                                                this.routineData.push({
+                                                    day: moment().format('DD-MM-YYYY'),
+                                                    tasklist: rData.data
+                                                });
+                                            })
+                                            .then(() => this.setData())
+                                            .then(() => resolve());
                                     } else {
                                         this.tasklist = this.routineData[lastEntry].tasklist;
+                                        resolve();
                                     }
                                 }
-                                resolve();
                             });
                     });
                 },
@@ -170,6 +186,7 @@ header("Content-Type: text/html");
             mounted() {
                 this.initialRoutineSet()
                     .then(() => {
+                        console.log(this.routineData.length);
                         var lastEntry = this.routineData.length - 1;
                         this.tasklist = this.routineData[lastEntry].tasklist;
 
@@ -190,83 +207,19 @@ header("Content-Type: text/html");
         var app = new Vue({
             el: '#app',
             data: {
-                glist: [
-                    {
-                        name: 'Yoga',
-                        time: '7:00',
-                        points: 10,
-                        ticked: false,
-                        passed: false
-                    },
-                    {
-                        name: 'Jogging',
-                        time: '7:15',
-                        points: 15,
-                        ticked: false,
-                        passed: false
-                    },
-                    {
-                        name: 'Pre Workout Meal',
-                        time: '7:45',
-                        points: 5,
-                        ticked: false,
-                        passed: false
-                    },
-                    {
-                        name: 'Workout',
-                        time: '8:30',
-                        points: 15,
-                        ticked: false,
-                        passed: false
-                    },
-                    {
-                        name: 'Reach Office',
-                        time: '11:00',
-                        points: 20,
-                        ticked: false,
-                        passed: false
-                    },
-                    {
-                        name: 'Study',
-                        time: '19:00',
-                        points: 5,
-                        ticked: false,
-                        passed: false
-                    },
-                    {
-                        name: 'Finish Walk Steps',
-                        time: '22:30',
-                        points: 5,
-                        ticked: false,
-                        passed: false
-                    },
-                    {
-                        name: 'Abs Workout',
-                        time: '22:45',
-                        points: 10,
-                        ticked: false,
-                        passed: false
-                    },
-                    {
-                        name: 'Sleep',
-                        time: '23:15',
-                        points: 15,
-                        ticked: false,
-                        passed: false
-                    },
-                ]
+                glist: []
             }
         });
     </script>
 
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js');
-            console.log('SW registered');
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js');
+            });
         }
     </script>
     <script src="service-worker.js"></script>
 </body>
 
 </html>
-
