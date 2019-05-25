@@ -6,6 +6,7 @@ yarn install
 ```
 
 ### Compiles and hot-reloads for development
+Note remember to use URL of docker apis
 ```
 yarn run serve
 ```
@@ -13,6 +14,7 @@ yarn run serve
 ### Compiles and minifies for production
 ```
 yarn run build
+docker-compose up
 ```
 
 ### Run your tests
