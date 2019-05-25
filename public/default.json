@@ -1,0 +1,65 @@
+[
+    {
+        "name": "Yoga",
+        "time": "7:00",
+        "points": 10,
+        "ticked": false,
+        "passed": false
+    },
+    {
+        "name": "Jogging",
+        "time": "7:15",
+        "points": 15,
+        "ticked": false,
+        "passed": false
+    },
+    {
+        "name": "Pre Workout Meal",
+        "time": "7:45",
+        "points": 5,
+        "ticked": false,
+        "passed": false
+    },
+    {
+        "name": "Workout",
+        "time": "8:30",
+        "points": 15,
+        "ticked": false,
+        "passed": false
+    },
+    {
+        "name": "Reach Office",
+        "time": "11:00",
+        "points": 20,
+        "ticked": false,
+        "passed": false
+    },
+    {
+        "name": "Study",
+        "time": "19:00",
+        "points": 5,
+        "ticked": false,
+        "passed": false
+    },
+    {
+        "name": "Finish Walk Steps",
+        "time": "22:30",
+        "points": 5,
+        "ticked": false,
+        "passed": false
+    },
+    {
+        "name": "Abs Workout",
+        "time": "22:45",
+        "points": 10,
+        "ticked": false,
+        "passed": false
+    },
+    {
+        "name": "Sleep",
+        "time": "23:15",
+        "points": 15,
+        "ticked": false,
+        "passed": false
+    }
+]
