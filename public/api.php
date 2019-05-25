@@ -1,9 +1,9 @@
 <?php
 include('no-cache.php');
-$servername = "localhost";
-$username = "";
-$password = "";
-$dbname = "";
+$servername = "db";
+$username = "user";
+$password = "test";
+$dbname = "gsc";
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
