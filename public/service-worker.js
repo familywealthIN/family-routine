@@ -56,7 +56,6 @@ self.addEventListener('fetch', event => {
   && event.request.url.indexOf(self.location.origin + "/api.php") < 0 
   && event.request.url.indexOf(self.location.origin + "/default.json") < 0 
   && event.request.method != "POST" ) {
-    console.log(event.request.url);
     event.respondWith(
       caches.match(event.request).then(cachedResponse => {
         if (cachedResponse) {
