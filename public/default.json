@@ -1,42 +1,42 @@
 [
     {
         "name": "Yoga",
-        "time": "7:00",
+        "time": "6:00",
         "points": 10,
         "ticked": false,
         "passed": false
     },
     {
         "name": "Jogging",
-        "time": "7:15",
+        "time": "6:15",
         "points": 15,
         "ticked": false,
         "passed": false
     },
     {
         "name": "Pre Workout Meal",
-        "time": "7:45",
+        "time": "6:45",
         "points": 5,
         "ticked": false,
         "passed": false
     },
     {
         "name": "Workout",
-        "time": "8:30",
+        "time": "7:30",
         "points": 15,
         "ticked": false,
         "passed": false
     },
     {
         "name": "Reach Office",
-        "time": "11:00",
+        "time": "10:00",
         "points": 20,
         "ticked": false,
         "passed": false
     },
     {
         "name": "Study",
-        "time": "19:00",
+        "time": "18:30",
         "points": 5,
         "ticked": false,
         "passed": false
