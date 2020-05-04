@@ -4,7 +4,7 @@
     <router-link to="/">Home</router-link> |
     <router-link to="/about">About</router-link>
     </v-navigation-drawer>-->
-    <v-navigation-drawer v-model="drawer" absolute temporary>
+    <v-navigation-drawer style="position: fixed;" v-model="drawer" absolute temporary>
       <v-list class="pa-1" v-if="$gAuth.isAuthorized">
         <v-list-tile avatar>
           <v-list-tile-avatar>

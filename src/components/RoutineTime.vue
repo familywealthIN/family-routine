@@ -6,6 +6,27 @@
           <v-progress-circular indeterminate color="primary"></v-progress-circular>
         </div>
         <div v-else>
+          <v-card :color="adoptProgress()" class="white--text">
+            <v-layout row>
+              <v-flex xs7>
+                <v-card-title primary-title>
+                  <div>
+                    <div class="headline">Today's Efficiency</div>
+                  </div>
+                </v-card-title>
+              </v-flex>
+              <v-flex xs5 class="mb-3">
+                <v-progress-circular
+                  :value="countTotal(tasklist)"
+                  :size="70"
+                  :rotate="-90"
+                  style="float: right;"
+                  class="mt-3 mr-3" 
+                  color="white" 
+                  width="10">{{countTotal(tasklist)}}</v-progress-circular>
+              </v-flex>
+            </v-layout>
+          </v-card>
           <v-list subheader style="width:100%" v-if="tasklist && tasklist.length > 0">
             <v-subheader>Today</v-subheader>
             <template v-for="(task, index) in tasklist">
@@ -64,13 +85,13 @@ export default {
           }
         }
       `,
-      update: function(data, errors) {
+      update: function(data) {
         this.loading = false;
         this.tasklist =
           data.routineDate && data.routineDate.date
             ? data.routineDate.tasklist
             : [];
-        if (data.routineDate === null && !errors) {
+        if (data.routineDate === null) {
           this.addNewDayRoutine();
           return this.tasklist;
         } else {
@@ -81,12 +102,12 @@ export default {
       },
       variables: function() {
         return {
-          date: this.date,
+          date: this.date
         };
       },
       error: function(error) {
         this.loading = false;
-        if(error.message === 'A valid authorization token is required') {
+        if (error.message === "A valid authorization token is required") {
           this.$router.push("login");
         }
       }
@@ -97,9 +118,13 @@ export default {
       lid: "gRoutine",
       loading: true,
       tasklist: [],
-      did: "",
-      date: moment().format("DD-MM-YYYY")
+      did: ""
     };
+  },
+  computed: {
+    date() {
+      return moment().format("DD-MM-YYYY");
+    }
   },
   methods: {
     addNewDayRoutine() {
@@ -275,6 +300,15 @@ export default {
         return total;
       }, 0);
     },
+    adoptProgress(){
+      const count = this.countTotal(this.tasklist)
+      if(count < 33) {
+        return 'error';
+      } else if (count < 70) {
+        return 'warning';
+      }
+      return 'success';
+    }
   },
   mounted() {
     // this.setPassedWait();

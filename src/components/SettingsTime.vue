@@ -132,7 +132,7 @@ export default {
           text: "Time",
           align: "right",
           value: "time",
-          sortable: false
+          sortable: true
         },
         {
           text: "Points",
