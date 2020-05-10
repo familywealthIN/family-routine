@@ -22,3 +22,5 @@ yarn-error.log*
 *.sw?
 
 .firebaserc
+serviceAccountKey.json
+.env

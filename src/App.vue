@@ -45,7 +45,7 @@
       <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
       <v-toolbar-title
         class="white--text"
-      >{{ ($route.name && $route.name[0].toUpperCase() + $route.name.substr(1)) || 'Family Routine' }}</v-toolbar-title>
+      >{{ pageTitle }}</v-toolbar-title>
     </v-toolbar>
     <v-content>
       <router-view></router-view>
@@ -55,18 +55,20 @@
 </template>
 
 <script>
-import { GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN } from './constants/settings';
+import {
+  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN,
+} from './constants/settings';
 
 export default {
   data() {
     return {
       drawer: null,
       items: [
-        { title: "Home", icon: "home", route: "/home" },
-        { title: "History", icon: "history", route: "/history" },
-        { title: "Settings", icon: "settings", route: "/settings" },
-        { title: "About", icon: "info", route: "/about" }
-      ]
+        { title: 'Home', icon: 'home', route: '/home' },
+        { title: 'History', icon: 'history', route: '/history' },
+        { title: 'Settings', icon: 'settings', route: '/settings' },
+        { title: 'About', icon: 'info', route: '/about' },
+      ],
     };
   },
   computed: {
@@ -78,7 +80,11 @@ export default {
     },
     picture() {
       return this.$root.$data.picture;
-    }
+    },
+    pageTitle() {
+      return (this.$route.name && this.$route.name[0].toUpperCase() + this.$route.name.substr(1))
+      || 'Family Routine';
+    },
   },
   methods: {
     handleClickSignOut() {
@@ -96,11 +102,8 @@ export default {
           this.$root.$data.userEmail = localStorage.getItem(GC_PICTURE);
           this.$router.push('/');
         })
-        .catch(error => {
-          console.log(error);
-          // On fail do something
-        });
+        .catch((error) => console.log(error));
     },
-  }
+  },
 };
 </script>

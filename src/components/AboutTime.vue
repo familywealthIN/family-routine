@@ -11,7 +11,7 @@
 </template>
 
 <script>
-import gql from "graphql-tag";
+import gql from 'graphql-tag';
 
 export default {
   apollo: {
@@ -26,11 +26,11 @@ export default {
           passed
         }
       }
-    `
+    `,
   },
   data() {
     return {};
-  }
+  },
 };
 </script>
 

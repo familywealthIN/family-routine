@@ -1,5 +1,4 @@
 import Vue from 'vue';
-import gql from "graphql-tag"
 import { ApolloClient } from 'apollo-client';
 import { ApolloLink } from 'apollo-link';
 import { createHttpLink } from 'apollo-link-http';
@@ -7,28 +6,32 @@ import { InMemoryCache } from 'apollo-cache-inmemory';
 import firebase from 'firebase/app';
 import 'firebase/messaging';
 
-import { config, publicKey, graphQLUrl, isDevelopment } from './blob/config';
+import {
+  config, publicKey, graphQLUrl, isDevelopment,
+} from './blob/config';
 import './plugins/vuetify';
 import VueApollo from './plugins/apollo';
 import App from './App.vue';
 import './plugins/vue-google-oauth2';
 import router from './router';
-import { GC_NOTIFICATION_TOKEN, GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN } from './constants/settings';
+import {
+  GC_NOTIFICATION_TOKEN, GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN,
+} from './constants/settings';
 
-Vue.config.productionTip = false
+Vue.config.productionTip = false;
 
 
 const authMiddleware = new ApolloLink((operation, forward) => {
   // add the authorization to the headers
-  const token = localStorage.getItem(GC_AUTH_TOKEN)
+  const token = localStorage.getItem(GC_AUTH_TOKEN);
   operation.setContext({
     headers: {
-      authorization: token ? `Bearer ${token}` : null
-    }
-  })
+      authorization: token ? `Bearer ${token}` : null,
+    },
+  });
 
-  return forward(operation)
-})
+  return forward(operation);
+});
 
 // HTTP connection to the API
 const httpLink = createHttpLink({
@@ -37,7 +40,7 @@ const httpLink = createHttpLink({
 });
 
 // Cache implementation
-const cache = new InMemoryCache()
+const cache = new InMemoryCache();
 
 // Create the apollo client
 const apolloClient = new ApolloClient({
@@ -52,7 +55,7 @@ const apolloClient = new ApolloClient({
       fetchPolicy: 'no-cache',
       errorPolicy: 'all',
     },
-  }
+  },
 });
 
 const apolloProvider = new VueApollo({
@@ -72,8 +75,8 @@ new Vue({
     email,
     picture,
   },
-  render: h => h(App)
-}).$mount('#app')
+  render: (h) => h(App),
+}).$mount('#app');
 
 if (!isDevelopment) {
   if ('serviceWorker' in navigator) {
@@ -95,7 +98,7 @@ if (!isDevelopment) {
     // Get Token
     messaging.getToken().then((token) => {
       localStorage.setItem(GC_NOTIFICATION_TOKEN, token);
-    })
+    });
   }).catch((err) => {
     console.log('Unable to get permission to notify.', err);
   });

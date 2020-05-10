@@ -21,8 +21,8 @@
                   :size="70"
                   :rotate="-90"
                   style="float: right;"
-                  class="mt-3 mr-3" 
-                  color="white" 
+                  class="mt-3 mr-3"
+                  color="white"
                   width="10">{{countTotal(tasklist)}}</v-progress-circular>
               </v-flex>
             </v-layout>
@@ -62,8 +62,12 @@
 </template>
 
 <script>
-import moment from "moment";
-import gql from "graphql-tag";
+/* eslint-disable no-param-reassign */
+import moment from 'moment';
+import gql from 'graphql-tag';
+
+import redirectOnError from '../utils/redirectOnError';
+import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 
 export default {
   apollo: {
@@ -85,46 +89,43 @@ export default {
           }
         }
       `,
-      update: function(data) {
+      update(data) {
         this.loading = false;
-        this.tasklist =
-          data.routineDate && data.routineDate.date
-            ? data.routineDate.tasklist
-            : [];
+        this.tasklist = data.routineDate && data.routineDate.date
+          ? data.routineDate.tasklist
+          : [];
         if (data.routineDate === null) {
           this.addNewDayRoutine();
           return this.tasklist;
-        } else {
-          this.did = data.routineDate.id;
-          this.setPassedWait();
-          return data.routineDate.tasklist;
         }
+        this.did = data.routineDate.id;
+        this.setPassedWait();
+        return data.routineDate.tasklist;
       },
-      variables: function() {
+      variables() {
         return {
-          date: this.date
+          date: this.date,
         };
       },
-      error: function(error) {
+      error(error) {
+        redirectOnError(this.$router, error);
+        clearInterval(this.timerId);
         this.loading = false;
-        if (error.message === "A valid authorization token is required") {
-          this.$router.push("login");
-        }
-      }
-    }
+      },
+    },
   },
   data() {
     return {
-      lid: "gRoutine",
       loading: true,
       tasklist: [],
-      did: ""
+      did: '',
+      timerId: '',
     };
   },
   computed: {
     date() {
-      return moment().format("DD-MM-YYYY");
-    }
+      return moment().format('DD-MM-YYYY');
+    },
   },
   methods: {
     addNewDayRoutine() {
@@ -148,48 +149,46 @@ export default {
           }
         `,
         variables: {
-          date: this.date
+          date: this.date,
         },
         update: (store, { data: { addRoutine } }) => {
-          this.tasklist =
-            addRoutine && addRoutine.date ? addRoutine.tasklist : [];
+          this.tasklist = addRoutine && addRoutine.date ? addRoutine.tasklist : [];
           this.did = addRoutine.id;
           this.setPassedWait();
           this.loading = false;
         },
-        error: () => {
+        error: (error) => {
+          redirectOnError(this.$router, error);
+          clearInterval(this.timerId);
           this.loading = false;
-        }
+        },
       });
     },
     getButtonColor(task) {
       if (task.ticked) {
-        return "success";
-      } else if (task.passed) {
-        return "error";
-      } else {
-        return "";
+        return 'success';
+      } if (task.passed) {
+        return 'error';
       }
+      return '';
     },
     getButtonDisabled(task) {
       if (task.passed || task.wait) {
         return true;
-      } else {
-        return false;
       }
+      return false;
     },
     getButtonIcon(task) {
       if (task.ticked) {
-        return "check";
-      } else if (task.passed && !task.ticked) {
-        return "close";
-      } else if (!task.passed && !task.ticked && !task.wait) {
-        return "alarm";
-      } else {
-        return "more_horiz";
+        return 'check';
+      } if (task.passed && !task.ticked) {
+        return 'close';
+      } if (!task.passed && !task.ticked && !task.wait) {
+        return 'alarm';
       }
+      return 'more_horiz';
     },
-    checkClick: function(e, i) {
+    checkClick(e, i) {
       const taskId = i;
       const task = this.tasklist[taskId];
       if (!task.passed && !task.wait) {
@@ -213,16 +212,21 @@ export default {
           variables: {
             id: this.did,
             name: task.name,
-            ticked: task.ticked
-          }
+            ticked: task.ticked,
+          },
+          error: (error) => {
+            task.ticked = false;
+            redirectOnError(this.$router, error);
+            clearInterval(this.timerId);
+          },
         });
       }
     },
-    passedTime: function(item) {
+    passedTime(item) {
       if (!item.ticked) {
-        var timestamp = moment(item.time, "HH:mm");
-        var exp = timestamp.diff(moment());
-        if (moment.duration(exp).asMinutes() < -30 && !item.passed) {
+        const timestamp = moment(item.time, 'HH:mm');
+        const exp = timestamp.diff(moment());
+        if (moment.duration(exp).asMinutes() < -TIMES_UP_TIME && !item.passed) {
           item.passed = true;
           this.$apollo.mutate({
             mutation: gql`
@@ -243,20 +247,22 @@ export default {
             variables: {
               id: this.did,
               name: item.name,
-              passed: item.passed
+              passed: item.passed,
             },
-            error: () => {
+            error: (error) => {
+              redirectOnError(this.$router, error);
+              clearInterval(this.timerId);
               item.passed = false;
-            }
+            },
           });
         }
       }
     },
-    waitTime: function(item) {
+    waitTime(item) {
       if (!item.ticked) {
-        var timestamp = moment(item.time, "HH:mm");
-        var exp = timestamp.diff(moment());
-        if (moment.duration(exp).asMinutes() < 60 && item.wait) {
+        const timestamp = moment(item.time, 'HH:mm');
+        const exp = timestamp.diff(moment());
+        if (moment.duration(exp).asMinutes() < PROACTIVE_START_TIME && item.wait) {
           item.wait = false;
           this.$apollo.mutate({
             mutation: gql`
@@ -277,17 +283,19 @@ export default {
             variables: {
               id: this.did,
               name: item.name,
-              wait: item.wait
+              wait: item.wait,
             },
-            error: () => {
+            error: (error) => {
+              redirectOnError(this.$router, error);
+              clearInterval(this.timerId);
               item.wait = false;
-            }
+            },
           });
         }
       }
     },
-    setPassedWait: function() {
-      Array.prototype.forEach.call(this.tasklist, task => {
+    setPassedWait() {
+      Array.prototype.forEach.call(this.tasklist, (task) => {
         this.passedTime(task);
         this.waitTime(task);
       });
@@ -300,25 +308,21 @@ export default {
         return total;
       }, 0);
     },
-    adoptProgress(){
-      const count = this.countTotal(this.tasklist)
-      if(count < 33) {
+    adoptProgress() {
+      const count = this.countTotal(this.tasklist);
+      if (count < 33) {
         return 'error';
-      } else if (count < 70) {
+      } if (count < 70) {
         return 'warning';
       }
       return 'success';
-    }
+    },
   },
   mounted() {
-    // this.setPassedWait();
-    //   this.updateRoutine();
-    // });
-    //     setInterval(function () {
-    //         // Invoke function every 10 minutes
-    //         this.updateRoutine();
-    //     }
-  }
+    this.timerId = setInterval(() => {
+      this.setPassedWait();
+    }, 60 * 1000);
+  },
 };
 </script>
 

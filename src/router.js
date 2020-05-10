@@ -1,15 +1,15 @@
-import Vue from 'vue'
-import Router from 'vue-router'
-import Login from './views/Login.vue'
+import Vue from 'vue';
+import Router from 'vue-router';
+import Login from './views/Login.vue';
 
-Vue.use(Router)
+Vue.use(Router);
 
 export default new Router({
   routes: [
     {
       path: '/home',
       name: 'home',
-      component: () => import(/* webpackChunkName: "home" */ './views/Home.vue')
+      component: () => import(/* webpackChunkName: "home" */ './views/Home.vue'),
     },
     {
       path: '/history',
@@ -17,7 +17,7 @@ export default new Router({
       // route level code-splitting
       // this generates a separate chunk (about.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "history" */ './views/History.vue')
+      component: () => import(/* webpackChunkName: "history" */ './views/History.vue'),
     },
     {
       path: '/settings',
@@ -25,7 +25,7 @@ export default new Router({
       // route level code-splitting
       // this generates a separate chunk (about.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "settings" */ './views/Settings.vue')
+      component: () => import(/* webpackChunkName: "settings" */ './views/Settings.vue'),
     },
     {
       path: '/about',
@@ -33,7 +33,7 @@ export default new Router({
       // route level code-splitting
       // this generates a separate chunk (about.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "about" */ './views/About.vue')
+      component: () => import(/* webpackChunkName: "about" */ './views/About.vue'),
     },
     {
       path: '/wizard',
@@ -41,12 +41,12 @@ export default new Router({
       // route level code-splitting
       // this generates a separate chunk (about.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "wizard" */ './views/Wizard.vue')
+      component: () => import(/* webpackChunkName: "wizard" */ './views/Wizard.vue'),
     },
     {
       path: '/',
       name: 'login',
-      component: Login
+      component: Login,
     },
-  ]
-})
+  ],
+});

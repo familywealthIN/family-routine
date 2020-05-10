@@ -62,29 +62,36 @@
 </template>
 
 <script>
-// import moment from 'moment';
-import gql from "graphql-tag";
+import gql from 'graphql-tag';
+
+import redirectOnError from '../utils/redirectOnError';
+
 export default {
   apollo: {
-    routines: gql`
-      query routines {
-        routines {
-          id
-          date
-          tasklist {
-            name
-            time
-            points
-            ticked
-            passed
+    routines: {
+      query: gql`
+        query routines {
+          routines {
+            id
+            date
+            tasklist {
+              name
+              time
+              points
+              ticked
+              passed
+            }
           }
         }
-      }
-    `
+      `,
+      error(error) {
+        redirectOnError(this.$router, error);
+      },
+    },
   },
   data() {
     return {
-      lid: "gRoutine",
+      lid: 'gRoutine',
       routines: [],
       graphArray: [],
     };
@@ -92,13 +99,14 @@ export default {
   computed: {
     avg() {
       const sum = this.routines.reduce((acc, cur) => acc + this.countTotal(cur.tasklist), 0);
+      // eslint-disable-next-line vue/no-side-effects-in-computed-properties
       this.graphArray = this.routines.map((routine) => this.countTotal(routine.tasklist));
-      const length = this.routines.length;
+      const { length } = this.routines;
 
       if (!sum && !length) return 0;
 
       return Math.ceil(sum / length);
-    }
+    },
   },
   methods: {
     countTotal(tasklist) {

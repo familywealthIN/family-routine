@@ -39,7 +39,8 @@
             <li>Tick it on time.</li>
             <li>Earn Points.</li>
           </ul>
-          <p>You get a time window not before 1 hour to tick task. And if you are 30 minutes late, the item gets expired</p>
+          <p>You get a time window not before 1 hour to tick task.
+            And if you are 30 minutes late, the item gets expired</p>
         </div>
         <div class="text-xs-right mb-3">
           <v-btn color="primary" @click="e1 = 2">Next</v-btn>
@@ -89,7 +90,8 @@
             </v-img>
           </div>
           <p>
-            Create habits on your hobbies to give you the joy and happiness for the time spent towards yourself
+            Create habits on your hobbies to give you the joy and
+             happiness for the time spent towards yourself
           </p>
         </div>
         <div class="text-xs-right">
@@ -109,8 +111,11 @@
               </template>
             </v-img>
           </div>
-          <p>Create an after Dinner program to spend time with your family, healthy activities, before bed routine and reading to sleep. <b>Finally, its most important to be hosnest to yourself</b></p>
-          <p>If this app works for you invite your family members as well to get scored on puntuality</p>
+          <p>Create an after Dinner program to spend time with your family,
+             healthy activities, before bed routine and reading to sleep.
+              <b>Finally, its most important to be hosnest to yourself</b></p>
+          <p>If this app works for you invite your family members as well to
+             get scored on puntuality</p>
         </div>
         <div class="text-xs-right">
           <v-btn color="primary" @click="redirectToSettings()">Finish</v-btn>
@@ -124,13 +129,13 @@
 export default {
   data() {
     return {
-      e1: 1
+      e1: 1,
     };
   },
   methods: {
     redirectToSettings() {
-      this.$router.push('settings')
-    }
-  }
+      this.$router.push('settings');
+    },
+  },
 };
 </script>

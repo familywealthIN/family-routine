@@ -1,14 +1,19 @@
 
 <template>
   <div class="login-box">
-    <img
-      src="/img/google-button.png"
-      class="google-button"
-      @click="handleClickSignIn"
-      v-if="!isSignIn"
-      :disabled="!isInit"
-    />
-    <v-btn @click="handleClickSignOut" v-if="isSignIn" :disabled="!isInit">signOut</v-btn>
+    <div v-if="isLoading">
+      <v-progress-circular :size="50" indeterminate color="primary"></v-progress-circular>
+    </div>
+    <div v-else>
+        <img
+          src="/img/google-button.png"
+          class="google-button"
+          @click="handleClickSignIn"
+          v-if="!isSignIn"
+          :disabled="!isInit"
+        />
+        <v-btn @click="handleClickSignOut" v-if="isSignIn" :disabled="!isInit">signOut</v-btn>
+    </div>
   </div>
 </template>
 
@@ -18,25 +23,26 @@
  * You should first need to place these 2 lines of code in your APP ENTRY file, e.g. src/main.js
  *
  * import GAuth from 'vue-google-oauth2'
- * Vue.use(GAuth, {clientId: '4584XXXXXXXX-2gqknkvdjfkdfkvb8uja2k65sldsms7qo9.apps.googleusercontent.com'})
+ * Vue.use(GAuth, {clientId: '...'})
  *
  */
-import gql from "graphql-tag";
+import gql from 'graphql-tag';
 
 import {
   GC_USER_NAME,
   GC_PICTURE,
   GC_USER_EMAIL,
   GC_AUTH_TOKEN,
-  GC_NOTIFICATION_TOKEN
-} from "../constants/settings";
+  GC_NOTIFICATION_TOKEN,
+} from '../constants/settings';
 
 export default {
-  name: "Login",
+  name: 'Login',
   data() {
     return {
       isInit: false,
-      isSignIn: false
+      isSignIn: false,
+      isLoading: true,
     };
   },
 
@@ -44,15 +50,16 @@ export default {
     handleClickSignIn() {
       this.$gAuth
         .signIn()
-        .then(user => {
+        .then((user) => {
           // On success do something, refer to https://developers.google.com/api-client-library/javascript/reference/referencedocs#googleusergetid
           const accessToken = user.getAuthResponse().access_token;
           const notificationId = localStorage.getItem(GC_NOTIFICATION_TOKEN) || '';
           this.createSession(accessToken, notificationId);
         })
-        .catch(error => {
+        .catch((error) => {
           // On fail do something
           console.log(error);
+          this.isLoading = false;
         });
     },
 
@@ -71,7 +78,7 @@ export default {
           this.$root.$data.userEmail = localStorage.getItem(GC_USER_EMAIL);
           this.$root.$data.picture = localStorage.getItem(GC_PICTURE);
         })
-        .catch(error => {
+        .catch((error) => {
           console.log(error);
           // On fail do something
         });
@@ -81,7 +88,10 @@ export default {
       this.$apollo.mutate({
         mutation: gql`
           mutation authGoogle($accessToken: String!, $notificationId: String!) {
-            authGoogle(accessToken: $accessToken, notificationId: $notificationId) {
+            authGoogle(
+              accessToken: $accessToken
+              notificationId: $notificationId
+            ) {
               name
               email
               picture
@@ -95,7 +105,9 @@ export default {
           notificationId,
         },
         update: (store, { data: { authGoogle } }) => {
-          const { name, email, picture, token, isNew } = authGoogle;
+          const {
+            name, email, picture, token, isNew,
+          } = authGoogle;
 
           this.isSignIn = this.$gAuth.isAuthorized;
           localStorage.setItem(GC_USER_NAME, name);
@@ -105,20 +117,35 @@ export default {
           this.$root.$data.name = localStorage.getItem(GC_USER_NAME);
           this.$root.$data.email = localStorage.getItem(GC_USER_EMAIL);
           this.$root.$data.picture = localStorage.getItem(GC_PICTURE);
-          isNew ? this.$router.push("wizard") : this.$router.push("home");
-        }
+
+          if (isNew) {
+            this.$router.push('wizard');
+          } else {
+            this.$router.push('home');
+          }
+
+          this.isLoading = false;
+        },
+        error: () => {
+          this.isLoading = false;
+        },
       });
-    }
+    },
   },
   mounted() {
-    let that = this;
-    let checkGauthLoad = setInterval(function() {
-      that.isInit = that.$gAuth.isInit;
-      that.isSignIn = that.$gAuth.isAuthorized;
-      if(that.isSignIn){ that.$router.push("home"); }
-      if (that.isInit) clearInterval(checkGauthLoad);
+    const checkGauthLoad = setInterval(() => {
+      this.isInit = this.$gAuth.isInit;
+      this.isSignIn = this.$gAuth.isAuthorized;
+      if (this.isSignIn) {
+        this.$router.push('home');
+        this.isLoading = false;
+      }
+      if (this.isInit) {
+        this.isLoading = false;
+        clearInterval(checkGauthLoad);
+      }
     }, 50);
-  }
+  },
 };
 </script>
 

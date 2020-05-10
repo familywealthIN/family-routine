@@ -81,109 +81,116 @@
 </template>
 
 <script>
-import gql from "graphql-tag";
+import gql from 'graphql-tag';
+
+import redirectOnError from '../utils/redirectOnError';
 
 export default {
   apollo: {
-    routineItems: gql`
-      query routineItems {
-        routineItems {
-          id
-          name
-          description
-          time
-          points
-          ticked
-          passed
+    routineItems: {
+      query: gql`
+        query routineItems {
+          routineItems {
+            id
+            name
+            description
+            time
+            points
+            ticked
+            passed
+          }
         }
-      }
-    `
+      `,
+      error(error) {
+        redirectOnError(this.$router, error);
+      },
+    },
   },
   data() {
     return {
       dialog: false,
       valid: true,
       editedIndex: -1,
+      routineItems: [],
       nameRules: [
-        v => !!v || "Name is required",
-        v => (v && v.length <= 100) || "Name must be less than 100 characters"
+        (v) => !!v || 'Name is required',
+        (v) => (v && v.length <= 100) || 'Name must be less than 100 characters',
       ],
       descriptionRules: [
-        v => !!v || "Description is required",
-        v =>
-          (v && v.length <= 255) ||
-          "Description must be less than 255 characters"
+        (v) => !!v || 'Description is required',
+        (v) => (v && v.length <= 255)
+          || 'Description must be less than 255 characters',
       ],
       pointsRules: [
-        v => !!v || "points is required",
-        v =>
-          (v && Number(v) <= this.maxInputPoints()) ||
-          `Name must be less than ${this.maxInputPoints()} characters`
+        (v) => !!v || 'points is required',
+        (v) => (v && Number(v) <= this.maxInputPoints())
+          || `Name must be less than ${this.maxInputPoints()} characters`,
       ],
-      timeRules: [v => !!v || "Time is required"],
+      timeRules: [(v) => !!v || 'Time is required'],
       headers: [
         {
-          text: "Task",
-          align: "left",
+          text: 'Task',
+          align: 'left',
           sortable: false,
-          value: "name"
+          value: 'name',
         },
         {
-          text: "Time",
-          align: "right",
-          value: "time",
-          sortable: true
+          text: 'Time',
+          align: 'right',
+          value: 'time',
+          sortable: true,
         },
         {
-          text: "Points",
-          align: "right",
-          value: "points",
-          sortable: false
+          text: 'Points',
+          align: 'right',
+          value: 'points',
+          sortable: false,
         },
         {
-          text: "Action",
-          align: "right",
-          sortable: false
-        }
+          text: 'Action',
+          align: 'right',
+          sortable: false,
+        },
       ],
-      routineItems: [],
       editedItem: {
-        id: "",
-        name: "",
-        description: "",
-        time: "00:00",
-        points: 0
+        id: '',
+        name: '',
+        description: '',
+        time: '00:00',
+        points: 0,
       },
       defaultItem: {
-        id: "",
-        name: "",
-        description: "",
-        time: "00:00",
-        points: 0
-      }
+        id: '',
+        name: '',
+        description: '',
+        time: '00:00',
+        points: 0,
+      },
     };
   },
   computed: {
     formTitle() {
-      return this.editedIndex === -1 ? "New Item" : "Edit Item";
-    }
+      return this.editedIndex === -1 ? 'New Item' : 'Edit Item';
+    },
   },
 
   watch: {
     dialog(val) {
-      val || this.close(false);
-    }
+      if (!val) {
+        this.close(false);
+      }
+    },
   },
   methods: {
     editItem(item) {
       this.editedIndex = this.routineItems.indexOf(item);
-      this.editedItem = Object.assign({}, item);
+      this.editedItem = { ...item };
       this.dialog = true;
     },
 
     deleteItem(item) {
       const index = this.routineItems.indexOf(item);
-      if (confirm("Are you sure you want to delete this item?")) {
+      if (confirm('Are you sure you want to delete this item?')) {
         this.deleteRoutineItem(item, index);
       }
     },
@@ -198,11 +205,14 @@ export default {
           }
         `,
         variables: {
-          id: item.id
+          id: item.id,
         },
         update: () => {
           this.routineItems.splice(index, 1);
-        }
+        },
+        error: (error) => {
+          redirectOnError(this.$router, error);
+        },
       });
     },
 
@@ -227,7 +237,7 @@ export default {
 
     resetEditItem() {
       this.$refs.form.reset();
-      this.editedItem = Object.assign({}, this.defaultItem);
+      this.editedItem = { ...this.defaultItem };
       this.editedIndex = -1;
     },
 
@@ -259,13 +269,16 @@ export default {
           name: item.name,
           description: item.description,
           time: item.time,
-          points: Number(item.points)
+          points: Number(item.points),
         },
         update: (scope, { data: { addRoutineItem } }) => {
           this.routineItems.push(addRoutineItem);
           this.resetEditItem();
         },
-        error: () => this.resetEditItem()
+        error: (error) => {
+          this.resetEditItem();
+          redirectOnError(this.$router, error);
+        },
       });
     },
 
@@ -277,12 +290,11 @@ export default {
 
     maxInputPoints() {
       const { editedIndex, routineItems } = this;
-      const editPoints =
-        routineItems &&
-        routineItems[editedIndex] &&
-        Number(routineItems[editedIndex].points) > 0
-          ? Number(routineItems[editedIndex].points)
-          : 0;
+      const editPoints = routineItems
+        && routineItems[editedIndex]
+        && Number(routineItems[editedIndex].points) > 0
+        ? Number(routineItems[editedIndex].points)
+        : 0;
       return 100 - (this.getPointsTotal() - editPoints);
     },
 
@@ -317,16 +329,19 @@ export default {
           name: item.name,
           description: item.description,
           time: item.time,
-          points: Number(item.points)
+          points: Number(item.points),
         },
-        update: (scope, { data: { updateRoutineItem } }) => {
+        update: () => {
           Object.assign(this.routineItems[this.editedIndex], this.editedItem);
           this.resetEditItem();
         },
-        error: () => this.resetEditItem()
+        error: (error) => {
+          this.resetEditItem();
+          redirectOnError(this.$router, error);
+        },
       });
-    }
-  }
+    },
+  },
 };
 </script>
 

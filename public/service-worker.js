@@ -53,8 +53,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   // Skip cross-origin requests, like those for Google Analytics.
   if (event.request.url.startsWith(self.location.origin) 
-  && event.request.url.indexOf(self.location.origin + "/api.php") < 0 
-  && event.request.url.indexOf(self.location.origin + "/default.json") < 0 
+  && event.request.url.indexOf(self.location.origin + "/graphql") < 0 
   && event.request.method != "POST" ) {
     event.respondWith(
       caches.match(event.request).then(cachedResponse => {

@@ -5,12 +5,12 @@
 </template>
 
 <script>
-import SettingsTime from '@/components/SettingsTime.vue'
+import SettingsTime from '@/components/SettingsTime.vue';
 
 export default {
-  name: "settings",
+  name: 'settings',
   components: {
-    SettingsTime
-  }
+    SettingsTime,
+  },
 };
 </script>
