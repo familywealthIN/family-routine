@@ -1,13 +1,16 @@
+<script>
+/* eslint-disable max-len */
+</script>
 <template>
-  <v-container style="max-width: 480px">
-    <v-layout wrap>
-      <v-card>
-        <v-card-text>
-          <p>This app tracks the daily activity and measures the puntuality efficiency in points</p>
-        </v-card-text>
-      </v-card>
+    <v-layout row>
+      <v-flex xs12 sm6 offset-sm3>
+        <v-card>
+          <v-card-text>
+            <p>This app tracks the daily activity and measures the puntuality efficiency in points</p>
+          </v-card-text>
+        </v-card>
+      </v-flex>
     </v-layout>
-  </v-container>
 </template>
 
 <script>

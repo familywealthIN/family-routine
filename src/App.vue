@@ -50,6 +50,7 @@
     <v-content>
       <router-view></router-view>
     </v-content>
+    <notifications group="notify" position="bottom center" />
     <!-- <v-footer app></v-footer> -->
   </v-app>
 </template>
@@ -66,6 +67,7 @@ export default {
       items: [
         { title: 'Home', icon: 'home', route: '/home' },
         { title: 'History', icon: 'history', route: '/history' },
+        { title: 'Family', icon: 'supervisor_account', route: '/family' },
         { title: 'Settings', icon: 'settings', route: '/settings' },
         { title: 'About', icon: 'info', route: '/about' },
       ],

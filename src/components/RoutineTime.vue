@@ -1,12 +1,11 @@
 <template>
-  <v-container style="max-width: 480px">
-    <v-layout text-xs-center wrap>
-      <v-flex mb-5>
-        <div v-if="loading" text-xs-center style="margin-top:100px;">
+    <v-layout row>
+      <v-flex xs12 sm6 offset-sm3>
+        <div v-if="loading" class="text-xs-center" style="margin-top:100px;">
           <v-progress-circular indeterminate color="primary"></v-progress-circular>
         </div>
         <div v-else>
-          <v-card :color="adoptProgress()" class="white--text">
+          <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 mt-2 mb-3">
             <v-layout row>
               <v-flex xs7>
                 <v-card-title primary-title>
@@ -52,13 +51,16 @@
               </v-list-tile>
             </template>
           </v-list>
-          <div v-if="tasklist.length === 0">
-            <span>No items to display. Please go to settings and add routine items.</span>
+          <div v-if="tasklist && tasklist.length === 0">
+            <v-card>
+              <v-card-text class="text-xs-center">
+                <p>No items to display. Please go to settings and add routine items.</p>
+              </v-card-text>
+            </v-card>
           </div>
         </div>
       </v-flex>
     </v-layout>
-  </v-container>
 </template>
 
 <script>

@@ -10,6 +10,7 @@ import {
   config, publicKey, graphQLUrl, isDevelopment,
 } from './blob/config';
 import './plugins/vuetify';
+import './plugins/notifications';
 import VueApollo from './plugins/apollo';
 import App from './App.vue';
 import './plugins/vue-google-oauth2';

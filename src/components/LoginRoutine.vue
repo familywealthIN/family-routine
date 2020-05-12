@@ -80,7 +80,13 @@ export default {
         })
         .catch((error) => {
           console.log(error);
-          // On fail do something
+          this.$notify({
+            title: 'Logout',
+            text: 'Unable to Logout',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         });
     },
 
@@ -128,6 +134,13 @@ export default {
         },
         error: () => {
           this.isLoading = false;
+          this.$notify({
+            title: 'Login',
+            text: 'Unable to Login',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         },
       });
     },

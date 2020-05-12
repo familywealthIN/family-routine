@@ -9,7 +9,30 @@ const {
 
 const { RoutineModel, RoutineType } = require('../schema/RoutineSchema');
 const { RoutineItemModel } = require('../schema/RoutineItemSchema');
+const { UserModel } = require('../schema/UserSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
+const validateGroupUser = require('../utils/validateGroupUser');
+
+function sortTimes(array) {
+  return array.sort((a, b) => {
+    const [aHours, aMinutes] = a.time.split(':');
+    const [bHours, bMinutes] = b.time.split(':');
+
+    if (parseInt(aHours, 10) - parseInt(bHours, 10) === 0) {
+      return parseInt(aMinutes, 10) - parseInt(bMinutes, 10);
+    }
+    return parseInt(aHours, 10) - parseInt(bHours, 10);
+  });
+}
+
+async function findTodayandSort(args, email) {
+  const todaysRoutine = await RoutineModel.findOne({ date: args.date, email }).exec();
+  if (todaysRoutine && todaysRoutine.tasklist) {
+    sortTimes(todaysRoutine.tasklist);
+    return todaysRoutine;
+  }
+  return null;
+}
 
 const query = {
   routines: {
@@ -18,6 +41,25 @@ const query = {
       const email = getEmailfromSession(context);
 
       return RoutineModel.find({ email }).exec();
+    },
+  },
+  routinesByGroupEmail: {
+    type: GraphQLList(RoutineType),
+    args: {
+      email: { type: GraphQLNonNull(GraphQLString) },
+      groupId: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      await validateGroupUser(UserModel, email, args.groupId);
+      await validateGroupUser(UserModel, args.email, args.groupId);
+
+      return RoutineModel
+        .find({ email: args.email })
+        .sort({ date: -1 })
+        .limit(7)
+        .exec();
     },
   },
   routine: {
@@ -49,6 +91,7 @@ const query = {
 
         tasklist.forEach((task) => {
           const foundTask = todayTasklist
+            // eslint-disable-next-line no-underscore-dangle
             .find((oldTask) => oldTask._id.toString() === task._id.toString());
 
           if (foundTask) {
@@ -60,12 +103,12 @@ const query = {
 
         await RoutineModel.findOneAndUpdate(
           { email, date: args.date },
-          { $set: { 'tasklist': tasklist } },
+          { $set: { tasklist } },
           { new: true },
         ).exec();
       }
 
-      return RoutineModel.findOne({ date: args.date, email }).exec();
+      return findTodayandSort(args, email);
     },
   },
 };
@@ -79,11 +122,11 @@ const mutation = {
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      hasEntry = await RoutineModel
+      const hasEntry = await RoutineModel
         .findOne({ date: args.date, email }).exec();
 
       if (hasEntry && hasEntry.tasklist && Array.isArray(hasEntry.tasklist)) {
-        return RoutineModel.findOne({ date: args.date, email }).exec();
+        return findTodayandSort(args, email);
       }
 
       let tasklist = [];
@@ -110,8 +153,7 @@ const mutation = {
       id: { type: GraphQLNonNull(GraphQLID) },
     },
     resolve: (root, args, context) => {
-      const email = context.decodedToken && context.decodedToken.email;
-      if (!email) { throw new Error('A valid authorization token is required'); }
+      const email = getEmailfromSession(context);
 
       return RoutineModel.findOneAndRemove({ _id: args.id, email }).exec();
     },

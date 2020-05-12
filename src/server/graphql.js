@@ -34,8 +34,14 @@ app.use('/graphql', (req, res) => {
   ExpressGraphQL({
     schema,
     customFormatErrorFn: (error) => {
-      res.status(401);
-      const { message, locations, path } = error;
+      const {
+        message: statusMessage, locations, path,
+      } = error;
+
+      const [status, message] = statusMessage.split(':');
+
+      res.status(status || 401);
+
       return {
         message,
         locations,

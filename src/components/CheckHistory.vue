@@ -1,7 +1,6 @@
 <template>
-  <v-container style="max-width: 480px">
-    <v-layout text-xs-center wrap>
-      <v-flex mb-5>
+    <v-layout row>
+      <v-flex xs12 sm6 offset-sm3>
         <v-card class="mx-auto" color="grey lighten-4" max-width="600">
           <v-card-title>
             <v-icon
@@ -30,43 +29,27 @@
               :smooth="16"
               :gradient="['#f72047', '#ffd200', '#1feaea']"
               :line-width="3"
-              :value="graphArray"
+              :value="graphArray || []"
               auto-draw
               stroke-linecap="round"
             ></v-sparkline>
           </v-sheet>
         </v-card>
-        <v-list subheader style="width:100%" v-if="routines.length">
-          <v-subheader>History</v-subheader>
-          <v-list-tile v-for="routine in routines" :key="routine.date">
-            <v-list-tile-content>
-              <v-list-tile-title v-html="routine.date"></v-list-tile-title>
-            </v-list-tile-content>
-
-            <v-list-tile-action>
-              <v-progress-circular
-                rotate="-90"
-                :value="countTotal(routine.tasklist)"
-                color="primary"
-              >{{countTotal(routine.tasklist)}}</v-progress-circular>
-            </v-list-tile-action>
-            <br />
-          </v-list-tile>
-        </v-list>
-        <div v-else text-xs-center style="margin-top:100px;">
-          <v-progress-circular :size="50" indeterminate color="primary"></v-progress-circular>
-        </div>
+        <user-history :routines="routines" />
       </v-flex>
     </v-layout>
-  </v-container>
 </template>
 
 <script>
 import gql from 'graphql-tag';
 
 import redirectOnError from '../utils/redirectOnError';
+import UserHistory from './UserHistory.vue';
 
 export default {
+  components: {
+    UserHistory,
+  },
   apollo: {
     routines: {
       query: gql`
@@ -91,7 +74,6 @@ export default {
   },
   data() {
     return {
-      lid: 'gRoutine',
       routines: [],
       graphArray: [],
     };

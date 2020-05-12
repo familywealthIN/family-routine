@@ -8,6 +8,7 @@ const serviceAccount = require('./serviceAccountKey.json');
 
 const {
   MONGDO_DB,
+  DOMAIN,
 } = process.env;
 
 admin.initializeApp({
@@ -21,6 +22,8 @@ function sendNotification(token, name, description) {
     notification: {
       title: name,
       body: description,
+      icon: '/img/512.png',
+      click_action: DOMAIN,
     },
   };
 

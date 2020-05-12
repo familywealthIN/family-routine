@@ -14,7 +14,9 @@ const UserSchema = new Mongoose.Schema({
     required: true,
     unique: true,
   },
+  picture: String,
   groupId: String,
+  inviterEmail: String,
   notificationId: String,
   social: {
     googleProvider: {
@@ -38,6 +40,8 @@ const UserItemType = new GraphQLObjectType({
     picture: { type: GraphQLString },
     groupId: { type: GraphQLString },
     notificationId: { type: GraphQLString },
+    inviterEmail: { type: GraphQLString },
+    invitedEmail: { type: GraphQLString },
     isNew: { type: GraphQLBoolean },
   },
 });

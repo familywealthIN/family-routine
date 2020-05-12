@@ -18,6 +18,7 @@ const RoutineType = new GraphQLObjectType({
   name: 'Routine',
   fields: {
     id: { type: GraphQLID },
+    email: { type: GraphQLString },
     date: { type: GraphQLString },
     tasklist: {
       type: new GraphQLList(RoutineItemType),

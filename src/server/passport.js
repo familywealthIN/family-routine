@@ -47,6 +47,8 @@ async function upsertGoogleUser({ accessToken, profile }, notificationId) {
       name: profile.displayName || `${profile.familyName} ${profile.givenName}`,
       email: profile.emails[0].value,
       notificationId,
+      // eslint-disable-next-line no-underscore-dangle
+      picture: profile._json.picture,
       groupId: '',
       'social.googleProvider': {
         id: profile.id,
@@ -59,10 +61,12 @@ async function upsertGoogleUser({ accessToken, profile }, notificationId) {
     return newUser;
   }
 
-  if (user.notificationId !== notificationId) {
+  // eslint-disable-next-line no-underscore-dangle
+  if (user.notificationId !== notificationId || user.picture !== profile._json.picture) {
     User.findOneAndUpdate(
       { _id: user.id },
-      { notificationId },
+      // eslint-disable-next-line no-underscore-dangle
+      { notificationId, picture: profile._json.picture },
       { new: true },
     ).exec();
   }
