@@ -8,6 +8,7 @@
         <img
           src="/img/google-button.png"
           class="google-button"
+          alt="Login with Google"
           @click="handleClickSignIn"
           v-if="!isSignIn"
           :disabled="!isInit"
