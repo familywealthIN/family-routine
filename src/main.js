@@ -38,6 +38,9 @@ const authMiddleware = new ApolloLink((operation, forward) => {
 const httpLink = createHttpLink({
   // You should use an absolute URL here
   uri: graphQLUrl,
+  fetchOptions: {
+    mode: 'no-cors',
+  },
 });
 
 // Cache implementation
