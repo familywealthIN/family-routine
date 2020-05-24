@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "start": "concurrently 'npm run serve' 'node ./server.js'",
-    "serve": "vue-cli-service serve",
+    "serve": "node ./node_modules/@vue/cli-service/bin/vue-cli-service serve",
     "serve:server": "node ./server.js",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "build": "node ./node_modules/@vue/cli-service/bin/vue-cli-service build",
+    "lint": "node ./node_modules/@vue/cli-service/bin/vue-cli-service lint"
   },
   "dependencies": {
     "apollo-boost": "^0.4.7",
