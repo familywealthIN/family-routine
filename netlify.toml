@@ -7,3 +7,8 @@
   for = "/*"
     [headers.values]
     Access-Control-Allow-Origin = "*"
+[[redirects]]
+  from = "/graphql"
+  to = "https://api.routine.familywealth.in/graphql"
+  status = 200
+  force = true
