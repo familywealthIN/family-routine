@@ -24,6 +24,14 @@
     </noscript>
     
     <div id="app"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js');
+          navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        });
+      }
+    </script>
     <script src="service-worker.js"></script>
     <!-- built files will be auto injected -->
   </body>

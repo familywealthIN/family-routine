@@ -80,12 +80,6 @@ new Vue({
 }).$mount('#app');
 
 if (!isDevelopment) {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js');
-      navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    });
-  }
   firebase.initializeApp(config);
 
   const messaging = firebase.messaging();
