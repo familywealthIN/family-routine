@@ -25,6 +25,25 @@ const query = {
       return GoalModel.find({ email }).exec();
     },
   },
+  dailyGoals: {
+    type: GraphQLList(GoalType),
+    args: {
+      date: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      return GoalModel.find({ date: args.date, email }).exec();
+    },
+  },
+  // stackedGoals: {
+  //   type: GraphQLList(GoalType),
+  //   resolve: (root, args, context) => {
+  //     const email = getEmailfromSession(context);
+
+  //     return GoalModel.find({ email }).exec();
+  //   },
+  // },
   goalsByGroupEmail: {
     type: GraphQLList(GoalType),
     args: {
@@ -38,7 +57,7 @@ const query = {
       await validateGroupUser(UserModel, args.email, args.groupId);
 
       return GoalModel
-        .find({ email: args.email, period: 'day' })
+        .find({ email: args.email })
         .sort({ date: -1 })
         .limit(7)
         .exec();
@@ -58,12 +77,24 @@ const query = {
   goalItem: {
     type: GoalItemType,
     args: {
-      id: { type: GraphQLNonNull(GraphQLString) },
+      id: { type: GraphQLNonNull(GraphQLID) },
+      date: { type: GraphQLNonNull(GraphQLString) },
+      period: { type: GraphQLNonNull(GraphQLString) },
     },
-    resolve: (root, args, context) => {
+    resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      return GoalModel.findOne({ id: args.id, email }).exec();
+      const goal = await GoalModel.findOne(
+        {
+          date: args.date,
+          period: args.period,
+          email,
+          'goalItems._id': args.id,
+        },
+        { 'goalItems.$': 1 },
+      ).exec();
+
+      return goal.goalItems[0];
     },
   },
   goalDatePeriod: {
@@ -78,19 +109,6 @@ const query = {
       return GoalModel.findOne({ date: args.date, period: args.period || 'day', email }).exec();
     },
   },
-  goalItemDatePeriod: {
-    type: GoalItemType,
-    args: {
-      id: { type: GraphQLNonNull(GraphQLID) },
-      date: { type: GraphQLNonNull(GraphQLString) },
-      period: { type: GraphQLNonNull(GraphQLString) },
-    },
-    resolve: async (root, args, context) => {
-      const email = getEmailfromSession(context);
-
-      return GoalModel.findOne({ date: args.date, email }).exec();
-    },
-  },
 };
 
 const mutation = {
@@ -99,23 +117,133 @@ const mutation = {
     args: {
       date: { type: GraphQLNonNull(GraphQLString) },
       period: { type: GraphQLNonNull(GraphQLString) },
+      body: { type: GraphQLString },
+      deadline: { type: GraphQLString },
+      contribution: { type: GraphQLString },
+      reward: { type: GraphQLString },
+      isComplete: { type: GraphQLBoolean },
+      isMilestone: { type: GraphQLBoolean },
+      taskRef: { type: GraphQLString },
+      goalRef: { type: GraphQLString },
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      return GoalModel.findOne({ date: args.date, period: args.period || 'period', email }).exec();
+      const {
+        date,
+        period,
+        body,
+        deadline,
+        contribution,
+        reward,
+        isComplete,
+        isMilestone,
+        taskRef,
+        goalRef,
+      } = args;
+
+      const goalToAdd = {
+        date,
+        email,
+        period,
+        goalItems: [
+          {
+            body,
+            deadline,
+            contribution,
+            reward,
+            isComplete,
+            isMilestone,
+            taskRef,
+            goalRef,
+          },
+        ],
+      };
+
+      const goalEntry = await GoalModel.findOne({ date: args.date, period: args.period || 'day', email }).exec();
+      console.log(goalEntry);
+      if (goalEntry && goalEntry.date) {
+        await GoalModel.findOneAndUpdate(
+          { email, date: args.date, period: args.period },
+          { $set: { goalItems: [...goalEntry.goalItems, goalToAdd.goalItems[0]] } },
+          { new: true },
+        ).exec();
+      } else {
+        const goal = new GoalModel(goalToAdd);
+        await goal.save();
+      }
+
+      const goal = await GoalModel.findOne(
+        {
+          date: args.date,
+          period: args.period,
+          email,
+        },
+      ).exec();
+
+      return goal.goalItems[goal.goalItems.length - 1];
     },
   },
   updateGoalItem: {
     type: GoalItemType,
     args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
       date: { type: GraphQLNonNull(GraphQLString) },
       period: { type: GraphQLNonNull(GraphQLString) },
+      body: { type: GraphQLString },
+      deadline: { type: GraphQLString },
+      contribution: { type: GraphQLString },
+      reward: { type: GraphQLString },
+      taskRef: { type: GraphQLString },
+      goalRef: { type: GraphQLString },
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      return GoalModel.findOne({ date: args.date, period: args.period || 'period', email }).exec();
+      const {
+        id,
+        date,
+        period,
+        body,
+        deadline,
+        contribution,
+        reward,
+        isMilestone,
+        taskRef,
+        goalRef,
+      } = args;
+
+      await GoalModel.findOneAndUpdate(
+        {
+          date,
+          period,
+          email,
+          'goalItems._id': id,
+        },
+        {
+          $set: {
+            'goalItems.$.body': body,
+            'goalItems.$.deadline': deadline,
+            'goalItems.$.contribution': contribution,
+            'goalItems.$.reward': reward,
+            'goalItems.$.isMilestone': isMilestone,
+            'goalItems.$.taskRef': taskRef,
+            'goalItems.$.goalRef': goalRef,
+          },
+        },
+        { new: true },
+      ).exec();
+    },
+  },
+  deleteGoal: {
+    type: GoalType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      return GoalModel.findOneAndRemove({ _id: args.id, email }).exec();
     },
   },
   deleteGoalItem: {
@@ -125,34 +253,42 @@ const mutation = {
       date: { type: GraphQLNonNull(GraphQLString) },
       period: { type: GraphQLNonNull(GraphQLString) },
     },
-    resolve: (root, args, context) => {
+    resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      return GoalModel.findOneAndRemove({ _id: args.id, email }).exec();
+      await GoalModel.findOneAndUpdate(
+        {
+          date: args.date,
+          period: args.period,
+          email,
+        },
+        { $pull: { goalItems: { _id: args.id } } },
+      ).exec();
+      return args;
     },
   },
-  tickGoalItem: {
+  completeGoalItem: {
     type: GoalItemType,
     args: {
       id: { type: GraphQLNonNull(GraphQLID) },
       date: { type: GraphQLNonNull(GraphQLString) },
       period: { type: GraphQLNonNull(GraphQLString) },
-      name: { type: GraphQLNonNull(GraphQLString) },
-      ticked: { type: GraphQLNonNull(GraphQLBoolean) },
+      isComplete: { type: GraphQLNonNull(GraphQLBoolean) },
     },
-    resolve: (root, args, context) => {
+    resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      return GoalModel.findOneAndUpdate(
+      await GoalModel.findOneAndUpdate(
         {
           date: args.date,
           period: args.period,
           email,
           'goalItems._id': args.id,
         },
-        { $set: { 'goalItems.$.ticked': args.ticked } },
+        { $set: { 'goalItems.$.isComplete': args.isComplete } },
         { new: true },
       ).exec();
+      return args;
     },
   },
 };

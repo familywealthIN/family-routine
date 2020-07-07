@@ -4,9 +4,9 @@ const {
 } = require('graphql');
 
 const routine = require('./routine');
+const goal = require('./goal');
 const routineItem = require('./routineItem');
 const userItem = require('./userItem');
-
 
 const schema = new GraphQLSchema({
   query: new GraphQLObjectType({
@@ -15,6 +15,7 @@ const schema = new GraphQLSchema({
       ...routine.query,
       ...routineItem.query,
       ...userItem.query,
+      ...goal.query,
     },
   }),
   mutation: new GraphQLObjectType({
@@ -23,6 +24,7 @@ const schema = new GraphQLSchema({
       ...routine.mutation,
       ...routineItem.mutation,
       ...userItem.mutation,
+      ...goal.mutation,
     },
   }),
 });

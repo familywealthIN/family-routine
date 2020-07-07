@@ -5,7 +5,7 @@
           <v-progress-circular indeterminate color="primary"></v-progress-circular>
         </div>
         <div v-else>
-          <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 mt-2 mb-3">
+          <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 mt-2 pb-2 pl-2 mb-3">
             <v-layout row>
               <v-flex xs7>
                 <v-card-title primary-title>
@@ -13,6 +13,12 @@
                     <div class="headline">Today's Efficiency</div>
                   </div>
                 </v-card-title>
+                <v-btn
+                  color="error"
+                  @click="goalDetailsDialog = true"
+                >
+                  Show Today's Goals
+                </v-btn>
               </v-flex>
               <v-flex xs5 class="mb-3">
                 <v-progress-circular
@@ -60,6 +66,23 @@
           </div>
         </div>
       </v-flex>
+      <v-dialog
+        v-model="goalDetailsDialog"
+        fullscreen
+        hide-overlay
+        transition="dialog-bottom-transition"
+      >
+        <v-card>
+          <v-toolbar dark color="primary">
+            <v-btn icon dark @click="goalDetailsDialog = false">
+              <v-icon>close</v-icon>
+            </v-btn>
+            <v-toolbar-title>Goals</v-toolbar-title>
+            <v-spacer></v-spacer>
+          </v-toolbar>
+          <goal-list :goals="goals" :date="date"/>
+        </v-card>
+      </v-dialog>
     </v-layout>
 </template>
 
@@ -71,7 +94,12 @@ import gql from 'graphql-tag';
 import redirectOnError from '../utils/redirectOnError';
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 
+import GoalList from './GoalList.vue';
+
 export default {
+  components: {
+    GoalList,
+  },
   apollo: {
     tasklist: {
       query: gql`
@@ -115,10 +143,40 @@ export default {
         this.loading = false;
       },
     },
+    goals: {
+      query: gql`
+        query dailyGoals($date: String!) {
+          dailyGoals(date: $date) {
+            id
+            date
+            period
+            goalItems {
+              id
+              body
+              isComplete
+            }
+          }
+        }
+      `,
+      update(data) {
+        return data.dailyGoals;
+      },
+      variables() {
+        return {
+          date: this.date,
+        };
+      },
+      error(error) {
+        redirectOnError(this.$router, error);
+        clearInterval(this.timerId);
+        this.loading = false;
+      },
+    },
   },
   data() {
     return {
       loading: true,
+      goalDetailsDialog: false,
       tasklist: [],
       did: '',
       timerId: '',
