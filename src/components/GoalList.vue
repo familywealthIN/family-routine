@@ -51,6 +51,8 @@ import gql from 'graphql-tag';
 
 import GoalItemList from './GoalItemList.vue';
 
+import redirectOnError from '../utils/redirectOnError';
+
 const STATIC_PERIOD = 'day';
 
 export default {
@@ -128,7 +130,14 @@ export default {
           this.newGoalItemBody = '';
         },
         error: (error) => {
-          console.log('show task adding error', error);
+          redirectOnError(this.$router, error);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         },
       });
     },

@@ -1,4 +1,3 @@
-
 <template>
   <div class="login-box">
     <div v-if="isLoading">

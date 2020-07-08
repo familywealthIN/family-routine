@@ -4,8 +4,11 @@ export default function getDates() {
   return moment().format('DD-MM-YYYY');
 }
 
-export function getDatesOfYear() {
-  const dateStart = moment();
+export function getDatesOfYear(beginDate) {
+  let dateStart = moment();
+  if (beginDate) {
+    dateStart = moment(beginDate, 'DD-MM-YYYY');
+  }
   const timeTillEndOfYear = moment().endOf('year');
   const remainingDaysOfYear = timeTillEndOfYear.diff(dateStart, 'days');
   const days = [];
@@ -59,4 +62,37 @@ export function getYearsOfLife() {
     });
   }
   return years;
+}
+
+export function stepupMilestonePeriodDate(period, date) {
+  if (period === 'day') {
+    const weekNo = moment(date, 'DD-MM-YYYY').weeks();
+    return {
+      period: 'week',
+      date: moment(date, 'DD-MM-YYYY').weeks(weekNo).weekday(5).format('DD-MM-YYYY'),
+    };
+  }
+  if (period === 'week') {
+    return {
+      period: 'month',
+      date: moment(date, 'DD-MM-YYYY').endOf('month').format('DD-MM-YYYY'),
+    };
+  }
+  if (period === 'month') {
+    return {
+      period: 'year',
+      date: moment(date, 'DD-MM-YYYY').endOf('year').format('DD-MM-YYYY'),
+    };
+  }
+  if (period === 'year') {
+    return {
+      period: 'lifetime',
+      date: '01-01-1970',
+    };
+  }
+  const weekNo = moment(date, 'DD-MM-YYYY').weeks();
+  return {
+    period: 'week',
+    date: moment(date, 'DD-MM-YYYY').weeks(weekNo).weekday(5).format('DD-MM-YYYY'),
+  };
 }

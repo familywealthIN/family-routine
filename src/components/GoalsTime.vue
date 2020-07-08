@@ -43,20 +43,25 @@
             >
               Goals
             </v-subheader>
-            <v-list-group
-              v-for="goal in goals"
-              :key="goal.id"
-              no-action
-            >
-              <template v-slot:activator>
-                <v-list-tile>
-                  <v-list-tile-content>
-                    <v-list-tile-title>{{ goal.period }} {{ goal.date }}</v-list-tile-title>
-                  </v-list-tile-content>
-                </v-list-tile>
-              </template>
-              <goal-item-list @update-new-goal-item="updateNewGoalItem" :goal="goal"/>
-            </v-list-group>
+            <div v-if="goals && goals.length">
+              <v-list-group
+                v-for="goal in goals"
+                :key="goal.id"
+                no-action
+              >
+                <template v-slot:activator>
+                  <v-list-tile>
+                    <v-list-tile-content>
+                      <v-list-tile-title>{{ goal.period }} {{ goal.date }}</v-list-tile-title>
+                    </v-list-tile-content>
+                  </v-list-tile>
+                </template>
+                <goal-item-list @update-new-goal-item="updateNewGoalItem" :goal="goal" :editMode="true" />
+              </v-list-group>
+            </div>
+            <div class="text-xs-center" v-else>
+              You Don't have any Goals in life. Poor Fellow.
+            </div>
           </v-list>
         </v-card-text>
       </v-card>
@@ -72,12 +77,12 @@
           <v-btn icon dark @click="closeGoalItemDialog()">
             <v-icon>close</v-icon>
           </v-btn>
-          <v-toolbar-title>{{ settingsName || 'Settings'}}</v-toolbar-title>
+          <v-toolbar-title>{{ goalActionText || 'Add Goal'}}</v-toolbar-title>
           <v-spacer></v-spacer>
         </v-toolbar>
         <v-card>
           <v-card-text>
-            <goal-creation :newGoalItem="newGoalItem" />
+            <goal-creation :newGoalItem="newGoalItem" v-on:add-update-goal-entry="addUpdateGoalEntry" />
           </v-card-text>
         </v-card>
       </v-card>
@@ -90,6 +95,7 @@ import gql from 'graphql-tag';
 import moment from 'moment';
 
 import redirectOnError from '../utils/redirectOnError';
+import { defaultGoalItem } from '../constants/goals';
 
 import GoalItemList from './GoalItemList.vue';
 import GoalCreation from './GoalCreation.vue';
@@ -130,18 +136,9 @@ export default {
     valid: true,
     addGoalItemDialog: false,
     buttonLoading: false,
-    settingsName: '',
+    goalActionText: 'Add Goal',
     groupId: '',
-    defaultGoalItem: {
-      body: '',
-      deadline: '',
-      contribution: '',
-      reward: '',
-      isComplete: false,
-      isMilestone: false,
-      taskRef: '',
-      goalRef: '',
-    },
+    defaultGoalItem,
     newGoalItem: {
       body: '',
       deadline: '',
@@ -156,18 +153,51 @@ export default {
   methods: {
   },
   methods: {
+    getGoal(period, date) {
+      const goal = this.goals.find((aGoal) => aGoal.period === period && aGoal.date === date);
+      if (!goal) {
+        const newGoal = {
+          id: `${Math.random()}`,
+          period,
+          date,
+          goalItems: [],
+        };
+        this.goals.push(newGoal);
+        return newGoal;
+      }
+
+      return goal;
+    },
     updateNewGoalItem(goalItem, period, date) {
-      console.log('updateNewGoalItem');
       this.newGoalItem = {
         ...goalItem,
         period,
         date,
-      }
+      };
+      this.goalActionText = 'Edit Goal';
       this.addGoalItemDialog = true;
     },
     closeGoalItemDialog() {
       this.newGoalItem = {...this.defaultGoalItem};
       this.addGoalItemDialog = false;
+      this.goalActionText = 'Add Goal';
+    },
+    addUpdateGoalEntry(newGoalItem) {
+      const goal = this.getGoal(newGoalItem.period, newGoalItem.date);
+      let goalItem = goal
+        .goalItems
+        .find((aGoalItem) => aGoalItem.id === newGoalItem.id);
+      if(goalItem && goalItem.id) {
+        const goalItemIndex = goal.goalItems.indexOf(goalItem);
+        Object.assign(goal.goalItems[goalItemIndex], newGoalItem);
+      } else {
+        goal.goalItems.push({
+          ...newGoalItem,
+        });
+      }
+
+      this.addGoalItemDialog = false;
+      this.newGoalItem = { ...this.defaultGoalItem };
     }
   },
 };

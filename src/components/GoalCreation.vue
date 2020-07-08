@@ -11,6 +11,7 @@
           name="newGoalItemBody"
           label="Type your task"
           class="inputGoal"
+          :rules="formRules.body"
           @keyup.enter="addGoalItem"
           required
         >
@@ -19,20 +20,26 @@
       <v-flex xs4 d-flex>
         <v-select
           :items="periodOptionList"
+          :disabled="newItemLoaded"
           v-model="newGoalItem.period"
           item-text="label"
           item-value="value"
+          :rules="formRules.dropDown"
           label="Period"
+          @change="updatePeriod()"
           required
         ></v-select>
       </v-flex>
       <v-flex v-if="dateOptionList.length" xs8 d-flex>
         <v-select
           :items="dateOptionList"
+          :disabled="newItemLoaded"
           v-model="newGoalItem.date"
           item-text="label"
           item-value="value"
+          :rules="formRules.dropDown"
           label="Date"
+          @change="triggerGoalItemsRef()"
           required
         ></v-select>
       </v-flex>
@@ -47,11 +54,10 @@
           label="Routine Task"
         ></v-select>
       </v-flex>
-      <v-flex v-if="newGoalItem.period && newGoalItem.date" xs6 d-flex>
+      <v-flex v-if="showMilestoneOption" xs6 d-flex>
         <v-checkbox
           v-model="newGoalItem.isMilestone"
           label="Milestone?"
-          @change="triggerUserItems()"
         ></v-checkbox>
       </v-flex>
       <v-flex v-if="newGoalItem.isMilestone" xs6 d-flex>
@@ -88,7 +94,14 @@
       {{ JSON.stringify(newGoalItem, null, 2) }}
       <v-flex xs12>
         <div style="float: right;">
-          <v-btn color="primary" @click="saveGoalItem">Save</v-btn>
+          <v-btn
+            color="primary"
+            :disabled="!valid || buttonLoading"
+            :loading="buttonLoading"
+            @click="saveGoalItem"
+          >
+            Save
+          </v-btn>
         </div>
       </v-flex>
     </v-layout>
@@ -99,11 +112,14 @@
 import gql from 'graphql-tag';
 import moment from 'moment';
 
+import redirectOnError from '../utils/redirectOnError';
+
 import {
   getDatesOfYear,
   getWeeksOfYear,
   getMonthsOfYear,
   getYearsOfLife,
+  stepupMilestonePeriodDate,
 } from '../utils/getDates';
 
 export default {
@@ -167,8 +183,7 @@ export default {
       },
       variables() {
         return {
-          period: this.newGoalItem.period,
-          date: this.newGoalItem.date,
+          ...stepupMilestonePeriodDate(this.newGoalItem.period, this.newGoalItem.date),
         };
       },
       error() {
@@ -180,6 +195,15 @@ export default {
     return {
       skipQuery: true,
       valid: false,
+      buttonLoading: false,
+      newItemLoaded: false,
+      formRules: {
+        body: [
+          (v) => !!v || 'Task Name is required',
+          (v) => (v && v.length >= 3) || 'Name must be greater than 3 characters',
+        ],
+        dropDown: [(v) => !!v || 'This Option is required'],
+      },
       periodOptionList: [
         {
           label: 'Day',
@@ -208,6 +232,9 @@ export default {
     dateOptionList() {
       switch (this.newGoalItem.period) {
         case 'day':
+          if (this.newItemLoaded) {
+            return getDatesOfYear(this.newGoalItem.date);
+          }
           return getDatesOfYear();
         case 'week':
           return getWeeksOfYear();
@@ -219,23 +246,214 @@ export default {
           return [];
       }
     },
+    showMilestoneOption() {
+      return this.newGoalItem.period
+        && this.newGoalItem.date
+        && this.newGoalItem.date !== '01-01-1970'
+        && this.goalItemsRef
+        && this.goalItemsRef.length;
+    },
   },
   methods: {
-    triggerUserItems() {
+    triggerGoalItemsRef() {
       this.$apollo.queries.goalItemsRef.skip = false;
       this.$apollo.queries.goalItemsRef.refetch();
     },
+    updatePeriod() {
+      this.newGoalItem.isMilestone = false;
+      if (this.newGoalItem.period === 'lifetime') {
+        this.newGoalItem.date = '01-01-1970';
+      } else {
+        this.newGoalItem.date = '';
+      }
+    },
     saveGoalItem() {
       this.$refs.form.validate();
-      console.log(this.valid);
       if (this.valid) {
         this.buttonLoading = true;
-        if (this.editedIndex > -1) {
+        if (this.newGoalItem.id) {
           this.updateGoalItem();
         } else {
           this.addGoalItem();
         }
       }
+    },
+
+    addGoalItem() {
+      const {
+        body = '',
+        period,
+        date,
+        deadline = '',
+        contribution = '',
+        reward = '',
+        isComplete = false,
+        isMilestone = false,
+        taskRef = '',
+        goalRef = '',
+      } = this.newGoalItem;
+
+      if (!body) {
+        return;
+      }
+
+      this.$apollo.mutate({
+        mutation: gql`
+          mutation addGoalItem(
+            $body: String!
+            $period: String!
+            $date: String!
+            $isComplete: Boolean!
+            $isMilestone: Boolean!
+            $deadline: String!,
+            $contribution: String!,
+            $reward: String!,
+            $taskRef: String!,
+            $goalRef: String!,
+          ) {
+            addGoalItem(
+              body: $body
+              period: $period
+              date: $date
+              isComplete: $isComplete
+              isMilestone: $isMilestone
+              deadline: $deadline,
+              contribution: $contribution,
+              reward: $reward,
+              taskRef: $taskRef,
+              goalRef: $goalRef,
+            ) {
+              id
+              body
+              isComplete
+              isMilestone
+            }
+          }
+        `,
+        variables: {
+          body,
+          period,
+          date,
+          deadline,
+          contribution,
+          reward,
+          isComplete,
+          isMilestone,
+          taskRef,
+          goalRef,
+        },
+        update: (scope, { data: { addGoalItem } }) => {
+          const goalItem = {
+            ...this.newGoalItem,
+            id: addGoalItem.id,
+          };
+          this.$emit('add-update-goal-entry', goalItem);
+          this.resetForm();
+        },
+        error: (error) => {
+          this.resetForm();
+          redirectOnError(this.$router, error);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+        },
+      });
+    },
+    updateGoalItem() {
+      const {
+        id,
+        body = '',
+        period,
+        date,
+        deadline = '',
+        contribution = '',
+        reward = '',
+        isMilestone = false,
+        taskRef = '',
+        goalRef = '',
+      } = this.newGoalItem;
+
+      if (!body) {
+        return;
+      }
+
+      this.$apollo.mutate({
+        mutation: gql`
+          mutation updateGoalItem(
+            $id: ID!
+            $body: String!
+            $period: String!
+            $date: String!
+            $isMilestone: Boolean!
+            $deadline: String!
+            $contribution: String!
+            $reward: String!
+            $taskRef: String!
+            $goalRef: String!
+          ) {
+            updateGoalItem(
+              id: $id,
+              body: $body
+              period: $period
+              date: $date
+              isMilestone: $isMilestone
+              deadline: $deadline,
+              contribution: $contribution
+              reward: $reward
+              taskRef: $taskRef
+              goalRef: $goalRef
+            ) {
+              id
+              body
+              isComplete
+              isMilestone
+            }
+          }
+        `,
+        variables: {
+          id,
+          body,
+          period,
+          date,
+          deadline,
+          contribution,
+          reward,
+          isMilestone,
+          taskRef,
+          goalRef,
+        },
+        update: (scope, { data: { updateGoalItem } }) => {
+          const goalItem = {
+            ...this.newGoalItem,
+            id: updateGoalItem.id,
+          };
+          this.$emit('add-update-goal-entry', goalItem);
+          this.resetForm();
+        },
+        error: (error) => {
+          this.resetForm();
+          redirectOnError(this.$router, error);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+        },
+      });
+    },
+    resetForm() {
+      this.buttonLoading = false;
+    },
+  },
+  watch: {
+    newGoalItem(newVal, oldVal) {
+      this.newItemLoaded = !!newVal.id && (oldVal.date === '' || typeof oldVal.date === 'undefined');
     },
   },
 };

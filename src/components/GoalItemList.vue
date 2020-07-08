@@ -12,9 +12,13 @@
         <v-list-tile-title :class="{ completed: goalItem.isComplete}">
           {{goalItem.body}}
         </v-list-tile-title>
-        <v-list-tile-sub-title>Some reference text</v-list-tile-sub-title>
+        <v-list-tile-sub-title
+          v-if="goalItem.isMilestone"
+        >
+          The goal is a milestone
+        </v-list-tile-sub-title>
         </v-list-tile-content>
-        <v-list-tile-action>
+        <v-list-tile-action v-if="editMode">
           <v-btn
             flat
             icon
@@ -38,6 +42,8 @@
 </template>
 <script>
 import gql from 'graphql-tag';
+
+import redirectOnError from '../utils/redirectOnError';
 
 export default {
   props: ['goal', 'editMode', 'newGoalItem'],
@@ -75,7 +81,14 @@ export default {
           date,
         },
         error: (error) => {
-          console.log('show task adding error', error);
+          redirectOnError(this.$router, error);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         },
       });
     },
@@ -105,12 +118,18 @@ export default {
           isComplete: Boolean(isComplete),
         },
         error: (error) => {
-          console.log('show task adding error', error);
+          redirectOnError(this.$router, error);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         },
       });
     },
     editGoalItem(goalItem, period, date) {
-      console.log('editGoalItem');
       this.$emit('update-new-goal-item', goalItem, period, date);
     },
   },

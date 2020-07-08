@@ -19,10 +19,12 @@ const validateGroupUser = require('../utils/validateGroupUser');
 const query = {
   goals: {
     type: GraphQLList(GoalType),
-    resolve: (root, args, context) => {
+    resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      return GoalModel.find({ email }).exec();
+      const goals = await GoalModel.find({ email }).exec();
+
+      return goals.filter((goal) => goal.goalItems.length);
     },
   },
   dailyGoals: {
@@ -194,6 +196,7 @@ const mutation = {
       deadline: { type: GraphQLString },
       contribution: { type: GraphQLString },
       reward: { type: GraphQLString },
+      isMilestone: { type: GraphQLBoolean },
       taskRef: { type: GraphQLString },
       goalRef: { type: GraphQLString },
     },
@@ -233,6 +236,16 @@ const mutation = {
         },
         { new: true },
       ).exec();
+
+      const goal = await GoalModel.findOne(
+        {
+          date: args.date,
+          period: args.period,
+          email,
+        },
+      ).exec();
+
+      return goal.goalItems.find((aGoalItem) => aGoalItem.id === id);
     },
   },
   deleteGoal: {

@@ -221,6 +221,13 @@ export default {
           redirectOnError(this.$router, error);
           clearInterval(this.timerId);
           this.loading = false;
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         },
       });
     },
@@ -278,6 +285,13 @@ export default {
             task.ticked = false;
             redirectOnError(this.$router, error);
             clearInterval(this.timerId);
+            this.$notify({
+              title: 'Error',
+              text: 'An unexpected error occured',
+              group: 'notify',
+              type: 'error',
+              duration: 3000,
+            });
           },
         });
       }
@@ -313,6 +327,13 @@ export default {
               redirectOnError(this.$router, error);
               clearInterval(this.timerId);
               item.passed = false;
+              this.$notify({
+                title: 'Error',
+                text: 'An unexpected error occured',
+                group: 'notify',
+                type: 'error',
+                duration: 3000,
+              });
             },
           });
         }
@@ -349,6 +370,13 @@ export default {
               redirectOnError(this.$router, error);
               clearInterval(this.timerId);
               item.wait = false;
+              this.$notify({
+                title: 'Error',
+                text: 'An unexpected error occured',
+                group: 'notify',
+                type: 'error',
+                duration: 3000,
+              });
             },
           });
         }

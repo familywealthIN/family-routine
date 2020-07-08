@@ -256,6 +256,13 @@ export default {
         },
         error: (error) => {
           redirectOnError(this.$router, error);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         },
       });
     },
@@ -326,6 +333,13 @@ export default {
           this.buttonLoading = false;
           this.close(false);
           redirectOnError(this.$router, error);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         },
       });
     },
@@ -343,7 +357,7 @@ export default {
         && Number(routineItems[editedIndex].points) > 0
         ? Number(routineItems[editedIndex].points)
         : 0;
-      return 100 - (this.getPointsTotal() - editPoints);
+      return +100 - +(this.getPointsTotal() - editPoints);
     },
 
     updateRoutineItem() {
@@ -390,6 +404,13 @@ export default {
           this.buttonLoading = false;
           this.close(false);
           redirectOnError(this.$router, error);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         },
       });
     },
