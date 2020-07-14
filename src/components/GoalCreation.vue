@@ -91,7 +91,6 @@
           </template>
         </v-textarea>
       </v-flex>
-      {{ JSON.stringify(newGoalItem, null, 2) }}
       <v-flex xs12>
         <div style="float: right;">
           <v-btn
@@ -247,6 +246,7 @@ export default {
       }
     },
     showMilestoneOption() {
+      console.log(this.newGoalItem.period, this.newGoalItem.date, this.goalItemsRef);
       return this.newGoalItem.period
         && this.newGoalItem.date
         && this.newGoalItem.date !== '01-01-1970'

@@ -111,6 +111,8 @@ export default {
             body
             isComplete
             isMilestone
+            contribution,
+            reward,
             taskRef
             goalRef
           }
