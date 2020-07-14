@@ -11,10 +11,12 @@ const {
   GoalModel,
   GoalType,
   GoalItemType,
+  GoalMilestoneType,
 } = require('../schema/GoalSchema');
 const { UserModel } = require('../schema/UserSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
+const getGoalMilestone = require('../utils/getGoalMilestone');
 
 const query = {
   goals: {
@@ -38,14 +40,18 @@ const query = {
       return GoalModel.find({ date: args.date, email }).exec();
     },
   },
-  // stackedGoals: {
-  //   type: GraphQLList(GoalType),
-  //   resolve: (root, args, context) => {
-  //     const email = getEmailfromSession(context);
+  goalMilestones: {
+    type: GoalMilestoneType,
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
 
-  //     return GoalModel.find({ email }).exec();
-  //   },
-  // },
+      const goals = await GoalModel.find({ email }).exec();
+      const jsonGoals = JSON.stringify(goals, null, 2);
+      console.log(getGoalMilestone(JSON.parse(jsonGoals)));
+
+      return getGoalMilestone(JSON.parse(jsonGoals));
+    },
+  },
   goalsByGroupEmail: {
     type: GraphQLList(GoalType),
     args: {

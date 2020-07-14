@@ -260,7 +260,6 @@ export default {
       this.$apollo.queries.goalItemsRef.refetch();
     },
     updatePeriod() {
-      this.newGoalItem.isMilestone = false;
       if (this.newGoalItem.period === 'lifetime') {
         this.newGoalItem.date = '01-01-1970';
       } else {
@@ -303,13 +302,13 @@ export default {
             $body: String!
             $period: String!
             $date: String!
-            $isComplete: Boolean!
-            $isMilestone: Boolean!
-            $deadline: String!,
-            $contribution: String!,
-            $reward: String!,
-            $taskRef: String!,
-            $goalRef: String!,
+            $isComplete: Boolean
+            $isMilestone: Boolean
+            $deadline: String,
+            $contribution: String,
+            $reward: String,
+            $taskRef: String,
+            $goalRef: String,
           ) {
             addGoalItem(
               body: $body
@@ -334,13 +333,13 @@ export default {
           body,
           period,
           date,
-          deadline,
-          contribution,
-          reward,
-          isComplete,
-          isMilestone,
-          taskRef,
-          goalRef,
+          deadline: deadline || '',
+          contribution: contribution || '',
+          reward: reward || '',
+          isComplete: isComplete || false,
+          isMilestone: isMilestone || false,
+          taskRef: taskRef || '',
+          goalRef: goalRef || '',
         },
         update: (scope, { data: { addGoalItem } }) => {
           const goalItem = {
@@ -419,12 +418,12 @@ export default {
           body,
           period,
           date,
-          deadline,
-          contribution,
-          reward,
-          isMilestone,
-          taskRef,
-          goalRef,
+          deadline: deadline || '',
+          contribution: contribution || '',
+          reward: reward || '',
+          isMilestone: isMilestone || false,
+          taskRef: taskRef || '',
+          goalRef: goalRef || '',
         },
         update: (scope, { data: { updateGoalItem } }) => {
           const goalItem = {
@@ -449,11 +448,15 @@ export default {
     },
     resetForm() {
       this.buttonLoading = false;
+      this.$refs.form.reset();
     },
   },
   watch: {
     newGoalItem(newVal, oldVal) {
       this.newItemLoaded = !!newVal.id && (oldVal.date === '' || typeof oldVal.date === 'undefined');
+      if (newVal.date !== oldVal.date && (oldVal.date === '' || typeof oldVal.date === 'undefined')) {
+        this.triggerGoalItemsRef();
+      }
     },
   },
 };

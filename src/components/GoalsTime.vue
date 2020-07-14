@@ -8,34 +8,6 @@
           class="mx-auto"
           max-width="600"
         >
-        <v-card
-          dark
-          flat
-        >
-          <v-btn
-            absolute
-            bottom
-            color="info"
-            right
-            fab
-            @click="addGoalItemDialog = true"
-          >
-            <v-icon>add</v-icon>
-          </v-btn>
-          <v-img
-            src="https://cdn.vuetifyjs.com/images/cards/forest.jpg"
-            gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
-          >
-            <v-container fill-height>
-              <v-layout align-center>
-                <strong class="display-4 font-weight-regular mr-4">{{(goals && goals.length) || 0}}</strong>
-                <v-layout column justify-end>
-                  <div class="headline font-weight-light">Goals</div>
-                </v-layout>
-              </v-layout>
-            </v-container>
-          </v-img>
-        </v-card>
         <v-card-text class="py-0 px-0">
           <v-list subheader>
             <v-subheader
@@ -64,6 +36,28 @@
             </div>
           </v-list>
         </v-card-text>
+        <v-btn
+          absolute
+          dark
+          fab
+          top
+          class="second-right-btn"
+          color="info"
+          @click="$router.push('/goals/milestones')"
+        >
+          <v-icon>widgets</v-icon>
+        </v-btn>
+        <v-btn
+          absolute
+          dark
+          fab
+          top
+          right
+          color="info"
+          @click="addGoalItemDialog = true"
+        >
+          <v-icon>add</v-icon>
+        </v-btn>
       </v-card>
     </v-flex>
     <v-dialog
@@ -115,9 +109,6 @@ export default {
           goalItems {
             id
             body
-            deadline
-            contribution
-            reward
             isComplete
             isMilestone
             taskRef
@@ -204,6 +195,9 @@ export default {
 </script>
 
 <style>
+  .second-right-btn {
+   right: 84px;
+  }
   .custom-loader {
     animation: loader 1s infinite;
     display: flex;

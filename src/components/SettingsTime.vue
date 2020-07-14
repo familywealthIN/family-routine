@@ -346,7 +346,7 @@ export default {
 
     getPointsTotal() {
       return Array.isArray(this.routineItems)
-        ? this.routineItems.reduce((total, { points }) => total + points, 0)
+        ? this.routineItems.reduce((total, { points }) => +total + +points, 0)
         : 0;
     },
 

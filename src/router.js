@@ -60,6 +60,14 @@ export default new Router({
       component: () => import(/* webpackChunkName: "goals" */ './views/Goals.vue'),
     },
     {
+      path: '/goals/milestones',
+      name: 'milestones',
+      // route level code-splitting
+      // this generates a separate chunk (about.[hash].js) for this route
+      // which is lazy-loaded when the route is visited.
+      component: () => import(/* webpackChunkName: "milestones" */ './views/Milestones.vue'),
+    },
+    {
       path: '/',
       name: 'login',
       component: Login,

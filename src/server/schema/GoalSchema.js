@@ -26,34 +26,70 @@ const GoalSchema = new Mongoose.Schema({
   goalItems: [GoalItemSchema],
 });
 
+const GoalItemTypeFields = {
+  id: { type: GraphQLID },
+  email: { type: GraphQLString },
+  date: { type: GraphQLString },
+  period: { type: GraphQLString },
+  body: { type: GraphQLString },
+  deadline: { type: GraphQLString },
+  contribution: { type: GraphQLString },
+  reward: { type: GraphQLString },
+  isComplete: { type: GraphQLBoolean },
+  isMilestone: { type: GraphQLBoolean },
+  taskRef: { type: GraphQLString },
+  goalRef: { type: GraphQLString },
+};
+
 const GoalItemType = new GraphQLObjectType({
   name: 'GoalItem',
   fields: {
-    id: { type: GraphQLID },
-    email: { type: GraphQLString },
-    date: { type: GraphQLString },
-    period: { type: GraphQLString },
-    body: { type: GraphQLString },
-    deadline: { type: GraphQLString },
-    contribution: { type: GraphQLString },
-    reward: { type: GraphQLString },
-    isComplete: { type: GraphQLBoolean },
-    isMilestone: { type: GraphQLBoolean },
-    taskRef: { type: GraphQLString },
-    goalRef: { type: GraphQLString },
+    ...GoalItemTypeFields,
   },
 });
 
-// const StackedGoalItemType = new GraphQLObjectType({
-//   name: 'StackedGoalItem',
-//   fields: {
-//     date: { type: GraphQLString },
-//     period: { type: GraphQLString },
-//     goalItems: {
-//       type: new GraphQLList(GoalType),
-//     },
-//   },
-// });
+const GoalItemWeekType = new GraphQLObjectType({
+  name: 'GoalItemWeek',
+  fields: {
+    ...GoalItemTypeFields,
+    milestones: { type: new GraphQLList(GoalItemType) },
+  },
+});
+
+const GoalItemMonthType = new GraphQLObjectType({
+  name: 'GoalItemMonth',
+  fields: {
+    ...GoalItemTypeFields,
+    milestones: { type: new GraphQLList(GoalItemWeekType) },
+  },
+});
+
+const GoalItemYearType = new GraphQLObjectType({
+  name: 'GoalItemYear',
+  fields: {
+    ...GoalItemTypeFields,
+    milestones: { type: new GraphQLList(GoalItemMonthType) },
+  },
+});
+
+const GoalItemLifetimeType = new GraphQLObjectType({
+  name: 'GoalItemLifetime',
+  fields: {
+    ...GoalItemTypeFields,
+    milestones: { type: new GraphQLList(GoalItemYearType) },
+  },
+});
+
+const GoalMilestoneType = new GraphQLObjectType({
+  name: 'GoalMilestone',
+  fields: {
+    day: { type: new GraphQLList(GoalItemType) },
+    week: { type: new GraphQLList(GoalItemWeekType) },
+    month: { type: new GraphQLList(GoalItemMonthType) },
+    year: { type: new GraphQLList(GoalItemYearType) },
+    lifetime: { type: new GraphQLList(GoalItemLifetimeType) },
+  },
+});
 
 const GoalType = new GraphQLObjectType({
   name: 'Goal',
@@ -79,4 +115,5 @@ module.exports = {
   GoalItemModel,
   GoalType,
   GoalItemType,
+  GoalMilestoneType,
 };
