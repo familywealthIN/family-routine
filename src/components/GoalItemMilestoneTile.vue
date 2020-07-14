@@ -5,12 +5,14 @@
     </span>
     <span>
     <h4 style="display:inline" :class="{ completed: goalItem.isComplete}">
-      {{goalItem.body}}
+      {{getPeriodDate(goalItem.period, goalItem.date)}}{{goalItem.body}}
     </h4>
     </span>
   </span>
 </template>
 <script>
+import moment from 'moment';
+
 export default {
   props: ['goalItem'],
   data() {
@@ -24,6 +26,24 @@ export default {
         return 'check';
       }
       return 'close';
+    },
+    getPeriodDate(period, date) {
+      const SEPERATOR = ' - ';
+      switch (period) {
+        case 'day':
+          return moment(date, 'DD-MM-YYYY').format('DD') + SEPERATOR;
+        case 'week':
+          return `Week ${moment(date, 'DD-MM-YYYY').week()}${SEPERATOR}`;
+        case 'month':
+          return moment(date, 'DD-MM-YYYY').format('MMMM') + SEPERATOR;
+        case 'year':
+          return moment(date, 'DD-MM-YYYY').format('YYYY') + SEPERATOR;
+        case 'lifetime':
+          return '';
+
+        default:
+          return date;
+      }
     },
   },
 };
