@@ -21,7 +21,6 @@ import {
 
 Vue.config.productionTip = false;
 
-
 const authMiddleware = new ApolloLink((operation, forward) => {
   // add the authorization to the headers
   const token = localStorage.getItem(GC_AUTH_TOKEN);
@@ -62,7 +61,6 @@ const apolloClient = new ApolloClient({
 const apolloProvider = new VueApollo({
   defaultClient: apolloClient,
 });
-
 
 const name = localStorage.getItem(GC_USER_NAME);
 const email = localStorage.getItem(GC_USER_EMAIL);
