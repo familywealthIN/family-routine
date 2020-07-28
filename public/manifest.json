@@ -13,10 +13,10 @@
         "sizes": "512x512"
       }
     ],
-    "start_url": "/#/",
+    "start_url": "/home",
     "background_color": "#FFFFFF",
     "display": "standalone",
-    "scope": "/#/",
+    "scope": "/",
     "theme_color": "#1976D3",
     "gcm_sender_id": "350952942983"
   }
