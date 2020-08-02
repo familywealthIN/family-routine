@@ -11,7 +11,7 @@
   </span>
 </template>
 <script>
-import moment from 'moment';
+import { getPeriodDate } from '../utils/getDates';
 
 export default {
   props: ['goalItem'],
@@ -27,24 +27,7 @@ export default {
       }
       return 'close';
     },
-    getPeriodDate(period, date) {
-      const SEPERATOR = ' - ';
-      switch (period) {
-        case 'day':
-          return moment(date, 'DD-MM-YYYY').format('DD') + SEPERATOR;
-        case 'week':
-          return `Week ${moment(date, 'DD-MM-YYYY').week()}${SEPERATOR}`;
-        case 'month':
-          return moment(date, 'DD-MM-YYYY').format('MMMM') + SEPERATOR;
-        case 'year':
-          return moment(date, 'DD-MM-YYYY').format('YYYY') + SEPERATOR;
-        case 'lifetime':
-          return '';
-
-        default:
-          return date;
-      }
-    },
+    getPeriodDate: (period, date) => getPeriodDate(period, date),
   },
 };
 </script>

@@ -9,38 +9,15 @@
           max-width="600"
         >
         <v-card-text class="py-0 px-0">
-          <v-list subheader>
-            <v-subheader
-              class="subheading"
-            >
-              Goals
-            </v-subheader>
-            <div v-if="goals && goals.length">
-              <v-list-group
-                v-for="goal in goals"
-                :key="goal.id"
-                no-action
-              >
-                <template v-slot:activator>
-                  <v-list-tile>
-                    <v-list-tile-content>
-                      <v-list-tile-title>{{ goal.period }} {{ goal.date }}</v-list-tile-title>
-                    </v-list-tile-content>
-                  </v-list-tile>
-                </template>
-                <goal-item-list @update-new-goal-item="updateNewGoalItem" :goal="goal" :editMode="true" />
-              </v-list-group>
-            </div>
-            <div class="text-xs-center" v-else>
-              You Don't have any Goals in life. Poor Fellow.
-            </div>
-          </v-list>
+          <template v-for="period in periods">
+            <goals-filter-time v-bind:key="period.name" :goals="goals" :periodFilter="period.name" :updateNewGoalItem="updateNewGoalItem" />
+          </template>
         </v-card-text>
         <v-btn
-          absolute
+          fixed
           dark
           fab
-          top
+          bottom
           class="second-right-btn"
           color="info"
           @click="$router.push('/goals/milestones')"
@@ -48,10 +25,10 @@
           <v-icon>widgets</v-icon>
         </v-btn>
         <v-btn
-          absolute
+          fixed
           dark
           fab
-          top
+          bottom
           right
           color="info"
           @click="addGoalItemDialog = true"
@@ -89,15 +66,17 @@ import gql from 'graphql-tag';
 import moment from 'moment';
 
 import redirectOnError from '../utils/redirectOnError';
-import { defaultGoalItem } from '../constants/goals';
+import { defaultGoalItem, periodsArray } from '../constants/goals';
 
 import GoalItemList from './GoalItemList.vue';
+import GoalsFilterTime from './GoalsFilterTime.vue';
 import GoalCreation from './GoalCreation.vue';
 
 export default {
   components: {
     GoalItemList,
     GoalCreation,
+    GoalsFilterTime,
   },
   apollo: {
     goals: gql`
@@ -142,6 +121,7 @@ export default {
       taskRef: '',
       goalRef: '',
     },
+    periods: periodsArray,
   }),
   methods: {
   },
@@ -199,6 +179,9 @@ export default {
 <style>
   .second-right-btn {
    right: 84px;
+  }
+  .theme--light.v-subheader {
+    border-bottom: 1px solid rgba(0,0,0,0.16);
   }
   .custom-loader {
     animation: loader 1s infinite;

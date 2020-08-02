@@ -10,3 +10,26 @@ export const defaultGoalItem = {
   taskRef: '',
   goalRef: '',
 };
+
+export const periodsArray = [
+  {
+    name: 'day',
+    active: false,
+  },
+  {
+    name: 'week',
+    active: false,
+  },
+  {
+    name: 'month',
+    active: false,
+  },
+  {
+    name: 'year',
+    active: false,
+  },
+  {
+    name: 'lifetime',
+    active: false,
+  },
+];

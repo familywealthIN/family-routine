@@ -51,7 +51,15 @@ export default {
 
   ul {
     list-style: none;
-    padding-left: 12px;
+    padding-left: 2px;
+  }
+
+  summary {
+    padding: 8px 0;
+    outline: none;
+  }
+  summary, details {
+    transition: 0.35s;
   }
 
   li * {

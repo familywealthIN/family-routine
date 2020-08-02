@@ -35,10 +35,10 @@
           </v-list>
         </v-card-text>
         <v-btn
-          absolute
+          fixed
           dark
           fab
-          top
+          bottom
           class="second-right-btn"
           color="info"
           @click="$router.push('/goals')"
@@ -55,7 +55,7 @@ import gql from 'graphql-tag';
 import moment from 'moment';
 
 import redirectOnError from '../utils/redirectOnError';
-import { defaultGoalItem } from '../constants/goals';
+import { defaultGoalItem, periodsArray } from '../constants/goals';
 
 import GoalItemMilestoneList from './GoalItemMilestoneList.vue';
 import GoalCreation from './GoalCreation.vue';
@@ -240,28 +240,7 @@ export default {
     buttonLoading: false,
     goalActionText: 'Add Goal',
     groupId: '',
-    periods: [
-      {
-        name: 'day',
-        active: false,
-      },
-      {
-        name: 'week',
-        active: false,
-      },
-      {
-        name: 'month',
-        active: false,
-      },
-      {
-        name: 'year',
-        active: false,
-      },
-      {
-        name: 'lifetime',
-        active: false,
-      },
-    ]
+    periods: periodsArray
   }),
   methods: {
   },

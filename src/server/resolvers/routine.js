@@ -57,7 +57,7 @@ const query = {
 
       return RoutineModel
         .find({ email: args.email })
-        .sort({ date: -1 })
+        .sort({ $natural: -1 })
         .limit(7)
         .exec();
     },

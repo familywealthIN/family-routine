@@ -47,7 +47,6 @@ const query = {
 
       const goals = await GoalModel.find({ email }).exec();
       const jsonGoals = JSON.stringify(goals, null, 2);
-      console.log(getGoalMilestone(JSON.parse(jsonGoals)));
 
       return getGoalMilestone(JSON.parse(jsonGoals));
     },
@@ -169,7 +168,7 @@ const mutation = {
       };
 
       const goalEntry = await GoalModel.findOne({ date: args.date, period: args.period || 'day', email }).exec();
-      console.log(goalEntry);
+
       if (goalEntry && goalEntry.date) {
         await GoalModel.findOneAndUpdate(
           { email, date: args.date, period: args.period },

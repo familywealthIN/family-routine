@@ -96,3 +96,21 @@ export function stepupMilestonePeriodDate(period, date) {
     date: moment(date, 'DD-MM-YYYY').weeks(weekNo).weekday(5).format('DD-MM-YYYY'),
   };
 }
+
+export function getPeriodDate(period, date, separator = ' - ') {
+  switch (period) {
+    case 'day':
+      return moment(date, 'DD-MM-YYYY').format('DD') + separator;
+    case 'week':
+      return `Week ${moment(date, 'DD-MM-YYYY').week()}${separator}`;
+    case 'month':
+      return moment(date, 'DD-MM-YYYY').format('MMMM') + separator;
+    case 'year':
+      return moment(date, 'DD-MM-YYYY').format('YYYY') + separator;
+    case 'lifetime':
+      return '';
+
+    default:
+      return date;
+  }
+}

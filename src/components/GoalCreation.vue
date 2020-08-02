@@ -246,7 +246,6 @@ export default {
       }
     },
     showMilestoneOption() {
-      console.log(this.newGoalItem.period, this.newGoalItem.date, this.goalItemsRef);
       return this.newGoalItem.period
         && this.newGoalItem.date
         && this.newGoalItem.date !== '01-01-1970'

@@ -24,6 +24,16 @@
         </v-btn>
       </div>
     </v-flex>
+    <v-flex xs12 d-flex>
+      <v-select
+        class="pl-3 pr-3"
+        :items="tasklist"
+        v-model="newGoalItem.taskRef"
+        item-text="name"
+        item-value="id"
+        label="Routine Task"
+      ></v-select>
+    </v-flex>
     <v-flex class="pl-3" v-if="showMilestoneOption" xs6 d-flex>
     <v-checkbox
       v-model="newGoalItem.isMilestone"
@@ -60,6 +70,9 @@
           </v-card>
         </v-flex>
       </template>
+      <v-flex xs12 class="pl-3 pr-3">
+        <v-btn block @click="$router.push('goals')" color="secondary" dark>More Options</v-btn>
+      </v-flex>
     </v-flex>
   </v-layout>
 </template>
@@ -77,7 +90,7 @@ export default {
   components: {
     GoalItemList,
   },
-  props: ['goals', 'date'],
+  props: ['goals', 'date', 'tasklist'],
   apollo: {
     goalItemsRef: {
       query: gql`
@@ -116,11 +129,13 @@ export default {
         body: '',
         isMilestone: false,
         goalRef: '',
+        taskRef: '',
       },
       defaultGoalItem: {
         body: '',
         isMilestone: false,
         goalRef: '',
+        taskRef: '',
       },
       goalItem: [],
       showMilestoneOption: true,
@@ -159,6 +174,7 @@ export default {
             $isComplete: Boolean!
             $isMilestone: Boolean!
             $goalRef: String
+            $taskRef: String
           ) {
             addGoalItem(
               body: $body
@@ -167,12 +183,14 @@ export default {
               isComplete: $isComplete
               isMilestone: $isMilestone
               goalRef: $goalRef,
+              taskRef: $taskRef,
             ) {
               id
               body
               isComplete
               isMilestone
               goalRef
+              taskRef
             }
           }
         `,
@@ -183,6 +201,7 @@ export default {
           isComplete: false,
           isMilestone: this.newGoalItem.isMilestone,
           goalRef: this.newGoalItem.goalRef,
+          taskRef: this.newGoalItem.taskRef,
         },
         update: (scope, { data: { addGoalItem } }) => {
           goal.goalItems.push({
@@ -191,6 +210,7 @@ export default {
             isMilestone: this.newGoalItem.isMilestone,
             isComplete: false,
             goalRef: this.newGoalItem.goalRef,
+            taskRef: this.newGoalItem.taskRef,
           });
           this.newGoalItem = { ...this.defaultGoalItem };
         },
