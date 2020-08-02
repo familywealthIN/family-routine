@@ -5,6 +5,7 @@ import Login from './views/Login.vue';
 Vue.use(Router);
 
 export default new Router({
+  mode: 'history',
   routes: [
     {
       path: '/home',
@@ -50,6 +51,22 @@ export default new Router({
       // this generates a separate chunk (about.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
       component: () => import(/* webpackChunkName: "family" */ './views/Family.vue'),
+    },
+    {
+      path: '/goals',
+      name: 'goals',
+      // route level code-splitting
+      // this generates a separate chunk (about.[hash].js) for this route
+      // which is lazy-loaded when the route is visited.
+      component: () => import(/* webpackChunkName: "goals" */ './views/Goals.vue'),
+    },
+    {
+      path: '/goals/milestones',
+      name: 'milestones',
+      // route level code-splitting
+      // this generates a separate chunk (about.[hash].js) for this route
+      // which is lazy-loaded when the route is visited.
+      component: () => import(/* webpackChunkName: "milestones" */ './views/Milestones.vue'),
     },
     {
       path: '/',

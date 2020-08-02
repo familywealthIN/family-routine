@@ -66,6 +66,7 @@ export default {
       drawer: null,
       items: [
         { title: 'Home', icon: 'home', route: '/home' },
+        { title: 'Goals', icon: 'assignment', route: '/goals' },
         { title: 'History', icon: 'history', route: '/history' },
         { title: 'Family', icon: 'supervisor_account', route: '/family' },
         { title: 'Settings', icon: 'settings', route: '/settings' },

@@ -5,7 +5,7 @@
           <v-progress-circular indeterminate color="primary"></v-progress-circular>
         </div>
         <div v-else>
-          <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 mt-2 mb-3">
+          <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 mt-2 pb-2 pl-2 mb-3">
             <v-layout row>
               <v-flex xs7>
                 <v-card-title primary-title>
@@ -13,6 +13,12 @@
                     <div class="headline">Today's Efficiency</div>
                   </div>
                 </v-card-title>
+                <v-btn
+                  color="error"
+                  @click="goalDetailsDialog = true"
+                >
+                  Show Today's Goals
+                </v-btn>
               </v-flex>
               <v-flex xs5 class="mb-3">
                 <v-progress-circular
@@ -31,7 +37,7 @@
             <template v-for="(task, index) in tasklist">
               <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
 
-              <v-list-tile :key="task.name" avatar>
+              <v-list-tile :key="task.id" avatar>
                 <v-list-tile-avatar>
                   <v-btn
                     fab
@@ -49,6 +55,19 @@
                   <v-list-tile-sub-title v-html="task.time"></v-list-tile-sub-title>
                 </v-list-tile-content>
               </v-list-tile>
+              <details :key="task.id" v-if="filterTaskGoals(task.id).length" class="inline-goals">
+                <summary>View Goals</summary>
+                <ul>
+                  <li :key="taskGoals.id" v-for="taskGoals in filterTaskGoals(task.id)">
+                    <b>{{taskGoals.period}}</b>
+                    <ul>
+                      <li :key="taskGoal.body" v-for="taskGoal in taskGoals.goalItems" :class="{ completed: taskGoal.isComplete}">
+                        {{taskGoal.body}}
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </details>
             </template>
           </v-list>
           <div v-if="tasklist && tasklist.length === 0">
@@ -60,6 +79,23 @@
           </div>
         </div>
       </v-flex>
+      <v-dialog
+        v-model="goalDetailsDialog"
+        fullscreen
+        hide-overlay
+        transition="dialog-bottom-transition"
+      >
+        <v-card>
+          <v-toolbar dark color="primary">
+            <v-btn icon dark @click="goalDetailsDialog = false">
+              <v-icon>close</v-icon>
+            </v-btn>
+            <v-toolbar-title>Goals</v-toolbar-title>
+            <v-spacer></v-spacer>
+          </v-toolbar>
+          <goal-list :goals="goals" :date="date" :tasklist="tasklist" />
+        </v-card>
+      </v-dialog>
     </v-layout>
 </template>
 
@@ -71,7 +107,12 @@ import gql from 'graphql-tag';
 import redirectOnError from '../utils/redirectOnError';
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 
+import GoalList from './GoalList.vue';
+
 export default {
+  components: {
+    GoalList,
+  },
   apollo: {
     tasklist: {
       query: gql`
@@ -115,10 +156,42 @@ export default {
         this.loading = false;
       },
     },
+    goals: {
+      query: gql`
+        query dailyGoals($date: String!) {
+          dailyGoals(date: $date) {
+            id
+            date
+            period
+            goalItems {
+              id
+              body
+              isComplete
+              taskRef
+              goalRef
+            }
+          }
+        }
+      `,
+      update(data) {
+        return data.dailyGoals;
+      },
+      variables() {
+        return {
+          date: this.date,
+        };
+      },
+      error(error) {
+        redirectOnError(this.$router, error);
+        clearInterval(this.timerId);
+        this.loading = false;
+      },
+    },
   },
   data() {
     return {
       loading: true,
+      goalDetailsDialog: false,
       tasklist: [],
       did: '',
       timerId: '',
@@ -163,6 +236,13 @@ export default {
           redirectOnError(this.$router, error);
           clearInterval(this.timerId);
           this.loading = false;
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         },
       });
     },
@@ -220,6 +300,13 @@ export default {
             task.ticked = false;
             redirectOnError(this.$router, error);
             clearInterval(this.timerId);
+            this.$notify({
+              title: 'Error',
+              text: 'An unexpected error occured',
+              group: 'notify',
+              type: 'error',
+              duration: 3000,
+            });
           },
         });
       }
@@ -255,6 +342,13 @@ export default {
               redirectOnError(this.$router, error);
               clearInterval(this.timerId);
               item.passed = false;
+              this.$notify({
+                title: 'Error',
+                text: 'An unexpected error occured',
+                group: 'notify',
+                type: 'error',
+                duration: 3000,
+              });
             },
           });
         }
@@ -291,6 +385,13 @@ export default {
               redirectOnError(this.$router, error);
               clearInterval(this.timerId);
               item.wait = false;
+              this.$notify({
+                title: 'Error',
+                text: 'An unexpected error occured',
+                group: 'notify',
+                type: 'error',
+                duration: 3000,
+              });
             },
           });
         }
@@ -314,10 +415,30 @@ export default {
       const count = this.countTotal(this.tasklist);
       if (count < 33) {
         return 'error';
-      } if (count < 70) {
+      }
+      if (count < 70) {
         return 'warning';
       }
       return 'success';
+    },
+    filterTaskGoals(id) {
+      const taskGoalList = [];
+      if (this.goals && this.goals.length) {
+        this.goals
+          .forEach((goal) => {
+            const taskGoalItems = goal.goalItems.filter((goalItem) => goalItem.taskRef === id);
+            if (taskGoalItems.length) {
+              const newGoal = {
+                id: goal.id,
+                period: goal.period,
+                date: goal.date,
+                goalItems: taskGoalItems,
+              };
+              taskGoalList.push(newGoal);
+            }
+          });
+      }
+      return taskGoalList;
     },
   },
   mounted() {
@@ -329,4 +450,15 @@ export default {
 </script>
 
 <style>
+  .inline-goals {
+    padding: 8px 16px;
+    background-color: antiquewhite;
+  }
+  .inline-goals summary {
+    outline: none;
+  }
+  .inline-goals ul {
+    list-style: none;
+    padding-left: 4px;
+  }
 </style>

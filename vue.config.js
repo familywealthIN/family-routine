@@ -5,4 +5,7 @@ module.exports = {
       headers: { 'Access-Control-Allow-Origin': '*' },
     },
   },
+  chainWebpack: (config) => {
+    config.plugins.delete('prefetch');
+  },
 };
