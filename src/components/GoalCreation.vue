@@ -246,6 +246,12 @@ export default {
       }
     },
     showMilestoneOption() {
+      // Important to trigger
+      console.log(this.newGoalItem.period,
+        this.newGoalItem.date,
+        this.newGoalItem.date !== '01-01-1970',
+        this.goalItemsRef
+        && this.goalItemsRef.length);
       return this.newGoalItem.period
         && this.newGoalItem.date
         && this.newGoalItem.date !== '01-01-1970'

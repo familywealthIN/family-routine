@@ -9,7 +9,6 @@ const {
 const { RoutineItemModel, RoutineItemType } = require('../schema/RoutineItemSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 
-
 const query = {
   routineItems: {
     type: GraphQLList(RoutineItemType),

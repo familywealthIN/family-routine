@@ -13,12 +13,23 @@
                     <div class="headline">Today's Efficiency</div>
                   </div>
                 </v-card-title>
-                <v-btn
+                <div class="d-flex">
+                  <v-btn
                   color="error"
                   @click="goalDetailsDialog = true"
                 >
                   Show Today's Goals
                 </v-btn>
+                  <v-btn
+                    fab
+                    dark
+                    small
+                    color="error"
+                    @click="mottoDialog = true"
+                  >
+                    <v-icon dark>favorite</v-icon>
+                  </v-btn>
+                </div>
               </v-flex>
               <v-flex xs5 class="mb-3">
                 <v-progress-circular
@@ -61,7 +72,11 @@
                   <li :key="taskGoals.id" v-for="taskGoals in filterTaskGoals(task.id)">
                     <b>{{taskGoals.period}}</b>
                     <ul>
-                      <li :key="taskGoal.body" v-for="taskGoal in taskGoals.goalItems" :class="{ completed: taskGoal.isComplete}">
+                      <li
+                        :key="taskGoal.body"
+                        v-for="taskGoal in taskGoals.goalItems"
+                        :class="{ completed: taskGoal.isComplete}"
+                      >
                         {{taskGoal.body}}
                       </li>
                     </ul>
@@ -96,6 +111,23 @@
           <goal-list :goals="goals" :date="date" :tasklist="tasklist" />
         </v-card>
       </v-dialog>
+       <v-dialog
+        v-model="mottoDialog"
+        fullscreen
+        hide-overlay
+        transition="dialog-bottom-transition"
+      >
+        <v-card>
+          <v-toolbar dark color="primary">
+            <v-btn icon dark @click="mottoDialog = false">
+              <v-icon>close</v-icon>
+            </v-btn>
+            <v-toolbar-title>Motto</v-toolbar-title>
+            <v-spacer></v-spacer>
+          </v-toolbar>
+          <motto-list />
+        </v-card>
+      </v-dialog>
     </v-layout>
 </template>
 
@@ -108,10 +140,12 @@ import redirectOnError from '../utils/redirectOnError';
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 
 import GoalList from './GoalList.vue';
+import MottoList from './MottoList.vue';
 
 export default {
   components: {
     GoalList,
+    MottoList,
   },
   apollo: {
     tasklist: {
@@ -192,6 +226,7 @@ export default {
     return {
       loading: true,
       goalDetailsDialog: false,
+      mottoDialog: false,
       tasklist: [],
       did: '',
       timerId: '',
@@ -322,9 +357,10 @@ export default {
               mutation passRoutineItem(
                 $id: ID!
                 $name: String!
+                $ticked: Boolean!
                 $passed: Boolean!
               ) {
-                passRoutineItem(id: $id, name: $name, passed: $passed) {
+                passRoutineItem(id: $id, name: $name, ticked: $ticked, passed: $passed) {
                   id
                   tasklist {
                     name
@@ -336,6 +372,7 @@ export default {
             variables: {
               id: this.did,
               name: item.name,
+              ticked: item.ticked,
               passed: item.passed,
             },
             error: (error) => {

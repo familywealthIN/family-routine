@@ -67,6 +67,7 @@ const mutation = {
               picture: data.profile._json.picture,
               token: user.generateJWT(),
               isNew: user.isNew || false,
+              motto: [],
             });
           }
         }
