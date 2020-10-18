@@ -14,21 +14,25 @@
                   </div>
                 </v-card-title>
                 <div class="d-flex">
-                  <v-btn
-                  color="error"
-                  @click="goalDetailsDialog = true"
-                >
-                  Show Today's Goals
-                </v-btn>
-                  <v-btn
-                    fab
-                    dark
-                    small
-                    color="error"
-                    @click="mottoDialog = true"
-                  >
-                    <v-icon dark>favorite</v-icon>
-                  </v-btn>
+                  <div>
+                    <v-btn
+                      color="error"
+                      @click="goalDetailsDialog = true"
+                    >
+                      Show Today's Goals
+                    </v-btn>
+                  </div>
+                  <div>
+                    <v-btn
+                      fab
+                      dark
+                      small
+                      color="error"
+                      @click="mottoDialog = true"
+                    >
+                      <v-icon dark>favorite</v-icon>
+                    </v-btn>
+                  </div>
                 </div>
               </v-flex>
               <v-flex xs5 class="mb-3">
@@ -44,7 +48,18 @@
             </v-layout>
           </v-card>
           <v-list subheader style="width:100%" v-if="tasklist && tasklist.length > 0">
-            <v-subheader>Today</v-subheader>
+              <v-subheader>
+                <div class="d-flex title-options">
+                    <div class="sub-header">Today</div>
+                    <div>
+                      <v-switch
+                        v-model="skipDay"
+                        label="Skip Day"
+                        @change="skipClick()"
+                      ></v-switch>
+                    </div>
+                </div>
+              </v-subheader>
             <template v-for="(task, index) in tasklist">
               <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
 
@@ -154,6 +169,7 @@ export default {
           routineDate(date: $date) {
             id
             date
+            skip
             tasklist {
               id
               name
@@ -177,6 +193,7 @@ export default {
         }
         this.did = data.routineDate.id;
         this.setPassedWait();
+        this.skipDay = !!(data.routineDate.skip);
         return data.routineDate.tasklist;
       },
       variables() {
@@ -230,6 +247,7 @@ export default {
       tasklist: [],
       did: '',
       timerId: '',
+      skipDay: false,
     };
   },
   computed: {
@@ -246,6 +264,7 @@ export default {
             addRoutine(date: $date) {
               id
               date
+              skip
               tasklist {
                 id
                 name
@@ -345,6 +364,37 @@ export default {
           },
         });
       }
+    },
+
+    skipClick() {
+      this.$apollo.mutate({
+        mutation: gql`
+            mutation skipRoutine(
+              $id: ID!
+              $skip: Boolean!
+            ) {
+              skipRoutine(id: $id, skip: $skip) {
+                id
+                skip
+              }
+            }
+          `,
+        variables: {
+          id: this.did,
+          skip: !!(this.skipDay),
+        },
+        error: (error) => {
+          redirectOnError(this.$router, error);
+          clearInterval(this.timerId);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+        },
+      });
     },
     passedTime(item) {
       if (!item.ticked) {
@@ -497,5 +547,15 @@ export default {
   .inline-goals ul {
     list-style: none;
     padding-left: 4px;
+  }
+
+  .title-options {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .title-options > .sub-header {
+    flex: 12 !important;
   }
 </style>

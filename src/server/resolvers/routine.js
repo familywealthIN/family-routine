@@ -40,7 +40,10 @@ const query = {
     resolve: (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      return RoutineModel.find({ email }).exec();
+      return RoutineModel.find({
+        email,
+        skip: { $ne: true },
+      }).exec();
     },
   },
   routinesByGroupEmail: {
@@ -164,6 +167,22 @@ const mutation = {
       return RoutineModel.findOneAndUpdate(
         { _id: args.id, email, 'tasklist.name': args.name },
         { $set: { 'tasklist.$.ticked': args.ticked } },
+        { new: true },
+      ).exec();
+    },
+  },
+  skipRoutine: {
+    type: RoutineType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+      skip: { type: GraphQLNonNull(GraphQLBoolean) },
+    },
+    resolve: (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      return RoutineModel.findOneAndUpdate(
+        { _id: args.id, email },
+        { skip: args.skip },
         { new: true },
       ).exec();
     },
