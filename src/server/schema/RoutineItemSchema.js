@@ -6,9 +6,9 @@ const {
   GraphQLObjectType,
 } = require('graphql');
 
-const Mongoose = require('../mongoose');
+const mongoose = require('mongoose');
 
-const RoutineItemSchema = new Mongoose.Schema({
+const RoutineItemSchema = new mongoose.Schema({
   name: String,
   description: String,
   email: String,
@@ -34,6 +34,6 @@ const RoutineItemType = new GraphQLObjectType({
   },
 });
 
-const RoutineItemModel = Mongoose.model('routineItem', RoutineItemSchema);
+const RoutineItemModel = mongoose.model('routineItem', RoutineItemSchema);
 
 module.exports = { RoutineItemSchema, RoutineItemModel, RoutineItemType };

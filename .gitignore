@@ -25,3 +25,4 @@ yarn-error.log*
 serviceAccountKey.json
 .env
 .serverless
+secrets.json

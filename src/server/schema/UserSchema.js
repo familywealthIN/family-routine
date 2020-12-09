@@ -5,11 +5,11 @@ const {
   GraphQLList,
 } = require('graphql');
 
-const Mongoose = require('../mongoose');
+const mongoose = require('mongoose');
 const { MottoItemSchema, MottoItemType } = require('./MottoSchema');
 const { generateAccessToken, upsertGoogleUser } = require('../passport');
 
-const UserSchema = new Mongoose.Schema({
+const UserSchema = new mongoose.Schema({
   name: String,
   email: {
     type: String,
@@ -52,6 +52,6 @@ const UserItemType = new GraphQLObjectType({
   },
 });
 
-const UserModel = Mongoose.model('User', UserSchema);
+const UserModel = mongoose.model('User', UserSchema);
 
 module.exports = { UserSchema, UserModel, UserItemType };

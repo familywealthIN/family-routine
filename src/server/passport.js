@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 const passport = require('passport');
 const { Strategy: GoogleTokenStrategy } = require('passport-google-token');
 
-
 // GOOGLE STRATEGY
 const GoogleTokenStrategyCallback = (accessToken, refreshToken, profile, done) => done(null, {
   accessToken,

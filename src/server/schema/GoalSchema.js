@@ -6,9 +6,9 @@ const {
   GraphQLObjectType,
 } = require('graphql');
 
-const Mongoose = require('../mongoose');
+const mongoose = require('mongoose');
 
-const GoalItemSchema = new Mongoose.Schema({
+const GoalItemSchema = new mongoose.Schema({
   body: String,
   isComplete: Boolean,
   isMilestone: Boolean,
@@ -19,7 +19,7 @@ const GoalItemSchema = new Mongoose.Schema({
   goalRef: String,
 });
 
-const GoalSchema = new Mongoose.Schema({
+const GoalSchema = new mongoose.Schema({
   date: String,
   email: String,
   period: String,
@@ -105,8 +105,8 @@ const GoalType = new GraphQLObjectType({
   },
 });
 
-const GoalItemModel = Mongoose.model('GoalItem', GoalItemSchema);
-const GoalModel = Mongoose.model('Goal', GoalSchema);
+const GoalItemModel = mongoose.model('GoalItem', GoalItemSchema);
+const GoalModel = mongoose.model('Goal', GoalSchema);
 
 module.exports = {
   GoalSchema,

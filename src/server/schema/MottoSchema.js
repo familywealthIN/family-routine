@@ -4,9 +4,9 @@ const {
   GraphQLObjectType,
 } = require('graphql');
 
-const Mongoose = require('../mongoose');
+const mongoose = require('mongoose');
 
-const MottoItemSchema = new Mongoose.Schema({
+const MottoItemSchema = new mongoose.Schema({
   mottoItem: String,
 });
 
@@ -18,7 +18,7 @@ const MottoItemType = new GraphQLObjectType({
   },
 });
 
-const MottoItemModel = Mongoose.model('MottoItem', MottoItemSchema);
+const MottoItemModel = mongoose.model('MottoItem', MottoItemSchema);
 module.exports = {
   MottoItemSchema,
   MottoItemModel,
