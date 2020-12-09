@@ -8,9 +8,28 @@
           class="mx-auto"
           max-width="600"
         >
+        <div class="text-xs-center pt-3 pb-3" >
+          <v-btn-toggle v-model="rangeType" >
+            <v-btn flat value="upcoming">
+              Upcoming
+            </v-btn>
+            <v-btn flat value="past">
+              Past
+            </v-btn>
+            <v-btn flat value="all">
+              All
+            </v-btn>
+          </v-btn-toggle>
+        </div>
         <v-card-text class="py-0 px-0">
           <template v-for="period in periods">
-            <goals-filter-time v-bind:key="period.name" :goals="goals" :periodFilter="period.name" :updateNewGoalItem="updateNewGoalItem" />
+            <goals-filter-time
+              v-bind:key="period.name"
+              :goals="goals"
+              :periodFilter="period.name"
+              :rangeType="rangeType"
+              :updateNewGoalItem="updateNewGoalItem"
+            />
           </template>
         </v-card-text>
         <v-btn
@@ -122,6 +141,7 @@ export default {
       goalRef: '',
     },
     periods: periodsArray,
+    rangeType: 'upcoming',
   }),
   methods: {
   },

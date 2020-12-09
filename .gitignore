@@ -24,3 +24,5 @@ yarn-error.log*
 .firebaserc
 serviceAccountKey.json
 .env
+.serverless
+secrets.json

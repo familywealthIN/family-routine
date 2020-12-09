@@ -40,7 +40,10 @@ const query = {
     resolve: (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      return RoutineModel.find({ email }).exec();
+      return RoutineModel.find({
+        email,
+        skip: { $ne: true },
+      }).exec();
     },
   },
   routinesByGroupEmail: {
@@ -129,22 +132,15 @@ const mutation = {
         return findTodayandSort(args, email);
       }
 
-      let tasklist = [];
-
-      return RoutineItemModel.find({ email }, (err, result) => {
-        if (err) {
-          console.log('Unable to get default Schedule.');
-          throw err;
-        }
-        tasklist = result;
-      }).then(() => {
-        const routine = new RoutineModel({
-          ...args,
-          email,
-          tasklist,
-        });
-        return routine.save();
+      const tasklist = await RoutineItemModel.find({ email });
+      const routine = new RoutineModel({
+        ...args,
+        email,
+        tasklist,
       });
+
+      await routine.save();
+      return findTodayandSort(args, email);
     },
   },
   deleteRoutine: {
@@ -175,15 +171,35 @@ const mutation = {
       ).exec();
     },
   },
+  skipRoutine: {
+    type: RoutineType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+      skip: { type: GraphQLNonNull(GraphQLBoolean) },
+    },
+    resolve: (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      return RoutineModel.findOneAndUpdate(
+        { _id: args.id, email },
+        { skip: args.skip },
+        { new: true },
+      ).exec();
+    },
+  },
   passRoutineItem: {
     type: RoutineType,
     args: {
       id: { type: GraphQLNonNull(GraphQLID) },
       name: { type: GraphQLNonNull(GraphQLString) },
+      ticked: { type: GraphQLNonNull(GraphQLBoolean) },
       passed: { type: GraphQLNonNull(GraphQLBoolean) },
     },
     resolve: (root, args, context) => {
       const email = getEmailfromSession(context);
+      if (args.ticked) {
+        return null;
+      }
 
       return RoutineModel.findOneAndUpdate(
         { _id: args.id, email, 'tasklist.name': args.name },

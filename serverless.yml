@@ -1,0 +1,25 @@
+service: familywealth-graphql-api
+
+custom:
+  secrets: ${file(secrets.json)}
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: dev
+  environment:
+    MONGDO_DB: ${self:custom.secrets.MONGDO_DB}
+    MONGDO_DEBUG: ${self:custom.secrets.MONGDO_DEBUG}
+    GOOGLE_CLIENT_ID: ${self:custom.secrets.GOOGLE_CLIENT_ID}
+    GOOGLE_CLIENT_KEY: ${self:custom.secrets.GOOGLE_CLIENT_KEY}
+    JWT_SECRET: ${self:custom.secrets.JWT_SECRET}
+    DOMAIN: ${self:custom.secrets.DOMAIN}
+
+functions:
+  query:
+    handler: serverless.handler
+    events:
+      - http:
+          path: graphql
+          method: post
+          cors: true

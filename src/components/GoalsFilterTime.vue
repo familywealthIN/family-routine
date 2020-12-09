@@ -12,7 +12,7 @@
       <template v-for="goal in goals">
         <v-list-group
           :key="goal.id"
-          v-if="goal.period === periodFilter"
+          v-if="goal.period === periodFilter && inRangeType(goal.date)"
           no-action
         >
           <template v-slot:activator>
@@ -27,7 +27,7 @@
       </template>
     </div>
     <div class="text-xs-center" v-else>
-      You Don't have any Goals in life.
+      You Don't have any Goals.
     </div>
   </v-list>
 </template>
@@ -42,7 +42,7 @@ export default {
   components: {
     GoalItemList,
   },
-  props: ['goals', 'periodFilter', 'updateNewGoalItem'],
+  props: ['goals', 'periodFilter', 'updateNewGoalItem', 'rangeType'],
   methods: {
     getPeriodDate: (period, date) => {
       const periodDate = getPeriodDate(period, date, '');
@@ -59,6 +59,18 @@ export default {
           return 'Know your life mission';
       }
     },
+    inRangeType(date)  {
+      const startDate = moment(date, "DD-MM-YYYY");
+      const todayDate = moment();
+
+      if(this.rangeType === 'upcoming') {
+        return moment(startDate).isAfter(todayDate);
+      } else if (this.rangeType === 'past') {
+        return moment(startDate).isBefore(todayDate);
+      }
+
+      return true;
+    }
   },
   filters: {
   capitalize: function (value) {

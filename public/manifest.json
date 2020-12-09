@@ -5,7 +5,8 @@
       {
         "src": "img/192.png",
         "type": "image/png",
-        "sizes": "192x192"
+        "sizes": "192x192",
+        "purpose": "any maskable"
       },
       {
         "src": "img/512.png",
@@ -13,7 +14,7 @@
         "sizes": "512x512"
       }
     ],
-    "start_url": "/home",
+    "start_url": "/",
     "background_color": "#FFFFFF",
     "display": "standalone",
     "scope": "/",

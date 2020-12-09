@@ -13,12 +13,27 @@
                     <div class="headline">Today's Efficiency</div>
                   </div>
                 </v-card-title>
-                <v-btn
-                  color="error"
-                  @click="goalDetailsDialog = true"
-                >
-                  Show Today's Goals
-                </v-btn>
+                <div class="d-flex">
+                  <div>
+                    <v-btn
+                      color="error"
+                      @click="goalDetailsDialog = true"
+                    >
+                      Show Today's Goals
+                    </v-btn>
+                  </div>
+                  <div>
+                    <v-btn
+                      fab
+                      dark
+                      small
+                      color="error"
+                      @click="mottoDialog = true"
+                    >
+                      <v-icon dark>favorite</v-icon>
+                    </v-btn>
+                  </div>
+                </div>
               </v-flex>
               <v-flex xs5 class="mb-3">
                 <v-progress-circular
@@ -33,7 +48,18 @@
             </v-layout>
           </v-card>
           <v-list subheader style="width:100%" v-if="tasklist && tasklist.length > 0">
-            <v-subheader>Today</v-subheader>
+              <v-subheader>
+                <div class="d-flex title-options">
+                    <div class="sub-header">Today</div>
+                    <div>
+                      <v-switch
+                        v-model="skipDay"
+                        label="Skip Day"
+                        @change="skipClick()"
+                      ></v-switch>
+                    </div>
+                </div>
+              </v-subheader>
             <template v-for="(task, index) in tasklist">
               <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
 
@@ -61,7 +87,11 @@
                   <li :key="taskGoals.id" v-for="taskGoals in filterTaskGoals(task.id)">
                     <b>{{taskGoals.period}}</b>
                     <ul>
-                      <li :key="taskGoal.body" v-for="taskGoal in taskGoals.goalItems" :class="{ completed: taskGoal.isComplete}">
+                      <li
+                        :key="taskGoal.body"
+                        v-for="taskGoal in taskGoals.goalItems"
+                        :class="{ completed: taskGoal.isComplete}"
+                      >
                         {{taskGoal.body}}
                       </li>
                     </ul>
@@ -96,6 +126,23 @@
           <goal-list :goals="goals" :date="date" :tasklist="tasklist" />
         </v-card>
       </v-dialog>
+       <v-dialog
+        v-model="mottoDialog"
+        fullscreen
+        hide-overlay
+        transition="dialog-bottom-transition"
+      >
+        <v-card>
+          <v-toolbar dark color="primary">
+            <v-btn icon dark @click="mottoDialog = false">
+              <v-icon>close</v-icon>
+            </v-btn>
+            <v-toolbar-title>Motto</v-toolbar-title>
+            <v-spacer></v-spacer>
+          </v-toolbar>
+          <motto-list />
+        </v-card>
+      </v-dialog>
     </v-layout>
 </template>
 
@@ -108,10 +155,12 @@ import redirectOnError from '../utils/redirectOnError';
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 
 import GoalList from './GoalList.vue';
+import MottoList from './MottoList.vue';
 
 export default {
   components: {
     GoalList,
+    MottoList,
   },
   apollo: {
     tasklist: {
@@ -120,6 +169,7 @@ export default {
           routineDate(date: $date) {
             id
             date
+            skip
             tasklist {
               id
               name
@@ -143,6 +193,7 @@ export default {
         }
         this.did = data.routineDate.id;
         this.setPassedWait();
+        this.skipDay = !!(data.routineDate.skip);
         return data.routineDate.tasklist;
       },
       variables() {
@@ -192,9 +243,11 @@ export default {
     return {
       loading: true,
       goalDetailsDialog: false,
+      mottoDialog: false,
       tasklist: [],
       did: '',
       timerId: '',
+      skipDay: false,
     };
   },
   computed: {
@@ -211,6 +264,7 @@ export default {
             addRoutine(date: $date) {
               id
               date
+              skip
               tasklist {
                 id
                 name
@@ -311,6 +365,37 @@ export default {
         });
       }
     },
+
+    skipClick() {
+      this.$apollo.mutate({
+        mutation: gql`
+            mutation skipRoutine(
+              $id: ID!
+              $skip: Boolean!
+            ) {
+              skipRoutine(id: $id, skip: $skip) {
+                id
+                skip
+              }
+            }
+          `,
+        variables: {
+          id: this.did,
+          skip: !!(this.skipDay),
+        },
+        error: (error) => {
+          redirectOnError(this.$router, error);
+          clearInterval(this.timerId);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+        },
+      });
+    },
     passedTime(item) {
       if (!item.ticked) {
         const timestamp = moment(item.time, 'HH:mm');
@@ -322,9 +407,10 @@ export default {
               mutation passRoutineItem(
                 $id: ID!
                 $name: String!
+                $ticked: Boolean!
                 $passed: Boolean!
               ) {
-                passRoutineItem(id: $id, name: $name, passed: $passed) {
+                passRoutineItem(id: $id, name: $name, ticked: $ticked, passed: $passed) {
                   id
                   tasklist {
                     name
@@ -336,6 +422,7 @@ export default {
             variables: {
               id: this.did,
               name: item.name,
+              ticked: item.ticked,
               passed: item.passed,
             },
             error: (error) => {
@@ -460,5 +547,15 @@ export default {
   .inline-goals ul {
     list-style: none;
     padding-left: 4px;
+  }
+
+  .title-options {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .title-options > .sub-header {
+    flex: 12 !important;
   }
 </style>

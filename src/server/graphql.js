@@ -1,13 +1,24 @@
-const Express = require('express');
-const ExpressGraphQL = require('express-graphql');
+const express = require('express');
+const cors = require('cors');
+const graphqlHTTP = require('express-graphql');
+const { createServer, proxy } = require('aws-serverless-express');
 const jwt = require('jsonwebtoken');
 
 const { schema } = require('./resolvers');
 
-const app = Express();
+const app = express();
+app.use(cors());
+
+app.enable('trust proxy');
+app.disable('x-powered-by');
+
+app.set('json spaces', 2);
+
+app.use(require('body-parser').json());
 
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*'); // update to match the domain you will make the request from
+  // update to match the domain you will make the request from
+  // res.header('Access-Control-Allow-Origin', '*');
   const authHeader = req.headers.authorization;
   const { JWT_SECRET } = process.env;
   if (authHeader) {
@@ -30,33 +41,41 @@ app.use((req, res, next) => {
   }
 });
 
-app.use('/graphql', (req, res) => {
-  ExpressGraphQL({
-    schema,
-    customFormatErrorFn: (error) => {
-      const {
-        message: statusMessage, locations, path,
-      } = error;
+const startGraphQL = (req, res) => graphqlHTTP({
+  schema,
+  // customFormatErrorFn: (error) => {
+  //   const {
+  //     message: statusMessage, locations, path,
+  //   } = error;
 
-      const [status, message] = statusMessage.split(':');
+  //   const [status, message] = statusMessage.split(':');
 
-      res.status(status || 401);
+  //   res.status(status || 401);
 
-      return {
-        message,
-        locations,
-        stack: error.stack ? error.stack.split('\n') : [],
-        path,
-      };
-    },
-    graphiql: true,
-  })(req, res);
-});
+  //   return {
+  //     message,
+  //     locations,
+  //     stack: error.stack ? error.stack.split('\n') : [],
+  //     path,
+  //   };
+  // },
+  graphiql: true,
+})(req, res);
 
-function startServer() {
+const startServer = () => {
+  app.use('/graphql', startGraphQL);
   app.listen(3000, () => {
     console.log('Listening at :3000...');
   });
-}
+};
 
-module.exports = { startServer };
+const startServerless = (event, context) => {
+  // eslint-disable-next-line no-param-reassign
+  context.callbackWaitsForEmptyEventLoop = false;
+  app.use('/', startGraphQL);
+  const server = createServer(app);
+
+  return proxy(server, event, context);
+};
+
+module.exports = { startServer, startServerless };

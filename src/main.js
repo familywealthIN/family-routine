@@ -46,6 +46,9 @@ const cache = new InMemoryCache();
 const apolloClient = new ApolloClient({
   link: authMiddleware.concat(httpLink),
   cache,
+  fetchOptions: {
+    mode: 'no-cors',
+  },
   defaultOptions: {
     watchQuery: {
       fetchPolicy: 'no-cache',
