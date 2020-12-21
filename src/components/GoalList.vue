@@ -49,48 +49,16 @@
         label="Goal Task"
       ></v-select>
     </v-flex>
-    <v-flex xs12>
-      <template v-for="goal in goals">
-        <v-flex xs12 v-if="goal && goal.goalItems" v-bind:key="goal.id">
-          <v-card class="pl-3 pr-3">
-            <v-list two-line subheader>
-              <v-spacer></v-spacer>
-                <v-subheader
-                  class="subheading"
-                  v-if="goal.goalItems.length == 0"
-                  v-bind:key="goal.id"
-                >
-                  You have 0 Goals for {{ goal.period === 'day' ? 'Today' : goal.period }}, add some
-                </v-subheader>
-                <v-subheader class="subheading" v-bind:key="goal.id" v-else>
-                  {{ goal.period === 'day' ? 'Today' : goal.period }} Goals
-                </v-subheader>
-                <goal-item-list :goal="goal"/>
-            </v-list>
-          </v-card>
-        </v-flex>
-      </template>
-      <v-flex xs12 class="pl-3 pr-3">
-        <v-btn block @click="$router.push('goals')" color="secondary" dark>More Options</v-btn>
-      </v-flex>
-    </v-flex>
   </v-layout>
 </template>
 <script>
 import gql from 'graphql-tag';
 
-import GoalItemList from './GoalItemList.vue';
-
 import redirectOnError from '../utils/redirectOnError';
-import { stepupMilestonePeriodDate } from '../utils/getDates';
-
-const STATIC_PERIOD = 'day';
+import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 
 export default {
-  components: {
-    GoalItemList,
-  },
-  props: ['goals', 'date', 'tasklist'],
+  props: ['goals', 'date', 'period', 'tasklist', 'goalDetailsDialog', 'selectedTaskRef'],
   apollo: {
     goalItemsRef: {
       query: gql`
@@ -114,7 +82,7 @@ export default {
       },
       variables() {
         return {
-          ...stepupMilestonePeriodDate(STATIC_PERIOD, this.date),
+          ...stepupMilestonePeriodDate(this.period, this.date),
         };
       },
       error() {
@@ -129,13 +97,13 @@ export default {
         body: '',
         isMilestone: false,
         goalRef: '',
-        taskRef: '',
+        taskRef: this.selectedTaskRef || '',
       },
       defaultGoalItem: {
         body: '',
         isMilestone: false,
         goalRef: '',
-        taskRef: '',
+        taskRef: this.selectedTaskRef || '',
       },
       goalItem: [],
       showMilestoneOption: true,
@@ -159,7 +127,8 @@ export default {
     },
     addGoalItem() {
       const value = this.newGoalItem.body && this.newGoalItem.body.trim();
-      const goal = this.getGoal(STATIC_PERIOD, this.date);
+      const date = periodGoalDates(this.period, this.date);
+      const goal = this.getGoal(this.period, date);
 
       if (!value) {
         return;
@@ -196,8 +165,8 @@ export default {
         `,
         variables: {
           body: this.newGoalItem.body,
-          period: STATIC_PERIOD,
-          date: this.date,
+          period: this.period,
+          date,
           isComplete: false,
           isMilestone: this.newGoalItem.isMilestone,
           goalRef: this.newGoalItem.goalRef,
@@ -213,6 +182,7 @@ export default {
             taskRef: this.newGoalItem.taskRef,
           });
           this.newGoalItem = { ...this.defaultGoalItem };
+          this.$emit('toggle-goal-details-dialog', false);
         },
         error: (error) => {
           redirectOnError(this.$router, error);
@@ -225,6 +195,12 @@ export default {
           });
         },
       });
+    },
+  },
+  watch: {
+    selectedTaskRef(val) {
+      this.newGoalItem.taskRef = val;
+      this.defaultGoalItem.taskRef = val;
     },
   },
 };

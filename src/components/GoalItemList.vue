@@ -8,15 +8,17 @@
           @change="completeGoalItem(goalItem.id, goalItem.isComplete, goal.period, goal.date)"
         ></v-checkbox>
         </v-list-tile-action>
-        <v-list-tile-content>
+        <v-list-tile-content
+          @click="completeGoalItemText(goalItem, goal.period, goal.date)"
+        >
         <v-list-tile-title :class="{ completed: goalItem.isComplete}">
           {{goalItem.body}}
         </v-list-tile-title>
-        <v-list-tile-sub-title
+        <!-- <v-list-tile-sub-title
           v-if="goalItem.isMilestone"
         >
           The goal is a milestone
-        </v-list-tile-sub-title>
+        </v-list-tile-sub-title> -->
         </v-list-tile-content>
         <v-list-tile-action v-if="editMode">
           <v-btn
@@ -58,6 +60,7 @@ export default {
     deleteGoalItem(index, period, date) {
       const { id } = this.goal.goalItems[index];
       this.goal.goalItems.splice(index, 1);
+      this.$emit('delete-task-goal', id);
 
       this.$apollo.mutate({
         mutation: gql`
@@ -91,6 +94,11 @@ export default {
           });
         },
       });
+    },
+    completeGoalItemText(goalItem, period, date) {
+      // eslint-disable-next-line no-param-reassign
+      goalItem.isComplete = !goalItem.isComplete;
+      this.completeGoalItem(goalItem.id, goalItem.isComplete, period, date);
     },
     completeGoalItem(id, isComplete, period, date) {
       this.$apollo.mutate({

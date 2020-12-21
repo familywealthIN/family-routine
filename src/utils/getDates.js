@@ -97,6 +97,20 @@ export function stepupMilestonePeriodDate(period, date) {
   };
 }
 
+export function periodGoalDates(period, date) {
+  if (period === 'week') {
+    const weekNo = moment(date, 'DD-MM-YYYY').weeks();
+    return moment(date, 'DD-MM-YYYY').weeks(weekNo).weekday(5).format('DD-MM-YYYY');
+  }
+  if (period === 'month') {
+    return moment(date, 'DD-MM-YYYY').endOf('month').format('DD-MM-YYYY');
+  }
+  if (period === 'year') {
+    return moment(date, 'DD-MM-YYYY').endOf('year').format('DD-MM-YYYY');
+  }
+  return date;
+}
+
 export function getPeriodDate(period, date, separator = ' - ') {
   switch (period) {
     case 'day':

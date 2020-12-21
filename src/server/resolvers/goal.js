@@ -6,6 +6,7 @@ const {
   GraphQLList,
   GraphQLNonNull,
 } = require('graphql');
+const moment = require('moment');
 
 const {
   GoalModel,
@@ -17,6 +18,20 @@ const { UserModel } = require('../schema/UserSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
 const getGoalMilestone = require('../utils/getGoalMilestone');
+
+function periodGoalDates(period, date) {
+  if (period === 'week') {
+    const weekNo = moment(date, 'DD-MM-YYYY').weeks();
+    return moment(date, 'DD-MM-YYYY').weeks(weekNo).weekday(5).format('DD-MM-YYYY');
+  }
+  if (period === 'month') {
+    return moment(date, 'DD-MM-YYYY').endOf('month').format('DD-MM-YYYY');
+  }
+  if (period === 'year') {
+    return moment(date, 'DD-MM-YYYY').endOf('year').format('DD-MM-YYYY');
+  }
+  return date;
+}
 
 const query = {
   goals: {
@@ -34,10 +49,19 @@ const query = {
     args: {
       date: { type: GraphQLNonNull(GraphQLString) },
     },
-    resolve: (root, args, context) => {
+    resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      return GoalModel.find({ date: args.date, email }).exec();
+      const dayGoals = await GoalModel.find({ period: 'day', date: args.date, email }).exec();
+      const weekGoals = await GoalModel.find({ period: 'week', date: periodGoalDates('week', args.date), email }).exec();
+      const monthGoals = await GoalModel.find({ period: 'month', date: periodGoalDates('month', args.date), email }).exec();
+      const yearGoals = await GoalModel.find({ period: 'year', date: periodGoalDates('year', args.date), email }).exec();
+      return [
+        ...dayGoals,
+        ...weekGoals,
+        ...monthGoals,
+        ...yearGoals,
+      ];
     },
   },
   goalMilestones: {
