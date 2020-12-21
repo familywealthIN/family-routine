@@ -85,7 +85,8 @@
                     <v-list-tile-sub-title v-html="task.time"></v-list-tile-sub-title>
                   </v-list-tile-content>
                 </v-list-tile>
-                <!-- <details :key="task.id" v-if="filterTaskGoals(task.id).length" class="inline-goals">
+                <!--
+                <details :key="task.id" v-if="filterTaskGoals(task.id).length" class="inline-goals">
                   <summary>View Goals</summary>
                   <ul>
                     <li :key="taskGoals.id" v-for="taskGoals in filterTaskGoals(task.id)">
@@ -101,7 +102,8 @@
                       </ul>
                     </li>
                   </ul>
-                </details> -->
+                </details>
+                -->
               </template>
             </template>
             <template v-if="viewType === 'concentrated'">
@@ -129,7 +131,12 @@
                   <v-list-tile-content>
                     <v-list-tile-title>
                       <span>{{task.name}}</span>
-                      <span v-if="task.id !== selectedTaskRef" class="v-list__tile__side-title">{{task.time}}</span>
+                      <span
+                        v-if="task.id !== selectedTaskRef"
+                        class="v-list__tile__side-title"
+                      >
+                        {{task.time}}
+                      </span>
                     </v-list-tile-title>
                     <v-list-tile-sub-title v-if="task.id === selectedTaskRef">
                       <div class="time-text">{{task.time}}</div>
