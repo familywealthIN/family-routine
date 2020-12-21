@@ -130,7 +130,7 @@ export default {
             this.$router.push('home');
           }
 
-          this.isLoading = false;
+          // this.isLoading = false;
         },
         error: () => {
           this.isLoading = false;
@@ -158,6 +158,7 @@ export default {
         clearInterval(checkGauthLoad);
       }
     }, 50);
+    window.addEventListener('sign-out', () => this.handleClickSignOut(), false);
   },
 };
 </script>

@@ -16,14 +16,6 @@
                 <div class="d-flex">
                   <div>
                     <v-btn
-                      color="error"
-                      @click="goalDetailsDialog = true"
-                    >
-                      Show Today's Goals
-                    </v-btn>
-                  </div>
-                  <div>
-                    <v-btn
                       fab
                       dark
                       small
@@ -47,57 +39,143 @@
               </v-flex>
             </v-layout>
           </v-card>
-          <v-list subheader style="width:100%" v-if="tasklist && tasklist.length > 0">
-              <v-subheader>
-                <div class="d-flex title-options">
-                    <div class="sub-header">Today</div>
-                    <div>
-                      <v-switch
-                        v-model="skipDay"
-                        label="Skip Day"
-                        @change="skipClick()"
-                      ></v-switch>
-                    </div>
-                </div>
-              </v-subheader>
-            <template v-for="(task, index) in tasklist">
-              <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
+          <v-list
+            subheader
+            style="width:100%"
+            v-if="tasklist && tasklist.length > 0"
+            :class="viewType === 'concentrated' ? 'concentrated-view' : ''"
+          >
+            <v-subheader>
+              <div class="d-flex title-options">
+                  <div class="sub-header">
+                    <span v-if="viewType === 'linear'">Linear</span>
+                    <a v-else @click="viewType='linear', selectedTaskRef = ''">Linear</a>
+                    |
+                    <span v-if="viewType === 'concentrated'">Concentrated</span>
+                    <a v-else @click="viewType='concentrated'">Concentrated</a>
+                  </div>
+                  <div>
+                    <v-switch
+                      v-model="skipDay"
+                      label="Skip Day"
+                      @change="skipClick()"
+                    ></v-switch>
+                  </div>
+              </div>
+            </v-subheader>
+            <template v-if="viewType === 'linear'">
+              <template v-for="(task, index) in tasklist">
+                <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
 
-              <v-list-tile :key="task.id" avatar>
-                <v-list-tile-avatar>
-                  <v-btn
-                    fab
-                    small
-                    :disabled="getButtonDisabled(task)"
-                    :color="getButtonColor(task)"
-                    @click="checkClick($event, index)"
-                  >
-                    <v-icon>{{getButtonIcon(task)}}</v-icon>
-                  </v-btn>
-                </v-list-tile-avatar>
+                <v-list-tile :key="task.id" avatar>
+                  <v-list-tile-avatar>
+                    <v-btn
+                      fab
+                      small
+                      :disabled="getButtonDisabled(task)"
+                      :color="getButtonColor(task)"
+                      @click="checkClick($event, task)"
+                    >
+                      <v-icon>{{getButtonIcon(task)}}</v-icon>
+                    </v-btn>
+                  </v-list-tile-avatar>
 
-                <v-list-tile-content>
-                  <v-list-tile-title v-html="task.name"></v-list-tile-title>
-                  <v-list-tile-sub-title v-html="task.time"></v-list-tile-sub-title>
-                </v-list-tile-content>
-              </v-list-tile>
-              <details :key="task.id" v-if="filterTaskGoals(task.id).length" class="inline-goals">
-                <summary>View Goals</summary>
-                <ul>
-                  <li :key="taskGoals.id" v-for="taskGoals in filterTaskGoals(task.id)">
-                    <b>{{taskGoals.period}}</b>
-                    <ul>
-                      <li
-                        :key="taskGoal.body"
-                        v-for="taskGoal in taskGoals.goalItems"
-                        :class="{ completed: taskGoal.isComplete}"
+                  <v-list-tile-content>
+                    <v-list-tile-title v-html="task.name"></v-list-tile-title>
+                    <v-list-tile-sub-title v-html="task.time"></v-list-tile-sub-title>
+                  </v-list-tile-content>
+                </v-list-tile>
+                <!-- <details :key="task.id" v-if="filterTaskGoals(task.id).length" class="inline-goals">
+                  <summary>View Goals</summary>
+                  <ul>
+                    <li :key="taskGoals.id" v-for="taskGoals in filterTaskGoals(task.id)">
+                      <b>{{taskGoals.period}}</b>
+                      <ul>
+                        <li
+                          :key="taskGoal.body"
+                          v-for="taskGoal in taskGoals.goalItems"
+                          :class="{ completed: taskGoal.isComplete}"
+                        >
+                          {{taskGoal.body}}
+                        </li>
+                      </ul>
+                    </li>
+                  </ul>
+                </details> -->
+              </template>
+            </template>
+            <template v-if="viewType === 'concentrated'">
+              <template v-for="(task, index) in concentratedTasklistGoals()">
+                <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
+
+                <v-list-tile
+                  :key="task.id"
+                  @click="updateSelectedTaskRef(task.id)"
+                  :class="task.id === selectedTaskRef ? 'active' : ''"
+                  avatar
+                >
+                  <v-list-tile-avatar>
+                    <v-btn
+                      fab
+                      small
+                      :disabled="getButtonDisabled(task)"
+                      :color="getButtonColor(task)"
+                      @click="checkClick($event, task)"
+                    >
+                      <v-icon>{{getButtonIcon(task)}}</v-icon>
+                    </v-btn>
+                  </v-list-tile-avatar>
+
+                  <v-list-tile-content>
+                    <v-list-tile-title>
+                      <span>{{task.name}}</span>
+                      <span v-if="task.id !== selectedTaskRef" class="v-list__tile__side-title">{{task.time}}</span>
+                    </v-list-tile-title>
+                    <v-list-tile-sub-title v-if="task.id === selectedTaskRef">
+                      <div class="time-text">{{task.time}}</div>
+                      <div>
+                        <v-btn-toggle v-model="currentGoalPeriod" >
+                          <v-btn flat value="day">
+                            Today
+                          </v-btn>
+                          <v-btn flat value="week">
+                            Week
+                          </v-btn>
+                          <v-btn flat value="month">
+                            Month
+                          </v-btn>
+                          <v-btn flat value="year">
+                            Year
+                          </v-btn>
+                        </v-btn-toggle>
+                      </div>
+                    </v-list-tile-sub-title>
+                    <div v-if="task.id === selectedTaskRef" class="task-goals">
+                      <div
+                        :key="taskGoals.id"
+                        v-for="taskGoals in filterTaskGoalsPeriod(task.id, currentGoalPeriod)"
                       >
-                        {{taskGoal.body}}
-                      </li>
-                    </ul>
-                  </li>
-                </ul>
-              </details>
+                        <v-list two-line subheader>
+                          <goal-item-list
+                            :goal="taskGoals"
+                            @delete-task-goal="deleteTaskGoal"
+                          />
+                        </v-list>
+                      </div>
+                      <div class="add-new">
+                        <v-btn
+                          small
+                          flat
+                          @click="goalDetailsDialog = true"
+                        >
+                          <v-icon>add</v-icon>
+                          Add a new Goal
+                        </v-btn>
+                      </div>
+                    </div>
+                  </v-list-tile-content>
+                </v-list-tile>
+              </template>
             </template>
           </v-list>
           <div v-if="tasklist && tasklist.length === 0">
@@ -120,10 +198,17 @@
             <v-btn icon dark @click="goalDetailsDialog = false">
               <v-icon>close</v-icon>
             </v-btn>
-            <v-toolbar-title>Goals</v-toolbar-title>
+            <v-toolbar-title>Add Goal</v-toolbar-title>
             <v-spacer></v-spacer>
           </v-toolbar>
-          <goal-list :goals="goals" :date="date" :tasklist="tasklist" />
+          <goal-list
+            :goals="goals"
+            :date="date"
+            :period="currentGoalPeriod"
+            :tasklist="tasklist"
+            :selectedTaskRef="selectedTaskRef"
+            @toggle-goal-details-dialog="toggleGoalDetailsDialog"
+          />
         </v-card>
       </v-dialog>
        <v-dialog
@@ -156,11 +241,13 @@ import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 
 import GoalList from './GoalList.vue';
 import MottoList from './MottoList.vue';
+import GoalItemList from './GoalItemList.vue';
 
 export default {
   components: {
     GoalList,
     MottoList,
+    GoalItemList,
   },
   apollo: {
     tasklist: {
@@ -248,6 +335,9 @@ export default {
       did: '',
       timerId: '',
       skipDay: false,
+      currentGoalPeriod: 'day',
+      selectedTaskRef: '',
+      viewType: 'linear',
     };
   },
   computed: {
@@ -300,6 +390,56 @@ export default {
         },
       });
     },
+    concentratedTasklistGoals() {
+      const concTasklistGoals = [];
+      let activeTaskIndex = 0;
+
+      const currentTask = this.tasklist.find((task, index) => {
+        const timestamp = moment(task.time, 'HH:mm');
+        if (timestamp.isSameOrAfter(moment()) && index === 0) {
+          return true;
+        }
+        const nextTask = this.tasklist[index + 1];
+        if (nextTask) {
+          const nextTimestamp = moment(nextTask.time, 'HH:mm');
+          activeTaskIndex = index;
+          return !timestamp.isSameOrAfter(moment()) && nextTimestamp.isSameOrAfter(moment());
+        }
+        if ((index + 1) === this.tasklist.length) {
+          activeTaskIndex = index;
+        }
+        return true;
+      });
+
+      if (this.tasklist[activeTaskIndex - 2]) {
+        concTasklistGoals.push(this.tasklist[activeTaskIndex - 2]);
+      }
+
+      if (this.tasklist[activeTaskIndex - 1]) {
+        concTasklistGoals.push(this.tasklist[activeTaskIndex - 1]);
+      }
+
+      this.tasklist.forEach((task) => {
+        task.active = task.id === currentTask.id;
+        if (task.active && this.selectedTaskRef === '') {
+          this.selectedTaskRef = task.id;
+        }
+      });
+      concTasklistGoals.push(currentTask);
+
+      if (this.tasklist[activeTaskIndex + 1]) {
+        concTasklistGoals.push(this.tasklist[activeTaskIndex + 1]);
+      }
+      return concTasklistGoals;
+    },
+    deleteTaskGoal(id) {
+      this.goals.forEach((goal) => {
+        goal.goalItems = goal.goalItems.filter((goalItem) => goalItem.id !== id);
+      });
+    },
+    updateSelectedTaskRef(id) {
+      this.selectedTaskRef = id;
+    },
     getButtonColor(task) {
       if (task.ticked) {
         return 'success';
@@ -324,9 +464,7 @@ export default {
       }
       return 'more_horiz';
     },
-    checkClick(e, i) {
-      const taskId = i;
-      const task = this.tasklist[taskId];
+    checkClick(e, task) {
       if (!task.passed && !task.wait) {
         task.ticked = true;
         this.$apollo.mutate({
@@ -365,7 +503,6 @@ export default {
         });
       }
     },
-
     skipClick() {
       this.$apollo.mutate({
         mutation: gql`
@@ -527,6 +664,30 @@ export default {
       }
       return taskGoalList;
     },
+    filterTaskGoalsPeriod(id, currentGoalPeriod) {
+      const taskGoalList = [];
+      if (this.goals && this.goals.length) {
+        this.goals
+          .forEach((goal) => {
+            if (goal.period === currentGoalPeriod) {
+              const taskGoalItems = goal.goalItems.filter((goalItem) => goalItem.taskRef === id);
+              if (taskGoalItems.length) {
+                const newGoal = {
+                  id: goal.id,
+                  period: goal.period,
+                  date: goal.date,
+                  goalItems: taskGoalItems,
+                };
+                taskGoalList.push(newGoal);
+              }
+            }
+          });
+      }
+      return taskGoalList;
+    },
+    toggleGoalDetailsDialog(bool) {
+      this.goalDetailsDialog = bool;
+    },
   },
   mounted() {
     this.timerId = setInterval(() => {
@@ -557,5 +718,146 @@ export default {
 
   .title-options > .sub-header {
     flex: 12 !important;
+  }
+
+  .concentrated-view .v-list__tile--avatar {
+    height: 36px;
+  }
+
+  .concentrated-view .v-list__tile__avatar {
+    min-width: 40px;
+  }
+
+  .concentrated-view .v-avatar,
+  .concentrated-view .v-avatar button{
+    height: 24px !important;
+    width: 24px !important;
+  }
+
+  .concentrated-view .v-avatar button {
+    margin: 6px;
+  }
+
+  .concentrated-view .v-list__tile__title {
+    font-size: 14px;
+  }
+
+  .concentrated-view .active {
+    background-color: #fff;
+  }
+  .concentrated-view .active .v-list__tile--avatar {
+    height: 240px;
+  }
+
+  .concentrated-view .v-list__tile__avatar {
+    min-width: 64px;
+    justify-content: center;
+  }
+  .concentrated-view .active .v-list__tile__avatar {
+    align-self: start;
+  }
+
+  .concentrated-view .active .v-avatar,
+  .concentrated-view .active .v-avatar button{
+    height: 48px !important;
+    width: 48px !important;
+  }
+
+  .concentrated-view .active .v-list__tile{
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+  .concentrated-view .active .v-list__tile__avatar {
+    justify-content: start;
+  }
+
+  .concentrated-view .active .v-list__tile__content {
+    justify-content: start;
+  }
+
+  .concentrated-view .active .v-list__tile__title {
+    font-size: 24px;
+    height: 30px;
+  }
+
+  .concentrated-view .active .goal-list .v-list__tile__title {
+    font-size: 10px;
+  }
+
+  .concentrated-view .v-list__tile__sub-title {
+    display: flex;
+    justify-content: space-between;
+    align-content: center;
+    padding: 4px 0;
+  }
+
+  .concentrated-view .v-list__tile__sub-title .time-text {
+    align-self: center;
+  }
+
+  .concentrated-view .v-list__tile__sub-title .v-item-group {
+    border: 1px solid #1976d2;
+    border-radius: 4px;
+    box-shadow: none;
+  }
+
+  .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn {
+    height: 24px;
+  }
+  .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn__content {
+    font-size: 10px;
+    color: #000;
+  }
+
+   .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn--active {
+    background-color: #1976d2;
+  }
+
+  .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn--active .v-btn__content {
+    color: #fff;
+  }
+
+  .concentrated-view .task-goals {
+    width: 100%;
+    height: 144px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .concentrated-view .task-goals .v-list__tile {
+    padding: 4px 0;
+    height: 32px;
+  }
+  .concentrated-view .task-goals .v-input--selection-controls__ripple,
+  .concentrated-view .task-goals .v-list__tile__action .v-btn,
+  .concentrated-view .task-goals .v-list__tile__title {
+    height: 24px;
+  }
+  .v-list__tile__side-title {
+    color: rgba(0,0,0,0.54);
+    padding-left: 8px;
+  }
+  .concentrated-view .task-goals .v-list {
+    background: transparent;
+  }
+  .concentrated-view .task-goals .v-list__tile__action {
+    min-width: 36px;
+  }
+  .concentrated-view .task-goals .v-list__tile__title {
+    font-size: 14px;
+  }
+  .concentrated-view .task-goals .add-new .v-btn {
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    color: rgba(0,0,0,0.87);
+    text-transform: initial;
+    font-size: 14px;
+    font-weight: 400;
+  }
+  .concentrated-view .task-goals .add-new .v-btn .v-icon {
+    padding-right: 12px;
+  }
+  .concentrated-view .task-goals .add-new .v-btn .v-btn__content {
+    justify-content: initial;
   }
 </style>
