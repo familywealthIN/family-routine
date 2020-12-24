@@ -13,6 +13,7 @@ const {
   FCM_MESSAGING_SENDER_ID,
   FCM_APP_ID,
   IS_DEVELOPMENT,
+  NETLIFY,
   GQL_URL,
   GA_PUBLIC_KEY,
   GA_CLIENT_ID,
@@ -31,6 +32,7 @@ export const config = {
 
 export const publicKey = '${GA_PUBLIC_KEY}';
 export const isDevelopment = ${IS_DEVELOPMENT};
+export const netlify = ${NETLIFY || false};
 export const graphQLUrl = '${GQL_URL}';
 export const gauthOption = {
 clientId: '${GA_CLIENT_ID}',

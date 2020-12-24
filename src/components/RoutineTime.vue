@@ -158,17 +158,22 @@
                       </div>
                     </v-list-tile-sub-title>
                     <div v-if="task.id === selectedTaskRef" class="task-goals">
-                      <div
-                        :key="taskGoals.id"
-                        v-for="taskGoals in filterTaskGoalsPeriod(task.id, currentGoalPeriod)"
-                      >
-                        <v-list two-line subheader>
-                          <goal-item-list
-                            :goal="taskGoals"
-                            @delete-task-goal="deleteTaskGoal"
-                          />
-                        </v-list>
+                      <div v-if="filterTaskGoalsPeriod(task.id, currentGoalPeriod).length" >
+                        <div
+                          :key="taskGoals.id"
+                          v-for="taskGoals in filterTaskGoalsPeriod(task.id, currentGoalPeriod)"
+                        >
+                          <v-list two-line subheader>
+                            <goal-item-list
+                              :goal="taskGoals"
+                              @delete-task-goal="deleteTaskGoal"
+                            />
+                          </v-list>
+                        </div>
                       </div>
+                      <small class="no-goals-text" v-else>
+                        No goal or activity logged.
+                      </small>
                       <div class="add-new">
                         <v-btn
                           small
@@ -176,7 +181,7 @@
                           @click="goalDetailsDialog = true"
                         >
                           <v-icon>add</v-icon>
-                          Add a new Goal
+                          Add Goal or Activity
                         </v-btn>
                       </div>
                     </div>
@@ -784,7 +789,7 @@ export default {
 
   .concentrated-view .active .v-list__tile__title {
     font-size: 24px;
-    height: 30px;
+    height: 28px;
   }
 
   .concentrated-view .active .goal-list .v-list__tile__title {
@@ -839,6 +844,11 @@ export default {
   .concentrated-view .task-goals .v-list__tile__title {
     height: 24px;
   }
+
+  .concentrated-view .task-goals .v-input--selection-controls__ripple {
+    top: calc(50% - 19px);
+  }
+
   .v-list__tile__side-title {
     color: rgba(0,0,0,0.54);
     padding-left: 8px;
@@ -849,8 +859,22 @@ export default {
   .concentrated-view .task-goals .v-list__tile__action {
     min-width: 36px;
   }
+  .concentrated-view
+  .task-goals .v-input--selection-controls:not(.v-input--hide-details) .v-input__slot {
+    margin-bottom: 3px;
+  }
   .concentrated-view .task-goals .v-list__tile__title {
     font-size: 14px;
+  }
+  .concentrated-view .task-goals .no-goals-text {
+    /* text-align: center; */
+    display: block;
+    padding: 20px 0 20px 36px;
+    color: #777;
+  }
+  .concentrated-view .task-goals .add-new {
+    border-top: 1px solid #ccc;
+    padding-top: 8px;
   }
   .concentrated-view .task-goals .add-new .v-btn {
     padding: 0;
