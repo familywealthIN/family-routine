@@ -7,7 +7,7 @@ import firebase from 'firebase/app';
 import 'firebase/messaging';
 
 import {
-  config, publicKey, graphQLUrl, isDevelopment,
+  config, publicKey, graphQLUrl, isDevelopment, netlify,
 } from './blob/config';
 import './plugins/vuetify';
 import './plugins/notifications';
@@ -80,7 +80,7 @@ new Vue({
   render: (h) => h(App),
 }).$mount('#app');
 
-if (!isDevelopment) {
+if (!isDevelopment || netlify) {
   firebase.initializeApp(config);
 
   const messaging = firebase.messaging();
