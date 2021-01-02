@@ -113,7 +113,7 @@
           </div>
           <p>Create an after Dinner program to spend time with your family,
              healthy activities, before bed routine and reading to sleep.
-              <b>Finally, its most important to be hosnest to yourself</b></p>
+              <b>Finally, its most important to be honest to yourself</b></p>
           <p>If this app works for you invite your family members as well to
              get scored on puntuality</p>
         </div>

@@ -158,6 +158,50 @@
                       </div>
                     </v-list-tile-sub-title>
                     <div v-if="task.id === selectedTaskRef" class="task-goals">
+                      <v-layout
+                        row
+                        wrap
+                        v-if="filterTaskGoalsPeriod(task.id, 'week').length
+                          && filterTaskGoalsPeriod(task.id, 'month').length"
+                      >
+                        <v-flex xs12>
+                          <v-alert
+                            :value="true"
+                            color="success"
+                            icon="check_circle"
+                            outline
+                          >
+                            You are all set.
+                            Do daily milestones to complete weekly and monthly goals.
+                          </v-alert>
+                        </v-flex>
+                      </v-layout>
+                      <v-layout row wrap v-else>
+                        <v-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, 'month').length">
+                          <v-chip @click="currentGoalPeriod = 'month', goalDetailsDialog = true">
+                            <v-avatar class="red text-white"><v-icon>close</v-icon></v-avatar>
+                            Set Month's Goal
+                          </v-chip>
+                        </v-flex>
+                        <v-flex xs6 v-if="filterTaskGoalsPeriod(task.id, 'month').length">
+                          <v-chip>
+                            <v-avatar class="success text-white"><v-icon>check</v-icon></v-avatar>
+                            Set Month's Goal
+                          </v-chip>
+                        </v-flex>
+                        <v-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, 'week').length">
+                          <v-chip @click="currentGoalPeriod = 'week', goalDetailsDialog = true">
+                            <v-avatar class="red text-white"><v-icon>close</v-icon></v-avatar>
+                            Set Week's Goal
+                          </v-chip>
+                        </v-flex>
+                        <v-flex xs6 v-if="filterTaskGoalsPeriod(task.id, 'week').length">
+                          <v-chip>
+                            <v-avatar class="success text-white"><v-icon>check</v-icon></v-avatar>
+                            Set Week's Goal
+                          </v-chip>
+                        </v-flex>
+                      </v-layout>
                       <div v-if="filterTaskGoalsPeriod(task.id, currentGoalPeriod).length" >
                         <div
                           :key="taskGoals.id"
@@ -710,6 +754,9 @@ export default {
 </script>
 
 <style>
+  .text-white {
+    color: #fff;
+  }
   .inline-goals {
     padding: 8px 16px;
     background-color: antiquewhite;
@@ -740,8 +787,8 @@ export default {
     min-width: 40px;
   }
 
-  .concentrated-view .v-avatar,
-  .concentrated-view .v-avatar button{
+  .concentrated-view .v-list__tile > .v-list__tile__avatar > .v-avatar,
+  .concentrated-view .v-list__tile > .v-list__tile__avatar > .v-avatar button{
     height: 24px !important;
     width: 24px !important;
   }
@@ -769,8 +816,8 @@ export default {
     align-self: start;
   }
 
-  .concentrated-view .active .v-avatar,
-  .concentrated-view .active .v-avatar button{
+  .concentrated-view .active .v-list__tile > .v-list__tile__avatar > .v-avatar,
+  .concentrated-view .active .v-list__tile > .v-list__tile__avatar > .v-avatar button{
     height: 48px !important;
     width: 48px !important;
   }
@@ -831,7 +878,7 @@ export default {
 
   .concentrated-view .task-goals {
     width: 100%;
-    height: 144px;
+    height: 150px;
     overflow-x: hidden;
     overflow-y: auto;
   }
@@ -866,11 +913,20 @@ export default {
   .concentrated-view .task-goals .v-list__tile__title {
     font-size: 14px;
   }
+  .concentrated-view .task-goals .v-chip {
+    cursor: pointer;
+    font-size: 11px;
+    margin: 0 2px 0 0;
+  }
   .concentrated-view .task-goals .no-goals-text {
     /* text-align: center; */
     display: block;
     padding: 20px 0 20px 36px;
     color: #777;
+  }
+  .concentrated-view .task-goals .v-alert.v-alert--outline {
+    padding: 4px;
+    font-size: 11px;
   }
   .concentrated-view .task-goals .add-new {
     border-top: 1px solid #ccc;
