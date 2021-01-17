@@ -91,7 +91,7 @@
           </div>
           <p>
             Create habits on your hobbies to give you the joy and
-             happiness for the time spent towards yourself
+             happiness for the time spent towards yourself.
           </p>
         </div>
         <div class="text-xs-right">
@@ -111,11 +111,11 @@
               </template>
             </v-img>
           </div>
-          <p>Create an after Dinner program to spend time with your family,
+          <p>Create an after dinner program to spend time with your family,
              healthy activities, before bed routine and reading to sleep.
               <b>Finally, its most important to be honest to yourself</b></p>
-          <p>If this app works for you invite your family members as well to
-             get scored on puntuality</p>
+          <p>If this app works for you, invite your family members as well to
+             live a healthy fruitful relationship.</p>
         </div>
         <div class="text-xs-right">
           <v-btn color="primary" @click="redirectToSettings()">Finish</v-btn>

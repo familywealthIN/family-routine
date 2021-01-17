@@ -2,133 +2,128 @@
 /* eslint-disable max-len */
 </script>
 <template>
-  <v-layout row >
-    <v-flex xs12 sm6 offset-sm3>
-      <v-card
-          class="mx-auto"
-          max-width="600"
-        >
-        <v-card
-          dark
-          flat
-        >
-          <v-btn
-            absolute
-            bottom
-            color="info"
-            right
-            fab
-            :disabled="userItems && userItems.length > 10"
-            @click="sendInviteDialog = true"
-          >
-            <v-icon>add</v-icon>
-          </v-btn>
-          <v-img
-            src="https://cdn.vuetifyjs.com/images/cards/forest.jpg"
-            gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
-          >
-            <v-container fill-height>
-              <v-layout align-center>
-                <strong class="display-4 font-weight-regular mr-4">{{(userItems && userItems.length) || 0}}</strong>
-                <v-layout column justify-end>
-                  <div class="headline font-weight-light">Members</div>
-                </v-layout>
+  <container-box
+    :isLoading="$apollo.queries.userItems.loading
+      || $apollo.queries.userDetails.loading" >
+    <v-card
+      dark
+      flat
+    >
+      <v-btn
+        absolute
+        bottom
+        color="info"
+        right
+        fab
+        :disabled="userItems && userItems.length > 10"
+        @click="sendInviteDialog = true"
+      >
+        <v-icon>add</v-icon>
+      </v-btn>
+      <v-img
+        src="https://cdn.vuetifyjs.com/images/cards/forest.jpg"
+        gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
+      >
+        <v-container fill-height>
+          <v-layout align-center>
+            <strong class="display-4 font-weight-regular mr-4">{{(userItems && userItems.length) || 0}}</strong>
+            <v-layout column justify-end>
+              <div class="headline font-weight-light">Members</div>
+            </v-layout>
+          </v-layout>
+        </v-container>
+      </v-img>
+    </v-card>
+    <v-card-text class="py-0 px-0">
+      <v-dialog v-model="sendInviteDialog" persistent max-width="600px">
+        <v-card>
+          <v-card-title>
+            <span class="headline">Invite User</span>
+          </v-card-title>
+          <v-card-text>
+            <v-container grid-list-md>
+              <v-layout wrap>
+                <v-flex xs12>
+                  <v-form
+                    ref="sendInviteForm"
+                    v-model="valid"
+                    lazy-validation
+                  >
+                    <v-text-field
+                      label="Email"
+                      v-model="invitedEmail"
+                      :rules="emailRules"
+                      required>
+                    </v-text-field>
+                  </v-form>
+                </v-flex>
               </v-layout>
             </v-container>
-          </v-img>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="blue darken-1" flat @click="sendInviteDialog = false">Close</v-btn>
+            <v-btn
+              color="primary"
+              :loading="buttonLoading"
+              :disabled="buttonLoading"
+              @click="sendInviteSubmit">
+              Invite
+            </v-btn>
+          </v-card-actions>
         </v-card>
-        <v-card-text class="py-0 px-0">
-          <v-dialog v-model="sendInviteDialog" persistent max-width="600px">
-            <v-card>
-              <v-card-title>
-                <span class="headline">Invite User</span>
-              </v-card-title>
-              <v-card-text>
-                <v-container grid-list-md>
-                  <v-layout wrap>
-                    <v-flex xs12>
-                      <v-form
-                        ref="sendInviteForm"
-                        v-model="valid"
-                        lazy-validation
-                      >
-                        <v-text-field
-                          label="Email"
-                          v-model="invitedEmail"
-                          :rules="emailRules"
-                          required>
-                        </v-text-field>
-                      </v-form>
-                    </v-flex>
-                  </v-layout>
-                </v-container>
-              </v-card-text>
-              <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-btn color="blue darken-1" flat @click="sendInviteDialog = false">Close</v-btn>
-                <v-btn
-                  color="primary"
-                  :loading="buttonLoading"
-                  :disabled="buttonLoading"
-                  @click="sendInviteSubmit">
-                  Invite
-                </v-btn>
-              </v-card-actions>
-            </v-card>
-          </v-dialog>
-          <v-card>
-            <v-list v-if="userItems && userItems.length" three-line>
-              <v-subheader>Family</v-subheader>
-              <template v-for="(userItem, index) in userItems">
+      </v-dialog>
+      <v-card>
+        <v-list v-if="userItems && userItems.length" three-line>
+          <v-subheader>Family</v-subheader>
+          <template v-for="(userItem, index) in userItems">
 
-                <v-divider :key="userItem.email" v-if="index !== 0"></v-divider>
+            <v-divider :key="userItem.email" v-if="index !== 0"></v-divider>
 
-                <v-list-tile
-                  :key="userItem.email"
-                  avatar
-                  @click="groupDetailsClick(userItem.email)"
-                >
-                  <v-list-tile-avatar>
-                    <img v-bind:src="userItem.picture || './img/default-user.png'">
-                  </v-list-tile-avatar>
+            <v-list-tile
+              :key="userItem.email"
+              avatar
+              @click="groupDetailsClick(userItem.email)"
+            >
+              <v-list-tile-avatar>
+                <img v-bind:src="userItem.picture || './img/default-user.png'">
+              </v-list-tile-avatar>
 
-                  <v-list-tile-content>
-                    <v-list-tile-title v-html="userItem.name"></v-list-tile-title>
-                    <v-list-tile-sub-title>
-                      <span class="pt-2"
-                        style="display: flex;align-items: center;justify-content: center;"
-                      >
-                        <template
-                          v-for="(score, index)
-                          in getGroupUserSevenDayScore(userItem.email)"
-                        >
-                          <v-avatar :key="score" size="24" :color="getButtonColor(score)">
-                            <v-icon color="white" size="16">{{getButtonIcon(score)}}</v-icon>
-                          </v-avatar>
-                          <v-divider :key="score" v-if="index !== 6"></v-divider>
-                        </template>
-                      </span>
-                    </v-list-tile-sub-title>
-                  </v-list-tile-content>
-                </v-list-tile>
-              </template>
-            </v-list>
-            <p v-else class="pt-3 pb-3 text-xs-center">
-              No Family Members have been added.
-            </p>
-          </v-card>
-          <v-btn
-            v-if="groupId"
-            color="primary"
-            flat
-            text
-            @click="leaveGroup"
-          >
-            Leave Group
-          </v-btn>
-        </v-card-text>
+              <v-list-tile-content>
+                <v-list-tile-title v-html="userItem.name"></v-list-tile-title>
+                <v-list-tile-sub-title>
+                  <span class="pt-2"
+                    style="display: flex;align-items: center;justify-content: center;"
+                  >
+                    <template
+                      v-for="(score, index)
+                      in getGroupUserSevenDayScore(userItem.email)"
+                    >
+                      <v-avatar :key="score" size="24" :color="getButtonColor(score)">
+                        <v-icon color="white" size="16">{{getButtonIcon(score)}}</v-icon>
+                      </v-avatar>
+                      <v-divider :key="score" v-if="index !== 6"></v-divider>
+                    </template>
+                  </span>
+                </v-list-tile-sub-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </template>
+        </v-list>
+        <p v-else class="pt-3 pb-3 text-xs-center">
+          No Family Members have been added.
+        </p>
       </v-card>
-    </v-flex>
+      <v-btn
+        v-if="groupId"
+        color="primary"
+        flat
+        text
+        @click="leaveGroup"
+      >
+        Leave Group
+      </v-btn>
+    </v-card-text>
     <v-dialog
       v-model="userInviteDialog"
       max-width="290"
@@ -182,7 +177,7 @@
         <user-history :routines="groupDetail" />
       </v-card>
     </v-dialog>
-  </v-layout>
+  </container-box>
 </template>
 
 <script>
@@ -191,10 +186,12 @@ import gql from 'graphql-tag';
 import redirectOnError from '../utils/redirectOnError';
 
 import UserHistory from './UserHistory.vue';
+import ContainerBox from './ContainerBox.vue';
 
 export default {
   components: {
     UserHistory,
+    ContainerBox,
   },
   apollo: {
     userItems: {
