@@ -2,123 +2,116 @@
 /* eslint-disable max-len */
 </script>
 <template>
-  <v-layout row>
-    <v-flex xs12 sm6 offset-sm3>
-      <v-card
-          class="mx-auto"
-          max-width="600"
-        >
-        <v-card
-          dark
-          flat
-        >
-          <v-btn
-            absolute
-            bottom
-            color="info"
-            right
-            fab
-            @click="dialog = true"
-          >
-            <v-icon>add</v-icon>
-          </v-btn>
-          <v-img
-            src="https://cdn.vuetifyjs.com/images/cards/forest.jpg"
-            gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
-          >
-            <v-container fill-height>
-              <v-layout align-center>
-                <strong class="display-4 font-weight-regular mr-4">{{routineItems && routineItems.length}}</strong>
-                <v-layout column justify-end>
-                  <div class="headline font-weight-light">Routine Items</div>
+  <container-box :isLoading="$apollo.queries.routineItems.loading">
+    <v-card
+      dark
+      flat
+    >
+      <v-btn
+        absolute
+        bottom
+        color="info"
+        right
+        fab
+        @click="dialog = true"
+      >
+        <v-icon>add</v-icon>
+      </v-btn>
+      <v-img
+        src="https://cdn.vuetifyjs.com/images/cards/forest.jpg"
+        gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
+      >
+        <v-container fill-height>
+          <v-layout align-center>
+            <strong class="display-4 font-weight-regular mr-4">{{routineItems && routineItems.length}}</strong>
+            <v-layout column justify-end>
+              <div class="headline font-weight-light">Routine Items</div>
+            </v-layout>
+          </v-layout>
+        </v-container>
+      </v-img>
+    </v-card>
+    <v-card-text class="px-0">
+      <v-dialog v-model="dialog" >
+        <v-card>
+          <v-card-title>
+            <span class="headline">{{ formTitle }}</span>
+          </v-card-title>
+          <v-form ref="form" v-model="valid">
+            <v-card-text>
+              <v-container grid-list-md>
+                <v-layout wrap>
+                  <v-flex xs12 sm12 md12>
+                    <v-text-field
+                      v-model="editedItem.name"
+                      :rules="nameRules"
+                      label="Routine Name"
+                      required
+                    ></v-text-field>
+                  </v-flex>
+                  <v-flex xs12 sm12 md12>
+                    <v-textarea
+                      :rules="descriptionRules"
+                      label="Description"
+                      v-model="editedItem.description"
+                    ></v-textarea>
+                  </v-flex>
+                  <v-flex xs12 sm12 md12>
+                    <v-text-field
+                      type="time"
+                      :rules="timeRules"
+                      v-model="editedItem.time"
+                      step="600"
+                      label="Time"
+                      required
+                    ></v-text-field>
+                  </v-flex>
+                  <v-flex xs12 sm12 md12>
+                    <v-text-field
+                      type="number"
+                      v-model="editedItem.points"
+                      :rules="pointsRules"
+                      label="Points"
+                      required
+                    ></v-text-field>
+                    Point Remaining: {{maxInputPoints()}}
+                  </v-flex>
                 </v-layout>
-              </v-layout>
-            </v-container>
-          </v-img>
-        </v-card>
-        <v-card-text class="px-0">
-          <v-dialog v-model="dialog" >
-            <v-card>
-              <v-card-title>
-                <span class="headline">{{ formTitle }}</span>
-              </v-card-title>
-              <v-form ref="form" v-model="valid">
-                <v-card-text>
-                  <v-container grid-list-md>
-                    <v-layout wrap>
-                      <v-flex xs12 sm12 md12>
-                        <v-text-field
-                          v-model="editedItem.name"
-                          :rules="nameRules"
-                          label="Routine Name"
-                          required
-                        ></v-text-field>
-                      </v-flex>
-                      <v-flex xs12 sm12 md12>
-                        <v-textarea
-                          :rules="descriptionRules"
-                          label="Description"
-                          v-model="editedItem.description"
-                        ></v-textarea>
-                      </v-flex>
-                      <v-flex xs12 sm12 md12>
-                        <v-text-field
-                          type="time"
-                          :rules="timeRules"
-                          v-model="editedItem.time"
-                          step="600"
-                          label="Time"
-                          required
-                        ></v-text-field>
-                      </v-flex>
-                      <v-flex xs12 sm12 md12>
-                        <v-text-field
-                          type="number"
-                          v-model="editedItem.points"
-                          :rules="pointsRules"
-                          label="Points"
-                          required
-                        ></v-text-field>
-                        Point Remaining: {{maxInputPoints()}}
-                      </v-flex>
-                    </v-layout>
-                  </v-container>
-                </v-card-text>
+              </v-container>
+            </v-card-text>
 
-                <v-card-actions>
-                  <v-spacer></v-spacer>
-                  <v-btn color="blue darken-1" flat @click="close(true)">Cancel</v-btn>
-                  <v-btn
-                    color="primary"
-                    :disabled="buttonLoading"
-                    :loading="buttonLoading"
-                    @click="save"
-                  >
-                    Save
-                  </v-btn>
-                </v-card-actions>
-              </v-form>
-            </v-card>
-          </v-dialog>
-          <v-data-table :headers="headers" :items="routineItems" class="elevation-1" hide-actions>
-            <template v-slot:items="props">
-              <td>{{ props.item.name }}</td>
-              <td class="text-xs-right">{{ props.item.time }}</td>
-              <td class="text-xs-right">{{ props.item.points }}</td>
-              <td class="text-xs-right" style="width:105px; padding: 0">
-                <v-btn flat icon color="pink" class="mr-0" @click="editItem(props.item)">
-                  <v-icon>edit</v-icon>
-                </v-btn>
-                <v-btn flat icon color="pink" class="ml-0" @click="deleteItem(props.item)">
-                  <v-icon>delete</v-icon>
-                </v-btn>
-              </td>
-            </template>
-          </v-data-table>
-        </v-card-text>
-      </v-card>
-    </v-flex>
-  </v-layout>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="blue darken-1" flat @click="close(true)">Cancel</v-btn>
+              <v-btn
+                color="primary"
+                :disabled="buttonLoading"
+                :loading="buttonLoading"
+                @click="save"
+              >
+                Save
+              </v-btn>
+            </v-card-actions>
+          </v-form>
+        </v-card>
+      </v-dialog>
+      <v-data-table :headers="headers" :items="routineItems" class="elevation-1" hide-actions>
+        <template v-slot:items="props">
+          <td>{{ props.item.name }}</td>
+          <td class="text-xs-right">{{ props.item.time }}</td>
+          <td class="text-xs-right">{{ props.item.points }}</td>
+          <td class="text-xs-right" style="width:105px; padding: 0">
+            <v-btn flat icon color="pink" class="mr-0" @click="editItem(props.item)">
+              <v-icon>edit</v-icon>
+            </v-btn>
+            <v-btn flat icon color="pink" class="ml-0" @click="deleteItem(props.item)">
+              <v-icon>delete</v-icon>
+            </v-btn>
+          </td>
+        </template>
+      </v-data-table>
+    </v-card-text>
+  </container-box>
 </template>
 
 <script>
@@ -126,8 +119,10 @@
 import gql from 'graphql-tag';
 
 import redirectOnError from '../utils/redirectOnError';
+import ContainerBox from './ContainerBox.vue';
 
 export default {
+  components: { ContainerBox },
   apollo: {
     routineItems: {
       query: gql`

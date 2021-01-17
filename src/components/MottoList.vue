@@ -49,8 +49,9 @@
           icon
           color="success"
           fab
-          dark
           class="ml-3 mr-0"
+          :loading="buttonLoading"
+          :disabled="buttonLoading"
           @click="addMottoItem(newMottoItem)"
         >
           <v-icon dark>send</v-icon>
@@ -90,6 +91,7 @@ export default {
   data() {
     return {
       show: true,
+      buttonLoading: false,
       newMottoItem: {
         mottoItem: '',
       },
@@ -105,6 +107,8 @@ export default {
       if (!value) {
         return;
       }
+
+      this.buttonLoading = true;
 
       this.$apollo.mutate({
         mutation: gql`
@@ -128,6 +132,7 @@ export default {
             mottoItem: this.newMottoItem.mottoItem,
           });
           this.newMottoItem = { ...this.defaultMottoItem };
+          this.buttonLoading = false;
         },
         error: (error) => {
           redirectOnError(this.$router, error);

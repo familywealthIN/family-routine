@@ -88,14 +88,16 @@ if (!isDevelopment || netlify) {
   messaging.usePublicVapidKey(publicKey);
 
   // Request Permission of Notifications
-  messaging.requestPermission().then(() => {
-    console.log('Notification permission granted.');
+  setTimeout(() => {
+    messaging.requestPermission().then(() => {
+      console.log('Notification permission granted.');
 
-    // Get Token
-    messaging.getToken().then((token) => {
-      localStorage.setItem(GC_NOTIFICATION_TOKEN, token);
+      // Get Token
+      messaging.getToken().then((token) => {
+        localStorage.setItem(GC_NOTIFICATION_TOKEN, token);
+      });
+    }).catch((err) => {
+      console.log('Unable to get permission to notify.', err);
     });
-  }).catch((err) => {
-    console.log('Unable to get permission to notify.', err);
-  });
+  }, 2000);
 }

@@ -1,290 +1,285 @@
 <template>
-    <v-layout row>
-      <v-flex xs12 sm6 offset-sm3>
-        <div v-if="loading" class="text-xs-center" style="margin-top:100px;">
-          <v-progress-circular indeterminate color="primary"></v-progress-circular>
+  <container-box :isLoading="isLoading">
+    <div class="pt-2">
+      <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 pb-2 pl-2 mb-3">
+        <v-layout row>
+          <v-flex xs7>
+            <v-card-title primary-title>
+              <div>
+                <div class="headline">Today's Efficiency</div>
+              </div>
+            </v-card-title>
+            <div class="d-flex">
+              <div>
+                <v-btn
+                  fab
+                  dark
+                  small
+                  color="error"
+                  @click="mottoDialog = true"
+                >
+                  <v-icon dark>favorite</v-icon>
+                </v-btn>
+              </div>
+            </div>
+          </v-flex>
+          <v-flex xs5 class="mb-3">
+            <v-progress-circular
+              :value="countTotal(tasklist)"
+              :size="70"
+              :rotate="-90"
+              style="float: right;"
+              class="mt-3 mr-3"
+              color="white"
+              width="10">{{countTotal(tasklist)}}</v-progress-circular>
+          </v-flex>
+        </v-layout>
+      </v-card>
+    </div>
+    <v-list
+      subheader
+      style="width:100%"
+      v-if="tasklist && tasklist.length > 0"
+      :class="viewType === 'concentrated' ? 'concentrated-view' : ''"
+    >
+      <v-subheader>
+        <div class="d-flex title-options">
+            <div class="sub-header">
+              <span v-if="viewType === 'linear'">Linear</span>
+              <a v-else @click="viewType='linear', selectedTaskRef = ''">Linear</a>
+              |
+              <span v-if="viewType === 'concentrated'">Concentrated</span>
+              <a v-else @click="viewType='concentrated'">Concentrated</a>
+            </div>
+            <div>
+              <v-switch
+                v-model="skipDay"
+                label="Skip Day"
+                @change="skipClick()"
+              ></v-switch>
+            </div>
         </div>
-        <div v-else>
-          <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 mt-2 pb-2 pl-2 mb-3">
-            <v-layout row>
-              <v-flex xs7>
-                <v-card-title primary-title>
-                  <div>
-                    <div class="headline">Today's Efficiency</div>
-                  </div>
-                </v-card-title>
-                <div class="d-flex">
-                  <div>
-                    <v-btn
-                      fab
-                      dark
-                      small
-                      color="error"
-                      @click="mottoDialog = true"
-                    >
-                      <v-icon dark>favorite</v-icon>
+      </v-subheader>
+      <template v-if="viewType === 'linear'">
+        <template v-for="(task, index) in tasklist">
+          <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
+
+          <v-list-tile :key="task.id" avatar>
+            <v-list-tile-avatar>
+              <v-btn
+                fab
+                small
+                :disabled="getButtonDisabled(task)"
+                :color="getButtonColor(task)"
+                @click="checkClick($event, task)"
+              >
+                <v-icon>{{getButtonIcon(task)}}</v-icon>
+              </v-btn>
+            </v-list-tile-avatar>
+
+            <v-list-tile-content>
+              <v-list-tile-title v-html="task.name"></v-list-tile-title>
+              <v-list-tile-sub-title v-html="task.time"></v-list-tile-sub-title>
+            </v-list-tile-content>
+          </v-list-tile>
+          <!--
+          <details :key="task.id" v-if="filterTaskGoals(task.id).length" class="inline-goals">
+            <summary>View Goals</summary>
+            <ul>
+              <li :key="taskGoals.id" v-for="taskGoals in filterTaskGoals(task.id)">
+                <b>{{taskGoals.period}}</b>
+                <ul>
+                  <li
+                    :key="taskGoal.body"
+                    v-for="taskGoal in taskGoals.goalItems"
+                    :class="{ completed: taskGoal.isComplete}"
+                  >
+                    {{taskGoal.body}}
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </details>
+          -->
+        </template>
+      </template>
+      <template v-if="viewType === 'concentrated'">
+        <template v-for="(task, index) in concentratedTasklistGoals()">
+          <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
+
+          <v-list-tile
+            :key="task.id"
+            @click="updateSelectedTaskRef(task.id)"
+            :class="task.id === selectedTaskRef ? 'active' : ''"
+            avatar
+          >
+            <v-list-tile-avatar>
+              <v-btn
+                fab
+                small
+                :disabled="getButtonDisabled(task)"
+                :color="getButtonColor(task)"
+                @click="checkClick($event, task)"
+              >
+                <v-icon>{{getButtonIcon(task)}}</v-icon>
+              </v-btn>
+            </v-list-tile-avatar>
+
+            <v-list-tile-content>
+              <v-list-tile-title>
+                <span>{{task.name}}</span>
+                <span
+                  v-if="task.id !== selectedTaskRef"
+                  class="v-list__tile__side-title"
+                >
+                  {{task.time}}
+                </span>
+              </v-list-tile-title>
+              <v-list-tile-sub-title v-if="task.id === selectedTaskRef">
+                <div class="time-text">{{task.time}}</div>
+                <div>
+                  <v-btn-toggle v-model="currentGoalPeriod" >
+                    <v-btn flat value="day">
+                      Today
                     </v-btn>
+                    <v-btn flat value="week">
+                      Week
+                    </v-btn>
+                    <v-btn flat value="month">
+                      Month
+                    </v-btn>
+                    <v-btn flat value="year">
+                      Year
+                    </v-btn>
+                  </v-btn-toggle>
+                </div>
+              </v-list-tile-sub-title>
+              <div v-if="task.id === selectedTaskRef" class="task-goals">
+                <v-layout
+                  row
+                  wrap
+                  v-if="filterTaskGoalsPeriod(task.id, 'week').length
+                    && filterTaskGoalsPeriod(task.id, 'month').length"
+                >
+                  <v-flex xs12>
+                    <v-alert
+                      :value="true"
+                      color="success"
+                      icon="check_circle"
+                      outline
+                    >
+                      You are all set.
+                      Do daily milestones to complete weekly and monthly goals.
+                    </v-alert>
+                  </v-flex>
+                </v-layout>
+                <v-layout row wrap v-else>
+                  <v-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, 'month').length">
+                    <v-chip @click="currentGoalPeriod = 'month', goalDetailsDialog = true">
+                      <v-avatar class="red text-white"><v-icon>close</v-icon></v-avatar>
+                      Set Month's Goal
+                    </v-chip>
+                  </v-flex>
+                  <v-flex xs6 v-if="filterTaskGoalsPeriod(task.id, 'month').length">
+                    <v-chip>
+                      <v-avatar class="success text-white"><v-icon>check</v-icon></v-avatar>
+                      Set Month's Goal
+                    </v-chip>
+                  </v-flex>
+                  <v-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, 'week').length">
+                    <v-chip @click="currentGoalPeriod = 'week', goalDetailsDialog = true">
+                      <v-avatar class="red text-white"><v-icon>close</v-icon></v-avatar>
+                      Set Week's Goal
+                    </v-chip>
+                  </v-flex>
+                  <v-flex xs6 v-if="filterTaskGoalsPeriod(task.id, 'week').length">
+                    <v-chip>
+                      <v-avatar class="success text-white"><v-icon>check</v-icon></v-avatar>
+                      Set Week's Goal
+                    </v-chip>
+                  </v-flex>
+                </v-layout>
+                <div v-if="filterTaskGoalsPeriod(task.id, currentGoalPeriod).length" >
+                  <div
+                    :key="taskGoals.id"
+                    v-for="taskGoals in filterTaskGoalsPeriod(task.id, currentGoalPeriod)"
+                  >
+                    <v-list two-line subheader>
+                      <goal-item-list
+                        :goal="taskGoals"
+                        @delete-task-goal="deleteTaskGoal"
+                      />
+                    </v-list>
                   </div>
                 </div>
-              </v-flex>
-              <v-flex xs5 class="mb-3">
-                <v-progress-circular
-                  :value="countTotal(tasklist)"
-                  :size="70"
-                  :rotate="-90"
-                  style="float: right;"
-                  class="mt-3 mr-3"
-                  color="white"
-                  width="10">{{countTotal(tasklist)}}</v-progress-circular>
-              </v-flex>
-            </v-layout>
-          </v-card>
-          <v-list
-            subheader
-            style="width:100%"
-            v-if="tasklist && tasklist.length > 0"
-            :class="viewType === 'concentrated' ? 'concentrated-view' : ''"
-          >
-            <v-subheader>
-              <div class="d-flex title-options">
-                  <div class="sub-header">
-                    <span v-if="viewType === 'linear'">Linear</span>
-                    <a v-else @click="viewType='linear', selectedTaskRef = ''">Linear</a>
-                    |
-                    <span v-if="viewType === 'concentrated'">Concentrated</span>
-                    <a v-else @click="viewType='concentrated'">Concentrated</a>
-                  </div>
-                  <div>
-                    <v-switch
-                      v-model="skipDay"
-                      label="Skip Day"
-                      @change="skipClick()"
-                    ></v-switch>
-                  </div>
+                <small class="no-goals-text" v-else>
+                  No goal or activity logged.
+                </small>
+                <div class="add-new">
+                  <v-btn
+                    small
+                    flat
+                    @click="goalDetailsDialog = true"
+                  >
+                    <v-icon>add</v-icon>
+                    Add Goal or Activity
+                  </v-btn>
+                </div>
               </div>
-            </v-subheader>
-            <template v-if="viewType === 'linear'">
-              <template v-for="(task, index) in tasklist">
-                <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
-
-                <v-list-tile :key="task.id" avatar>
-                  <v-list-tile-avatar>
-                    <v-btn
-                      fab
-                      small
-                      :disabled="getButtonDisabled(task)"
-                      :color="getButtonColor(task)"
-                      @click="checkClick($event, task)"
-                    >
-                      <v-icon>{{getButtonIcon(task)}}</v-icon>
-                    </v-btn>
-                  </v-list-tile-avatar>
-
-                  <v-list-tile-content>
-                    <v-list-tile-title v-html="task.name"></v-list-tile-title>
-                    <v-list-tile-sub-title v-html="task.time"></v-list-tile-sub-title>
-                  </v-list-tile-content>
-                </v-list-tile>
-                <!--
-                <details :key="task.id" v-if="filterTaskGoals(task.id).length" class="inline-goals">
-                  <summary>View Goals</summary>
-                  <ul>
-                    <li :key="taskGoals.id" v-for="taskGoals in filterTaskGoals(task.id)">
-                      <b>{{taskGoals.period}}</b>
-                      <ul>
-                        <li
-                          :key="taskGoal.body"
-                          v-for="taskGoal in taskGoals.goalItems"
-                          :class="{ completed: taskGoal.isComplete}"
-                        >
-                          {{taskGoal.body}}
-                        </li>
-                      </ul>
-                    </li>
-                  </ul>
-                </details>
-                -->
-              </template>
-            </template>
-            <template v-if="viewType === 'concentrated'">
-              <template v-for="(task, index) in concentratedTasklistGoals()">
-                <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
-
-                <v-list-tile
-                  :key="task.id"
-                  @click="updateSelectedTaskRef(task.id)"
-                  :class="task.id === selectedTaskRef ? 'active' : ''"
-                  avatar
-                >
-                  <v-list-tile-avatar>
-                    <v-btn
-                      fab
-                      small
-                      :disabled="getButtonDisabled(task)"
-                      :color="getButtonColor(task)"
-                      @click="checkClick($event, task)"
-                    >
-                      <v-icon>{{getButtonIcon(task)}}</v-icon>
-                    </v-btn>
-                  </v-list-tile-avatar>
-
-                  <v-list-tile-content>
-                    <v-list-tile-title>
-                      <span>{{task.name}}</span>
-                      <span
-                        v-if="task.id !== selectedTaskRef"
-                        class="v-list__tile__side-title"
-                      >
-                        {{task.time}}
-                      </span>
-                    </v-list-tile-title>
-                    <v-list-tile-sub-title v-if="task.id === selectedTaskRef">
-                      <div class="time-text">{{task.time}}</div>
-                      <div>
-                        <v-btn-toggle v-model="currentGoalPeriod" >
-                          <v-btn flat value="day">
-                            Today
-                          </v-btn>
-                          <v-btn flat value="week">
-                            Week
-                          </v-btn>
-                          <v-btn flat value="month">
-                            Month
-                          </v-btn>
-                          <v-btn flat value="year">
-                            Year
-                          </v-btn>
-                        </v-btn-toggle>
-                      </div>
-                    </v-list-tile-sub-title>
-                    <div v-if="task.id === selectedTaskRef" class="task-goals">
-                      <v-layout
-                        row
-                        wrap
-                        v-if="filterTaskGoalsPeriod(task.id, 'week').length
-                          && filterTaskGoalsPeriod(task.id, 'month').length"
-                      >
-                        <v-flex xs12>
-                          <v-alert
-                            :value="true"
-                            color="success"
-                            icon="check_circle"
-                            outline
-                          >
-                            You are all set.
-                            Do daily milestones to complete weekly and monthly goals.
-                          </v-alert>
-                        </v-flex>
-                      </v-layout>
-                      <v-layout row wrap v-else>
-                        <v-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, 'month').length">
-                          <v-chip @click="currentGoalPeriod = 'month', goalDetailsDialog = true">
-                            <v-avatar class="red text-white"><v-icon>close</v-icon></v-avatar>
-                            Set Month's Goal
-                          </v-chip>
-                        </v-flex>
-                        <v-flex xs6 v-if="filterTaskGoalsPeriod(task.id, 'month').length">
-                          <v-chip>
-                            <v-avatar class="success text-white"><v-icon>check</v-icon></v-avatar>
-                            Set Month's Goal
-                          </v-chip>
-                        </v-flex>
-                        <v-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, 'week').length">
-                          <v-chip @click="currentGoalPeriod = 'week', goalDetailsDialog = true">
-                            <v-avatar class="red text-white"><v-icon>close</v-icon></v-avatar>
-                            Set Week's Goal
-                          </v-chip>
-                        </v-flex>
-                        <v-flex xs6 v-if="filterTaskGoalsPeriod(task.id, 'week').length">
-                          <v-chip>
-                            <v-avatar class="success text-white"><v-icon>check</v-icon></v-avatar>
-                            Set Week's Goal
-                          </v-chip>
-                        </v-flex>
-                      </v-layout>
-                      <div v-if="filterTaskGoalsPeriod(task.id, currentGoalPeriod).length" >
-                        <div
-                          :key="taskGoals.id"
-                          v-for="taskGoals in filterTaskGoalsPeriod(task.id, currentGoalPeriod)"
-                        >
-                          <v-list two-line subheader>
-                            <goal-item-list
-                              :goal="taskGoals"
-                              @delete-task-goal="deleteTaskGoal"
-                            />
-                          </v-list>
-                        </div>
-                      </div>
-                      <small class="no-goals-text" v-else>
-                        No goal or activity logged.
-                      </small>
-                      <div class="add-new">
-                        <v-btn
-                          small
-                          flat
-                          @click="goalDetailsDialog = true"
-                        >
-                          <v-icon>add</v-icon>
-                          Add Goal or Activity
-                        </v-btn>
-                      </div>
-                    </div>
-                  </v-list-tile-content>
-                </v-list-tile>
-              </template>
-            </template>
-          </v-list>
-          <div v-if="tasklist && tasklist.length === 0">
-            <v-card>
-              <v-card-text class="text-xs-center">
-                <p>No items to display. Please go to settings and add routine items.</p>
-              </v-card-text>
-            </v-card>
-          </div>
-        </div>
-      </v-flex>
-      <v-dialog
-        v-model="goalDetailsDialog"
-        fullscreen
-        hide-overlay
-        transition="dialog-bottom-transition"
-      >
-        <v-card>
-          <v-toolbar dark color="primary">
-            <v-btn icon dark @click="goalDetailsDialog = false">
-              <v-icon>close</v-icon>
-            </v-btn>
-            <v-toolbar-title>Add Goal</v-toolbar-title>
-            <v-spacer></v-spacer>
-          </v-toolbar>
-          <goal-list
-            :goals="goals"
-            :date="date"
-            :period="currentGoalPeriod"
-            :tasklist="tasklist"
-            :selectedTaskRef="selectedTaskRef"
-            @toggle-goal-details-dialog="toggleGoalDetailsDialog"
-          />
-        </v-card>
-      </v-dialog>
-       <v-dialog
-        v-model="mottoDialog"
-        fullscreen
-        hide-overlay
-        transition="dialog-bottom-transition"
-      >
-        <v-card>
-          <v-toolbar dark color="primary">
-            <v-btn icon dark @click="mottoDialog = false">
-              <v-icon>close</v-icon>
-            </v-btn>
-            <v-toolbar-title>Motto</v-toolbar-title>
-            <v-spacer></v-spacer>
-          </v-toolbar>
-          <motto-list />
-        </v-card>
-      </v-dialog>
-    </v-layout>
+            </v-list-tile-content>
+          </v-list-tile>
+        </template>
+      </template>
+    </v-list>
+    <div v-if="tasklist && tasklist.length === 0">
+      <v-card>
+        <v-card-text class="text-xs-center">
+          <p>No items to display. Please go to settings and add routine items.</p>
+        </v-card-text>
+      </v-card>
+    </div>
+    <v-dialog
+      v-model="goalDetailsDialog"
+      fullscreen
+      hide-overlay
+      transition="dialog-bottom-transition"
+    >
+      <v-card>
+        <v-toolbar dark color="primary">
+          <v-btn icon dark @click="goalDetailsDialog = false">
+            <v-icon>close</v-icon>
+          </v-btn>
+          <v-toolbar-title>Add Goal</v-toolbar-title>
+          <v-spacer></v-spacer>
+        </v-toolbar>
+        <goal-list
+          :goals="goals"
+          :date="date"
+          :period="currentGoalPeriod"
+          :tasklist="tasklist"
+          :selectedTaskRef="selectedTaskRef"
+          @toggle-goal-details-dialog="toggleGoalDetailsDialog"
+        />
+      </v-card>
+    </v-dialog>
+    <v-dialog
+      v-model="mottoDialog"
+      fullscreen
+      hide-overlay
+      transition="dialog-bottom-transition"
+    >
+      <v-card>
+        <v-toolbar dark color="primary">
+          <v-btn icon dark @click="mottoDialog = false">
+            <v-icon>close</v-icon>
+          </v-btn>
+          <v-toolbar-title>Motto</v-toolbar-title>
+          <v-spacer></v-spacer>
+        </v-toolbar>
+        <motto-list />
+      </v-card>
+    </v-dialog>
+  </container-box>
 </template>
 
 <script>
@@ -298,12 +293,14 @@ import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 import GoalList from './GoalList.vue';
 import MottoList from './MottoList.vue';
 import GoalItemList from './GoalItemList.vue';
+import ContainerBox from './ContainerBox.vue';
 
 export default {
   components: {
     GoalList,
     MottoList,
     GoalItemList,
+    ContainerBox,
   },
   apollo: {
     tasklist: {
@@ -326,7 +323,7 @@ export default {
         }
       `,
       update(data) {
-        this.loading = false;
+        this.isLoading = false;
         this.tasklist = data.routineDate && data.routineDate.date
           ? data.routineDate.tasklist
           : [];
@@ -347,7 +344,7 @@ export default {
       error(error) {
         redirectOnError(this.$router, error);
         clearInterval(this.timerId);
-        this.loading = false;
+        this.isLoading = false;
       },
     },
     goals: {
@@ -378,13 +375,13 @@ export default {
       error(error) {
         redirectOnError(this.$router, error);
         clearInterval(this.timerId);
-        this.loading = false;
+        this.isLoading = false;
       },
     },
   },
   data() {
     return {
-      loading: true,
+      isLoading: true,
       goalDetailsDialog: false,
       mottoDialog: false,
       tasklist: [],
@@ -403,7 +400,7 @@ export default {
   },
   methods: {
     addNewDayRoutine() {
-      this.loading = true;
+      this.isLoading = true;
       this.$apollo.mutate({
         mutation: gql`
           mutation addRoutine($date: String!) {
@@ -430,12 +427,12 @@ export default {
           this.tasklist = addRoutine && addRoutine.date ? addRoutine.tasklist : [];
           this.did = addRoutine.id;
           this.setPassedWait();
-          this.loading = false;
+          this.isLoading = false;
         },
         error: (error) => {
           redirectOnError(this.$router, error);
           clearInterval(this.timerId);
-          this.loading = false;
+          this.isLoading = false;
           this.$notify({
             title: 'Error',
             text: 'An unexpected error occured',

@@ -39,8 +39,8 @@
         </v-list-tile>
       </v-list-group>
     </v-list>
-    <div v-else class="text-xs-center" style="margin-top:100px;">
-      <v-progress-circular :size="50" indeterminate color="primary"></v-progress-circular>
+    <div v-else class="text-xs-center pt-3 pb-3">
+      We do not have history of routine, check back later.
     </div>
   </v-card>
 </template>

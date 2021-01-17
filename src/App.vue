@@ -69,7 +69,7 @@ export default {
         { title: 'Goals', icon: 'assignment', route: '/goals' },
         { title: 'History', icon: 'history', route: '/history' },
         { title: 'Family', icon: 'supervisor_account', route: '/family' },
-        { title: 'Settings', icon: 'settings', route: '/settings' },
+        { title: 'Routine Settings', icon: 'settings', route: '/settings' },
         { title: 'About', icon: 'info', route: '/about' },
       ],
     };

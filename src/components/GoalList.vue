@@ -16,8 +16,9 @@
           icon
           color="success"
           fab
-          dark
           class="ml-3 mr-0"
+          :loading="buttonLoading"
+          :disabled="buttonLoading"
           @click="addGoalItem(newGoalItem)"
         >
           <v-icon dark>send</v-icon>
@@ -93,6 +94,7 @@ export default {
   data() {
     return {
       show: true,
+      buttonLoading: false,
       newGoalItem: {
         body: '',
         isMilestone: false,
@@ -126,6 +128,7 @@ export default {
       return goal;
     },
     addGoalItem() {
+      this.buttonLoading = true;
       const value = this.newGoalItem.body && this.newGoalItem.body.trim();
       const date = periodGoalDates(this.period, this.date);
       const goal = this.getGoal(this.period, date);
@@ -183,6 +186,7 @@ export default {
           });
           this.newGoalItem = { ...this.defaultGoalItem };
           this.$emit('toggle-goal-details-dialog', false);
+          this.buttonLoading = false;
         },
         error: (error) => {
           redirectOnError(this.$router, error);
