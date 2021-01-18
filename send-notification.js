@@ -16,7 +16,6 @@ admin.initializeApp({
   databaseURL: 'https://groutine-21c1b.firebaseio.com',
 });
 
-
 function sendNotification(token, name, description) {
   const payload = {
     notification: {
@@ -100,11 +99,13 @@ db.once('open', () => {
     ]).toArray((err, result) => {
       result.forEach((user) => {
         const {
-          name, email, description, userDetails,
+          name, email, description, userDetails, ticked,
         } = user;
-        const { notificationId } = userDetails[0];
-        console.log(`Sending notification of ${email} with name ${name} to ${notificationId}`);
-        notificationList.push(sendNotification(notificationId, name, description));
+        if (!ticked) {
+          const { notificationId } = userDetails[0];
+          console.log(`Sending notification of ${email} with name ${name} to ${notificationId}`);
+          notificationList.push(sendNotification(notificationId, name, description));
+        }
       });
 
       Promise.all(notificationList)
