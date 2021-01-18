@@ -260,6 +260,15 @@
           :selectedTaskRef="selectedTaskRef"
           @toggle-goal-details-dialog="toggleGoalDetailsDialog"
         />
+        <v-alert
+          :value="true"
+          color="success"
+          icon="ev_station"
+          outline
+          class="ml-3 mr-3"
+        >
+          It's better to set Month and Weekly goals first to better guide daily milestones.
+        </v-alert>
       </v-card>
     </v-dialog>
     <v-dialog
@@ -396,6 +405,13 @@ export default {
   computed: {
     date() {
       return moment().format('DD-MM-YYYY');
+    },
+  },
+  watch: {
+    date(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.$apollo.queries.tasklist.refetch();
+      }
     },
   },
   methods: {
@@ -744,6 +760,9 @@ export default {
   },
   mounted() {
     this.timerId = setInterval(() => {
+      if (moment(new Date(), 'HH:mm') === '00:00') {
+        console.log('watcher Check', this.date);
+      }
       this.setPassedWait();
     }, 60 * 1000);
   },
