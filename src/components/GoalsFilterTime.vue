@@ -61,12 +61,12 @@ export default {
     },
     inRangeType(date)  {
       const startDate = moment(date, "DD-MM-YYYY");
-      const todayDate = moment();
+      const todayDate = moment(new Date(), "DD-MM-YYYY");
 
       if(this.rangeType === 'upcoming') {
-        return moment(startDate).isAfter(todayDate);
+        return moment(startDate).isSameOrAfter(todayDate, "day");
       } else if (this.rangeType === 'past') {
-        return moment(startDate).isBefore(todayDate);
+        return moment(startDate).isBefore(todayDate, "day");
       }
 
       return true;
