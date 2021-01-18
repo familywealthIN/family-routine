@@ -540,10 +540,10 @@ export default {
           mutation: gql`
             mutation tickRoutineItem(
               $id: ID!
-              $name: String!
+              $taskId: String!
               $ticked: Boolean!
             ) {
-              tickRoutineItem(id: $id, name: $name, ticked: $ticked) {
+              tickRoutineItem(id: $id, taskId: $taskId, ticked: $ticked) {
                 id
                 tasklist {
                   name
@@ -554,7 +554,7 @@ export default {
           `,
           variables: {
             id: this.did,
-            name: task.name,
+            taskId: task.id,
             ticked: task.ticked,
           },
           error: (error) => {
@@ -612,13 +612,14 @@ export default {
             mutation: gql`
               mutation passRoutineItem(
                 $id: ID!
-                $name: String!
+                $taskId: String!
                 $ticked: Boolean!
                 $passed: Boolean!
               ) {
-                passRoutineItem(id: $id, name: $name, ticked: $ticked, passed: $passed) {
+                passRoutineItem(id: $id, taskId: $taskId, ticked: $ticked, passed: $passed) {
                   id
                   tasklist {
+                    id
                     name
                     ticked
                   }
@@ -627,9 +628,18 @@ export default {
             `,
             variables: {
               id: this.did,
-              name: item.name,
+              taskId: item.id,
               ticked: item.ticked,
               passed: item.passed,
+            },
+            update: (store, { data: { passRoutineItem } }) => {
+              if (passRoutineItem.tasklist) {
+                const currentTask = passRoutineItem.tasklist.find((task) => task.id === item.id);
+                if (currentTask.ticked) {
+                  item.passed = false;
+                  item.ticked = true;
+                }
+              }
             },
             error: (error) => {
               redirectOnError(this.$router, error);
@@ -657,10 +667,10 @@ export default {
             mutation: gql`
               mutation waitRoutineItem(
                 $id: ID!
-                $name: String!
+                $taskId: String!
                 $wait: Boolean!
               ) {
-                waitRoutineItem(id: $id, name: $name, wait: $wait) {
+                waitRoutineItem(id: $id, taskId: $taskId, wait: $wait) {
                   id
                   tasklist {
                     name
@@ -671,7 +681,7 @@ export default {
             `,
             variables: {
               id: this.did,
-              name: item.name,
+              taskId: item.id,
               wait: item.wait,
             },
             error: (error) => {
