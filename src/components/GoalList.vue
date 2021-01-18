@@ -16,8 +16,9 @@
           icon
           color="success"
           fab
-          dark
           class="ml-3 mr-0"
+          :loading="buttonLoading"
+          :disabled="buttonLoading"
           @click="addGoalItem(newGoalItem)"
         >
           <v-icon dark>send</v-icon>
@@ -70,6 +71,7 @@ export default {
             goalItems {
               id
               body
+              taskRef
             }
           }
         }
@@ -77,7 +79,7 @@ export default {
       update(data) {
         this.loading = false;
         return data.goalDatePeriod && data.goalDatePeriod.date
-          ? data.goalDatePeriod.goalItems
+          ? this.groupGoalItemsRef(data.goalDatePeriod.goalItems)
           : [];
       },
       variables() {
@@ -93,6 +95,7 @@ export default {
   data() {
     return {
       show: true,
+      buttonLoading: false,
       newGoalItem: {
         body: '',
         isMilestone: false,
@@ -126,11 +129,13 @@ export default {
       return goal;
     },
     addGoalItem() {
+      this.buttonLoading = true;
       const value = this.newGoalItem.body && this.newGoalItem.body.trim();
       const date = periodGoalDates(this.period, this.date);
       const goal = this.getGoal(this.period, date);
 
       if (!value) {
+        this.buttonLoading = false;
         return;
       }
 
@@ -183,6 +188,7 @@ export default {
           });
           this.newGoalItem = { ...this.defaultGoalItem };
           this.$emit('toggle-goal-details-dialog', false);
+          this.buttonLoading = false;
         },
         error: (error) => {
           redirectOnError(this.$router, error);
@@ -196,21 +202,60 @@ export default {
         },
       });
     },
+    groupGoalItemsRef(goalItems) {
+      const groupedGoalItems = [];
+      let currentTaskRef = '';
+      goalItems.sort((a, b) => {
+        if (a.taskRef < b.taskRef) { return -1; }
+        if (a.taskRef > b.taskRef) { return 1; }
+        return 0;
+      });
+
+      goalItems.forEach((goalItem) => {
+        if (goalItem.taskRef !== currentTaskRef) {
+          currentTaskRef = goalItem.taskRef;
+          const selectedTask = this.tasklist.find((task) => task.id === currentTaskRef);
+          groupedGoalItems.push({ header: selectedTask.name });
+
+          if (this.newGoalItem.taskRef === this.selectedTaskRef && this.newGoalItem.goalRef === '') {
+            this.newGoalItem.goalRef = goalItem.id;
+          }
+        }
+
+        groupedGoalItems.push(goalItem);
+      });
+
+      return groupedGoalItems;
+    },
   },
   watch: {
-    selectedTaskRef(val) {
-      this.newGoalItem.taskRef = val;
-      this.defaultGoalItem.taskRef = val;
+    selectedTaskRef(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.newGoalItem = {
+          ...this.defaultGoalItem,
+          taskRef: newVal,
+        };
+        this.defaultGoalItem = {
+          ...this.defaultGoalItem,
+          taskRef: newVal,
+        };
+      }
+    },
+    period(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.newGoalItem = {
+          ...this.defaultGoalItem,
+        };
+        this.defaultGoalItem = {
+          ...this.defaultGoalItem,
+        };
+      }
     },
   },
 };
 </script>
 
-<style lang="stylus" scoped>
-  .completed {
-    text-decoration: line-through;
-  }
-
+<style>
   .formGoal {
     display: flex;
     grid-column: 2;
@@ -221,5 +266,11 @@ export default {
     display:inline-block;
     flex-shrink: 0;
     flex-grow: 1;
+  }
+
+  .v-select-list .v-subheader {
+    padding: 0 8px 0 8px;
+    height: 30px;
+    border-bottom: 1px solid #ccc;
   }
 </style>

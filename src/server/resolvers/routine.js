@@ -12,18 +12,7 @@ const { RoutineItemModel } = require('../schema/RoutineItemSchema');
 const { UserModel } = require('../schema/UserSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
-
-function sortTimes(array) {
-  return array.sort((a, b) => {
-    const [aHours, aMinutes] = a.time.split(':');
-    const [bHours, bMinutes] = b.time.split(':');
-
-    if (parseInt(aHours, 10) - parseInt(bHours, 10) === 0) {
-      return parseInt(aMinutes, 10) - parseInt(bMinutes, 10);
-    }
-    return parseInt(aHours, 10) - parseInt(bHours, 10);
-  });
-}
+const sortTimes = require('../utils/sortTimes');
 
 async function findTodayandSort(args, email) {
   const todaysRoutine = await RoutineModel.findOne({ date: args.date, email }).exec();
@@ -37,13 +26,17 @@ async function findTodayandSort(args, email) {
 const query = {
   routines: {
     type: GraphQLList(RoutineType),
-    resolve: (root, args, context) => {
+    resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      return RoutineModel.find({
+      const routines = await RoutineModel.find({
         email,
         skip: { $ne: true },
       }).exec();
+
+      routines.forEach((routine) => sortTimes(routine.tasklist));
+
+      return routines;
     },
   },
   routinesByGroupEmail: {
@@ -58,11 +51,15 @@ const query = {
       await validateGroupUser(UserModel, email, args.groupId);
       await validateGroupUser(UserModel, args.email, args.groupId);
 
-      return RoutineModel
-        .find({ email: args.email })
+      const routines = await RoutineModel
+        .find({ email: args.email, skip: { $ne: true } })
         .sort({ $natural: -1 })
         .limit(7)
         .exec();
+
+      routines.forEach((routine) => sortTimes(routine.tasklist));
+
+      return routines;
     },
   },
   routine: {
@@ -158,14 +155,14 @@ const mutation = {
     type: RoutineType,
     args: {
       id: { type: GraphQLNonNull(GraphQLID) },
-      name: { type: GraphQLNonNull(GraphQLString) },
+      taskId: { type: GraphQLNonNull(GraphQLString) },
       ticked: { type: GraphQLNonNull(GraphQLBoolean) },
     },
     resolve: (root, args, context) => {
       const email = getEmailfromSession(context);
 
       return RoutineModel.findOneAndUpdate(
-        { _id: args.id, email, 'tasklist.name': args.name },
+        { _id: args.id, email, 'tasklist._id': args.taskId },
         { $set: { 'tasklist.$.ticked': args.ticked } },
         { new: true },
       ).exec();
@@ -191,18 +188,21 @@ const mutation = {
     type: RoutineType,
     args: {
       id: { type: GraphQLNonNull(GraphQLID) },
-      name: { type: GraphQLNonNull(GraphQLString) },
+      taskId: { type: GraphQLNonNull(GraphQLString) },
       ticked: { type: GraphQLNonNull(GraphQLBoolean) },
       passed: { type: GraphQLNonNull(GraphQLBoolean) },
     },
-    resolve: (root, args, context) => {
+    resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
-      if (args.ticked) {
-        return null;
+      const routine = await RoutineModel
+        .findOne({ _id: args.id, email }).exec();
+      const taskToUpdate = routine.tasklist.find((task) => task.id === args.taskId);
+      if (args.ticked || (taskToUpdate && taskToUpdate.ticked)) {
+        return routine;
       }
 
       return RoutineModel.findOneAndUpdate(
-        { _id: args.id, email, 'tasklist.name': args.name },
+        { _id: args.id, email, 'tasklist._id': args.taskId },
         { $set: { 'tasklist.$.passed': args.passed } },
         { new: true },
       ).exec();
@@ -212,14 +212,14 @@ const mutation = {
     type: RoutineType,
     args: {
       id: { type: GraphQLNonNull(GraphQLID) },
-      name: { type: GraphQLNonNull(GraphQLString) },
+      taskId: { type: GraphQLNonNull(GraphQLString) },
       wait: { type: GraphQLNonNull(GraphQLBoolean) },
     },
     resolve: (root, args, context) => {
       const email = getEmailfromSession(context);
 
       return RoutineModel.findOneAndUpdate(
-        { _id: args.id, email, 'tasklist.name': args.name },
+        { _id: args.id, email, 'tasklist._id': args.taskId },
         { $set: { 'tasklist.$.wait': args.wait } },
         { new: true },
       ).exec();

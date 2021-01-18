@@ -2,52 +2,45 @@
 /* eslint-disable max-len */
 </script>
 <template>
-  <v-layout row >
-    <v-flex xs12 sm6 offset-sm3>
-      <v-card
-          class="mx-auto"
-          max-width="600"
+  <container-box :isLoading="$apollo.queries.goalMilestones.loading">
+    <v-card-text class="py-0 px-0">
+      <v-list subheader>
+        <v-subheader
+          class="subheading"
         >
-        <v-card-text class="py-0 px-0">
-          <v-list subheader>
-            <v-subheader
-              class="subheading"
-            >
-              Goals
-            </v-subheader>
-            <template v-for="period in periods">
-              <div v-if="goalMilestones && goalMilestones[period.name].length" v-bind:key="period.name">
-                <v-list-group v-model="period.active">
-                  <template v-slot:activator>
-                    <v-list-tile>
-                      <v-list-tile-content>
-                        <v-list-tile-title>{{ period.name }} Goals</v-list-tile-title>
-                      </v-list-tile-content>
-                    </v-list-tile>
-                  </template>
-                  <ul><goal-item-milestone-list :goalItems="goalMilestones[period.name]" /></ul>
-                </v-list-group>
-              </div>
-            </template>
-            <!-- <div class="text-xs-center" v-else>
-              You Don't have any Goals in life. Poor Fellow.
-            </div> -->
-          </v-list>
-        </v-card-text>
-        <v-btn
-          fixed
-          dark
-          fab
-          bottom
-          class="second-right-btn"
-          color="info"
-          @click="$router.push('/goals')"
-        >
-          <v-icon>view_agenda</v-icon>
-        </v-btn>
-      </v-card>
-    </v-flex>
-  </v-layout>
+          Goals
+        </v-subheader>
+        <template v-for="period in periods">
+          <div v-if="goalMilestones && goalMilestones[period.name].length" v-bind:key="period.name">
+            <v-list-group v-model="period.active">
+              <template v-slot:activator>
+                <v-list-tile>
+                  <v-list-tile-content>
+                    <v-list-tile-title>{{ period.name }} Goals</v-list-tile-title>
+                  </v-list-tile-content>
+                </v-list-tile>
+              </template>
+              <ul><goal-item-milestone-list :goalItems="goalMilestones[period.name]" /></ul>
+            </v-list-group>
+          </div>
+        </template>
+        <!-- <div class="text-xs-center" v-else>
+          You Don't have any Goals in life. Poor Fellow.
+        </div> -->
+      </v-list>
+    </v-card-text>
+    <v-btn
+      fixed
+      dark
+      fab
+      bottom
+      class="second-right-btn"
+      color="info"
+      @click="$router.push('/goals')"
+    >
+      <v-icon>view_agenda</v-icon>
+    </v-btn>
+  </container-box>
 </template>
 
 <script>
@@ -59,11 +52,13 @@ import { defaultGoalItem, periodsArray } from '../constants/goals';
 
 import GoalItemMilestoneList from './GoalItemMilestoneList.vue';
 import GoalCreation from './GoalCreation.vue';
+import ContainerBox from './ContainerBox.vue';
 
 export default {
   components: {
     GoalItemMilestoneList,
     GoalCreation,
+    ContainerBox,
   },
   apollo: {
     goalMilestones: gql`
