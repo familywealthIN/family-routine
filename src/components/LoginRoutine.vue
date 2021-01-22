@@ -37,7 +37,6 @@
           Sign in with Google
         </div>
       </a>
-      <v-btn @click="handleClickSignOut" v-if="isSignIn" :disabled="!isInit">Sign Out</v-btn>
     </div>
   </container-box>
 </template>
@@ -170,7 +169,7 @@ export default {
   mounted() {
     const checkGauthLoad = setInterval(() => {
       this.isInit = this.$gAuth.isInit;
-      this.isSignIn = this.$gAuth.isAuthorized;
+      this.isSignIn = this.$gAuth.isAuthorized && !window.appSignedOut;
       if (this.isSignIn) {
         this.$router.push('home');
         this.isLoading = false;

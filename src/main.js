@@ -1,6 +1,7 @@
 import Vue from 'vue';
 import { ApolloClient } from 'apollo-client';
 import { ApolloLink } from 'apollo-link';
+import { onError } from 'apollo-link-error';
 import { createHttpLink } from 'apollo-link-http';
 import { InMemoryCache } from 'apollo-cache-inmemory';
 import firebase from 'firebase/app';
@@ -18,6 +19,7 @@ import router from './router';
 import {
   GC_NOTIFICATION_TOKEN, GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN,
 } from './constants/settings';
+import redirectOnError from './utils/redirectOnError';
 
 Vue.config.productionTip = false;
 
@@ -42,9 +44,33 @@ const httpLink = createHttpLink({
 // Cache implementation
 const cache = new InMemoryCache();
 
+const errorLink = onError(({ graphQLErrors, networkError }) => {
+  if (graphQLErrors) {
+    graphQLErrors.map((error) => {
+      //       const { message, locations, path } = error;
+      //       console.log(
+      //         `[GraphQL error]: Message: ${message},
+      // Location: ${JSON.stringify(locations)},
+      // Path: ${path}`,
+      //       );
+      redirectOnError(router, error);
+      return null;
+    });
+  }
+
+  if (networkError) {
+    // Add something like this to set the error message to the one from the server response
+    // eslint-disable-next-line no-param-reassign
+    networkError.message = networkError.result.errors[0].debugMessage;
+
+    console.error(`[Network error]: ${networkError}`);
+  }
+});
+
+const normalLink = authMiddleware.concat(httpLink);
 // Create the apollo client
 const apolloClient = new ApolloClient({
-  link: authMiddleware.concat(httpLink),
+  link: errorLink.concat(normalLink),
   cache,
   fetchOptions: {
     mode: 'no-cors',
