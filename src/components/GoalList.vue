@@ -78,6 +78,7 @@ export default {
       `,
       update(data) {
         this.loading = false;
+        this.goalItems = data.goalDatePeriod.goalItems;
         return data.goalDatePeriod && data.goalDatePeriod.date
           ? this.groupGoalItemsRef(data.goalDatePeriod.goalItems)
           : [];
@@ -108,7 +109,7 @@ export default {
         goalRef: '',
         taskRef: this.selectedTaskRef || '',
       },
-      goalItem: [],
+      goalItems: [],
       showMilestoneOption: true,
     };
   },
@@ -202,6 +203,17 @@ export default {
         },
       });
     },
+    sortTimes(array) {
+      return array.sort((a, b) => {
+        const [aHours, aMinutes] = a.time.split(':');
+        const [bHours, bMinutes] = b.time.split(':');
+
+        if (parseInt(aHours, 10) - parseInt(bHours, 10) === 0) {
+          return parseInt(aMinutes, 10) - parseInt(bMinutes, 10);
+        }
+        return parseInt(aHours, 10) - parseInt(bHours, 10);
+      });
+    },
     groupGoalItemsRef(goalItems) {
       const groupedGoalItems = [];
       let currentTaskRef = '';
@@ -212,20 +224,35 @@ export default {
       });
 
       goalItems.forEach((goalItem) => {
+        const timeTask = this.tasklist.find((task) => task.id === goalItem.taskRef);
+        // eslint-disable-next-line no-param-reassign
+        goalItem.time = timeTask.time;
+      });
+
+      this.sortTimes(goalItems);
+
+      goalItems.forEach((goalItem) => {
         if (goalItem.taskRef !== currentTaskRef) {
           currentTaskRef = goalItem.taskRef;
           const selectedTask = this.tasklist.find((task) => task.id === currentTaskRef);
           groupedGoalItems.push({ header: selectedTask.name });
-
-          if (this.newGoalItem.taskRef === this.selectedTaskRef && this.newGoalItem.goalRef === '') {
-            this.newGoalItem.goalRef = goalItem.id;
-          }
         }
 
         groupedGoalItems.push(goalItem);
       });
 
+      this.autoSelectGoalRef();
+
       return groupedGoalItems;
+    },
+    autoSelectGoalRef() {
+      if (this.goalItems && this.goalItems.length) {
+        this.goalItems.forEach((goalItem) => {
+          if (this.selectedTaskRef && goalItem.taskRef === this.selectedTaskRef) {
+            this.newGoalItem.goalRef = goalItem.id;
+          }
+        });
+      }
     },
   },
   watch: {
@@ -239,6 +266,7 @@ export default {
           ...this.defaultGoalItem,
           taskRef: newVal,
         };
+        this.autoSelectGoalRef();
       }
     },
     period(newVal, oldVal) {

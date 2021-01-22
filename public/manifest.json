@@ -8,7 +8,7 @@
         "sizes": "192x192"
       },
       {
-        "src": "img/maskable_icon.png",
+        "src": "img/192_maskable.png",
         "type": "image/png",
         "sizes": "192x192",
         "purpose": "any maskable"
@@ -23,6 +23,6 @@
     "background_color": "#FFFFFF",
     "display": "standalone",
     "scope": "/",
-    "theme_color": "#1976D3",
+    "theme_color": "#288bd5",
     "gcm_sender_id": "350952942983"
   }
