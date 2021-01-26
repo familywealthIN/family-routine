@@ -42,12 +42,34 @@
       <v-toolbar-title
         class="white--text"
       >{{ pageTitle }}</v-toolbar-title>
+      <v-spacer></v-spacer>
+      <v-btn icon @click="mottoDialog = true">
+        <v-icon>favorite</v-icon>
+      </v-btn>
     </v-toolbar>
     <v-content>
       <router-view></router-view>
     </v-content>
+
     <notifications group="notify" position="bottom center" />
     <!-- <v-footer app></v-footer> -->
+    <v-dialog
+      v-model="mottoDialog"
+      fullscreen
+      hide-overlay
+      transition="dialog-bottom-transition"
+    >
+      <v-card>
+        <v-toolbar dark color="primary">
+          <v-btn icon dark @click="mottoDialog = false">
+            <v-icon>close</v-icon>
+          </v-btn>
+          <v-toolbar-title>Motto</v-toolbar-title>
+          <v-spacer></v-spacer>
+        </v-toolbar>
+        <motto-list />
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
@@ -55,11 +77,16 @@
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN,
 } from './constants/settings';
+import MottoList from './components/MottoList.vue';
 
 export default {
+  components: {
+    MottoList,
+  },
   data() {
     return {
       drawer: null,
+      mottoDialog: false,
       items: [
         { title: 'Home', icon: 'home', route: '/home' },
         { title: 'Goals', icon: 'assignment', route: '/goals' },
@@ -106,3 +133,13 @@ export default {
   },
 };
 </script>
+
+<style>
+  .v-toolbar--fixed {
+    z-index: 5;
+  }
+
+  .v-toolbar__title:not(:first-child) {
+    margin-left: 8px;
+  }
+</style>

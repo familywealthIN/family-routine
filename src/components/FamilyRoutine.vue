@@ -75,7 +75,7 @@
       </v-dialog>
       <v-card>
         <v-list v-if="userItems && userItems.length" three-line>
-          <v-subheader>Family</v-subheader>
+          <v-subheader>Members</v-subheader>
           <template v-for="(userItem, index) in userItems">
 
             <v-divider :key="userItem.email" v-if="index !== 0"></v-divider>

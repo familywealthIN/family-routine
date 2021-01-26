@@ -1,17 +1,14 @@
 <template>
   <v-layout row wrap>
     <v-flex xs12>
-      <v-card class="pl-3 pr-3">
+      <v-card class="pt-3">
         <v-list subheader>
           <v-spacer></v-spacer>
           <v-subheader
             class="subheading"
             v-if="motto && motto.length == 0"
           >
-            You have 0 Life Motto , add some.
-          </v-subheader>
-          <v-subheader class="subheading" v-else>
-            Motto
+            You have 0 Life Motto. Add some.
           </v-subheader>
           <v-list-tile
             v-for="(mott, i) in motto"

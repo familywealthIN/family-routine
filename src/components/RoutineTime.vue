@@ -9,19 +9,6 @@
                 <div class="headline">Today's Efficiency</div>
               </div>
             </v-card-title>
-            <div class="d-flex">
-              <div>
-                <v-btn
-                  fab
-                  dark
-                  small
-                  color="error"
-                  @click="mottoDialog = true"
-                >
-                  <v-icon dark>favorite</v-icon>
-                </v-btn>
-              </div>
-            </div>
           </v-flex>
           <v-flex xs5 class="mb-3">
             <v-progress-circular
@@ -40,71 +27,24 @@
       subheader
       style="width:100%"
       v-if="tasklist && tasklist.length > 0"
-      :class="viewType === 'concentrated' ? 'concentrated-view' : ''"
+      class="concentrated-view"
     >
       <v-subheader>
         <div class="d-flex title-options">
-            <div class="sub-header">
-              <span v-if="viewType === 'linear'">Linear</span>
-              <a v-else @click="viewType='linear', selectedTaskRef = ''">Linear</a>
-              |
-              <span v-if="viewType === 'concentrated'">Concentrated</span>
-              <a v-else @click="viewType='concentrated'">Concentrated</a>
-            </div>
-            <div>
-              <v-switch
-                v-model="skipDay"
-                label="Skip Day"
-                @change="skipClick()"
-              ></v-switch>
-            </div>
+          <div class="sub-header">
+            {{this.date}}
+          </div>
+          <div>
+            <v-switch
+              v-model="skipDay"
+              label="Skip Day"
+              @change="skipClick()"
+            ></v-switch>
+          </div>
         </div>
       </v-subheader>
-      <template v-if="viewType === 'linear'">
+      <template>
         <template v-for="(task, index) in tasklist">
-          <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
-
-          <v-list-tile :key="task.id" avatar>
-            <v-list-tile-avatar>
-              <v-btn
-                fab
-                small
-                :disabled="getButtonDisabled(task)"
-                :color="getButtonColor(task)"
-                @click="checkClick($event, task)"
-              >
-                <v-icon>{{getButtonIcon(task)}}</v-icon>
-              </v-btn>
-            </v-list-tile-avatar>
-
-            <v-list-tile-content>
-              <v-list-tile-title v-html="task.name"></v-list-tile-title>
-              <v-list-tile-sub-title v-html="task.time"></v-list-tile-sub-title>
-            </v-list-tile-content>
-          </v-list-tile>
-          <!--
-          <details :key="task.id" v-if="filterTaskGoals(task.id).length" class="inline-goals">
-            <summary>View Goals</summary>
-            <ul>
-              <li :key="taskGoals.id" v-for="taskGoals in filterTaskGoals(task.id)">
-                <b>{{taskGoals.period}}</b>
-                <ul>
-                  <li
-                    :key="taskGoal.body"
-                    v-for="taskGoal in taskGoals.goalItems"
-                    :class="{ completed: taskGoal.isComplete}"
-                  >
-                    {{taskGoal.body}}
-                  </li>
-                </ul>
-              </li>
-            </ul>
-          </details>
-          -->
-        </template>
-      </template>
-      <template v-if="viewType === 'concentrated'">
-        <template v-for="(task, index) in concentratedTasklistGoals()">
           <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
 
           <v-list-tile
@@ -128,12 +68,6 @@
             <v-list-tile-content>
               <v-list-tile-title>
                 <span>{{task.name}}</span>
-                <span
-                  v-if="task.id !== selectedTaskRef"
-                  class="v-list__tile__side-title"
-                >
-                  {{task.time}}
-                </span>
               </v-list-tile-title>
               <v-list-tile-sub-title v-if="task.id === selectedTaskRef">
                 <div class="time-text">{{task.time}}</div>
@@ -154,6 +88,7 @@
                   </v-btn-toggle>
                 </div>
               </v-list-tile-sub-title>
+              <v-list-tile-sub-title v-else v-html="task.time"></v-list-tile-sub-title>
               <div v-if="task.id === selectedTaskRef" class="task-goals">
                 <v-layout
                   row
@@ -228,13 +163,32 @@
               </div>
             </v-list-tile-content>
           </v-list-tile>
+          <!--
+          <details :key="task.id" v-if="filterTaskGoals(task.id).length" class="inline-goals">
+            <summary>View Goals</summary>
+            <ul>
+              <li :key="taskGoals.id" v-for="taskGoals in filterTaskGoals(task.id)">
+                <b>{{taskGoals.period}}</b>
+                <ul>
+                  <li
+                    :key="taskGoal.body"
+                    v-for="taskGoal in taskGoals.goalItems"
+                    :class="{ completed: taskGoal.isComplete}"
+                  >
+                    {{taskGoal.body}}
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </details>
+          -->
         </template>
       </template>
     </v-list>
     <div v-if="tasklist && tasklist.length === 0">
       <v-card>
         <v-card-text class="text-xs-center">
-          <p>No items to display. Please go to settings and add routine items.</p>
+          <p>No items to display. Please go to Routine Settings and add routine items.</p>
         </v-card-text>
       </v-card>
     </div>
@@ -271,23 +225,6 @@
         </v-alert>
       </v-card>
     </v-dialog>
-    <v-dialog
-      v-model="mottoDialog"
-      fullscreen
-      hide-overlay
-      transition="dialog-bottom-transition"
-    >
-      <v-card>
-        <v-toolbar dark color="primary">
-          <v-btn icon dark @click="mottoDialog = false">
-            <v-icon>close</v-icon>
-          </v-btn>
-          <v-toolbar-title>Motto</v-toolbar-title>
-          <v-spacer></v-spacer>
-        </v-toolbar>
-        <motto-list />
-      </v-card>
-    </v-dialog>
   </container-box>
 </template>
 
@@ -300,14 +237,12 @@ import redirectOnError from '../utils/redirectOnError';
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 
 import GoalList from './GoalList.vue';
-import MottoList from './MottoList.vue';
 import GoalItemList from './GoalItemList.vue';
 import ContainerBox from './ContainerBox.vue';
 
 export default {
   components: {
     GoalList,
-    MottoList,
     GoalItemList,
     ContainerBox,
   },
@@ -392,14 +327,12 @@ export default {
     return {
       isLoading: true,
       goalDetailsDialog: false,
-      mottoDialog: false,
       tasklist: [],
       did: '',
       timerId: '',
       skipDay: false,
       currentGoalPeriod: 'day',
       selectedTaskRef: '',
-      viewType: 'linear',
     };
   },
   computed: {
@@ -458,48 +391,6 @@ export default {
           });
         },
       });
-    },
-    concentratedTasklistGoals() {
-      const concTasklistGoals = [];
-      let activeTaskIndex = 0;
-
-      const currentTask = this.tasklist.find((task, index) => {
-        const timestamp = moment(task.time, 'HH:mm');
-        if (timestamp.isSameOrAfter(moment()) && index === 0) {
-          return true;
-        }
-        const nextTask = this.tasklist[index + 1];
-        if (nextTask) {
-          const nextTimestamp = moment(nextTask.time, 'HH:mm');
-          activeTaskIndex = index;
-          return !timestamp.isSameOrAfter(moment()) && nextTimestamp.isSameOrAfter(moment());
-        }
-        if ((index + 1) === this.tasklist.length) {
-          activeTaskIndex = index;
-        }
-        return true;
-      });
-
-      if (this.tasklist[activeTaskIndex - 2]) {
-        concTasklistGoals.push(this.tasklist[activeTaskIndex - 2]);
-      }
-
-      if (this.tasklist[activeTaskIndex - 1]) {
-        concTasklistGoals.push(this.tasklist[activeTaskIndex - 1]);
-      }
-
-      this.tasklist.forEach((task) => {
-        task.active = task.id === currentTask.id;
-        if (task.active && this.selectedTaskRef === '') {
-          this.selectedTaskRef = task.id;
-        }
-      });
-      concTasklistGoals.push(currentTask);
-
-      if (this.tasklist[activeTaskIndex + 1]) {
-        concTasklistGoals.push(this.tasklist[activeTaskIndex + 1]);
-      }
-      return concTasklistGoals;
     },
     deleteTaskGoal(id) {
       this.goals.forEach((goal) => {
@@ -769,12 +660,7 @@ export default {
     },
   },
   mounted() {
-    this.timerId = setInterval(() => {
-      if (moment(new Date(), 'HH:mm') === '00:00') {
-        console.log('watcher Check', this.date);
-      }
-      this.setPassedWait();
-    }, 60 * 1000);
+    this.timerId = setInterval(() => this.setPassedWait(), 60 * 1000);
   },
 };
 </script>
@@ -805,39 +691,19 @@ export default {
     flex: 12 !important;
   }
 
-  .concentrated-view .v-list__tile--avatar {
-    height: 36px;
-  }
-
-  .concentrated-view .v-list__tile__avatar {
-    min-width: 40px;
-  }
-
-  .concentrated-view .v-list__tile > .v-list__tile__avatar > .v-avatar,
-  .concentrated-view .v-list__tile > .v-list__tile__avatar > .v-avatar button{
-    height: 24px !important;
-    width: 24px !important;
-  }
-
-  .concentrated-view .v-avatar button {
-    margin: 6px;
-  }
-
-  .concentrated-view .v-list__tile__title {
-    font-size: 14px;
-  }
-
   .concentrated-view .active {
     background-color: #fff;
   }
+
+  .concentrated-view .active .v-list__tile--avatar,
+  .concentrated-view .v-list__tile--avatar {
+    transition: 0.35s;
+  }
+
   .concentrated-view .active .v-list__tile--avatar {
     height: 240px;
   }
 
-  .concentrated-view .v-list__tile__avatar {
-    min-width: 64px;
-    justify-content: center;
-  }
   .concentrated-view .active .v-list__tile__avatar {
     align-self: start;
   }

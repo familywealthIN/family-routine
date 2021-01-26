@@ -3,6 +3,12 @@
 </script>
 <template>
   <container-box :isLoading="isLoading">
+    <h2 class="text-xs-center pt-5">Build Your Routine</h2>
+    <div class="banner-box">
+      <img src="/img/login-banner.png" alt="Login Banner">
+    </div>
+    <h2 class="text-xs-center pt-3">Set Progressive Goals</h2>
+    <p class="text-xs-center pt-2 pl-3 pr-3 text-muted">Build a harmony between your routine and goals to live a prosperous healthy life.</p>
     <div class="login-box">
       <a
         href="javascript:void(0)"
@@ -38,6 +44,18 @@
         </div>
       </a>
     </div>
+    <footer>
+      <div class="text-xs-center text-muted">
+        <small>
+          By using
+          Family Routine,
+          you accept our
+          <a href="https://familywealth.in/terms">Terms</a>
+          and
+          <a href="https://familywealth.in/privacy-policy">Privacy Policy</a>.
+        </small>
+      </div>
+    </footer>
   </container-box>
 </template>
 
@@ -213,14 +231,56 @@ export default {
 .google-button .g-text {
   margin-left: 12px;
 }
+.login {
+  background-color: #fff;
+}
 .login-box {
   text-align: center;
-  width: 360px;
-  padding: 200px 15px 0;
+  width: 100%;
+  padding: 70px 16px 0;
   margin: 0 auto;
 }
+
+@media (max-width: 359px) {
+  .login-box {
+    padding-top: 30px;
+  }
+}
+
+.banner-box {
+  padding: 10px 20px 0;
+}
+
+.banner-box img {
+  max-width: 100%;
+  width: auto;
+}
+
+.text-muted {
+  color: #9197a3;
+}
+
+.text-muted a {
+  color: #9197a3;
+  font-weight: bold;
+  text-decoration: none;
+}
+
 .login .v-card {
   box-shadow: none;
-  background: #fafafa;
+}
+
+.login,
+.login .layout,
+.login .v-card {
+  height: 100%;
+}
+
+.login footer {
+  position: absolute;
+  bottom: 8px;
+  margin: 0 auto;
+  display: block;
+  width: 100%;
 }
 </style>
