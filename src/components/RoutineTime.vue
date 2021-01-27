@@ -425,6 +425,7 @@ export default {
       return 'more_horiz';
     },
     checkClick(e, task) {
+      e.stopPropagation();
       if (!task.passed && !task.wait) {
         task.ticked = true;
         this.$apollo.mutate({
