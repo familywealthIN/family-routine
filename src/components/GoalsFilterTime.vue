@@ -64,9 +64,9 @@ export default {
       const todayDate = moment(new Date(), "DD-MM-YYYY");
 
       if(this.rangeType === 'upcoming') {
-        return moment(startDate).isSameOrAfter(todayDate, "day");
+        return moment(startDate).isSameOrAfter(todayDate, "day") || date === '01-01-1970';
       } else if (this.rangeType === 'past') {
-        return moment(startDate).isBefore(todayDate, "day");
+        return moment(startDate).isBefore(todayDate, "day") && date !== '01-01-1970';
       }
 
       return true;

@@ -32,7 +32,7 @@
       <v-subheader>
         <div class="d-flex title-options">
           <div class="sub-header">
-            {{this.date}}
+            {{this.today}}
           </div>
           <div>
             <v-switch
@@ -333,11 +333,12 @@ export default {
       skipDay: false,
       currentGoalPeriod: 'day',
       selectedTaskRef: '',
+      date: moment().format('DD-MM-YYYY'),
     };
   },
   computed: {
-    date() {
-      return moment().format('DD-MM-YYYY');
+    today() {
+      return moment(this.date, 'DD-MM-YYYY').format('DD MMMM YYYY');
     },
   },
   watch: {
@@ -426,7 +427,7 @@ export default {
     },
     checkClick(e, task) {
       e.stopPropagation();
-      if (!task.passed && !task.wait) {
+      if (!task.passed && !task.wait && !task.ticked) {
         task.ticked = true;
         this.$apollo.mutate({
           mutation: gql`
@@ -661,7 +662,12 @@ export default {
     },
   },
   mounted() {
-    this.timerId = setInterval(() => this.setPassedWait(), 60 * 1000);
+    this.timerId = setInterval(() => {
+      if (this.date !== moment().format('DD-MM-YYYY')) {
+        this.date = moment().format('DD-MM-YYYY');
+      }
+      this.setPassedWait();
+    }, 60 * 1000);
   },
 };
 </script>
