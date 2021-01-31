@@ -2,7 +2,7 @@
 /* eslint-disable max-len */
 </script>
 <template>
-  <container-box :isLoading="isLoading">
+  <container-box :isLoading="isLoading || $gAuth.isAuthorized">
     <h2 class="text-xs-center pt-5">Build Your Routine</h2>
     <div class="banner-box">
       <img src="/img/login-banner.png" alt="Login Banner">
