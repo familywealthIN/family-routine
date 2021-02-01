@@ -172,12 +172,12 @@ export default {
 </script>
 
 <style>
-  .theme--light.v-calendar-weekly .v-calendar-weekly__day {
+  .history .theme--light.v-calendar-weekly .v-calendar-weekly__day {
     border-right: 1px solid #fff;
     border-bottom: 1px solid #fff;
     color: #000;
   }
-  .v-calendar-weekly__day-label {
+  .history .v-calendar-weekly__day-label {
     transform: translateX(calc(50% - 16px));
     left: 50%;
         margin-left: -16px;
@@ -185,25 +185,25 @@ export default {
     z-index: 5;
   }
 
-  .v-calendar-weekly__day-label:hover {
+  .history .v-calendar-weekly__day-label:hover {
     text-decoration: none;
   }
 
-  .v-calendar-weekly__day-month {
+  .history .v-calendar-weekly__day-month {
     right: 0;
     top: 0px;
     font-size: 8px;
     line-height: 1;
   }
 
-  .v-calendar-weekly__day .v-progress-circular {
+  .history .v-calendar-weekly__day .v-progress-circular {
     position: absolute;
     top: 3px;
     left: 50%;
     margin-left: -16px;
   }
 
-  .v-outside .v-progress-circular {
+  .history .v-outside .v-progress-circular {
     color: #ccc !important;
   }
 </style>
