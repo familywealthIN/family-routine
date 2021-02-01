@@ -106,7 +106,7 @@ export default {
   data: () => ({
     taskDialog: false,
     type: 'month',
-    start: '2021-01-01',
+    start: moment().format('YYYY-MM-DD'),
     end: '2021-12-01',
     selectedTasklist: [],
     selectedTasklistTitle: '',
