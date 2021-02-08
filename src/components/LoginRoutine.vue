@@ -237,7 +237,7 @@ export default {
 .login-box {
   text-align: center;
   width: 100%;
-  padding: 70px 16px 0;
+  padding: 70px 16px 70px;
   margin: 0 auto;
 }
 

@@ -6,7 +6,6 @@ module.exports = {
     },
   },
   chainWebpack: (config) => {
-    config.plugin('workbox');
     config.plugins.delete('prefetch');
   },
   pwa: {
@@ -15,5 +14,8 @@ module.exports = {
     msTileColor: '#FFFFFF',
     appleMobileWebAppCapable: 'yes',
     appleMobileWebAppStatusBarStyle: 'black',
+    workboxOptions: {
+      exclude: ['_header', '_redirects', 'firebase-messaging-sw.js', 'firebase.html'],
+    },
   },
 };
