@@ -74,8 +74,12 @@
 </template>
 
 <script>
+import firebase from 'firebase/app';
 import {
-  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN,
+  config, publicKey, isDevelopment, netlify,
+} from './blob/config';
+import {
+  GC_NOTIFICATION_TOKEN, GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN,
 } from './constants/settings';
 import MottoList from './components/MottoList.vue';
 
@@ -111,6 +115,27 @@ export default {
       return (this.$route.name && this.$route.name[0].toUpperCase() + this.$route.name.substr(1))
       || 'Family Routine';
     },
+  },
+  created() {
+    if (!isDevelopment || netlify) {
+      firebase.initializeApp(config);
+
+      const messaging = firebase.messaging();
+
+      messaging.usePublicVapidKey(publicKey);
+
+      // Request Permission of Notifications
+      messaging.requestPermission().then(() => {
+        console.log('Notification permission granted.');
+
+        // Get Token
+        messaging.getToken().then((token) => {
+          localStorage.setItem(GC_NOTIFICATION_TOKEN, token);
+        });
+      }).catch((err) => {
+        console.log('Unable to get permission to notify.', err);
+      });
+    }
   },
   methods: {
     handleClickSignOut() {
