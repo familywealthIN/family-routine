@@ -20,6 +20,7 @@ import {
   GC_NOTIFICATION_TOKEN, GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN,
 } from './constants/settings';
 import redirectOnError from './utils/redirectOnError';
+import './registerServiceWorker';
 
 Vue.config.productionTip = false;
 
