@@ -4,12 +4,9 @@ import { ApolloLink } from 'apollo-link';
 import { onError } from 'apollo-link-error';
 import { createHttpLink } from 'apollo-link-http';
 import { InMemoryCache } from 'apollo-cache-inmemory';
-import firebase from 'firebase/app';
 import 'firebase/messaging';
 
-import {
-  config, publicKey, graphQLUrl, isDevelopment, netlify,
-} from './blob/config';
+import { graphQLUrl } from './blob/config';
 import './plugins/vuetify';
 import './plugins/notifications';
 import VueApollo from './plugins/apollo';
@@ -17,9 +14,10 @@ import App from './App.vue';
 import './plugins/vue-google-oauth2';
 import router from './router';
 import {
-  GC_NOTIFICATION_TOKEN, GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN,
+  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN,
 } from './constants/settings';
 import redirectOnError from './utils/redirectOnError';
+import './registerServiceWorker';
 
 Vue.config.productionTip = false;
 
@@ -105,25 +103,3 @@ new Vue({
   },
   render: (h) => h(App),
 }).$mount('#app');
-
-if (!isDevelopment || netlify) {
-  firebase.initializeApp(config);
-
-  const messaging = firebase.messaging();
-
-  messaging.usePublicVapidKey(publicKey);
-
-  // Request Permission of Notifications
-  setTimeout(() => {
-    messaging.requestPermission().then(() => {
-      console.log('Notification permission granted.');
-
-      // Get Token
-      messaging.getToken().then((token) => {
-        localStorage.setItem(GC_NOTIFICATION_TOKEN, token);
-      });
-    }).catch((err) => {
-      console.log('Unable to get permission to notify.', err);
-    });
-  }, 2000);
-}
