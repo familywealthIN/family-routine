@@ -15,7 +15,7 @@ module.exports = {
     appleMobileWebAppCapable: 'yes',
     appleMobileWebAppStatusBarStyle: 'black',
     workboxOptions: {
-      exclude: ['_header', '_redirects', 'firebase-messaging-sw.js', 'firebase.html'],
+      exclude: ['_header', '_redirects', 'firebase-messaging-sw.js', 'firebase.html', '.htaccess'],
     },
   },
 };

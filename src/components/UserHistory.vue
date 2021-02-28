@@ -7,7 +7,7 @@
             xs12
             class="mb-3"
           >
-            <h2 class="pt-3 pb-2 pl-2">{{ currentMonth }}</h2>
+            <div class="text-xs-center"><h2 class="pt-3 pb-2 pl-2">{{ currentMonth }}</h2></div>
             <v-sheet height="250">
               <v-calendar
                 ref="calendar"

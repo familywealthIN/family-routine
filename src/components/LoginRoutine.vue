@@ -256,12 +256,12 @@ export default {
   width: auto;
 }
 
-.text-muted {
-  color: #9197a3;
+.text-muted,
+.text-muted a {
+  color: rgba(0, 0, 0, .54);
 }
 
 .text-muted a {
-  color: #9197a3;
   font-weight: bold;
   text-decoration: none;
 }
