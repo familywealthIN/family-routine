@@ -101,10 +101,10 @@
           <td class="text-xs-right">{{ props.item.time }}</td>
           <td class="text-xs-right">{{ props.item.points }}</td>
           <td class="text-xs-right" style="width:105px; padding: 0">
-            <v-btn flat icon color="pink" class="mr-0" @click="editItem(props.item)">
+            <v-btn flat icon class="mr-0" @click="editItem(props.item)">
               <v-icon>edit</v-icon>
             </v-btn>
-            <v-btn flat icon color="pink" class="ml-0" @click="deleteItem(props.item)">
+            <v-btn flat icon class="ml-0" @click="deleteItem(props.item)">
               <v-icon>delete</v-icon>
             </v-btn>
           </td>

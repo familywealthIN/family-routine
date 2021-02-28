@@ -174,7 +174,7 @@
           <v-toolbar-title>{{ settingsName || 'Settings'}}</v-toolbar-title>
           <v-spacer></v-spacer>
         </v-toolbar>
-        <user-history :routines="groupDetail" />
+        <family-user-history :routines="groupDetail" />
       </v-card>
     </v-dialog>
   </container-box>
@@ -185,12 +185,12 @@ import gql from 'graphql-tag';
 
 import redirectOnError from '../utils/redirectOnError';
 
-import UserHistory from './UserHistory.vue';
+import FamilyUserHistory from './FamilyUserHistory.vue';
 import ContainerBox from './ContainerBox.vue';
 
 export default {
   components: {
-    UserHistory,
+    FamilyUserHistory,
     ContainerBox,
   },
   apollo: {
