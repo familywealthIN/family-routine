@@ -1,0 +1,7 @@
+db.users.remove({})
+db.routineitems.remove({})
+db.routines.remove({})
+
+db.users.drop()
+db.routineitems.drop()
+db.routines.drop()

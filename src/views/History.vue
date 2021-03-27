@@ -6,12 +6,12 @@
 
 <script>
 // @ is an alias to /src
-import CheckHistory from '@/components/CheckHistory.vue'
+import CheckHistory from '@/components/CheckHistory.vue';
 
 export default {
   name: 'history',
   components: {
-    CheckHistory
-  }
-}
+    CheckHistory,
+  },
+};
 </script>

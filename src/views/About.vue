@@ -5,12 +5,12 @@
 </template>
 
 <script>
-import AboutTime from '@/components/AboutTime.vue'
+import AboutTime from '@/components/AboutTime.vue';
 
 export default {
-  name: "About",
+  name: 'about',
   components: {
-    AboutTime
-  }
+    AboutTime,
+  },
 };
 </script>

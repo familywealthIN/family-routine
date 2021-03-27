@@ -1,0 +1,14 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "in.familywealth.routine",
+            "sha256_cert_fingerprints": [
+                "14:FD:3C:54:90:AB:EB:B0:45:DC:64:FF:CC:12:E9:9C:22:A2:23:BD:AA:F4:4E:87:21:40:BB:C0:5F:64:55:2C"
+            ]
+        }
+    }
+]

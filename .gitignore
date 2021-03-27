@@ -20,3 +20,9 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+.firebaserc
+serviceAccountKey.json
+.env
+.serverless
+secrets.json

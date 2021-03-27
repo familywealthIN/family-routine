@@ -1,78 +1,107 @@
 <template>
-  <v-container style="max-width: 480px">
-    <v-layout
-      text-xs-center
-      wrap
-    >
-      <v-flex mb-5>
-        <v-list subheader style="width:100%" v-if="routineData.length">
-          <v-subheader>History</v-subheader>
-          <v-list-tile v-for="routine in routineData" :key="routine.day">
-            
-            <v-list-tile-content>
-              <v-list-tile-title v-html="routine.day"></v-list-tile-title>
-            </v-list-tile-content>
+    <container-box :isLoading="$apollo.queries.routines.loading">
+      <v-card color="grey lighten-4">
+        <v-card-title>
+          <v-icon
+            :color="'indigo'"
+            class="mr-5"
+            size="64"
+          >history</v-icon>
+          <v-layout column align-start>
+            <div class="caption grey--text text-uppercase">Routine Efficiency</div>
+            <div>
+              <span class="display-2 font-weight-black" v-text="avg || '—'"></span>
+              <strong v-if="avg">%</strong>
+            </div>
+          </v-layout>
 
-            <v-list-tile-action>
-              <v-progress-circular
-                rotate="-90"
-                :value="countTotal(routine.tasklist)"
-                color="primary"
-              >{{countTotal(routine.tasklist)}}</v-progress-circular>
-            </v-list-tile-action>
-           <br>
-          </v-list-tile>
-        </v-list>
-        <div v-else text-xs-center style="margin-top:100px;">
-           <v-progress-circular
-              :size="50"
-              indeterminate
-              color="primary"
-            ></v-progress-circular>
-        </div>
-      </v-flex>
-    </v-layout>
-  </v-container>
+          <v-spacer></v-spacer>
+
+          <v-btn icon class="align-self-start" size="28">
+            <v-icon>mdi-arrow-right-thick</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <v-sheet color="transparent">
+          <v-sparkline
+            :key="String(avg)"
+            :smooth="16"
+            :gradient="['#f72047', '#ffd200', '#1feaea']"
+            :line-width="3"
+            :value="graphArray || []"
+            auto-draw
+            stroke-linecap="round"
+          ></v-sparkline>
+        </v-sheet>
+      </v-card>
+      <user-history :routines="routines" />
+    </container-box>
 </template>
 
 <script>
-  // import moment from 'moment';
-  import axios from 'axios';
-  export default {
-    data () {
-      return {
-        lid: 'gRoutine',
-        routineData: []
-      }
-    },
-    methods:{
-      countTotal(tasklist){
-        return tasklist.reduce((total, num) => {
-          if(num.ticked) {
-            return total + num.points;
+import gql from 'graphql-tag';
+
+import redirectOnError from '../utils/redirectOnError';
+import UserHistory from './UserHistory.vue';
+import ContainerBox from './ContainerBox.vue';
+
+export default {
+  components: {
+    UserHistory,
+    ContainerBox,
+  },
+  apollo: {
+    routines: {
+      query: gql`
+        query routines {
+          routines {
+            id
+            date
+            tasklist {
+              name
+              time
+              points
+              ticked
+              passed
+            }
           }
-          return total;
-        }, 0);
+        }
+      `,
+      error(error) {
+        redirectOnError(this.$router, error);
       },
-      initialRoutineSet: function () {
-        return new Promise((resolve) => {
-          this.getData()
-            .then((rData) => {
-              this.routineData = rData.data;
-              resolve();
-            });
-        });
-      },
-      getData: function () {
-          return axios.get('/api.php?name=' + this.lid);
-      }
     },
-    mounted() {
-      this.initialRoutineSet();
-    }
-  }
+  },
+  data() {
+    return {
+      routines: [],
+      graphArray: [],
+    };
+  },
+  computed: {
+    avg() {
+      const sum = this.routines.reduce((acc, cur) => acc + this.countTotal(cur.tasklist), 0);
+      // eslint-disable-next-line vue/no-side-effects-in-computed-properties
+      this.graphArray = this.routines.map((routine) => this.countTotal(routine.tasklist));
+      const { length } = this.routines;
+
+      if (!sum && !length) return 0;
+
+      return Math.ceil(sum / length);
+    },
+  },
+  methods: {
+    countTotal(tasklist) {
+      return tasklist.reduce((total, num) => {
+        if (num.ticked) {
+          return total + num.points;
+        }
+        return total;
+      }, 0);
+    },
+  },
+};
 </script>
 
 <style>
-
 </style>
