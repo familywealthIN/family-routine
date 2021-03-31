@@ -93,6 +93,7 @@ export default {
       mottoDialog: false,
       items: [
         { title: 'Home', icon: 'home', route: '/home' },
+        { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
         { title: 'Goals', icon: 'assignment', route: '/goals' },
         { title: 'History', icon: 'history', route: '/history' },
         { title: 'Family', icon: 'supervisor_account', route: '/family' },
