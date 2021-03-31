@@ -56,11 +56,13 @@ const query = {
       const weekGoals = await GoalModel.find({ period: 'week', date: periodGoalDates('week', args.date), email }).exec();
       const monthGoals = await GoalModel.find({ period: 'month', date: periodGoalDates('month', args.date), email }).exec();
       const yearGoals = await GoalModel.find({ period: 'year', date: periodGoalDates('year', args.date), email }).exec();
+      const lifetimeGoals = await GoalModel.find({ period: 'lifetime', email }).exec();
       return [
         ...dayGoals,
         ...weekGoals,
         ...monthGoals,
         ...yearGoals,
+        ...lifetimeGoals,
       ];
     },
   },
