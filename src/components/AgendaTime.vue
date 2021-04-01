@@ -371,13 +371,13 @@ export default {
     border-bottom: 1px solid #ccc;
   }
   .v-timeline--dense:before {
-    left: 34px;
+    left: 34px !important;
   }
   .v-timeline--dense .v-timeline-item__dot {
-    left: 16px;
+    left: 16px !important;
   }
   .v-timeline--dense .v-timeline-item__dot--small {
-    left: 23px;
+    left: 23px !important;
   }
  .add-new .v-btn {
     margin-left: -15px;
