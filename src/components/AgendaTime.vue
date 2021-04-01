@@ -21,78 +21,78 @@
           </v-card-text>
         </v-card>
       </template>
-      <v-timeline dense clipped>
-        <template v-for="task in tasklist">
-          <span :key="task.id">
+    </div>
+    <v-timeline dense clipped>
+      <template v-for="task in tasklist">
+        <span :key="task.id">
+          <v-timeline-item
+            fill-dot
+            class="pb-4 pt-4 routine-item"
+            :color="getButtonColor(task)"
+            medium
+          >
+            <template v-slot:icon>
+              <v-icon class="white--text" >{{getButtonIcon(task)}}</v-icon>
+            </template>
+            <v-layout>
+              <v-flex xs3 class="pr-3">
+                <strong>{{task.time}}</strong>
+              </v-flex>
+              <v-flex>
+                <strong>{{task.name}}</strong>
+                <div class="caption">{{task.description}}</div>
+              </v-flex>
+            </v-layout>
+          </v-timeline-item>
+          <template v-for="period in periods">
             <v-timeline-item
-              fill-dot
-              class="pb-4 pt-4"
-              :color="getButtonColor(task)"
-              medium
+              hide-dot
+              :key="period"
+              class="pb-0 pt-2"
             >
-              <template v-slot:icon>
-                <v-icon class="white--text" >{{getButtonIcon(task)}}</v-icon>
-              </template>
-              <v-layout>
-                <v-flex xs3 class="pr-3">
-                  <strong>{{task.time}}</strong>
+              <v-layout class="period-separator" align-center justify-space-between>
+                <v-flex xs7>
+                  <span style="text-transform: uppercase">{{period}}</span>
                 </v-flex>
-                <v-flex>
-                  <strong>{{task.name}}</strong>
-                  <div class="caption">{{task.description}}</div>
+                <v-flex xs5 text-xs-right>
+                  <v-btn
+                    flat
+                    icon
+                    color="primary"
+                    @click="
+                      selectedTaskRef = task.id;
+                      currentGoalPeriod = period;
+                      goalDetailsDialog = true"
+                    >
+                    <v-icon>add</v-icon>
+                  </v-btn>
                 </v-flex>
               </v-layout>
             </v-timeline-item>
-            <template v-for="period in periods">
-              <v-timeline-item
-                hide-dot
-                :key="period"
-                class="pb-0 pt-2"
+            <template v-if="filterTaskGoalsPeriod(task.id, period).length" >
+              <template
+                v-for="taskGoals in filterTaskGoalsPeriod(task.id, period)"
               >
-                <v-layout align-center justify-space-between>
-                  <v-flex xs7>
-                    <span style="text-transform: uppercase">{{period}}</span>
-                  </v-flex>
-                  <v-flex xs5 text-xs-right>
-                    <v-btn
-                      flat
-                      icon
-                      color="primary"
-                      @click="
-                        selectedTaskRef = task.id;
-                        currentGoalPeriod = period;
-                        goalDetailsDialog = true"
-                      >
-                      <v-icon>add</v-icon>
-                    </v-btn>
-                  </v-flex>
-                </v-layout>
-              </v-timeline-item>
-              <template v-if="filterTaskGoalsPeriod(task.id, period).length" >
-                <template
-                  v-for="taskGoals in filterTaskGoalsPeriod(task.id, period)"
-                >
-                  <timeline-item-list
-                    :key="taskGoals.id"
-                    :goal="taskGoals"
-                    @delete-task-goal="deleteTaskGoal"
-                  />
-                </template>
-              </template>
-              <template v-else>
-                <v-timeline-item
-                  :key="period"
-                  class="mb-0 pb-0"
-                  hide-dot
-                >
-                  <span>No goal or activity set.</span>
-                </v-timeline-item>
+                <timeline-item-list
+                  :key="taskGoals.id"
+                  :goal="taskGoals"
+                  @delete-task-goal="deleteTaskGoal"
+                />
               </template>
             </template>
-          </span>
-        </template>
-      </v-timeline>
-    </div>
+            <template v-else>
+              <v-timeline-item
+                :key="period"
+                class="mb-0 pb-3 pt-3"
+                hide-dot
+              >
+                <span>No goal or activity set.</span>
+              </v-timeline-item>
+            </template>
+          </template>
+        </span>
+      </template>
+    </v-timeline>
     <div v-if="tasklist && tasklist.length === 0">
       <v-card>
         <v-card-text class="text-xs-center">
@@ -360,6 +360,25 @@ export default {
 </script>
 
 <style>
+  .v-timeline-item {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .routine-item {
+    background-color: aqua;
+  }
+  .period-separator {
+    border-bottom: 1px solid #ccc;
+  }
+  .v-timeline--dense:before {
+    left: 34px;
+  }
+  .v-timeline--dense .v-timeline-item__dot {
+    left: 16px;
+  }
+  .v-timeline--dense .v-timeline-item__dot--small {
+    left: 23px;
+  }
  .add-new .v-btn {
     margin-left: -15px;
     padding-left: 0;
