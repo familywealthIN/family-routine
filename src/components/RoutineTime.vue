@@ -482,17 +482,21 @@ export default {
           id: this.did,
           skip: !!(this.skipDay),
         },
-        error: (error) => {
-          redirectOnError(this.$router, error);
-          clearInterval(this.timerId);
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        },
+      }).catch((error) => {
+        let text = 'An unexpected error occured';
+        if (error.message) {
+          // eslint-disable-next-line prefer-destructuring
+          text = error.message.split('GraphQL error: ')[1];
+        }
+        setTimeout(() => { this.skipDay = false; }, 1000);
+        redirectOnError(this.$router, error);
+        this.$notify({
+          title: 'Error',
+          text,
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       });
     },
     passedTime(item) {
