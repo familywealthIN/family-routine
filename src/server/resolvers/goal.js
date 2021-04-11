@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 /* eslint-disable no-param-reassign */
 const {
   GraphQLID,
@@ -33,6 +34,55 @@ function periodGoalDates(period, date) {
   return date;
 }
 
+async function autoCheckTaskPeriod({
+  currentPeriod, stepDownPeriod, cleanGoals, completionThreshold, args, email,
+}) {
+  const periodGoals = await GoalModel.find({ period: currentPeriod, date: periodGoalDates(currentPeriod, args.date), email }).exec();
+  periodGoals.forEach((periodGoal) => {
+    periodGoal.goalItems.forEach((periodGoalItem) => {
+      periodGoalItem.progress = 0;
+
+      const dayCleanGoals = cleanGoals.filter((cleanGoal) => cleanGoal.period === stepDownPeriod);
+
+      if (dayCleanGoals && dayCleanGoals.length) {
+        dayCleanGoals.forEach(async (dayCleanGoal) => {
+          const matchedDayGoal = dayCleanGoal
+            .goalItems
+            .find((dayGoalItem) => String(periodGoalItem.id) === String(dayGoalItem.goalRef) && dayGoalItem.isComplete);
+
+          if (matchedDayGoal && matchedDayGoal.goalRef) {
+            // Addition Logic to threshold
+            periodGoalItem.progress += 1;
+
+            if (periodGoalItem.progress === completionThreshold && !periodGoalItem.isComplete) {
+              const cleanGoalsGoalItem = cleanGoals
+                .find((cleanGoal) => String(cleanGoal.id) === String(periodGoal.id))
+                .goalItems
+                .find((cleanGoalItem) => String(cleanGoalItem.id) === String(periodGoalItem.id));
+
+              periodGoalItem.isComplete = true;
+              cleanGoalsGoalItem.isComplete = true;
+
+              await GoalModel.findOneAndUpdate(
+                {
+                  date: periodGoal.date,
+                  period: periodGoal.period,
+                  email,
+                  'goalItems._id': periodGoalItem.id,
+                },
+                { $set: { 'goalItems.$.isComplete': true } },
+                { new: true },
+              ).exec();
+            }
+          }
+        });
+      }
+    });
+  });
+
+  return periodGoals;
+}
+
 const query = {
   goals: {
     type: GraphQLList(GoalType),
@@ -56,7 +106,41 @@ const query = {
       const weekGoals = await GoalModel.find({ period: 'week', date: periodGoalDates('week', args.date), email }).exec();
       const monthGoals = await GoalModel.find({ period: 'month', date: periodGoalDates('month', args.date), email }).exec();
       const yearGoals = await GoalModel.find({ period: 'year', date: periodGoalDates('year', args.date), email }).exec();
+      return [
+        ...dayGoals,
+        ...weekGoals,
+        ...monthGoals,
+        ...yearGoals,
+      ];
+    },
+  },
+  agendaGoals: {
+    type: GraphQLList(GoalType),
+    args: {
+      date: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const goals = await GoalModel.find({ email }).exec();
+
+      const cleanGoals = goals.filter((goal) => goal.goalItems.length);
+
+      const dayGoals = await GoalModel.find({ period: 'day', date: args.date, email }).exec();
+
+      const weekGoals = await autoCheckTaskPeriod({
+        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: 5, args, email,
+      });
+
+      const monthGoals = await autoCheckTaskPeriod({
+        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: 3, args, email,
+      });
+
+      const yearGoals = await autoCheckTaskPeriod({
+        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: 10, args, email,
+      });
+
       const lifetimeGoals = await GoalModel.find({ period: 'lifetime', email }).exec();
+
       return [
         ...dayGoals,
         ...weekGoals,

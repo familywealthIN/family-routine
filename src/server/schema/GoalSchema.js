@@ -4,6 +4,7 @@ const {
   GraphQLBoolean,
   GraphQLList,
   GraphQLObjectType,
+  GraphQLInt,
 } = require('graphql');
 
 const mongoose = require('mongoose');
@@ -38,6 +39,7 @@ const GoalItemTypeFields = {
   isComplete: { type: GraphQLBoolean },
   isMilestone: { type: GraphQLBoolean },
   taskRef: { type: GraphQLString },
+  progress: { type: GraphQLInt },
   goalRef: { type: GraphQLString },
 };
 
