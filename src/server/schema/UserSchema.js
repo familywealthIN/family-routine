@@ -3,6 +3,7 @@ const {
   GraphQLObjectType,
   GraphQLBoolean,
   GraphQLList,
+  GraphQLInt,
 } = require('graphql');
 
 const mongoose = require('mongoose');
@@ -20,6 +21,7 @@ const UserSchema = new mongoose.Schema({
   groupId: String,
   inviterEmail: String,
   notificationId: String,
+  holidays: Number,
   social: {
     googleProvider: {
       id: String,
@@ -43,6 +45,7 @@ const UserItemType = new GraphQLObjectType({
     picture: { type: GraphQLString },
     groupId: { type: GraphQLString },
     notificationId: { type: GraphQLString },
+    holidays: { type: GraphQLInt },
     inviterEmail: { type: GraphQLString },
     invitedEmail: { type: GraphQLString },
     isNew: { type: GraphQLBoolean },
