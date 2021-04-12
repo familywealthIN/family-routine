@@ -6,6 +6,7 @@ const {
   GraphQLList,
   GraphQLNonNull,
 } = require('graphql');
+const moment = require('moment');
 
 const { RoutineModel, RoutineType } = require('../schema/RoutineSchema');
 const { RoutineItemModel } = require('../schema/RoutineItemSchema');
@@ -21,6 +22,28 @@ async function findTodayandSort(args, email) {
     return todaysRoutine;
   }
   return null;
+}
+
+async function getSkipDayCount(email) {
+  const weekNo = moment().weeks();
+  const currentDayIndex = moment().weeks(weekNo).weekday();
+  let i = 0;
+  const promises = [];
+  while (i <= currentDayIndex) {
+    const currentDate = moment().weeks(weekNo).weekday(i).format('DD-MM-YYYY');
+    promises.push(RoutineModel.findOne({ date: currentDate, email }).exec());
+    i += 1;
+  }
+  const selectedRoutines = await Promise.all(promises);
+
+  const skipDayCount = selectedRoutines.reduce((acc, selectedItem) => {
+    if ((selectedItem && selectedItem.skip) || selectedItem === null) {
+      return acc + 1;
+    }
+    return acc;
+  }, 0);
+
+  return skipDayCount;
 }
 
 const query = {
@@ -174,8 +197,13 @@ const mutation = {
       id: { type: GraphQLNonNull(GraphQLID) },
       skip: { type: GraphQLNonNull(GraphQLBoolean) },
     },
-    resolve: (root, args, context) => {
+    resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
+
+      const skipDays = await getSkipDayCount(email);
+      if (skipDays >= 2 && args.skip) {
+        throw new Error('You have already skip 2 days this week.');
+      }
 
       return RoutineModel.findOneAndUpdate(
         { _id: args.id, email },
