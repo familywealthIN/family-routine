@@ -184,7 +184,6 @@ export default {
           return this.tasklist;
         }
         this.did = data.routineDate.id;
-        this.setPassedWait();
         this.skipDay = !!(data.routineDate.skip);
         return data.routineDate.tasklist;
       },
@@ -201,14 +200,15 @@ export default {
     },
     goals: {
       query: gql`
-        query dailyGoals($date: String!) {
-          dailyGoals(date: $date) {
+        query agendaGoals($date: String!) {
+          agendaGoals(date: $date) {
             id
             date
             period
             goalItems {
               id
               body
+              progress
               isComplete
               taskRef
               goalRef
@@ -217,7 +217,7 @@ export default {
         }
       `,
       update(data) {
-        return data.dailyGoals;
+        return data.agendaGoals;
       },
       variables() {
         return {
@@ -280,7 +280,6 @@ export default {
         update: (store, { data: { addRoutine } }) => {
           this.tasklist = addRoutine && addRoutine.date ? addRoutine.tasklist : [];
           this.did = addRoutine.id;
-          this.setPassedWait();
           this.isLoading = false;
         },
         error: (error) => {
@@ -353,7 +352,6 @@ export default {
       if (this.date !== moment().format('DD-MM-YYYY')) {
         this.date = moment().format('DD-MM-YYYY');
       }
-      this.setPassedWait();
     }, 60 * 1000);
   },
 };

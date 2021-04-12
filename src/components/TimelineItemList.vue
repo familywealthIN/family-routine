@@ -10,7 +10,7 @@
       >
         <v-layout align-center justify-space-between>
           <v-flex>
-            {{goalItem.body}}
+            {{goalItem.body}} {{progressText(goal.period, goalItem.progress)}}
           </v-flex>
           <v-flex xs5 text-xs-right>
             <span v-if="editMode">
@@ -33,6 +33,11 @@
             </span>
           </v-flex>
         </v-layout>
+        <v-progress-linear
+          color="success"
+          v-if="goal.period !== 'day' && goalItem.progress !== null"
+          :value="progressPercent(goal.period, goalItem.progress)"
+        ></v-progress-linear>
       </v-timeline-item>
     </template>
   </div>
@@ -43,7 +48,7 @@ import gql from 'graphql-tag';
 import redirectOnError from '../utils/redirectOnError';
 
 export default {
-  props: ['goal', 'editMode', 'newGoalItem'],
+  props: ['goal', 'editMode', 'newGoalItem', 'period'],
   data() {
     return {
       show: true,
@@ -52,6 +57,26 @@ export default {
     };
   },
   methods: {
+    progressText(period, progress) {
+      if (period === 'year') {
+        return `(${progress}/10)`;
+      } if (period === 'month') {
+        return `(${progress}/3)`;
+      } if (period === 'week') {
+        return `(${progress}/5)`;
+      }
+      return '';
+    },
+    progressPercent(period, progress) {
+      if (period === 'year') {
+        return (progress / 10) * 100;
+      } if (period === 'month') {
+        return (progress / 3) * 100;
+      } if (period === 'week') {
+        return (progress / 5) * 100;
+      }
+      return 0;
+    },
     deleteGoalItem(index, period, date) {
       const { id } = this.goal.goalItems[index];
       this.goal.goalItems.splice(index, 1);
