@@ -22,6 +22,38 @@
         </v-card>
       </template>
     </div>
+    <div class="text-xs-center date-navigation">
+      <v-btn
+        fab
+        outline
+        small
+        absolute
+        left
+        color="primary"
+        :disabled="disablePrevious()"
+        @click="previousDate()"
+      >
+        <v-icon dark>
+          keyboard_arrow_left
+        </v-icon>
+      </v-btn>
+      <v-btn
+        fab
+        outline
+        small
+        absolute
+        right
+        color="primary"
+        @click="nextDate()"
+      >
+        <v-icon
+          dark
+        >
+          keyboard_arrow_right
+        </v-icon>
+      </v-btn>
+      <div class="date-today">{{today}}</div>
+    </div>
     <v-timeline dense clipped>
       <template v-for="task in tasklist">
         <span :key="task.id">
@@ -194,7 +226,6 @@ export default {
       },
       error(error) {
         redirectOnError(this.$router, error);
-        clearInterval(this.timerId);
         this.isLoading = false;
       },
     },
@@ -226,7 +257,6 @@ export default {
       },
       error(error) {
         redirectOnError(this.$router, error);
-        clearInterval(this.timerId);
         this.isLoading = false;
       },
     },
@@ -237,7 +267,6 @@ export default {
       goalDetailsDialog: false,
       tasklist: [],
       did: '',
-      timerId: '',
       skipDay: false,
       currentGoalPeriod: 'day',
       selectedTaskRef: '',
@@ -284,7 +313,6 @@ export default {
         },
         error: (error) => {
           redirectOnError(this.$router, error);
-          clearInterval(this.timerId);
           this.isLoading = false;
           this.$notify({
             title: 'Error',
@@ -303,6 +331,15 @@ export default {
     },
     updateSelectedTaskRef(id) {
       this.selectedTaskRef = id;
+    },
+    disablePrevious() {
+      return this.date === moment().format('DD-MM-YYYY');
+    },
+    previousDate() {
+      this.date = moment(this.date, 'DD-MM-YYYY').subtract(1, 'days').format('DD-MM-YYYY');
+    },
+    nextDate() {
+      this.date = moment(this.date, 'DD-MM-YYYY').add(1, 'days').format('DD-MM-YYYY');
     },
     getButtonColor(task) {
       if (task.ticked) {
@@ -347,12 +384,10 @@ export default {
       this.goalDetailsDialog = bool;
     },
   },
-  mounted() {
-    this.timerId = setInterval(() => {
-      if (this.date !== moment().format('DD-MM-YYYY')) {
-        this.date = moment().format('DD-MM-YYYY');
-      }
-    }, 60 * 1000);
+  computed: {
+    today() {
+      return moment(this.date, 'DD-MM-YYYY').format('DD MMMM YYYY');
+    },
   },
 };
 </script>
@@ -381,5 +416,13 @@ export default {
     margin-left: -15px;
     padding-left: 0;
     text-align: left;
+  }
+  .date-navigation {
+    padding: 32px 32px 0 32px;
+  }
+  .date-navigation .date-today {
+    height: 40px;
+    padding-top: 10px;
+    font-weight: bold;
   }
 </style>
