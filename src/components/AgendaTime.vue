@@ -4,7 +4,7 @@
       <p class="pt-4">
         Work on your daily agenda to bring you closer to your lifetime goal.
       </p>
-      <template v-if="goals.find((goal) => goal.period === 'lifetime')" >
+      <template v-if="goals && goals.find((goal) => goal.period === 'lifetime')" >
         <v-card>
           <v-card-title>
             <h3>Remember your Lifetime Goals</h3>
