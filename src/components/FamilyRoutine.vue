@@ -78,10 +78,10 @@
           <v-subheader>Members</v-subheader>
           <template v-for="(userItem, index) in userItems">
 
-            <v-divider :key="userItem.email" v-if="index !== 0"></v-divider>
+            <v-divider :key="userItem.id" v-if="index !== 0"></v-divider>
 
             <v-list-tile
-              :key="userItem.email"
+              :key="userItem.id"
               avatar
               @click="groupDetailsClick(userItem.email)"
             >
@@ -99,10 +99,10 @@
                       v-for="(score, index)
                       in getGroupUserSevenDayScore(userItem.email)"
                     >
-                      <v-avatar :key="score" size="24" :color="getButtonColor(score)">
-                        <v-icon color="white" size="16">{{getButtonIcon(score)}}</v-icon>
+                      <v-avatar :key="String(userItem.email) + String(score.date)" size="24" :color="getButtonColor(score.count)">
+                        <v-icon color="white" size="16">{{getButtonIcon(score.count)}}</v-icon>
                       </v-avatar>
-                      <v-divider :key="score" v-if="index !== 6"></v-divider>
+                      <v-divider :key="String(userItem.email) + String(score.date)" v-if="index !== 6"></v-divider>
                     </template>
                   </span>
                 </v-list-tile-sub-title>
@@ -211,8 +211,10 @@ export default {
       },
       update({ getUsersByGroupId }) {
         this.groupDetails = [];
-        getUsersByGroupId.forEach((userItem) => this.getGroupDetails(userItem.email));
-        return getUsersByGroupId;
+        if(Array.isArray(getUsersByGroupId)) {
+          getUsersByGroupId.forEach((userItem) => this.getGroupDetails(userItem.email));
+        }
+        return getUsersByGroupId || [];
       },
       skip() {
         return this.skipQuery;
@@ -474,9 +476,14 @@ export default {
       // eslint-disable-next-line max-len
       const currentGroupUserDays = this.groupDetails.find((userDetail) => userDetail[0].email === email);
 
-      currentGroupUserDays.forEach((currentGroupUserDay) => {
-        scores.push(this.countTotal(currentGroupUserDay.tasklist));
-      });
+      if(Array.isArray(currentGroupUserDays)) {
+        currentGroupUserDays.forEach((currentGroupUserDay) => {
+          scores.push({
+            date: currentGroupUserDay.date,
+            count: this.countTotal(currentGroupUserDay.tasklist)
+          });
+        });
+      }
 
       return scores;
     },

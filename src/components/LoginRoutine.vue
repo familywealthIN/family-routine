@@ -249,6 +249,7 @@ export default {
 
 .banner-box {
   padding: 10px 20px 0;
+  text-align: center;
 }
 
 .banner-box img {
