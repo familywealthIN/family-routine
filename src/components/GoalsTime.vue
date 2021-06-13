@@ -18,13 +18,66 @@
     </div>
     <v-card-text class="py-0 px-0">
       <template v-for="period in periods">
-        <goals-filter-time
-          v-bind:key="period.name"
-          :goals="goals"
-          :periodFilter="period.name"
-          :rangeType="rangeType"
-          :updateNewGoalItem="updateNewGoalItem"
-        />
+        <div v-if="period.name === 'day'" :key="period.name">
+          <div class="text-xs-center"><h2 class="pt-3 pb-2 pl-2">{{ currentMonth }}</h2></div>
+          <v-sheet>
+            <v-calendar
+              ref="calendar"
+              v-model="start"
+              :type="type"
+              :end="end"
+              color="primary"
+              @change="updateRange"
+              @click:date="showGoalDialog"
+            >
+              <template v-slot:day="{ date }">
+                <template v-for="goal in goalsMap[date]">
+                  {{goal.goalItems.length}} Goals
+                </template>
+              </template>
+            </v-calendar>
+          </v-sheet>
+          <v-layout>
+            <v-flex
+              xs4
+              class="text-xs-left"
+            >
+              <v-btn outline color="primary" @click="$refs.calendar[0].prev()">
+                <v-icon
+                  left
+                  dark
+                >
+                  keyboard_arrow_left
+                </v-icon>
+                Prev
+              </v-btn>
+            </v-flex>
+            <v-flex xs4></v-flex>
+            <v-flex
+              xs4
+              class="text-xs-right"
+            >
+              <v-btn outline color="primary" @click="$refs.calendar[0].next()">
+                Next
+                <v-icon
+                  right
+                  dark
+                >
+                  keyboard_arrow_right
+                </v-icon>
+              </v-btn>
+            </v-flex>
+          </v-layout>
+        </div>
+        <div v-else :key="period.name">
+          <goals-filter-time
+            :key="period.name"
+            :goals="goals"
+            :periodFilter="period.name"
+            :rangeType="rangeType"
+            :updateNewGoalItem="updateNewGoalItem"
+          />
+        </div>
       </template>
     </v-card-text>
     <v-btn
@@ -68,6 +121,18 @@
             <goal-creation :newGoalItem="newGoalItem" v-on:add-update-goal-entry="addUpdateGoalEntry" />
           </v-card-text>
         </v-card>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="goalDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
+      <v-card>
+        <v-toolbar dark color="primary">
+          <v-btn icon dark @click="goalDialog = false">
+            <v-icon>close</v-icon>
+          </v-btn>
+          <v-toolbar-title>{{selectedDayGoalTitle}}</v-toolbar-title>
+          <v-spacer></v-spacer>
+        </v-toolbar>
+        <goal-item-list @update-new-goal-item="updateNewGoalItem" :goal="selectedDayGoal" :editMode="true" />
       </v-card>
     </v-dialog>
   </container-box>
@@ -117,8 +182,26 @@ export default {
     date() {
       return moment().format('DD-MM-YYYY');
     },
+    // convert the list of events into a map of lists keyed by date
+    goalsMap() {
+      const map = {};
+      if(this.goals) {
+        this.goals.forEach((goal) => {
+          if(goal.period === 'day') {
+            const date = this.formatCalendarDate(goal.date);
+            (map[date] = map[date] || []).push(goal);
+          }
+        });
+      }
+      console.log('map', map);
+      return map;
+    },
   },
   data: () => ({
+    type: 'month',
+    start: moment().format('YYYY-MM-DD'),
+    end: '2021-12-01',
+    currentMonth: moment().format('MMMM YYYY'),
     valid: true,
     addGoalItemDialog: false,
     buttonLoading: false,
@@ -137,10 +220,17 @@ export default {
     },
     periods: periodsArray,
     rangeType: 'upcoming',
+    goalDialog: false,
+    selectedDayGoalTitle: '',
+    selectedDayGoal: {}
   }),
   methods: {
-  },
-  methods: {
+    updateRange({ start }) {
+      this.currentMonth = moment(start.date, 'YYYY-MM-DD').format('MMMM YYYY');
+    },
+    formatCalendarDate(date) {
+      return moment(date, 'DD-MM-YYYY').format('YYYY-MM-DD');
+    },
     getGoal(period, date) {
       const goal = this.goals.find((aGoal) => aGoal.period === period && aGoal.date === date);
       if (!goal) {
@@ -186,7 +276,14 @@ export default {
 
       this.addGoalItemDialog = false;
       this.newGoalItem = { ...this.defaultGoalItem };
-    }
+    },
+    showGoalDialog({ date }) {
+      if(date in this.goalsMap) {
+        this.selectedDayGoalTitle = this.goalsMap[date][0].date
+        this.selectedDayGoal = this.goalsMap[date][0];
+        this.goalDialog = true;
+      }
+    },
   },
 };
 </script>

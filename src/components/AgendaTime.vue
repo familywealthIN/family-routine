@@ -272,7 +272,7 @@ export default {
       skipDay: false,
       currentGoalPeriod: 'day',
       selectedTaskRef: '',
-      date: '01-06-2021' || moment().format('DD-MM-YYYY'),
+      date: moment().format('DD-MM-YYYY'),
       periods: ['year', 'month', 'week', 'day'],
     };
   },

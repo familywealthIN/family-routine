@@ -67,7 +67,7 @@
     <div v-else class="text-xs-center pt-3 pb-3">
       We do not have history of routine, check back later.
     </div>
-     <v-dialog v-model="taskDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
+    <v-dialog v-model="taskDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
       <v-card>
         <v-toolbar dark color="primary">
           <v-btn icon dark @click="taskDialog = false">
