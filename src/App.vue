@@ -1,5 +1,5 @@
 <template>
-  <v-app :class="$gAuth && $gAuth.isAuthorized ? 'logged-in' : ''">
+  <v-app>
     <v-navigation-drawer
       fixed
       clipped
@@ -179,7 +179,7 @@ export default {
       display: none;
     }
 
-    .logged-in main.v-content {
+    nav + main.v-content {
       padding-left: 300px !important;
     }
 
