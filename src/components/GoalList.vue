@@ -78,7 +78,7 @@ export default {
       `,
       update(data) {
         this.loading = false;
-        this.goalItems = data.goalDatePeriod.goalItems;
+        this.goalItems = data && data.goalDatePeriod && data.goalDatePeriod.goalItems;
         return data.goalDatePeriod && data.goalDatePeriod.date
           ? this.groupGoalItemsRef(data.goalDatePeriod.goalItems)
           : [];

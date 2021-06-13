@@ -59,21 +59,21 @@ export default {
   methods: {
     progressText(period, progress) {
       if (period === 'year') {
-        return `(${progress}/10)`;
+        return `(${progress || 0}/10)`;
       } if (period === 'month') {
-        return `(${progress}/3)`;
+        return `(${progress || 0}/3)`;
       } if (period === 'week') {
-        return `(${progress}/5)`;
+        return `(${progress || 0}/5)`;
       }
       return '';
     },
     progressPercent(period, progress) {
       if (period === 'year') {
-        return (progress / 10) * 100;
+        return progress ? (progress / 10) * 100 : 0;
       } if (period === 'month') {
-        return (progress / 3) * 100;
+        return progress ? (progress / 3) * 100 : 0;
       } if (period === 'week') {
-        return (progress / 5) * 100;
+        return progress ? (progress / 5) * 100 : 0;
       }
       return 0;
     },
