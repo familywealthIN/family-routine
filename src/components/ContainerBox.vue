@@ -1,9 +1,9 @@
 <template>
   <v-layout row >
-    <v-flex xs12 sm6 offset-sm3>
+    <v-flex xs12 sm10 offset-sm1>
       <v-card
         class="mx-auto"
-        max-width="600"
+        max-width="800"
       >
         <div
           v-if="isLoading"

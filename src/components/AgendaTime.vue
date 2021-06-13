@@ -54,77 +54,79 @@
       </v-btn>
       <div class="date-today">{{today}}</div>
     </div>
-    <v-timeline dense clipped>
-      <template v-for="task in tasklist">
-        <span :key="task.id">
-          <v-timeline-item
-            fill-dot
-            class="pb-4 pt-4 routine-item"
-            :color="getButtonColor(task)"
-            medium
-          >
-            <template v-slot:icon>
-              <v-icon class="white--text" >{{getButtonIcon(task)}}</v-icon>
-            </template>
-            <v-layout>
-              <v-flex xs3 class="pr-3">
-                <strong>{{task.time}}</strong>
-              </v-flex>
-              <v-flex>
-                <strong>{{task.name}}</strong>
-                <div class="caption">{{task.description}}</div>
-              </v-flex>
-            </v-layout>
-          </v-timeline-item>
-          <template v-for="period in periods">
+    <div v-if="tasklist && tasklist.length">
+      <v-timeline dense clipped>
+        <template v-for="task in tasklist">
+          <span :key="task.id">
             <v-timeline-item
-              hide-dot
-              :key="period"
-              class="pb-0 pt-2"
+              fill-dot
+              class="pb-4 pt-4 routine-item"
+              :color="getButtonColor(task)"
+              medium
             >
-              <v-layout class="period-separator" align-center justify-space-between>
-                <v-flex xs7>
-                  <span style="text-transform: uppercase">{{period}}</span>
+              <template v-slot:icon>
+                <v-icon class="white--text" >{{getButtonIcon(task)}}</v-icon>
+              </template>
+              <v-layout>
+                <v-flex xs3 class="pr-3">
+                  <strong>{{task.time}}</strong>
                 </v-flex>
-                <v-flex xs5 text-xs-right>
-                  <v-btn
-                    flat
-                    icon
-                    color="primary"
-                    @click="
-                      selectedTaskRef = task.id;
-                      currentGoalPeriod = period;
-                      goalDetailsDialog = true"
-                    >
-                    <v-icon>add</v-icon>
-                  </v-btn>
+                <v-flex>
+                  <strong>{{task.name}}</strong>
+                  <div class="caption">{{task.description}}</div>
                 </v-flex>
               </v-layout>
             </v-timeline-item>
-            <template v-if="filterTaskGoalsPeriod(task.id, period).length" >
-              <template
-                v-for="taskGoals in filterTaskGoalsPeriod(task.id, period)"
+            <template v-for="period in periods">
+              <v-timeline-item
+                hide-dot
+                :key="period + task.id"
+                class="pb-0 pt-2"
               >
-                <timeline-item-list
-                  :key="taskGoals.id"
-                  :goal="taskGoals"
-                  @delete-task-goal="deleteTaskGoal"
-                />
+                <v-layout class="period-separator" align-center justify-space-between>
+                  <v-flex xs7>
+                    <span style="text-transform: uppercase">{{period}}</span>
+                  </v-flex>
+                  <v-flex xs5 text-xs-right>
+                    <v-btn
+                      flat
+                      icon
+                      color="primary"
+                      @click="
+                        selectedTaskRef = task.id;
+                        currentGoalPeriod = period;
+                        goalDetailsDialog = true"
+                      >
+                      <v-icon>add</v-icon>
+                    </v-btn>
+                  </v-flex>
+                </v-layout>
+              </v-timeline-item>
+              <template v-if="filterTaskGoalsPeriod(task.id, period).length" >
+                <template
+                  v-for="(taskGoals, i) in filterTaskGoalsPeriod(task.id, period)"
+                >
+                  <timeline-item-list
+                    :key="task.id + period + i"
+                    :goal="taskGoals"
+                    @delete-task-goal="deleteTaskGoal"
+                  />
+                </template>
+              </template>
+              <template v-else>
+                <v-timeline-item
+                  :key="period"
+                  class="mb-0 pb-3 pt-3"
+                  hide-dot
+                >
+                  <span>No goal or activity set.</span>
+                </v-timeline-item>
               </template>
             </template>
-            <template v-else>
-              <v-timeline-item
-                :key="period"
-                class="mb-0 pb-3 pt-3"
-                hide-dot
-              >
-                <span>No goal or activity set.</span>
-              </v-timeline-item>
-            </template>
-          </template>
-        </span>
-      </template>
-    </v-timeline>
+          </span>
+        </template>
+      </v-timeline>
+    </div>
     <div v-if="tasklist && tasklist.length === 0">
       <v-card>
         <v-card-text class="text-xs-center">
@@ -270,7 +272,7 @@ export default {
       skipDay: false,
       currentGoalPeriod: 'day',
       selectedTaskRef: '',
-      date: moment().format('DD-MM-YYYY'),
+      date: '01-06-2021' || moment().format('DD-MM-YYYY'),
       periods: ['year', 'month', 'week', 'day'],
     };
   },
@@ -326,7 +328,9 @@ export default {
     },
     deleteTaskGoal(id) {
       this.goals.forEach((goal) => {
-        goal.goalItems = goal.goalItems.filter((goalItem) => goalItem.id !== id);
+        goal.goalItems = goal
+        && goal.goalItems
+        && goal.goalItems.filter((goalItem) => goalItem.id !== id);
       });
     },
     updateSelectedTaskRef(id) {
@@ -342,20 +346,24 @@ export default {
       this.date = moment(this.date, 'DD-MM-YYYY').add(1, 'days').format('DD-MM-YYYY');
     },
     getButtonColor(task) {
-      if (task.ticked) {
-        return 'success';
-      } if (task.passed) {
-        return 'error';
+      if (task) {
+        if (task.ticked) {
+          return 'success';
+        } if (task.passed) {
+          return 'error';
+        }
       }
       return 'grey';
     },
     getButtonIcon(task) {
-      if (task.ticked) {
-        return 'check';
-      } if (task.passed && !task.ticked) {
-        return 'close';
-      } if (!task.passed && !task.ticked && !task.wait) {
-        return 'alarm';
+      if (task) {
+        if (task.ticked) {
+          return 'check';
+        } if (task.passed && !task.ticked) {
+          return 'close';
+        } if (!task.passed && !task.ticked && !task.wait) {
+          return 'alarm';
+        }
       }
       return 'more_horiz';
     },
@@ -364,9 +372,12 @@ export default {
       if (this.goals && this.goals.length) {
         this.goals
           .forEach((goal) => {
-            if (goal.period === currentGoalPeriod) {
-              const taskGoalItems = goal.goalItems.filter((goalItem) => goalItem.taskRef === id);
-              if (taskGoalItems.length) {
+            if (goal && goal.period === currentGoalPeriod) {
+              const taskGoalItems = goal
+                && goal.goalItems
+                && goal.goalItems.filter((goalItem) => goalItem.taskRef === id);
+
+              if (taskGoalItems && taskGoalItems.length) {
                 const newGoal = {
                   id: goal.id,
                   period: goal.period,
@@ -378,7 +389,7 @@ export default {
             }
           });
       }
-      return taskGoalList;
+      return Array.isArray(taskGoalList) ? taskGoalList : [];
     },
     toggleGoalDetailsDialog(bool) {
       this.goalDetailsDialog = bool;

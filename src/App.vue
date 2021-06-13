@@ -1,6 +1,11 @@
 <template>
-  <v-app>
-    <v-navigation-drawer style="position: fixed;" v-model="drawer" absolute temporary>
+  <v-app :class="$gAuth && $gAuth.isAuthorized ? 'logged-in' : ''">
+    <v-navigation-drawer
+      fixed
+      clipped
+      v-model="drawer"
+      v-if="$route.name !== 'login'"
+    >
       <v-list class="pa-1" v-if="$gAuth.isAuthorized">
         <v-list-tile avatar>
           <v-list-tile-avatar>
@@ -167,5 +172,19 @@ export default {
 
   .v-toolbar__title:not(:first-child) {
     margin-left: 8px;
+  }
+
+  @media (min-width: 1264px) {
+    .v-toolbar__side-icon {
+      display: none;
+    }
+
+    .logged-in main.v-content {
+      padding-left: 300px !important;
+    }
+
+    .v-navigation-drawer--fixed {
+      padding-top: 64px;
+    }
   }
 </style>
