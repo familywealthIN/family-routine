@@ -3,13 +3,20 @@
     <template v-for="(goalItem, i) in goal.goalItems">
       <v-list-tile v-bind:key="goalItem.id">
         <v-list-tile-action>
-        <v-checkbox
-          v-model="goalItem.isComplete"
-          @change="completeGoalItem(goalItem.id, goalItem.isComplete, goal.period, goal.date)"
-        ></v-checkbox>
+          <v-checkbox
+            v-model="goalItem.isComplete"
+            @change="completeGoalItem(
+              goalItem.id,
+              goalItem.isComplete,
+              goal.period,
+              goal.date,
+              goalItem.taskRef,
+              goalItem.isMilestone
+            )"
+          ></v-checkbox>
         </v-list-tile-action>
         <v-list-tile-content
-          @click="completeGoalItemText(goalItem, goal.period, goal.date)"
+          @click="completeGoalItemText(goalItem, goal.period, goal.date, goalItem.taskRef)"
         >
         <v-list-tile-title :class="{ completed: goalItem.isComplete}">
           {{goalItem.body}}
@@ -95,25 +102,29 @@ export default {
         },
       });
     },
-    completeGoalItemText(goalItem, period, date) {
+    completeGoalItemText(goalItem, period, date, taskRef) {
       // eslint-disable-next-line no-param-reassign
       goalItem.isComplete = !goalItem.isComplete;
-      this.completeGoalItem(goalItem.id, goalItem.isComplete, period, date);
+      this.completeGoalItem(goalItem.id, goalItem.isComplete, period, date, taskRef, goalItem.isMilestone);
     },
-    completeGoalItem(id, isComplete, period, date) {
+    completeGoalItem(id, isComplete, period, date, taskRef, isMilestone) {
       this.$apollo.mutate({
         mutation: gql`
           mutation completeGoalItem(
             $id: ID!
             $period: String!
             $date: String!
+            $taskRef: String!
             $isComplete: Boolean!
+            $isMilestone: Boolean!
           ) {
             completeGoalItem(
               id: $id
               period: $period
               date: $date
+              taskRef: $taskRef
               isComplete: $isComplete
+              isMilestone: $isMilestone
             ) {
               id
             }
@@ -123,7 +134,9 @@ export default {
           id,
           period,
           date,
+          taskRef,
           isComplete: Boolean(isComplete),
+          isMilestone: Boolean(isMilestone),
         },
         error: (error) => {
           redirectOnError(this.$router, error);

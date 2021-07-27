@@ -185,8 +185,8 @@ import gql from 'graphql-tag';
 
 import redirectOnError from '../utils/redirectOnError';
 
-import FamilyUserHistory from './FamilyUserHistory.vue';
-import ContainerBox from './ContainerBox.vue';
+import FamilyUserHistory from '../components/FamilyUserHistory.vue';
+import ContainerBox from '../components/ContainerBox.vue';
 
 export default {
   components: {

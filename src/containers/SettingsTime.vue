@@ -119,7 +119,7 @@
 import gql from 'graphql-tag';
 
 import redirectOnError from '../utils/redirectOnError';
-import ContainerBox from './ContainerBox.vue';
+import ContainerBox from '../components/ContainerBox.vue';
 
 export default {
   components: { ContainerBox },

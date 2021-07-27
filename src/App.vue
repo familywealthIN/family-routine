@@ -100,6 +100,7 @@ export default {
         { title: 'Home', icon: 'home', route: '/home' },
         { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
         { title: 'Goals', icon: 'assignment', route: '/goals' },
+        { title: 'Progress', icon: 'chart', route: '/progress' },
         { title: 'History', icon: 'history', route: '/history' },
         { title: 'Family', icon: 'supervisor_account', route: '/family' },
         { title: 'Routine Settings', icon: 'settings', route: '/settings' },

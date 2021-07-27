@@ -43,7 +43,13 @@
           </div>
         </div>
       </v-subheader>
-      <template>
+      <template v-if="skipDay">
+        <div class="skip-box">
+          <img src="/img/relax.jpg">
+          <h1>Relax, Detox and Enjoy the Day</h1>
+        </div>
+      </template>
+      <template v-else>
         <template v-for="(task, index) in tasklist">
           <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
 
@@ -236,9 +242,9 @@ import gql from 'graphql-tag';
 import redirectOnError from '../utils/redirectOnError';
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 
-import GoalList from './GoalList.vue';
-import GoalItemList from './GoalItemList.vue';
-import ContainerBox from './ContainerBox.vue';
+import GoalList from '../components/GoalList.vue';
+import GoalItemList from '../components/GoalItemList.vue';
+import ContainerBox from '../components/ContainerBox.vue';
 
 export default {
   components: {
@@ -262,6 +268,11 @@ export default {
               ticked
               passed
               wait
+              stimuli {
+                name
+                splitRate
+                earned
+              }
             }
           }
         }
@@ -304,6 +315,7 @@ export default {
               isComplete
               taskRef
               goalRef
+              isMilestone
             }
           }
         }
@@ -366,6 +378,11 @@ export default {
                 ticked
                 passed
                 wait
+                stimuli {
+                  name
+                  splitRate
+                  earned
+                }
               }
             }
           }
@@ -410,7 +427,7 @@ export default {
       return '';
     },
     getButtonDisabled(task) {
-      if (task.passed || task.wait) {
+      if (!task.ticked && (task.passed || task.wait)) {
         return true;
       }
       return false;
@@ -849,5 +866,13 @@ export default {
   }
   .concentrated-view .task-goals .add-new .v-btn .v-btn__content {
     justify-content: initial;
+  }
+  .skip-box {
+    text-align: center;
+    padding: 32px 16px;
+  }
+  .skip-box img {
+    max-width: 100%;
+    width: auto;
   }
 </style>

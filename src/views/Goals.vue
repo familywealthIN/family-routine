@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import GoalsTime from '@/components/GoalsTime.vue';
+import GoalsTime from '@/containers/GoalsTime.vue';
 
 export default {
   name: 'Goals',
