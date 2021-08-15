@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 /* eslint-disable max-len */
 /* eslint-disable no-param-reassign */
 const {
@@ -21,7 +22,15 @@ const validateGroupUser = require('../utils/validateGroupUser');
 const getGoalMilestone = require('../utils/getGoalMilestone');
 const { updateStimulusEarnedPoint, removeStimulusEarnedPoint } = require('../utils/stimulusPoints');
 const sortTimes = require('../utils/sortTimes');
+const { RoutineItemModel } = require('../schema/RoutineItemSchema');
 const { RoutineModel } = require('../schema/RoutineSchema');
+const { buildStimuliForRoutineItem } = require('./routine');
+
+const threshold = {
+  weekDays: 5,
+  monthWeeks: 3,
+  yearMonths: 5,
+};
 
 async function findTodayandSort(args, email) {
   const todaysRoutine = await RoutineModel.findOne({ date: args.date, email }).exec();
@@ -29,7 +38,20 @@ async function findTodayandSort(args, email) {
     sortTimes(todaysRoutine.tasklist);
     return todaysRoutine;
   }
-  return null;
+  const tasklist = await RoutineItemModel.find({ email });
+  sortTimes(tasklist);
+  tasklist.forEach((task) => {
+    task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
+  });
+  const routine = new RoutineModel({
+    ...args,
+    email,
+    tasklist,
+  });
+
+  await routine.save();
+
+  return findTodayandSort(args, email);
 }
 
 function periodGoalDates(period, date) {
@@ -46,10 +68,79 @@ function periodGoalDates(period, date) {
   return date;
 }
 
+function enlistGDays(gRoutineTasks, cleanGoals) {
+  const gRoutineTasksMonth = Array.from(gRoutineTasks.values()).filter((gtask) => gtask.period === 'month');
+
+  if (gRoutineTasksMonth.length) {
+    const cleanMonthGoals = cleanGoals.filter((goal) => goal.period === 'week');
+
+    gRoutineTasksMonth.forEach((monthTask) => {
+      cleanMonthGoals.forEach((goal) => {
+        goal.goalItems.forEach((goalItem) => {
+          if (monthTask.id === goalItem.goalRef && goalItem.isComplete && goalItem.taskRef) {
+            gRoutineTasks.set(`${goal.period}_${monthTask.updatePeriod}_${goal.date}_${goalItem.taskRef}`, {
+              id: String(goalItem.id),
+              updatePeriod: monthTask.updatePeriod,
+              period: goal.period,
+              date: goal.date,
+              taskRef: goalItem.taskRef,
+            });
+          }
+        });
+      });
+    });
+  }
+
+  const gRoutineTasksWeek = Array.from(gRoutineTasks.values()).filter((gtask) => gtask.period === 'week');
+
+  if (gRoutineTasksMonth.length) {
+    const cleanMonthGoals = cleanGoals.filter((goal) => goal.period === 'day');
+
+    gRoutineTasksWeek.forEach((weekTask) => {
+      cleanMonthGoals.forEach((goal) => {
+        goal.goalItems.forEach((goalItem) => {
+          if (weekTask.id === goalItem.goalRef && goalItem.isComplete) {
+            gRoutineTasks.set(`${goal.period}_${weekTask.updatePeriod}_${goal.date}_${goalItem.taskRef}`, {
+              id: String(goalItem.id),
+              updatePeriod: weekTask.updatePeriod,
+              period: goal.period,
+              date: goal.date,
+              taskRef: goalItem.taskRef,
+            });
+          }
+        });
+      });
+    });
+  }
+
+  const toSanitizeGTasks = Array.from(gRoutineTasks.keys());
+
+  toSanitizeGTasks.forEach((gTaskId) => {
+    if (!gTaskId.startsWith('day_')) {
+      gRoutineTasks.delete(gTaskId);
+    }
+  });
+}
+
+function updateGTasksMap(gRoutineTasks, tempGRoutineTasks) {
+  if (gRoutineTasks) {
+    tempGRoutineTasks.forEach((tempGRoutineTask) => {
+      gRoutineTasks.set(`${tempGRoutineTask.period}_${tempGRoutineTask.updatePeriod}_${tempGRoutineTask.date}_${tempGRoutineTask.taskRef}`, {
+        id: tempGRoutineTask.id,
+        updatePeriod: tempGRoutineTask.updatePeriod,
+        period: tempGRoutineTask.period,
+        date: tempGRoutineTask.date,
+        taskRef: tempGRoutineTask.taskRef,
+      });
+    });
+  }
+}
+
 async function autoCheckTaskPeriod({
   currentPeriod, stepDownPeriod, cleanGoals, completionThreshold, args, email, gRoutineTasks = null,
 }) {
   const periodGoals = await GoalModel.find({ period: currentPeriod, date: periodGoalDates(currentPeriod, args.date), email }).exec();
+  const updatePromises = [];
   periodGoals.forEach((periodGoal) => {
     periodGoal.goalItems.forEach((periodGoalItem) => {
       periodGoalItem.progress = 0;
@@ -57,7 +148,8 @@ async function autoCheckTaskPeriod({
       const dayCleanGoals = cleanGoals.filter((cleanGoal) => cleanGoal.period === stepDownPeriod);
 
       if (dayCleanGoals && dayCleanGoals.length) {
-        dayCleanGoals.forEach(async (dayCleanGoal) => {
+        const tempGRoutineTasks = [];
+        dayCleanGoals.forEach((dayCleanGoal) => {
           const matchedDayGoal = dayCleanGoal
             .goalItems
             .find((dayGoalItem) => String(periodGoalItem.id) === String(dayGoalItem.goalRef) && dayGoalItem.isComplete);
@@ -65,6 +157,14 @@ async function autoCheckTaskPeriod({
           if (matchedDayGoal && matchedDayGoal.goalRef) {
             // Addition Logic to threshold
             periodGoalItem.progress += 1;
+
+            tempGRoutineTasks.push({
+              id: String(matchedDayGoal.id),
+              updatePeriod: currentPeriod,
+              period: stepDownPeriod,
+              date: dayCleanGoal.date,
+              taskRef: matchedDayGoal.taskRef,
+            });
 
             if (periodGoalItem.progress === completionThreshold && !periodGoalItem.isComplete) {
               const cleanGoalsGoalItem = cleanGoals
@@ -75,7 +175,7 @@ async function autoCheckTaskPeriod({
               periodGoalItem.isComplete = true;
               cleanGoalsGoalItem.isComplete = true;
 
-              await GoalModel.findOneAndUpdate(
+              updatePromises.push(GoalModel.findOneAndUpdate(
                 {
                   date: periodGoal.date,
                   period: periodGoal.period,
@@ -84,18 +184,18 @@ async function autoCheckTaskPeriod({
                 },
                 { $set: { 'goalItems.$.isComplete': true } },
                 { new: true },
-              ).exec();
+              ).exec());
 
               // backtrack all associated task
-              if (gRoutineTasks) {
-                console.log('auto Check', currentPeriod);
-              }
+              updateGTasksMap(gRoutineTasks, tempGRoutineTasks);
             }
           }
         });
       }
     });
   });
+
+  await Promise.all(updatePromises);
 
   return periodGoals;
 }
@@ -150,15 +250,15 @@ const query = {
       const dayGoals = await GoalModel.find({ period: 'day', date: args.date, email }).exec();
 
       const weekGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: 5, args, email,
+        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, args, email,
       });
 
       const monthGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: 3, args, email,
+        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, args, email,
       });
 
       const yearGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: 9, args, email,
+        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: threshold.yearMonths, args, email,
       });
 
       const lifetimeGoals = await GoalModel.find({ period: 'lifetime', email }).exec();
@@ -450,31 +550,6 @@ const mutation = {
         ).exec();
       }
 
-      if (args.isComplete && moment(args.date, 'DD-MM-YYYY').weekday() >= 4) {
-        const goals = await GoalModel.find({ email }).exec();
-
-        const cleanGoals = goals.filter((goal) => goal.goalItems && goal.goalItems.length);
-        const gRoutineTasks = new Map();
-        console.log('Work on my week');
-
-        await autoCheckTaskPeriod({
-          currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: 5, args, email,
-        });
-
-        if (weekOfMonth(args.date) >= 3) {
-          console.log('Work on my month');
-          await autoCheckTaskPeriod({
-            currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: 3, args, email,
-          });
-          if (moment(args.date, 'DD-MM-YYYY').month() > 8) {
-            console.log('Work on my year');
-            await autoCheckTaskPeriod({
-              currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: 9, args, email,
-            });
-          }
-        }
-      }
-
       await GoalModel.findOneAndUpdate(
         {
           date: args.date,
@@ -485,6 +560,71 @@ const mutation = {
         { $set: { 'goalItems.$.isComplete': args.isComplete } },
         { new: true },
       ).exec();
+
+      if (args.isComplete && moment(args.date, 'DD-MM-YYYY').weekday() >= (threshold.weekDays - 1)) {
+        const goals = await GoalModel.find({ email }).exec();
+
+        const cleanGoals = goals.filter((goal) => goal.goalItems && goal.goalItems.length);
+        const gRoutineTasks = new Map();
+        gRoutineTasks.set(`day_week_${args.date}_${args.taskRef}`, {
+          id: args.id,
+          updatePeriod: 'week',
+          period: args.period,
+          date: args.date,
+          taskRef: args.taskRef,
+        });
+        console.log('Work on my week', email);
+
+        await autoCheckTaskPeriod({
+          currentPeriod: 'week',
+          stepDownPeriod: 'day',
+          cleanGoals,
+          completionThreshold: threshold.weekDays,
+          args,
+          email,
+          gRoutineTasks,
+        });
+
+        if (weekOfMonth(args.date) >= (threshold.monthWeeks - 1)) {
+          console.log('Work on my month', email);
+          await autoCheckTaskPeriod({
+            currentPeriod: 'month',
+            stepDownPeriod: 'week',
+            cleanGoals,
+            completionThreshold: threshold.monthWeeks,
+            args,
+            email,
+            gRoutineTasks,
+          });
+          if (moment(args.date, 'DD-MM-YYYY').month() >= (threshold.yearMonths - 1)) {
+            console.log('Work on my year', email);
+            await autoCheckTaskPeriod({
+              currentPeriod: 'year',
+              stepDownPeriod: 'month',
+              cleanGoals,
+              completionThreshold: threshold.yearMonths,
+              args,
+              email,
+              gRoutineTasks,
+            });
+          }
+        }
+
+        enlistGDays(gRoutineTasks, cleanGoals);
+
+        if (args.period === 'day') {
+          Array.from(gRoutineTasks.values()).forEach(async (gTask) => {
+            const currentDate = await RoutineModel.findOne({ date: gTask.date, email }).exec();
+            const task = currentDate.tasklist.find((t) => t._id.toString() === gTask.taskRef.toString());
+            task.stimuli = updateStimulusEarnedPoint('G', task, gTask.updatePeriod);
+            await RoutineModel.findOneAndUpdate(
+              { date: gTask.date, email, 'tasklist._id': gTask.taskRef },
+              { $set: { 'tasklist.$.stimuli': task.stimuli } },
+              { new: true },
+            ).exec();
+          });
+        }
+      }
       return args;
     },
   },

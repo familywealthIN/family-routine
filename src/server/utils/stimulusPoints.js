@@ -24,16 +24,16 @@ function getEstimatedStimulusUnit(action, task, isRemove = false, period) {
       switch (period) {
         case 'day':
           periodPoint = task.points * 0.25;
-          return { earned: stimulus.earned > periodPoint ? task.points : periodPoint };
+          return { earned: stimulus.earned > periodPoint ? stimulus.earned : periodPoint };
         case 'week':
           periodPoint = task.points * 0.50;
-          return { earned: task.points > periodPoint ? task.points : periodPoint };
+          return { earned: stimulus.earned > periodPoint ? stimulus.earned : periodPoint };
         case 'month':
           periodPoint = task.points * 0.75;
-          return { earned: task.points > periodPoint ? task.points : periodPoint };
+          return { earned: stimulus.earned > periodPoint ? stimulus.earned : periodPoint };
         case 'year':
           periodPoint = task.points * 1;
-          return { earned: task.points > periodPoint ? task.points : periodPoint };
+          return { earned: stimulus.earned > periodPoint ? stimulus.earned : periodPoint };
         default:
           return { earned: stimulus.earned };
       }
@@ -65,8 +65,6 @@ function updateStimulusEarnedPoint(action, task, period) {
     });
   }
 
-  console.log('task.stimuli add', task.stimuli);
-
   return task.stimuli;
 }
 
@@ -82,8 +80,6 @@ function removeStimulusEarnedPoint(action, task) {
 
     return st;
   });
-
-  console.log('task.stimuli remove', task.stimuli);
 
   return task.stimuli;
 }

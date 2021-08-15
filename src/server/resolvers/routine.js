@@ -315,4 +315,4 @@ const mutation = {
   },
 };
 
-module.exports = { query, mutation };
+module.exports = { query, mutation, buildStimuliForRoutineItem };

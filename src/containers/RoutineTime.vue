@@ -1,24 +1,34 @@
 <template>
   <container-box :isLoading="isLoading">
     <div class="pt-2">
-      <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 pb-2 pl-2 mb-3">
-        <v-layout row>
-          <v-flex xs7>
-            <v-card-title primary-title>
-              <div>
-                <div class="headline">Today's Efficiency</div>
-              </div>
-            </v-card-title>
-          </v-flex>
-          <v-flex xs5 class="mb-3">
+      <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 pt-1 pb-1 mb-3">
+        <v-layout style="max-width: 240px; margin: 0 auto;" row>
+          <v-flex xs4 class="mb-3 text-xs-center">
             <v-progress-circular
-              :value="countTotal(tasklist)"
-              :size="70"
+              :value="countTotal('D')"
+              :size="50"
               :rotate="-90"
-              style="float: right;"
-              class="mt-3 mr-3"
+              class="mt-3"
               color="white"
-              width="10">{{countTotal(tasklist)}}</v-progress-circular>
+              width="6">D</v-progress-circular>
+          </v-flex>
+          <v-flex xs4 class="mb-3 text-xs-center">
+            <v-progress-circular
+              :value="countTotal('K')"
+              :size="50"
+              :rotate="-90"
+              class="mt-3"
+              color="white"
+              width="6">K</v-progress-circular>
+          </v-flex>
+          <v-flex xs4 class="mb-3 text-xs-center">
+            <v-progress-circular
+              :value="countTotal('G')"
+              :size="50"
+              :rotate="-90"
+              class="mt-3"
+              color="white"
+              width="6">G</v-progress-circular>
           </v-flex>
         </v-layout>
       </v-card>
@@ -620,16 +630,17 @@ export default {
         this.waitTime(task);
       });
     },
-    countTotal() {
+    countTotal(stimulus = 'D') {
       return this.tasklist.reduce((total, num) => {
-        if (num.ticked) {
-          return total + num.points;
+        const currentStimulus = num.stimuli.find((st) => st.name === stimulus);
+        if (currentStimulus && currentStimulus.earned) {
+          return total + currentStimulus.earned;
         }
         return total;
       }, 0);
     },
     adoptProgress() {
-      const count = this.countTotal(this.tasklist);
+      const count = this.countTotal();
       if (count < 33) {
         return 'error';
       }
