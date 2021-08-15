@@ -70,7 +70,7 @@ import {
   GC_AUTH_TOKEN,
   GC_NOTIFICATION_TOKEN,
 } from '../constants/settings';
-import ContainerBox from './ContainerBox.vue';
+import ContainerBox from '../components/ContainerBox.vue';
 
 export default {
   name: 'Login',

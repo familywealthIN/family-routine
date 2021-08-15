@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 /* eslint-disable no-param-reassign */
 const {
   GraphQLID,
@@ -14,9 +15,19 @@ const { UserModel } = require('../schema/UserSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
 const sortTimes = require('../utils/sortTimes');
+const { updateStimulusEarnedPoint } = require('../utils/stimulusPoints');
 
 async function findTodayandSort(args, email) {
   const todaysRoutine = await RoutineModel.findOne({ date: args.date, email }).exec();
+  if (todaysRoutine && todaysRoutine.tasklist) {
+    sortTimes(todaysRoutine.tasklist);
+    return todaysRoutine;
+  }
+  return null;
+}
+
+async function findIdandSort(args, email) {
+  const todaysRoutine = await RoutineModel.findOne({ _id: args.id, email }).exec();
   if (todaysRoutine && todaysRoutine.tasklist) {
     sortTimes(todaysRoutine.tasklist);
     return todaysRoutine;
@@ -44,6 +55,40 @@ async function getSkipDayCount(email) {
   }, 0);
 
   return skipDayCount;
+}
+
+function timeDiff(time, nextTime) {
+  const [startHour] = time.split(':');
+  const [endHour] = nextTime.split(':');
+
+  const taskTime = (endHour - startHour);
+
+  return taskTime > 2 ? taskTime : 2;
+}
+
+function buildStimuliForRoutineItem(taskId, tasklist) {
+  const taskIndex = tasklist.findIndex((task) => task._id.toString() === taskId.toString());
+
+  const { time } = tasklist[taskIndex];
+  const nextTime = tasklist[taskIndex + 1] ? tasklist[taskIndex + 1].time : '24:00';
+
+  return [
+    {
+      name: 'D',
+      splitRate: timeDiff(time, nextTime),
+      earned: 0,
+    },
+    {
+      name: 'K',
+      splitRate: 2,
+      earned: 0,
+    },
+    {
+      name: 'G',
+      splitRate: 4, // 4 divided in day, week, month and year. the value not used
+      earned: 0,
+    },
+  ];
 }
 
 const query = {
@@ -112,6 +157,8 @@ const query = {
       if (todayTasks && todayTasks.tasklist && Array.isArray(todayTasks.tasklist)) {
         const todayTasklist = todayTasks.tasklist;
 
+        sortTimes(tasklist);
+
         tasklist.forEach((task) => {
           const foundTask = todayTasklist
             // eslint-disable-next-line no-underscore-dangle
@@ -121,6 +168,11 @@ const query = {
             task.passed = foundTask.passed;
             task.wait = foundTask.wait;
             task.ticked = foundTask.ticked;
+            task.stimuli = foundTask.stimuli && foundTask.stimuli.length
+              ? foundTask.stimuli
+              : buildStimuliForRoutineItem(task._id, tasklist);
+          } else {
+            task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
           }
         });
 
@@ -153,6 +205,10 @@ const mutation = {
       }
 
       const tasklist = await RoutineItemModel.find({ email });
+      sortTimes(tasklist);
+      tasklist.forEach((task) => {
+        task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
+      });
       const routine = new RoutineModel({
         ...args,
         email,
@@ -181,12 +237,16 @@ const mutation = {
       taskId: { type: GraphQLNonNull(GraphQLString) },
       ticked: { type: GraphQLNonNull(GraphQLBoolean) },
     },
-    resolve: (root, args, context) => {
+    resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
+
+      const routine = await findIdandSort(args, email);
+      const task = routine.tasklist.find((t) => t._id.toString() === args.taskId.toString());
+      task.stimuli = updateStimulusEarnedPoint('D', task);
 
       return RoutineModel.findOneAndUpdate(
         { _id: args.id, email, 'tasklist._id': args.taskId },
-        { $set: { 'tasklist.$.ticked': args.ticked } },
+        { $set: { 'tasklist.$.ticked': args.ticked, 'tasklist.$.stimuli': task.stimuli } },
         { new: true },
       ).exec();
     },
@@ -255,4 +315,4 @@ const mutation = {
   },
 };
 
-module.exports = { query, mutation };
+module.exports = { query, mutation, buildStimuliForRoutineItem };

@@ -27,7 +27,7 @@
 
 <script>
 import gql from 'graphql-tag';
-import ContainerBox from './ContainerBox.vue';
+import ContainerBox from '../components/ContainerBox.vue';
 
 export default {
   components: { ContainerBox },

@@ -6,7 +6,7 @@
 
 <script>
 // @ is an alias to /src
-import LoginRoutine from '@/components/LoginRoutine.vue';
+import LoginRoutine from '@/containers/LoginRoutine.vue';
 
 export default {
   name: 'login',

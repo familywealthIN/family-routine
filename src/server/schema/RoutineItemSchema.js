@@ -4,9 +4,27 @@ const {
   GraphQLBoolean,
   GraphQLInt,
   GraphQLObjectType,
+  GraphQLList,
+  GraphQLFloat,
 } = require('graphql');
 
 const mongoose = require('mongoose');
+
+const StimulusItemSchema = new mongoose.Schema({
+  name: String,
+  splitRate: Number,
+  earned: Number,
+});
+
+const StimulusItemType = new GraphQLObjectType({
+  name: 'StimuliItem',
+  fields: {
+    name: { type: GraphQLString },
+    splitRate: { type: GraphQLInt },
+    earned: { type: GraphQLFloat },
+    potential: { type: GraphQLInt },
+  },
+});
 
 const RoutineItemSchema = new mongoose.Schema({
   name: String,
@@ -14,6 +32,7 @@ const RoutineItemSchema = new mongoose.Schema({
   email: String,
   time: String,
   points: Number,
+  stimuli: [StimulusItemSchema],
   ticked: Boolean,
   passed: Boolean,
   wait: Boolean,
@@ -28,6 +47,9 @@ const RoutineItemType = new GraphQLObjectType({
     email: { type: GraphQLString },
     time: { type: GraphQLString },
     points: { type: GraphQLInt },
+    stimuli: {
+      type: new GraphQLList(StimulusItemType),
+    },
     ticked: { type: GraphQLBoolean },
     passed: { type: GraphQLBoolean },
     wait: { type: GraphQLBoolean },

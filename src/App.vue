@@ -100,6 +100,7 @@ export default {
         { title: 'Home', icon: 'home', route: '/home' },
         { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
         { title: 'Goals', icon: 'assignment', route: '/goals' },
+        // { title: 'Progress', icon: 'chart', route: '/progress' },
         { title: 'History', icon: 'history', route: '/history' },
         { title: 'Family', icon: 'supervisor_account', route: '/family' },
         { title: 'Routine Settings', icon: 'settings', route: '/settings' },
@@ -157,7 +158,7 @@ export default {
           this.$root.$data.userName = localStorage.getItem(GC_USER_NAME);
           this.$root.$data.userEmail = localStorage.getItem(GC_USER_EMAIL);
           this.$root.$data.userEmail = localStorage.getItem(GC_PICTURE);
-          this.$router.push('/');
+          this.$router.push('/').catch(() => {});
         })
         .catch((error) => console.log(error));
     },

@@ -3,19 +3,6 @@
 </script>
 <template>
   <container-box :isLoading="$apollo.queries.goals.loading">
-    <div class="text-xs-center pt-3 pb-3" >
-      <v-btn-toggle v-model="rangeType" >
-        <v-btn flat value="upcoming">
-          Upcoming
-        </v-btn>
-        <v-btn flat value="past">
-          Past
-        </v-btn>
-        <v-btn flat value="all">
-          All
-        </v-btn>
-      </v-btn-toggle>
-    </div>
     <v-card-text class="py-0 px-0">
       <template v-for="period in periods">
         <div v-if="period.name === 'day'" :key="period.name">
@@ -68,6 +55,19 @@
               </v-btn>
             </v-flex>
           </v-layout>
+          <div class="text-xs-center pt-3 pb-3" >
+            <v-btn-toggle v-model="rangeType" >
+              <v-btn flat value="upcoming">
+                Upcoming
+              </v-btn>
+              <v-btn flat value="past">
+                Past
+              </v-btn>
+              <v-btn flat value="all">
+                All
+              </v-btn>
+            </v-btn-toggle>
+          </div>
         </div>
         <div v-else :key="period.name">
           <goals-filter-time
@@ -145,10 +145,10 @@ import moment from 'moment';
 import redirectOnError from '../utils/redirectOnError';
 import { defaultGoalItem, periodsArray } from '../constants/goals';
 
-import GoalItemList from './GoalItemList.vue';
-import GoalsFilterTime from './GoalsFilterTime.vue';
-import GoalCreation from './GoalCreation.vue';
-import ContainerBox from './ContainerBox.vue';
+import GoalItemList from '../components/GoalItemList.vue';
+import GoalsFilterTime from '../components/GoalsFilterTime.vue';
+import GoalCreation from '../components/GoalCreation.vue';
+import ContainerBox from '../components/ContainerBox.vue';
 
 export default {
   components: {

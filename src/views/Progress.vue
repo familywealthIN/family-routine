@@ -1,17 +1,17 @@
 <template>
   <div class="history">
-    <CheckHistory/>
+    <ProgressTime/>
   </div>
 </template>
 
 <script>
 // @ is an alias to /src
-import CheckHistory from '@/containers/CheckHistory.vue';
+import ProgressTime from '@/containers/ProgressTime.vue';
 
 export default {
   name: 'history',
   components: {
-    CheckHistory,
+    ProgressTime,
   },
 };
 </script>
