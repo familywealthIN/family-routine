@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import FamilyRoutine from '@/components/FamilyRoutine.vue';
+import FamilyRoutine from '@/containers/FamilyRoutine.vue';
 
 export default {
   name: 'family',

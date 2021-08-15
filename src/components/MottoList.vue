@@ -132,6 +132,7 @@ export default {
           this.buttonLoading = false;
         },
         error: (error) => {
+          console.log('motto error', error);
           redirectOnError(this.$router, error);
           this.$notify({
             title: 'Error',

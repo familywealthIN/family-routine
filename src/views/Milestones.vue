@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import MilestonesTime from '@/components/MilestonesTime.vue';
+import MilestonesTime from '@/containers/MilestonesTime.vue';
 
 export default {
   name: 'Milestones',

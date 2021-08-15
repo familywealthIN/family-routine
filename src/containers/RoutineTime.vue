@@ -1,24 +1,34 @@
 <template>
   <container-box :isLoading="isLoading">
     <div class="pt-2">
-      <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 pb-2 pl-2 mb-3">
-        <v-layout row>
-          <v-flex xs7>
-            <v-card-title primary-title>
-              <div>
-                <div class="headline">Today's Efficiency</div>
-              </div>
-            </v-card-title>
-          </v-flex>
-          <v-flex xs5 class="mb-3">
+      <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 pt-1 pb-1 mb-3">
+        <v-layout style="max-width: 240px; margin: 0 auto;" row>
+          <v-flex xs4 class="mb-3 text-xs-center">
             <v-progress-circular
-              :value="countTotal(tasklist)"
-              :size="70"
+              :value="countTotal('D')"
+              :size="50"
               :rotate="-90"
-              style="float: right;"
-              class="mt-3 mr-3"
+              class="mt-3"
               color="white"
-              width="10">{{countTotal(tasklist)}}</v-progress-circular>
+              width="6">D</v-progress-circular>
+          </v-flex>
+          <v-flex xs4 class="mb-3 text-xs-center">
+            <v-progress-circular
+              :value="countTotal('K')"
+              :size="50"
+              :rotate="-90"
+              class="mt-3"
+              color="white"
+              width="6">K</v-progress-circular>
+          </v-flex>
+          <v-flex xs4 class="mb-3 text-xs-center">
+            <v-progress-circular
+              :value="countTotal('G')"
+              :size="50"
+              :rotate="-90"
+              class="mt-3"
+              color="white"
+              width="6">G</v-progress-circular>
           </v-flex>
         </v-layout>
       </v-card>
@@ -43,7 +53,13 @@
           </div>
         </div>
       </v-subheader>
-      <template>
+      <template v-if="skipDay">
+        <div class="skip-box">
+          <img src="/img/relax.jpg">
+          <h1>Relax, Detox and Enjoy the Day</h1>
+        </div>
+      </template>
+      <template v-else>
         <template v-for="(task, index) in tasklist">
           <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
 
@@ -236,9 +252,9 @@ import gql from 'graphql-tag';
 import redirectOnError from '../utils/redirectOnError';
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 
-import GoalList from './GoalList.vue';
-import GoalItemList from './GoalItemList.vue';
-import ContainerBox from './ContainerBox.vue';
+import GoalList from '../components/GoalList.vue';
+import GoalItemList from '../components/GoalItemList.vue';
+import ContainerBox from '../components/ContainerBox.vue';
 
 export default {
   components: {
@@ -262,6 +278,11 @@ export default {
               ticked
               passed
               wait
+              stimuli {
+                name
+                splitRate
+                earned
+              }
             }
           }
         }
@@ -304,6 +325,7 @@ export default {
               isComplete
               taskRef
               goalRef
+              isMilestone
             }
           }
         }
@@ -366,6 +388,11 @@ export default {
                 ticked
                 passed
                 wait
+                stimuli {
+                  name
+                  splitRate
+                  earned
+                }
               }
             }
           }
@@ -410,7 +437,7 @@ export default {
       return '';
     },
     getButtonDisabled(task) {
-      if (task.passed || task.wait) {
+      if (!task.ticked && (task.passed || task.wait)) {
         return true;
       }
       return false;
@@ -603,16 +630,17 @@ export default {
         this.waitTime(task);
       });
     },
-    countTotal() {
+    countTotal(stimulus = 'D') {
       return this.tasklist.reduce((total, num) => {
-        if (num.ticked) {
-          return total + num.points;
+        const currentStimulus = num.stimuli.find((st) => st.name === stimulus);
+        if (currentStimulus && currentStimulus.earned) {
+          return total + currentStimulus.earned;
         }
         return total;
       }, 0);
     },
     adoptProgress() {
-      const count = this.countTotal(this.tasklist);
+      const count = this.countTotal();
       if (count < 33) {
         return 'error';
       }
@@ -849,5 +877,13 @@ export default {
   }
   .concentrated-view .task-goals .add-new .v-btn .v-btn__content {
     justify-content: initial;
+  }
+  .skip-box {
+    text-align: center;
+    padding: 32px 16px;
+  }
+  .skip-box img {
+    max-width: 100%;
+    width: auto;
   }
 </style>

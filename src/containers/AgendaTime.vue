@@ -177,9 +177,9 @@ import gql from 'graphql-tag';
 
 import redirectOnError from '../utils/redirectOnError';
 
-import GoalList from './GoalList.vue';
-import TimelineItemList from './TimelineItemList.vue';
-import ContainerBox from './ContainerBox.vue';
+import GoalList from '../components/GoalList.vue';
+import TimelineItemList from '../components/TimelineItemList.vue';
+import ContainerBox from '../components/ContainerBox.vue';
 
 export default {
   components: {

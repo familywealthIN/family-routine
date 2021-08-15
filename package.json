@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "start": "node ./node_modules/@vue/cli-service/bin/vue-cli-service serve",
     "serve": "node ./node_modules/@vue/cli-service/bin/vue-cli-service serve",
     "build": "node ./node_modules/@vue/cli-service/bin/vue-cli-service build",
     "lint": "node ./node_modules/@vue/cli-service/bin/vue-cli-service lint",
-    "serve:server": "node ./node_modules/nodemon/bin/nodemon.js --watch src/server ./server.js",
-    "start": "concurrently 'npm run serve' 'node ./server.js'"
+    "serve:server": "node ./node_modules/nodemon/bin/nodemon.js --watch src/server ./server.js"
   },
   "dependencies": {
     "apollo-boost": "^0.4.7",
@@ -42,6 +42,7 @@
     "vue-apollo": "^3.0.3",
     "vue-google-oauth2": "^1.5.3",
     "vue-notification": "^1.3.20",
+    "vue-radar": "^0.1.5",
     "vue-router": "^3.0.3",
     "vuetify": "^1.5.5"
   },

@@ -42,8 +42,8 @@
 import gql from 'graphql-tag';
 
 import redirectOnError from '../utils/redirectOnError';
-import UserHistory from './UserHistory.vue';
-import ContainerBox from './ContainerBox.vue';
+import UserHistory from '../components/UserHistory.vue';
+import ContainerBox from '../components/ContainerBox.vue';
 
 export default {
   components: {

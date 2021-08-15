@@ -20,6 +20,14 @@ export default new Router({
       // which is lazy-loaded when the route is visited.
       component: () => import(/* webpackChunkName: "history" */ './views/History.vue'),
     },
+    // {
+    //   path: '/progress',
+    //   name: 'progress',
+    //   // route level code-splitting
+    //   // this generates a separate chunk (about.[hash].js) for this route
+    //   // which is lazy-loaded when the route is visited.
+    //   component: () => import(/* webpackChunkName: "progress" */ './views/Progress.vue'),
+    // },
     {
       path: '/settings',
       name: 'settings',
