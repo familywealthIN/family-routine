@@ -223,11 +223,24 @@ const query = {
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
+      const goals = await GoalModel.find({ email }).exec();
+
+      const cleanGoals = goals.filter((goal) => goal.goalItems && goal.goalItems.length);
 
       const dayGoals = await GoalModel.find({ period: 'day', date: args.date, email }).exec();
-      const weekGoals = await GoalModel.find({ period: 'week', date: periodGoalDates('week', args.date), email }).exec();
-      const monthGoals = await GoalModel.find({ period: 'month', date: periodGoalDates('month', args.date), email }).exec();
-      const yearGoals = await GoalModel.find({ period: 'year', date: periodGoalDates('year', args.date), email }).exec();
+
+      const weekGoals = await autoCheckTaskPeriod({
+        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, args, email,
+      });
+
+      const monthGoals = await autoCheckTaskPeriod({
+        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, args, email,
+      });
+
+      const yearGoals = await autoCheckTaskPeriod({
+        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: threshold.yearMonths, args, email,
+      });
+
       return [
         ...dayGoals,
         ...weekGoals,
