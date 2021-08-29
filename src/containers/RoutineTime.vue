@@ -2,7 +2,16 @@
   <container-box :isLoading="isLoading">
     <div class="pt-2">
       <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 pt-1 pb-1 mb-3">
-        <v-layout style="max-width: 240px; margin: 0 auto;" row>
+        <v-layout style="max-width: 320px; margin: 0 auto;" row wrap>
+          <v-flex xs4 class="mt-3 text-xs-center">
+            Discipline
+          </v-flex>
+          <v-flex xs4 class="mt-3 text-xs-center">
+            Kinetics
+          </v-flex>
+          <v-flex xs4 class="mt-3 text-xs-center">
+            Geniuses
+          </v-flex>
           <v-flex xs4 class="mb-3 text-xs-center">
             <v-progress-circular
               :value="countTotal('D')"
@@ -10,7 +19,7 @@
               :rotate="-90"
               class="mt-3"
               color="white"
-              width="6">D</v-progress-circular>
+              width="6">{{countTotal('D')}}</v-progress-circular>
           </v-flex>
           <v-flex xs4 class="mb-3 text-xs-center">
             <v-progress-circular
@@ -19,7 +28,7 @@
               :rotate="-90"
               class="mt-3"
               color="white"
-              width="6">K</v-progress-circular>
+              width="6">{{countTotal('K')}}</v-progress-circular>
           </v-flex>
           <v-flex xs4 class="mb-3 text-xs-center">
             <v-progress-circular
@@ -28,7 +37,7 @@
               :rotate="-90"
               class="mt-3"
               color="white"
-              width="6">G</v-progress-circular>
+              width="6">{{countTotal('G')}}</v-progress-circular>
           </v-flex>
         </v-layout>
       </v-card>
@@ -158,7 +167,9 @@
                     <v-list two-line subheader>
                       <goal-item-list
                         :goal="taskGoals"
+                        :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
                         @delete-task-goal="deleteTaskGoal"
+                        @refresh-task-goal="refreshTaskGoal"
                       />
                     </v-list>
                   </div>
@@ -322,6 +333,7 @@ export default {
             goalItems {
               id
               body
+              progress
               isComplete
               taskRef
               goalRef
@@ -356,6 +368,7 @@ export default {
       currentGoalPeriod: 'day',
       selectedTaskRef: '',
       date: moment().format('DD-MM-YYYY'),
+      lastCompleteItemGoalRef: 0,
     };
   },
   computed: {
@@ -425,6 +438,22 @@ export default {
         goal.goalItems = goal.goalItems.filter((goalItem) => goalItem.id !== id);
       });
     },
+    refreshTaskGoal(taskRef) {
+      this.$apollo.queries.tasklist.refetch();
+      this.$apollo.queries.goals.refetch();
+      this.lastCompleteItemGoalRef = taskRef;
+    },
+    getWeekProgress(currentGoalPeriod) {
+      if (currentGoalPeriod === 'day') {
+        if (this.goals && this.goals.length) {
+          const weekGoals = this.goals.find((goal) => (goal.period === 'week'));
+          const weekGoalItemMilestoneChecked = weekGoals
+            .goalItems.find((goalItem) => (goalItem.id === this.lastCompleteItemGoalRef));
+          return (weekGoalItemMilestoneChecked && weekGoalItemMilestoneChecked.progress) || 0;
+        }
+      }
+      return 0;
+    },
     updateSelectedTaskRef(id) {
       this.selectedTaskRef = id;
     },
@@ -489,7 +518,7 @@ export default {
               duration: 3000,
             });
           },
-        });
+        }).then(() => this.$apollo.queries.tasklist.refetch());
       }
     },
     skipClick() {

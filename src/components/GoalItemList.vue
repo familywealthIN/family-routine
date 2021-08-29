@@ -11,7 +11,8 @@
               goal.period,
               goal.date,
               goalItem.taskRef,
-              goalItem.isMilestone
+              goalItem.isMilestone,
+              goalItem.goalRef,
             )"
           ></v-checkbox>
         </v-list-tile-action>
@@ -36,7 +37,12 @@
             <v-icon>edit</v-icon>
           </v-btn>
         </v-list-tile-action>
-        <v-list-tile-action>
+        <v-list-tile-action v-if="lastCompleteItemId === goalItem.id && animateEntry">
+          <div style="width: 150px">
+            <streak-checks :progress="progress" :animate="true"></streak-checks>
+          </div>
+        </v-list-tile-action>
+        <v-list-tile-action v-else>
           <v-btn
             flat
             icon
@@ -53,14 +59,20 @@
 import gql from 'graphql-tag';
 
 import redirectOnError from '../utils/redirectOnError';
+import StreakChecks from './StreakChecks.vue';
 
 export default {
-  props: ['goal', 'editMode', 'newGoalItem'],
+  props: ['goal', 'editMode', 'newGoalItem', 'progress'],
+  components: {
+    StreakChecks,
+  },
   data() {
     return {
       show: true,
       newGoalItemBody: '',
       goalItem: [],
+      animateEntry: false,
+      lastCompleteItemId: '',
     };
   },
   methods: {
@@ -105,9 +117,18 @@ export default {
     completeGoalItemText(goalItem, period, date, taskRef) {
       // eslint-disable-next-line no-param-reassign
       goalItem.isComplete = !goalItem.isComplete;
-      this.completeGoalItem(goalItem.id, goalItem.isComplete, period, date, taskRef, goalItem.isMilestone);
+      this.completeGoalItem(
+        goalItem.id,
+        goalItem.isComplete,
+        period,
+        date,
+        taskRef,
+        goalItem.isMilestone,
+        goalItem.goalRef,
+      );
     },
-    completeGoalItem(id, isComplete, period, date, taskRef, isMilestone) {
+    completeGoalItem(id, isComplete, period, date, taskRef, isMilestone, goalRef) {
+      this.lastCompleteItemId = id;
       this.$apollo.mutate({
         mutation: gql`
           mutation completeGoalItem(
@@ -138,7 +159,9 @@ export default {
           isComplete: Boolean(isComplete),
           isMilestone: Boolean(isMilestone),
         },
-        error: (error) => {
+      })
+        .then(() => (this.$emit('refresh-task-goal', goalRef)))
+        .catch((error) => {
           redirectOnError(this.$router, error);
           this.$notify({
             title: 'Error',
@@ -147,11 +170,18 @@ export default {
             type: 'error',
             duration: 3000,
           });
-        },
-      });
+        });
     },
     editGoalItem(goalItem, period, date) {
       this.$emit('update-new-goal-item', goalItem, period, date);
+    },
+  },
+  watch: {
+    progress(val, oldVal) {
+      if (val !== oldVal) {
+        this.animateEntry = true;
+        setTimeout(() => { this.animateEntry = false; }, 2000);
+      }
     },
   },
 };
