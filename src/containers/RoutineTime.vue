@@ -190,25 +190,6 @@
               </div>
             </v-list-tile-content>
           </v-list-tile>
-          <!--
-          <details :key="task.id" v-if="filterTaskGoals(task.id).length" class="inline-goals">
-            <summary>View Goals</summary>
-            <ul>
-              <li :key="taskGoals.id" v-for="taskGoals in filterTaskGoals(task.id)">
-                <b>{{taskGoals.period}}</b>
-                <ul>
-                  <li
-                    :key="taskGoal.body"
-                    v-for="taskGoal in taskGoals.goalItems"
-                    :class="{ completed: taskGoal.isComplete}"
-                  >
-                    {{taskGoal.body}}
-                  </li>
-                </ul>
-              </li>
-            </ul>
-          </details>
-          -->
         </template>
       </template>
     </v-list>
@@ -266,6 +247,17 @@ import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 import GoalList from '../components/GoalList.vue';
 import GoalItemList from '../components/GoalItemList.vue';
 import ContainerBox from '../components/ContainerBox.vue';
+
+const threshold = {
+  weekDays: 5,
+  monthWeeks: 3,
+  yearMonths: 5,
+};
+
+function weekOfMonth(d) {
+  const addFirstWeek = moment(d, 'DD-MM-YYYY').startOf('month').weekday() < 2 ? 1 : 0;
+  return moment(d, 'DD-MM-YYYY').week() - moment(d, 'DD-MM-YYYY').startOf('month').week() + addFirstWeek;
+}
 
 export default {
   components: {
@@ -660,13 +652,31 @@ export default {
       });
     },
     countTotal(stimulus = 'D') {
-      return this.tasklist.reduce((total, num) => {
+      const aggregatePoints = this.tasklist.reduce((total, num) => {
         const currentStimulus = num.stimuli.find((st) => st.name === stimulus);
         if (currentStimulus && currentStimulus.earned) {
           return total + currentStimulus.earned;
         }
         return total;
       }, 0);
+
+      if (stimulus === 'G') {
+        // TODO: Enable this later
+        // if (moment(this.date, 'DD-MM-YYYY').month() >= (threshold.yearMonths - 1)) {
+        //   return aggregatePoints;
+        // }
+
+        if (weekOfMonth(this.date) >= (threshold.monthWeeks - 1)) {
+          return Number((aggregatePoints * 1.334).toFixed(1));
+        }
+
+        if (moment(this.date, 'DD-MM-YYYY').weekday() >= (threshold.weekDays - 1)) {
+          return aggregatePoints * 2;
+        }
+
+        return aggregatePoints * 4;
+      }
+      return aggregatePoints;
     },
     adoptProgress() {
       const count = this.countTotal();

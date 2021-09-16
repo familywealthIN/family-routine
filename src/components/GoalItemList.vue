@@ -39,7 +39,7 @@
         </v-list-tile-action>
         <v-list-tile-action v-if="lastCompleteItemId === goalItem.id && animateEntry">
           <div style="width: 150px">
-            <streak-checks :progress="progress" :animate="true"></streak-checks>
+            <streak-checks :progress="progress || 0" :animate="true"></streak-checks>
           </div>
         </v-list-tile-action>
         <v-list-tile-action v-else>
