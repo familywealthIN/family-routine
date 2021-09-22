@@ -661,19 +661,20 @@ export default {
       }, 0);
 
       if (stimulus === 'G') {
-        // TODO: Enable this later
-        // if (moment(this.date, 'DD-MM-YYYY').month() >= (threshold.yearMonths - 1)) {
-        //   return aggregatePoints;
-        // }
-
-        if (weekOfMonth(this.date) >= (threshold.monthWeeks - 1)) {
-          return Number((aggregatePoints * 1.334).toFixed(1));
-        }
-
         if (moment(this.date, 'DD-MM-YYYY').weekday() >= (threshold.weekDays - 1)) {
+          if (weekOfMonth(this.date) >= (threshold.monthWeeks - 1)) {
+            // TODO: Enable this later
+            // if (moment(this.date, 'DD-MM-YYYY').month() >= (threshold.yearMonths - 1)) {
+            //   return aggregatePoints;
+            // }
+            console.log('month', Number((aggregatePoints * 1.334).toFixed(1)));
+            return Number((aggregatePoints * 1.334).toFixed(1));
+          }
+          console.log('week', aggregatePoints * 2);
           return aggregatePoints * 2;
         }
 
+        console.log('week', aggregatePoints * 4);
         return aggregatePoints * 4;
       }
       return aggregatePoints;
