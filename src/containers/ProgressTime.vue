@@ -66,7 +66,7 @@
               <v-list>
                 <v-list-tile
                   avatar
-                  @click="$router.push('history')"
+                  @click="$router.push('/history')"
                 >
                   <v-list-tile-content>
                     <v-list-tile-title>
