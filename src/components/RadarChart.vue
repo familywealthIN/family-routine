@@ -1,6 +1,6 @@
 <template>
   <v-radar
-    :stats="stats"
+    :stats="stats || []"
     :polycolor="polycolor"
     :radar="radar"
     :scale="scale">
@@ -11,31 +11,36 @@
 import Radar from 'vue-radar';
 
 export default {
-
   components: {
     'v-radar': Radar,
   },
+  props: ['size', 'stats'],
   data() {
     return {
       radar: {
-        size: '150',
+        size: this.size || '300',
+        structure: {
+          external: {
+            strokeColor: 'rgba(0, 0, 0, 0.5)',
+            strokeWidth: '4',
+          },
+          internals: {
+            strokeColor: 'rgba(0, 0, 0, 0)',
+            strokeWidth: '0',
+          },
+          average: {
+            strokeColor: 'rgba(0, 0, 0, 1)',
+            strokeWidth: '0',
+            fillColor: 'rgba(0, 0, 0, 0)',
+          },
+        },
       }, // empty object is mandatory
-      scale: {}, // empty object is mandatory
-      stats: [ // at least 3 stats are required here
-        {
-          name: 'G', // string
-          value: 12, // int
-        },
-        {
-          name: 'K',
-          value: 77,
-        },
-        {
-          name: 'D',
-          value: 44,
-        },
-      ],
-      polycolor: 'rgba(250, 100, 50, .5)', // any css format is usable (hexa, rgb, rgba...)
+      scale: {
+        stat1: 100,
+        stat2: 100,
+        stat3: 100,
+      }, // empty object is mandatory
+      polycolor: 'rgba(40, 139, 213, .8)', // any css format is usable (hexa, rgb, rgba...)
     };
   },
 };

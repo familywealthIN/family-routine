@@ -29,7 +29,7 @@ const { buildStimuliForRoutineItem } = require('./routine');
 const threshold = {
   weekDays: 5,
   monthWeeks: 3,
-  yearMonths: 5,
+  yearMonths: 9,
 };
 
 async function findTodayandSort(args, email) {
@@ -643,4 +643,4 @@ const mutation = {
   },
 };
 
-module.exports = { query, mutation };
+module.exports = { query, mutation, autoCheckTaskPeriod };

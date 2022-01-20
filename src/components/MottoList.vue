@@ -131,17 +131,16 @@ export default {
           this.newMottoItem = { ...this.defaultMottoItem };
           this.buttonLoading = false;
         },
-        error: (error) => {
-          console.log('motto error', error);
-          redirectOnError(this.$router, error);
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        },
+      }).catch((error) => {
+        console.log('motto error', error);
+        redirectOnError(this.$router, error);
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       });
     },
     deleteMottoItem(index) {
@@ -163,16 +162,15 @@ export default {
         variables: {
           id,
         },
-        error: (error) => {
-          redirectOnError(this.$router, error);
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        },
+      }).catch((error) => {
+        redirectOnError(this.$router, error);
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       });
     },
   },

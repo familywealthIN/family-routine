@@ -1,7 +1,7 @@
 <template>
   <container-box :isLoading="isLoading">
     <div class="pt-2">
-      <v-card :color="adoptProgress()" class="white--text ml-2 mr-2 pt-1 pb-1 mb-3">
+      <v-card :color="adoptProgress()" class="white--text ml-3 mr-3 pt-1 pb-1 mb-3 elevation-0">
         <v-layout style="max-width: 320px; margin: 0 auto;" row wrap>
           <v-flex xs4 class="mt-3 text-xs-center">
             Discipline
@@ -19,7 +19,7 @@
               :rotate="-90"
               class="mt-3"
               color="white"
-              width="6">{{countTotal('D')}}</v-progress-circular>
+              width="6">{{Number(countTotal('D')).toFixed(1)}}</v-progress-circular>
           </v-flex>
           <v-flex xs4 class="mb-3 text-xs-center">
             <v-progress-circular
@@ -28,7 +28,7 @@
               :rotate="-90"
               class="mt-3"
               color="white"
-              width="6">{{countTotal('K')}}</v-progress-circular>
+              width="6">{{Number(countTotal('K')).toFixed(1)}}</v-progress-circular>
           </v-flex>
           <v-flex xs4 class="mb-3 text-xs-center">
             <v-progress-circular
@@ -37,7 +37,7 @@
               :rotate="-90"
               class="mt-3"
               color="white"
-              width="6">{{countTotal('G')}}</v-progress-circular>
+              width="6">{{Number(countTotal('G')).toFixed(1)}}</v-progress-circular>
           </v-flex>
         </v-layout>
       </v-card>
@@ -46,7 +46,7 @@
       subheader
       style="width:100%"
       v-if="tasklist && tasklist.length > 0"
-      class="concentrated-view"
+      class="concentrated-view elevation-0"
     >
       <v-subheader>
         <div class="d-flex title-options">
@@ -78,24 +78,35 @@
             :class="task.id === selectedTaskRef ? 'active' : ''"
             avatar
           >
-            <v-list-tile-avatar>
-              <v-btn
-                fab
-                small
-                :disabled="getButtonDisabled(task)"
-                :color="getButtonColor(task)"
-                @click="checkClick($event, task)"
-              >
-                <v-icon>{{getButtonIcon(task)}}</v-icon>
-              </v-btn>
-            </v-list-tile-avatar>
-
+            <v-progress-circular
+              :value="countTaskPercentage(task)"
+              :size="48"
+              :rotate="-90"
+              class="mr-3 circular-task"
+              width="2"
+              color="warning"
+            >
+              <v-list-tile-avatar>
+                <v-btn
+                  fab
+                  small
+                  class="elevation-0"
+                  :disabled="getButtonDisabled(task)"
+                  :color="getButtonColor(task)"
+                  @click="checkClick($event, task)"
+                >
+                  <v-icon>{{getButtonIcon(task)}}</v-icon>
+                </v-btn>
+              </v-list-tile-avatar>
+            </v-progress-circular>
             <v-list-tile-content>
               <v-list-tile-title>
                 <span>{{task.name}}</span>
               </v-list-tile-title>
               <v-list-tile-sub-title v-if="task.id === selectedTaskRef">
-                <div class="time-text">{{task.time}}</div>
+                <div class="time-text">
+                  {{task.time}} - {{countTaskCompleted(task)}}/{{countTaskTotal(task)}}
+                </div>
                 <div>
                   <v-btn-toggle v-model="currentGoalPeriod" >
                     <v-btn flat value="day">
@@ -113,8 +124,10 @@
                   </v-btn-toggle>
                 </div>
               </v-list-tile-sub-title>
-              <v-list-tile-sub-title v-else v-html="task.time"></v-list-tile-sub-title>
-              <div v-if="task.id === selectedTaskRef" class="task-goals">
+              <v-list-tile-sub-title v-else >
+                {{task.time}}
+              </v-list-tile-sub-title>
+              <div v-if="task.id === selectedTaskRef" class="pt-2 pb-2 task-goals">
                 <v-layout
                   row
                   wrap
@@ -189,6 +202,12 @@
                 </div>
               </div>
             </v-list-tile-content>
+            <v-list-tile-action v-if="task.id !== selectedTaskRef">
+                <v-list-tile-action-text>
+                  <b>{{countTaskCompleted(task)}}</b>/{{countTaskTotal(task)}}
+                </v-list-tile-action-text>
+                <v-list-tile-action-text>tasks</v-list-tile-action-text>
+            </v-list-tile-action>
           </v-list-tile>
         </template>
       </template>
@@ -251,7 +270,7 @@ import ContainerBox from '../components/ContainerBox.vue';
 const threshold = {
   weekDays: 5,
   monthWeeks: 3,
-  yearMonths: 5,
+  yearMonths: 9,
 };
 
 function weekOfMonth(d) {
@@ -411,18 +430,17 @@ export default {
           this.setPassedWait();
           this.isLoading = false;
         },
-        error: (error) => {
-          redirectOnError(this.$router, error);
-          clearInterval(this.timerId);
-          this.isLoading = false;
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        },
+      }).catch((error) => {
+        redirectOnError(this.$router, error);
+        clearInterval(this.timerId);
+        this.isLoading = false;
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       });
     },
     deleteTaskGoal(id) {
@@ -439,7 +457,7 @@ export default {
       if (currentGoalPeriod === 'day') {
         if (this.goals && this.goals.length) {
           const weekGoals = this.goals.find((goal) => (goal.period === 'week'));
-          const weekGoalItemMilestoneChecked = weekGoals
+          const weekGoalItemMilestoneChecked = weekGoals && weekGoals
             .goalItems.find((goalItem) => (goalItem.id === this.lastCompleteItemGoalRef));
           return (weekGoalItemMilestoneChecked && weekGoalItemMilestoneChecked.progress) || 0;
         }
@@ -498,7 +516,9 @@ export default {
             taskId: task.id,
             ticked: task.ticked,
           },
-          error: (error) => {
+        })
+          .then(() => this.$apollo.queries.tasklist.refetch())
+          .catch((error) => {
             task.ticked = false;
             redirectOnError(this.$router, error);
             clearInterval(this.timerId);
@@ -509,8 +529,7 @@ export default {
               type: 'error',
               duration: 3000,
             });
-          },
-        }).then(() => this.$apollo.queries.tasklist.refetch());
+          });
       }
     },
     skipClick() {
@@ -586,18 +605,17 @@ export default {
                 }
               }
             },
-            error: (error) => {
-              redirectOnError(this.$router, error);
-              clearInterval(this.timerId);
-              item.passed = false;
-              this.$notify({
-                title: 'Error',
-                text: 'An unexpected error occured',
-                group: 'notify',
-                type: 'error',
-                duration: 3000,
-              });
-            },
+          }).catch((error) => {
+            redirectOnError(this.$router, error);
+            clearInterval(this.timerId);
+            item.passed = false;
+            this.$notify({
+              title: 'Error',
+              text: 'An unexpected error occured',
+              group: 'notify',
+              type: 'error',
+              duration: 3000,
+            });
           });
         }
       }
@@ -629,18 +647,17 @@ export default {
               taskId: item.id,
               wait: item.wait,
             },
-            error: (error) => {
-              redirectOnError(this.$router, error);
-              clearInterval(this.timerId);
-              item.wait = false;
-              this.$notify({
-                title: 'Error',
-                text: 'An unexpected error occured',
-                group: 'notify',
-                type: 'error',
-                duration: 3000,
-              });
-            },
+          }).catch((error) => {
+            redirectOnError(this.$router, error);
+            clearInterval(this.timerId);
+            item.wait = false;
+            this.$notify({
+              title: 'Error',
+              text: 'An unexpected error occured',
+              group: 'notify',
+              type: 'error',
+              duration: 3000,
+            });
           });
         }
       }
@@ -664,9 +681,9 @@ export default {
         if (moment(this.date, 'DD-MM-YYYY').weekday() >= (threshold.weekDays - 1)) {
           if (weekOfMonth(this.date) >= (threshold.monthWeeks - 1)) {
             // TODO: Enable this later
-            // if (moment(this.date, 'DD-MM-YYYY').month() >= (threshold.yearMonths - 1)) {
-            //   return aggregatePoints;
-            // }
+            if (moment(this.date, 'DD-MM-YYYY').month() >= (threshold.yearMonths - 1)) {
+              return aggregatePoints;
+            }
             console.log('month', Number((aggregatePoints * 1.334).toFixed(1)));
             return Number((aggregatePoints * 1.334).toFixed(1));
           }
@@ -732,6 +749,24 @@ export default {
     toggleGoalDetailsDialog(bool) {
       this.goalDetailsDialog = bool;
     },
+    countTaskPercentage(task) {
+      const stimulus = task.stimuli.find((st) => st.name === 'K');
+      const completed = 100 * (stimulus.earned / task.points);
+      return completed;
+    },
+    countTaskCompleted(task) {
+      const dStimulus = task.stimuli.find((st) => st.name === 'D');
+      const stimulus = task.stimuli.find((st) => st.name === 'K');
+      const count = Number((dStimulus.splitRate / stimulus.splitRate).toFixed(0));
+      const completed = Number((count * (Number(stimulus.earned) / Number(task.points))).toFixed(0));
+      return completed;
+    },
+    countTaskTotal(task) {
+      const dStimulus = task.stimuli.find((st) => st.name === 'D');
+      const stimulus = task.stimuli.find((st) => st.name === 'K');
+      const count = Number((dStimulus.splitRate / stimulus.splitRate).toFixed(0));
+      return count;
+    },
   },
   mounted() {
     this.timerId = setInterval(() => {
@@ -780,18 +815,18 @@ export default {
   }
 
   .concentrated-view .active .v-list__tile--avatar {
-    height: 240px;
+    height: 300px;
   }
 
+  .concentrated-view .active .circular-task,
   .concentrated-view .active .v-list__tile__avatar {
     align-self: start;
   }
 
-  .concentrated-view .active .v-list__tile > .v-list__tile__avatar > .v-avatar,
-  .concentrated-view .active .v-list__tile > .v-list__tile__avatar > .v-avatar button{
-    height: 48px !important;
-    width: 48px !important;
-  }
+/* TODO: Fix zoom problem */
+  /* .concentrated-view .active .v-list__tile .circular-task{
+    zoom: 1.2;
+  } */
 
   .concentrated-view .active .v-list__tile{
     padding-top: 16px;
@@ -849,7 +884,7 @@ export default {
 
   .concentrated-view .task-goals {
     width: 100%;
-    height: 150px;
+    height: 240px;
     overflow-x: hidden;
     overflow-y: auto;
   }
@@ -925,5 +960,9 @@ export default {
   .skip-box img {
     max-width: 100%;
     width: auto;
+  }
+
+  .circular-task .v-avatar {
+    margin: 0 auto;
   }
 </style>
