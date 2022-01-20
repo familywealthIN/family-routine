@@ -752,14 +752,14 @@ export default {
     countTaskPercentage(task) {
       const stimulus = task.stimuli.find((st) => st.name === 'K');
       const completed = 100 * (stimulus.earned / task.points);
-      return completed;
+      return isNaN(completed) ? 0 : completed;
     },
     countTaskCompleted(task) {
       const dStimulus = task.stimuli.find((st) => st.name === 'D');
       const stimulus = task.stimuli.find((st) => st.name === 'K');
       const count = Number((dStimulus.splitRate / stimulus.splitRate).toFixed(0));
       const completed = Number((count * (Number(stimulus.earned) / Number(task.points))).toFixed(0));
-      return completed;
+      return isNaN(completed) ? 0 : completed;
     },
     countTaskTotal(task) {
       const dStimulus = task.stimuli.find((st) => st.name === 'D');
