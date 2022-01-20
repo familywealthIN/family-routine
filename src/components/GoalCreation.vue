@@ -354,17 +354,16 @@ export default {
           this.$emit('add-update-goal-entry', goalItem);
           this.resetForm();
         },
-        error: (error) => {
-          this.resetForm();
-          redirectOnError(this.$router, error);
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        },
+      }).catch((error) => {
+        this.resetForm();
+        redirectOnError(this.$router, error);
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       });
     },
     updateGoalItem() {
@@ -438,17 +437,16 @@ export default {
           this.$emit('add-update-goal-entry', goalItem);
           this.resetForm();
         },
-        error: (error) => {
-          this.resetForm();
-          redirectOnError(this.$router, error);
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        },
+      }).catch((error) => {
+        this.resetForm();
+        redirectOnError(this.$router, error);
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       });
     },
     resetForm() {

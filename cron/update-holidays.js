@@ -8,7 +8,6 @@ const {
   MONGDO_DB,
 } = process.env;
 
-
 function exitProcess() {
   console.log(`process ended at ${new Date()}`);
   process.exit();

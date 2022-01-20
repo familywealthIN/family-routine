@@ -3,10 +3,51 @@
 </script>
 <template>
   <container-box :isLoading="$apollo.queries.goals.loading">
-    <v-card-text class="py-0 px-0">
+    <v-card
+      dark
+      flat
+      class="image-card"
+    >
+      <v-btn
+        absolute
+        dark
+        fab
+        bottom
+        class="second-right-btn"
+        color="info"
+        @click="$router.push('/goals/milestones')"
+      >
+        <v-icon>widgets</v-icon>
+      </v-btn>
+      <v-btn
+        absolute
+        dark
+        fab
+        bottom
+        right
+        color="info"
+        @click="addGoalItemDialog = true"
+      >
+        <v-icon>add</v-icon>
+      </v-btn>
+      <v-img
+        src="https://cdn.vuetifyjs.com/images/cards/forest.jpg"
+        gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
+      >
+        <v-container fill-height>
+          <v-layout align-center>
+            <strong class="display-4 font-weight-regular mr-4">{{goals && goals.find((goal) => goal && goal.period === 'lifetime').goalItems.length || 0 }}</strong>
+            <v-layout column justify-end>
+              <div class="headline font-weight-light">Lifetime Goals</div>
+            </v-layout>
+          </v-layout>
+        </v-container>
+      </v-img>
+    </v-card>
+    <v-card-text class="image-card-page py-0 px-0">
       <template v-for="period in periods">
         <div v-if="period.name === 'day'" :key="period.name">
-          <div class="text-xs-center"><h2 class="pt-3 pb-2 pl-2">{{ currentMonth }}</h2></div>
+          <div class="text-xs-center"><h2 class="pt-4 pb-3 pl-2">{{ currentMonth }}</h2></div>
           <v-sheet>
             <v-calendar
               ref="calendar"
@@ -80,28 +121,6 @@
         </div>
       </template>
     </v-card-text>
-    <v-btn
-      fixed
-      dark
-      fab
-      bottom
-      class="second-right-btn"
-      color="info"
-      @click="$router.push('/goals/milestones')"
-    >
-      <v-icon>widgets</v-icon>
-    </v-btn>
-    <v-btn
-      fixed
-      dark
-      fab
-      bottom
-      right
-      color="info"
-      @click="addGoalItemDialog = true"
-    >
-      <v-icon>add</v-icon>
-    </v-btn>
     <v-dialog
       v-model="addGoalItemDialog"
       fullscreen
@@ -200,7 +219,7 @@ export default {
   data: () => ({
     type: 'month',
     start: moment().format('YYYY-MM-DD'),
-    end: '2021-12-01',
+    end: '2022-12-01',
     currentMonth: moment().format('MMMM YYYY'),
     valid: true,
     addGoalItemDialog: false,

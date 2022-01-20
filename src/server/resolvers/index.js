@@ -8,6 +8,7 @@ const goal = require('./goal');
 const routineItem = require('./routineItem');
 const userItem = require('./userItem');
 const motto = require('./motto');
+const progress = require('./progress');
 
 const schema = new GraphQLSchema({
   query: new GraphQLObjectType({
@@ -18,6 +19,7 @@ const schema = new GraphQLSchema({
       ...userItem.query,
       ...goal.query,
       ...motto.query,
+      ...progress.query,
     },
   }),
   mutation: new GraphQLObjectType({
@@ -28,6 +30,7 @@ const schema = new GraphQLSchema({
       ...userItem.mutation,
       ...goal.mutation,
       ...motto.mutation,
+      ...progress.mutation,
     },
   }),
 });

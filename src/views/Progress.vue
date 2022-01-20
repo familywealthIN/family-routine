@@ -1,6 +1,6 @@
 <template>
-  <div class="history">
-    <ProgressTime/>
+  <div class="progress">
+    <ProgressTime :period="$route.params.period || 'week'" />
   </div>
 </template>
 

@@ -100,6 +100,7 @@ export default {
         .catch((error) => {
           console.log(error);
           this.isLoading = false;
+          window.location.reload();
         });
     },
 
@@ -126,6 +127,7 @@ export default {
             type: 'error',
             duration: 3000,
           });
+          window.location.reload();
         });
     },
 
@@ -171,7 +173,7 @@ export default {
 
           setTimeout(() => { this.isLoading = false; }, 500);
         },
-        error: () => {
+      }).catch(() => {
           this.isLoading = false;
           this.$notify({
             title: 'Login',
@@ -180,8 +182,7 @@ export default {
             type: 'error',
             duration: 3000,
           });
-        },
-      });
+        });
     },
   },
   mounted() {

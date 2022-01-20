@@ -10,79 +10,72 @@ export default new Router({
     {
       path: '/home',
       name: 'home',
-      component: () => import(/* webpackChunkName: "home" */ './views/Home.vue'),
+      component: () => import(/* webpackChunkName: "home" */'./views/Home.vue'),
     },
     {
       path: '/history',
       name: 'history',
-      // route level code-splitting
-      // this generates a separate chunk (about.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "history" */ './views/History.vue'),
+      component: () => import(/* webpackChunkName: "history" */'./views/History.vue'),
     },
-    // {
-    //   path: '/progress',
-    //   name: 'progress',
-    //   // route level code-splitting
-    //   // this generates a separate chunk (about.[hash].js) for this route
-    //   // which is lazy-loaded when the route is visited.
-    //   component: () => import(/* webpackChunkName: "progress" */ './views/Progress.vue'),
-    // },
+    {
+      path: '/settings/notifications',
+      name: 'notifications',
+      component: () => import(/* webpackChunkName: "notifications" */'./views/Notifications.vue'),
+    },
+    {
+      path: '/progress',
+      name: 'progress',
+      component: () => import(/* webpackChunkName: "progress" */'./views/Progress.vue'),
+    },
+    {
+      path: '/progress/:period',
+      name: 'progress',
+      component: () => import(/* webpackChunkName: "progress" */'./views/Progress.vue'),
+    },
     {
       path: '/settings',
-      name: 'settings',
-      // route level code-splitting
-      // this generates a separate chunk (about.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "settings" */ './views/Settings.vue'),
+      name: 'routines',
+      component: () => import(/* webpackChunkName: "settings" */'./views/Settings.vue'),
     },
     {
       path: '/about',
       name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (about.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "about" */ './views/About.vue'),
+      component: () => import(/* webpackChunkName: "about" */'./views/About.vue'),
     },
     {
       path: '/wizard',
       name: 'welcome',
-      // route level code-splitting
-      // this generates a separate chunk (about.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "wizard" */ './views/Wizard.vue'),
+      component: () => import(/* webpackChunkName: "wizard" */'./views/Wizard.vue'),
     },
     {
       path: '/family',
       name: 'family',
-      // route level code-splitting
-      // this generates a separate chunk (about.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "family" */ './views/Family.vue'),
+      component: () => import(/* webpackChunkName: "family" */'./views/Family.vue'),
     },
     {
       path: '/goals',
       name: 'goals',
-      // route level code-splitting
-      // this generates a separate chunk (about.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "goals" */ './views/Goals.vue'),
+      component: () => import(/* webpackChunkName: "goals" */'./views/Goals.vue'),
     },
     {
       path: '/goals/milestones',
       name: 'milestones',
-      // route level code-splitting
-      // this generates a separate chunk (about.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "milestones" */ './views/Milestones.vue'),
+      component: () => import(/* webpackChunkName: "milestones" */'./views/Milestones.vue'),
     },
     {
       path: '/agenda',
       name: 'agenda',
-      // route level code-splitting
-      // this generates a separate chunk (about.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
       component: () => import(/* webpackChunkName: "agenda" */ './views/Agenda.vue'),
+    },
+    {
+      path: '/guide',
+      name: 'guide',
+      component: () => import(/* webpackChunkName: "guide" */ './views/Guide.vue'),
+    },
+    {
+      path: '/settings/profile',
+      name: 'profile',
+      component: () => import(/* webpackChunkName: "profile" */ './views/Profile.vue'),
     },
     {
       path: '/',

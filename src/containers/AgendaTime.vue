@@ -1,5 +1,17 @@
 <template>
   <container-box :isLoading="isLoading">
+    <div class="weekdays pt-3 pl-2 pr-2">
+      <template v-for="(weekDay, i) in weekDays">
+        <div
+          @click="setDate(i)"
+          :class="`day ${weekDay.isActive ? 'active' : ''}`"
+          :key="weekDay.day"
+        >
+          <div>{{ weekDay.day }}</div>
+          <div>{{ weekDay.dayNumber }}</div>
+        </div>
+      </template>
+    </div>
     <div class="pl-3 pr-3">
       <p class="pt-4">
         Work on your daily agenda to bring you closer to your lifetime goal.
@@ -22,7 +34,7 @@
         </v-card>
       </template>
     </div>
-    <div class="text-xs-center date-navigation">
+    <div class="text-xs-center date-navigation" hidden>
       <v-btn
         fab
         outline
@@ -92,12 +104,21 @@
                       flat
                       icon
                       color="primary"
+                      v-if="isEditable"
                       @click="
                         selectedTaskRef = task.id;
                         currentGoalPeriod = period;
                         goalDetailsDialog = true"
                       >
                       <v-icon>add</v-icon>
+                    </v-btn>
+                    <v-btn
+                      flat
+                      icon
+                      color="primary"
+                      v-else
+                    >
+                      <v-icon></v-icon>
                     </v-btn>
                   </v-flex>
                 </v-layout>
@@ -273,17 +294,40 @@ export default {
       currentGoalPeriod: 'day',
       selectedTaskRef: '',
       date: moment().format('DD-MM-YYYY'),
+      weekDays: this.buildWeekdays(),
       periods: ['year', 'month', 'week', 'day'],
+      isEditable: true,
     };
   },
   watch: {
     date(newVal, oldVal) {
       if (newVal !== oldVal) {
         this.$apollo.queries.tasklist.refetch();
+        const date = moment(this.date, 'DD-MM-YYYY');
+        const todayDate = moment(new Date(), 'DD-MM-YYYY');
+        this.isEditable = moment(date).isSameOrAfter(todayDate, 'day');
       }
     },
   },
   methods: {
+    buildWeekdays() {
+      const weekDays = [];
+      const dayShort = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+      const currentDate = moment();
+
+      const weekStart = currentDate.clone().startOf('week');
+      // const weekEnd = currentDate.clone().endOf('isoWeek');
+
+      dayShort.forEach((day, i) => {
+        weekDays.push({
+          dayNumber: moment(weekStart).add(i, 'days').format('DD'),
+          isActive: moment().weekday() === i,
+          day,
+        });
+      });
+
+      return weekDays;
+    },
     addNewDayRoutine() {
       this.isLoading = true;
       this.$apollo.mutate({
@@ -313,17 +357,16 @@ export default {
           this.did = addRoutine.id;
           this.isLoading = false;
         },
-        error: (error) => {
-          redirectOnError(this.$router, error);
-          this.isLoading = false;
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        },
+      }).catch((error) => {
+        redirectOnError(this.$router, error);
+        this.isLoading = false;
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       });
     },
     deleteTaskGoal(id) {
@@ -344,6 +387,20 @@ export default {
     },
     nextDate() {
       this.date = moment(this.date, 'DD-MM-YYYY').add(1, 'days').format('DD-MM-YYYY');
+    },
+    setDate(indx) {
+      const currentDate = moment();
+      const weekStart = currentDate.clone().startOf('week');
+
+      this.weekDays = this.weekDays.map((weekDay, i) => {
+        if (Number(indx) === i) {
+          weekDay.isActive = true;
+          return weekDay;
+        }
+        weekDay.isActive = false;
+        return weekDay;
+      });
+      this.date = moment(weekStart).add(indx, 'days').format('DD-MM-YYYY');
     },
     getButtonColor(task) {
       if (task) {
@@ -435,5 +492,27 @@ export default {
     height: 40px;
     padding-top: 10px;
     font-weight: bold;
+  }
+
+  .weekdays {
+    width: 100%;
+    display: flex;
+    justify-content:space-evenly;
+    align-items: center;
+    font-weight: 500;
+  }
+  .weekdays .day {
+    padding: 16px;
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  #mobileLayout .weekdays .day {
+    border-radius: 16px;
+  }
+
+  .weekdays .day.active {
+    background-color: #288bd5;
+    color: #fff;
   }
 </style>

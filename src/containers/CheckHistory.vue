@@ -1,7 +1,7 @@
 <template>
     <container-box :isLoading="$apollo.queries.routines.loading">
-      <v-card color="grey lighten-4">
-        <v-card-title>
+      <v-card class="image-card">
+        <v-card-title class="grey lighten-4">
           <v-icon
             :color="'indigo'"
             class="mr-5"
@@ -22,7 +22,7 @@
           </v-btn>
         </v-card-title>
 
-        <v-sheet color="transparent">
+        <v-sheet class="grey lighten-4 pb-4">
           <v-sparkline
             :key="String(avg)"
             :smooth="16"
@@ -33,8 +33,11 @@
             stroke-linecap="round"
           ></v-sparkline>
         </v-sheet>
+
+        <v-card-text class="image-card-page">
+          <user-history :routines="routines" />
+        </v-card-text>
       </v-card>
-      <user-history :routines="routines" />
     </container-box>
 </template>
 
