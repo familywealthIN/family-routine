@@ -824,9 +824,9 @@ export default {
   }
 
 /* TODO: Fix zoom problem */
-  /* .concentrated-view .active .v-list__tile .circular-task{
-    zoom: 1.2;
-  } */
+  .concentrated-view .active .v-list__tile .circular-task{
+    min-width: 48px;
+  }
 
   .concentrated-view .active .v-list__tile{
     padding-top: 16px;
