@@ -36,7 +36,7 @@
       >
         <v-container fill-height>
           <v-layout align-center>
-            <strong class="display-4 font-weight-regular mr-4">{{goals && goals.find((goal) => goal && goal.period === 'lifetime').goalItems.length || 0 }}</strong>
+            <strong class="display-4 font-weight-regular mr-4">{{getLifetimeGoalsCount()}}</strong>
             <v-layout column justify-end>
               <div class="headline font-weight-light">Lifetime Goals</div>
             </v-layout>
@@ -264,6 +264,10 @@ export default {
       }
 
       return goal;
+    },
+    getLifetimeGoalsCount() {
+      const lifetimeGoals = this.goals && this.goals.find((goal) => goal && goal.period === 'lifetime');
+      return lifetimeGoals && lifetimeGoals.goalItems && lifetimeGoals.goalItems.length || 0
     },
     updateNewGoalItem(goalItem, period, date) {
       this.newGoalItem = {
