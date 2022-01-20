@@ -80,7 +80,7 @@ function buildStimuliForRoutineItem(taskId, tasklist) {
     },
     {
       name: 'K',
-      splitRate: 2,
+      splitRate: 2, // 1 task in 2 hours
       earned: 0,
     },
     {
@@ -121,6 +121,22 @@ const query = {
 
       const routines = await RoutineModel
         .find({ email: args.email, skip: { $ne: true } })
+        .sort({ $natural: -1 })
+        .limit(7)
+        .exec();
+
+      routines.forEach((routine) => sortTimes(routine.tasklist));
+
+      return routines;
+    },
+  },
+  routineSevenDays: {
+    type: GraphQLList(RoutineType),
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      const routines = await RoutineModel
+        .find({ email, skip: { $ne: true } })
         .sort({ $natural: -1 })
         .limit(7)
         .exec();

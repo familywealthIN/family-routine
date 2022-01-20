@@ -2,8 +2,8 @@
   <v-layout row >
     <v-flex xs12 sm10 offset-sm1>
       <v-card
-        class="mx-auto"
         max-width="800"
+        :class="transparent ? 'transparent mx-auto elevation-0' : 'mx-auto elevation-0'"
       >
         <div
           v-if="isLoading"
@@ -23,7 +23,7 @@
 <script>
 export default {
   name: 'ContainerBox',
-  props: ['isLoading'],
+  props: ['isLoading', 'transparent'],
 };
 </script>
 
@@ -58,5 +58,10 @@ export default {
 .fadeIn {
   -webkit-animation-name: fadeIn;
   animation-name: fadeIn;
+}
+
+.transparent {
+  background-color: transparent;
+  box-shadow: none;
 }
 </style>

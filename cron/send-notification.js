@@ -16,12 +16,12 @@ admin.initializeApp({
   databaseURL: 'https://groutine-21c1b.firebaseio.com',
 });
 
-function sendNotification(token, name, description) {
+function sendNotification(token, name, description, url) {
   const payload = {
     notification: {
       title: name,
       body: description,
-      click_action: DOMAIN,
+      click_action: url || DOMAIN,
     },
   };
 
@@ -41,23 +41,14 @@ function exitProcess() {
 }
 
 function calcTime(offset) {
-  // create Date object for current location
   const d = new Date();
-
-  // convert to msec
-  // subtract local time zone offset
-  // get UTC time in msec
   const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
-
-  // create new Date object for different city
-  // using supplied offset
   const nd = new Date(utc + (3710000 * offset));
-
-  // return time as a string
   return nd.toTimeString().substring(0, 5);
 }
 
 const time = calcTime('+5.5');
+
 console.log(`Process Started for time ${time}`);
 const notificationList = [];
 

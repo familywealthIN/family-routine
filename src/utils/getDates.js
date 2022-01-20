@@ -25,9 +25,10 @@ export function getDatesOfYear(beginDate) {
 
 export function getWeeksOfYear() {
   const currentWeek = moment().week();
+  const lastWeekOfYear = moment().endOf('year').week();
   const weeks = [];
   // eslint-disable-next-line no-plusplus
-  for (let i = currentWeek; i <= 52; i++) {
+  for (let i = currentWeek; i <= lastWeekOfYear; i++) {
     weeks.push({
       label: `Week ${i} (${moment().weeks(i).weekday(1).format('DD-MM-YYYY')})`,
       value: moment().weeks(i).weekday(5).format('DD-MM-YYYY'),

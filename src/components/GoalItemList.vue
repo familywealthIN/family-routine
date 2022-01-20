@@ -102,16 +102,15 @@ export default {
           period,
           date,
         },
-        error: (error) => {
-          redirectOnError(this.$router, error);
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        },
+      }).catch((error) => {
+        redirectOnError(this.$router, error);
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       });
     },
     completeGoalItemText(goalItem, period, date, taskRef) {
@@ -162,7 +161,6 @@ export default {
       })
         .then(() => (this.$emit('refresh-task-goal', goalRef)))
         .catch((error) => {
-          redirectOnError(this.$router, error);
           this.$notify({
             title: 'Error',
             text: 'An unexpected error occured',
@@ -170,6 +168,7 @@ export default {
             type: 'error',
             duration: 3000,
           });
+          redirectOnError(this.$router, error);
         });
     },
     editGoalItem(goalItem, period, date) {

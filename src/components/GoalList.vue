@@ -191,16 +191,15 @@ export default {
           this.$emit('toggle-goal-details-dialog', false);
           this.buttonLoading = false;
         },
-        error: (error) => {
-          redirectOnError(this.$router, error);
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        },
+      }).catch((error) => {
+        redirectOnError(this.$router, error);
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       });
     },
     sortTimes(array) {

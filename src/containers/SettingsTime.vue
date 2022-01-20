@@ -6,6 +6,7 @@
     <v-card
       dark
       flat
+      class="image-card"
     >
       <v-btn
         absolute
@@ -31,7 +32,7 @@
         </v-container>
       </v-img>
     </v-card>
-    <v-card-text class="px-0">
+    <v-card-text class="image-card-page px-0">
       <v-dialog v-model="dialog" >
         <v-card>
           <v-card-title>
@@ -95,7 +96,7 @@
           </v-form>
         </v-card>
       </v-dialog>
-      <v-data-table :headers="headers" :items="routineItems" class="elevation-1" hide-actions>
+      <v-data-table :headers="headers" :items="routineItems" class="elevation-0 mt-2" hide-actions>
         <template v-slot:items="props">
           <td>{{ props.item.name }}</td>
           <td class="text-xs-right">{{ props.item.time }}</td>
@@ -248,7 +249,7 @@ export default {
         update: () => {
           this.routineItems.splice(index, 1);
         },
-        error: (error) => {
+      }).catch((error) => {
           redirectOnError(this.$router, error);
           this.$notify({
             title: 'Error',
@@ -257,8 +258,7 @@ export default {
             type: 'error',
             duration: 3000,
           });
-        },
-      });
+        });
     },
 
     close(auto = true) {
@@ -322,7 +322,7 @@ export default {
           this.close(false);
           this.resetEditItem();
         },
-        error: (error) => {
+      }).catch((error) => {
           this.resetEditItem();
           this.buttonLoading = false;
           this.close(false);
@@ -334,8 +334,7 @@ export default {
             type: 'error',
             duration: 3000,
           });
-        },
-      });
+        });
     },
 
     getPointsTotal() {
@@ -393,7 +392,7 @@ export default {
           this.buttonLoading = false;
           this.close(false);
         },
-        error: (error) => {
+      }).catch((error) => {
           this.resetEditItem();
           this.buttonLoading = false;
           this.close(false);
@@ -405,8 +404,7 @@ export default {
             type: 'error',
             duration: 3000,
           });
-        },
-      });
+        });
     },
   },
 };

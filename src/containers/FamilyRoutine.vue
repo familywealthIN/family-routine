@@ -8,6 +8,7 @@
     <v-card
       dark
       flat
+      class="image-card"
     >
       <v-btn
         absolute
@@ -34,7 +35,7 @@
         </v-container>
       </v-img>
     </v-card>
-    <v-card-text class="py-0 px-0">
+    <v-card-text class="image-card-page py-0 px-0">
       <v-dialog v-model="sendInviteDialog" persistent max-width="600px">
         <v-card>
           <v-card-title>
@@ -73,47 +74,45 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
-      <v-card>
-        <v-list v-if="userItems && userItems.length" three-line>
-          <v-subheader>Members</v-subheader>
-          <template v-for="(userItem, index) in userItems">
+      <v-list v-if="userItems && userItems.length" three-line>
+        <v-subheader>Members</v-subheader>
+        <template v-for="(userItem, index) in userItems">
 
-            <v-divider :key="userItem.id" v-if="index !== 0"></v-divider>
+          <v-divider :key="userItem.id" v-if="index !== 0"></v-divider>
 
-            <v-list-tile
-              :key="userItem.id"
-              avatar
-              @click="groupDetailsClick(userItem.email)"
-            >
-              <v-list-tile-avatar>
-                <img v-bind:src="userItem.picture || './img/default-user.png'">
-              </v-list-tile-avatar>
+          <v-list-tile
+            :key="userItem.id"
+            avatar
+            @click="groupDetailsClick(userItem.email)"
+          >
+            <v-list-tile-avatar>
+              <img v-bind:src="userItem.picture || './img/default-user.png'">
+            </v-list-tile-avatar>
 
-              <v-list-tile-content>
-                <v-list-tile-title v-html="userItem.name"></v-list-tile-title>
-                <v-list-tile-sub-title>
-                  <span class="pt-2"
-                    style="display: flex;align-items: center;justify-content: center;"
+            <v-list-tile-content>
+              <v-list-tile-title v-html="userItem.name"></v-list-tile-title>
+              <v-list-tile-sub-title>
+                <span class="pt-2"
+                  style="display: flex;align-items: center;justify-content: center;"
+                >
+                  <template
+                    v-for="(score, index)
+                    in getGroupUserSevenDayScore(userItem.email)"
                   >
-                    <template
-                      v-for="(score, index)
-                      in getGroupUserSevenDayScore(userItem.email)"
-                    >
-                      <v-avatar :key="String(userItem.email) + String(score.date)" size="24" :color="getButtonColor(score.count)">
-                        <v-icon color="white" size="16">{{getButtonIcon(score.count)}}</v-icon>
-                      </v-avatar>
-                      <v-divider :key="String(userItem.email) + String(score.date)" v-if="index !== 6"></v-divider>
-                    </template>
-                  </span>
-                </v-list-tile-sub-title>
-              </v-list-tile-content>
-            </v-list-tile>
-          </template>
-        </v-list>
-        <p v-else class="pt-3 pb-3 text-xs-center">
-          No Family Members have been added.
-        </p>
-      </v-card>
+                    <v-avatar :key="String(userItem.email) + String(score.date)" size="24" :color="getButtonColor(score.count)">
+                      <v-icon color="white" size="16">{{getButtonIcon(score.count)}}</v-icon>
+                    </v-avatar>
+                    <v-divider :key="String(userItem.email) + String(score.date)" v-if="index !== 6"></v-divider>
+                  </template>
+                </span>
+              </v-list-tile-sub-title>
+            </v-list-tile-content>
+          </v-list-tile>
+        </template>
+      </v-list>
+      <p v-else class="pt-3 pb-3 text-xs-center">
+        No Family Members have been added.
+      </p>
       <v-btn
         v-if="groupId"
         color="primary"
@@ -474,7 +473,7 @@ export default {
     getGroupUserSevenDayScore(email) {
       const scores = [];
       // eslint-disable-next-line max-len
-      const currentGroupUserDays = this.groupDetails.find((userDetail) => userDetail[0].email === email);
+      const currentGroupUserDays = this.groupDetails.find((userDetail) => userDetail[0] && userDetail[0].email === email);
 
       if(Array.isArray(currentGroupUserDays)) {
         currentGroupUserDays.forEach((currentGroupUserDay) => {
