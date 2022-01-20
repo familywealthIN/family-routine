@@ -352,7 +352,8 @@ function getBestRoutineSorted({
     const scoredTasklist = getScore(routine);
 
     scoredTasklist.forEach((scoredTask) => {
-      const currentFullTask = fullTasklistScore.find((fullTask) => fullTask.id === scoredTask.id);
+      const currentFullTask = fullTasklistScore
+        .find((fullTask) => fullTask.id.toString() === scoredTask.id.toString());
       if (currentFullTask && currentFullTask.id) {
         currentFullTask.value += scoredTask.value;
       } else {
@@ -361,6 +362,8 @@ function getBestRoutineSorted({
     });
     return fullTasklistScore;
   }, []);
+
+  console.log('fullTasklistScore', fullTasklistScore);
 
   fullTasklistScore.sort((a, b) => b.value - a.value);
 
@@ -376,8 +379,11 @@ function getBestRoutineSorted({
 
 function getRoutinesForPeriod(routines, startDate, endDate) {
   const periodRoutines = routines.map((routine) => {
-    if ((routine.date === startDate || moment(routine.date, 'DD-MM-YYYY').isAfter(startDate))
-      && !(moment(routine.date, 'DD-MM-YYYY').isAfter(endDate))) {
+    const routineDate = moment(routine.date, 'DD-MM-YYYY');
+    const startDateM = moment(startDate, 'DD-MM-YYYY');
+    const endDateM = moment(endDate, 'DD-MM-YYYY');
+    if ((moment(routineDate).isSameOrAfter(startDateM, 'day'))
+      && !(moment(routineDate).isAfter(endDateM, 'day'))) {
       return routine;
     }
     return null;
@@ -388,8 +394,11 @@ function getRoutinesForPeriod(routines, startDate, endDate) {
 
 function getDailyTasksForPeriod(dailyTasks, startDate, endDate) {
   const periodDailyTasks = dailyTasks.map((dailyTask) => {
-    if ((dailyTask.date === startDate || moment(dailyTask.date, 'DD-MM-YYYY').isAfter(startDate))
-      && !(moment(dailyTask.date, 'DD-MM-YYYY').isAfter(endDate))) {
+    const dailyTaskDate = moment(dailyTask.date, 'DD-MM-YYYY');
+    const startDateM = moment(startDate, 'DD-MM-YYYY');
+    const endDateM = moment(endDate, 'DD-MM-YYYY');
+    if ((moment(dailyTaskDate).isSameOrAfter(startDateM, 'day'))
+      && !(moment(dailyTaskDate).isAfter(endDateM, 'day'))) {
       return dailyTask;
     }
     return null;
