@@ -113,7 +113,6 @@ export default {
           localStorage.removeItem(GC_USER_NAME);
           localStorage.removeItem(GC_PICTURE);
           localStorage.removeItem(GC_AUTH_TOKEN);
-          localStorage.removeItem(GC_NOTIFICATION_TOKEN);
           this.$root.$data.userName = localStorage.getItem(GC_USER_NAME);
           this.$root.$data.userEmail = localStorage.getItem(GC_USER_EMAIL);
           this.$root.$data.picture = localStorage.getItem(GC_PICTURE);
