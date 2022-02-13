@@ -100,7 +100,7 @@
                     <span style="text-transform: uppercase">{{period}}</span>
                   </v-flex>
                   <v-flex xs5 text-xs-right>
-                    <v-btn
+                    <!-- <v-btn
                       flat
                       icon
                       color="primary"
@@ -109,6 +109,26 @@
                         selectedTaskRef = task.id;
                         currentGoalPeriod = period;
                         goalDetailsDialog = true"
+                      >
+                      <v-icon>content_copy</v-icon>
+                      <v-icon class="overlay-icon">arrow_back</v-icon>
+                    </v-btn> -->
+                    <v-btn
+                      flat
+                      icon
+                      color="primary"
+                      v-if="isEditable && period !== 'year'"
+                      @click="clonePeriodGoalItem(task, period)"
+                      >
+                      <v-icon>content_copy</v-icon>
+                      <v-icon class="overlay-icon">arrow_upward</v-icon>
+                    </v-btn>
+                    <v-btn
+                      flat
+                      icon
+                      color="primary"
+                      v-if="isEditable"
+                      @click="newGoalItem(task, period)"
                       >
                       <v-icon>add</v-icon>
                     </v-btn>
@@ -173,6 +193,7 @@
           :goals="goals"
           :date="date"
           :period="currentGoalPeriod"
+          :selectedBody="selectedBody"
           :tasklist="tasklist"
           :selectedTaskRef="selectedTaskRef"
           @toggle-goal-details-dialog="toggleGoalDetailsDialog"
@@ -201,6 +222,7 @@ import redirectOnError from '../utils/redirectOnError';
 import GoalList from '../components/GoalList.vue';
 import TimelineItemList from '../components/TimelineItemList.vue';
 import ContainerBox from '../components/ContainerBox.vue';
+import { stepupMilestonePeriodDate } from '../utils/getDates';
 
 export default {
   components: {
@@ -292,6 +314,7 @@ export default {
       did: '',
       skipDay: false,
       currentGoalPeriod: 'day',
+      selectedBody: '',
       selectedTaskRef: '',
       date: moment().format('DD-MM-YYYY'),
       weekDays: this.buildWeekdays(),
@@ -424,6 +447,20 @@ export default {
       }
       return 'more_horiz';
     },
+    newGoalItem(task, period) {
+      this.selectedTaskRef = task.id;
+      this.currentGoalPeriod = period;
+      this.selectedBody = '';
+      this.goalDetailsDialog = true;
+    },
+    clonePeriodGoalItem(task, period) {
+      const stepUpPeriod = stepupMilestonePeriodDate(period);
+      const filteredPeriodGoals = this.filterTaskGoalsPeriod(task.id, stepUpPeriod.period);
+      this.selectedBody = (filteredPeriodGoals && filteredPeriodGoals.length && filteredPeriodGoals[0].goalItems[0].body) || '';
+      this.selectedTaskRef = task.id;
+      this.currentGoalPeriod = period;
+      this.goalDetailsDialog = true;
+    },
     filterTaskGoalsPeriod(id, currentGoalPeriod) {
       const taskGoalList = [];
       if (this.goals && this.goals.length) {
@@ -514,5 +551,11 @@ export default {
   .weekdays .day.active {
     background-color: #288bd5;
     color: #fff;
+  }
+
+  .overlay-icon {
+    position: absolute;
+    font-size: 14px;
+    padding: 2px 0 0 3px;
   }
 </style>

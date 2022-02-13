@@ -59,7 +59,7 @@ import redirectOnError from '../utils/redirectOnError';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 
 export default {
-  props: ['goals', 'date', 'period', 'tasklist', 'goalDetailsDialog', 'selectedTaskRef'],
+  props: ['goals', 'selectedBody', 'date', 'period', 'tasklist', 'goalDetailsDialog', 'selectedTaskRef'],
   apollo: {
     goalItemsRef: {
       query: gql`
@@ -98,13 +98,13 @@ export default {
       show: true,
       buttonLoading: false,
       newGoalItem: {
-        body: '',
+        body: this.selectedBody || '',
         isMilestone: false,
         goalRef: '',
         taskRef: this.selectedTaskRef || '',
       },
       defaultGoalItem: {
-        body: '',
+        body: this.selectedBody || '',
         isMilestone: false,
         goalRef: '',
         taskRef: this.selectedTaskRef || '',
@@ -255,6 +255,18 @@ export default {
     },
   },
   watch: {
+    selectedBody(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.newGoalItem = {
+          ...this.defaultGoalItem,
+          body: newVal,
+        };
+        this.defaultGoalItem = {
+          ...this.defaultGoalItem,
+          body: newVal,
+        };
+      }
+    },
     selectedTaskRef(newVal, oldVal) {
       if (newVal !== oldVal) {
         this.newGoalItem = {
