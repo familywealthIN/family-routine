@@ -6,13 +6,12 @@
     <v-layout wrap >
       <v-flex xs12 d-flex>
         <v-text-field
-          v-model="newGoalItem.body"
-          id="newGoalItemBody"
-          name="newGoalItemBody"
+          v-model="selectedGoalItem.body"
+          id="selectedGoalItemBody"
+          name="selectedGoalItemBody"
           label="Type your task"
           class="inputGoal"
           :rules="formRules.body"
-          @keyup.enter="addGoalItem"
           required
         >
         </v-text-field>
@@ -20,26 +19,24 @@
       <v-flex xs4 d-flex>
         <v-select
           :items="periodOptionList"
-          :disabled="newItemLoaded"
-          v-model="newGoalItem.period"
+          :disabled="true"
+          v-model="selectedGoalItem.period"
           item-text="label"
           item-value="value"
           :rules="formRules.dropDown"
           label="Period"
-          @change="updatePeriod()"
           required
         ></v-select>
       </v-flex>
       <v-flex v-if="dateOptionList.length" xs8 d-flex>
         <v-select
           :items="dateOptionList"
-          :disabled="newItemLoaded"
-          v-model="newGoalItem.date"
+          :disabled="true"
+          v-model="selectedGoalItem.date"
           item-text="label"
           item-value="value"
           :rules="formRules.dropDown"
           label="Date"
-          @change="triggerGoalItemsRef()"
           required
         ></v-select>
       </v-flex>
@@ -48,7 +45,8 @@
       <v-flex xs12 d-flex>
         <v-select
           :items="tasklist"
-          v-model="newGoalItem.taskRef"
+          :disabled="true"
+          v-model="selectedGoalItem.taskRef"
           item-text="name"
           item-value="id"
           label="Routine Task"
@@ -56,22 +54,69 @@
       </v-flex>
       <v-flex v-if="showMilestoneOption" xs6 d-flex>
         <v-checkbox
-          v-model="newGoalItem.isMilestone"
+          :disabled="true"
+          v-model="selectedGoalItem.isMilestone"
           label="Milestone?"
         ></v-checkbox>
       </v-flex>
-      <v-flex v-if="newGoalItem.isMilestone" xs6 d-flex>
+      <v-flex v-if="selectedGoalItem.isMilestone" xs6 d-flex>
         <v-select
+          :disabled="true"
           :items="goalItemsRef"
-          v-model="newGoalItem.goalRef"
+          v-model="selectedGoalItem.goalRef"
           item-text="body"
           item-value="id"
           label="Goal Task"
         ></v-select>
       </v-flex>
+      <v-flex xs12 v-if="selectedGoalItem.period === 'day'">
+        <v-card class="pl-3 pr-3 mb-3">
+          <v-card-title class="headline">Sub Tasks</v-card-title>
+          <div class="pl-3 pr-3 formGoal mt-3 mb-2">
+            <v-text-field
+              clearable
+              v-model="newSubTaskItemBody"
+              id="newSubTaskItemBody"
+              name="newSubTaskItemBody"
+              label="Type your sub task"
+              class="inputGoal"
+              @keyup.enter="addSubTaskItem"
+            >
+            </v-text-field>
+            <v-btn
+                icon
+                color="success"
+                fab
+                dark
+                class="ml-3 mr-0"
+                @click="addSubTaskItem(newSubTaskItemBody)"
+            >
+                <v-icon dark>send</v-icon>
+            </v-btn>
+          </div>
+          <v-list two-line subheader>
+            <v-spacer></v-spacer>
+              <v-subheader
+                class="subheading"
+                v-if="selectedGoalItem && selectedGoalItem.subTasks && selectedGoalItem.subTasks.length == 0"
+              >
+                You have 0 sub tasks
+              </v-subheader>
+              <v-subheader class="subheading" v-else>
+                {{ selectedGoalItem && selectedGoalItem.subTasks && selectedGoalItem.subTasks.length }} sub tasks
+              </v-subheader>
+              <sub-task-item-list
+                  :subTasks="selectedGoalItem.subTasks"
+                  :taskId="selectedGoalItem.id"
+                  :period="selectedGoalItem.period"
+                  :date="selectedGoalItem.date"
+              />
+          </v-list>
+        </v-card>
+      </v-flex>
       <v-flex xs12>
         <v-textarea
-          v-model="newGoalItem.contribution"
+          v-model="selectedGoalItem.contribution"
         >
           <template v-slot:label>
             <div>
@@ -82,7 +127,7 @@
       </v-flex>
       <v-flex xs12>
         <v-textarea
-          v-model="newGoalItem.reward"
+          v-model="selectedGoalItem.reward"
         >
           <template v-slot:label>
             <div>
@@ -111,6 +156,8 @@
 import gql from 'graphql-tag';
 import moment from 'moment';
 
+import SubTaskItemList from './SubTaskItemList.vue';
+
 import redirectOnError from '../utils/redirectOnError';
 
 import {
@@ -122,7 +169,10 @@ import {
 } from '../utils/getDates';
 
 export default {
-  props: ['newGoalItem'],
+  props: ['selectedGoalItem'],
+  components: {
+    SubTaskItemList,
+  },
   apollo: {
     tasklist: {
       query: gql`
@@ -182,7 +232,7 @@ export default {
       },
       variables() {
         return {
-          ...stepupMilestonePeriodDate(this.newGoalItem.period, this.newGoalItem.date),
+          ...stepupMilestonePeriodDate(this.selectedGoalItem.period, this.selectedGoalItem.date),
         };
       },
       error() {
@@ -195,7 +245,8 @@ export default {
       skipQuery: true,
       valid: false,
       buttonLoading: false,
-      newItemLoaded: false,
+      isNewItemLoaded: false,
+      newSubTaskItemBody: '',
       formRules: {
         body: [
           (v) => !!v || 'Task Name is required',
@@ -229,10 +280,10 @@ export default {
   },
   computed: {
     dateOptionList() {
-      switch (this.newGoalItem.period) {
+      switch (this.selectedGoalItem.period) {
         case 'day':
-          if (this.newItemLoaded) {
-            return getDatesOfYear(this.newGoalItem.date);
+          if (this.isNewItemLoaded) {
+            return getDatesOfYear(this.selectedGoalItem.date);
           }
           return getDatesOfYear();
         case 'week':
@@ -247,14 +298,14 @@ export default {
     },
     showMilestoneOption() {
       // Important to trigger
-      console.log(this.newGoalItem.period,
-        this.newGoalItem.date,
-        this.newGoalItem.date !== '01-01-1970',
+      console.log(this.selectedGoalItem.period,
+        this.selectedGoalItem.date,
+        this.selectedGoalItem.date !== '01-01-1970',
         this.goalItemsRef
         && this.goalItemsRef.length);
-      return this.newGoalItem.period
-        && this.newGoalItem.date
-        && this.newGoalItem.date !== '01-01-1970'
+      return this.selectedGoalItem.period
+        && this.selectedGoalItem.date
+        && this.selectedGoalItem.date !== '01-01-1970'
         && this.goalItemsRef
         && this.goalItemsRef.length;
     },
@@ -265,105 +316,77 @@ export default {
       this.$apollo.queries.goalItemsRef.refetch();
     },
     updatePeriod() {
-      if (this.newGoalItem.period === 'lifetime') {
-        this.newGoalItem.date = '01-01-1970';
+      if (this.selectedGoalItem.period === 'lifetime') {
+        this.selectedGoalItem.date = '01-01-1970';
       } else {
-        this.newGoalItem.date = '';
+        this.selectedGoalItem.date = '';
       }
     },
     saveGoalItem() {
       this.$refs.form.validate();
       if (this.valid) {
         this.buttonLoading = true;
-        if (this.newGoalItem.id) {
+        if (this.selectedGoalItem.id) {
           this.updateGoalItem();
-        } else {
-          this.addGoalItem();
         }
       }
     },
+    addSubTaskItem() {
+      const value = this.newSubTaskItemBody && this.newSubTaskItemBody.trim();
 
-    addGoalItem() {
-      const {
-        body = '',
-        period,
-        date,
-        deadline = '',
-        contribution = '',
-        reward = '',
-        isComplete = false,
-        isMilestone = false,
-        taskRef = '',
-        goalRef = '',
-      } = this.newGoalItem;
-
-      if (!body) {
+      if (!value) {
         return;
       }
 
+      const { date, id } = this.selectedGoalItem;
+
       this.$apollo.mutate({
         mutation: gql`
-          mutation addGoalItem(
+          mutation addSubTaskItem(
+            $taskId: ID!
             $body: String!
             $period: String!
             $date: String!
-            $isComplete: Boolean
-            $isMilestone: Boolean
-            $deadline: String,
-            $contribution: String,
-            $reward: String,
-            $taskRef: String,
-            $goalRef: String,
+            $isComplete: Boolean!
           ) {
-            addGoalItem(
+            addSubTaskItem(
+              taskId: $taskId
               body: $body
               period: $period
               date: $date
               isComplete: $isComplete
-              isMilestone: $isMilestone
-              deadline: $deadline,
-              contribution: $contribution,
-              reward: $reward,
-              taskRef: $taskRef,
-              goalRef: $goalRef,
             ) {
               id
               body
               isComplete
-              isMilestone
             }
           }
         `,
         variables: {
-          body,
-          period,
+          taskId: id,
+          body: this.newSubTaskItemBody,
+          period: 'day',
           date,
-          deadline: deadline || '',
-          contribution: contribution || '',
-          reward: reward || '',
-          isComplete: isComplete || false,
-          isMilestone: isMilestone || false,
-          taskRef: taskRef || '',
-          goalRef: goalRef || '',
+          isComplete: false,
         },
-        update: (scope, { data: { addGoalItem } }) => {
-          const goalItem = {
-            ...this.newGoalItem,
-            id: addGoalItem.id,
-          };
-          this.$emit('add-update-goal-entry', goalItem);
-          this.resetForm();
+        update: (scope, { data: { addSubTaskItem } }) => {
+          if (!this.selectedGoalItem.subTasks) {
+            this.selectedGoalItem.subTasks = [];
+          }
+
+          this.selectedGoalItem.subTasks = [
+            ...this.selectedGoalItem.subTasks,
+            {
+              id: addSubTaskItem.id,
+              body: this.newSubTaskItemBody,
+              isComplete: false,
+            }
+          ];
+          this.newSubTaskItemBody = '';
         },
-      }).catch((error) => {
-        this.resetForm();
-        redirectOnError(this.$router, error);
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
+        error: (error) => {
+          console.log('show task adding error', error);
+        },
       });
     },
     updateGoalItem() {
@@ -378,7 +401,7 @@ export default {
         isMilestone = false,
         taskRef = '',
         goalRef = '',
-      } = this.newGoalItem;
+      } = this.selectedGoalItem;
 
       if (!body) {
         return;
@@ -430,11 +453,11 @@ export default {
           goalRef: goalRef || '',
         },
         update: (scope, { data: { updateGoalItem } }) => {
-          const goalItem = {
-            ...this.newGoalItem,
-            id: updateGoalItem.id,
-          };
-          this.$emit('add-update-goal-entry', goalItem);
+          // const goalItem = {
+          //   ...this.selectedGoalItem,
+          //   id: updateGoalItem.id,
+          // };
+          this.$emit('toggle-goal-display-dialog', false);
           this.resetForm();
         },
       }).catch((error) => {
@@ -455,12 +478,38 @@ export default {
     },
   },
   watch: {
-    newGoalItem(newVal, oldVal) {
-      this.newItemLoaded = !!newVal.id && (oldVal.date === '' || typeof oldVal.date === 'undefined');
-      if (newVal.date !== oldVal.date && (oldVal.date === '' || typeof oldVal.date === 'undefined')) {
+    selectedGoalItem(newVal, oldVal) {
+      this.isNewItemLoaded = !!newVal.id && (oldVal.date === '' || typeof oldVal.date === 'undefined');
+      const isNewDateItemLoaded = newVal.date !== oldVal.date && (oldVal.date === '' || typeof oldVal.date === 'undefined');
+      if (isNewDateItemLoaded || (this.goalItemsRef && this.goalItemsRef.length === 0)) {
         this.triggerGoalItemsRef();
       }
     },
   },
 };
 </script>
+
+<style lang="stylus" scoped>
+  .completed {
+    text-decoration: line-through;
+  }
+
+  .formGoal {
+    display: flex;
+    grid-column: 2;
+    width: 100%;
+  }
+
+  .inputGoal {
+    display:inline-block;
+    flex-shrink: 0;
+    flex-grow: 1;
+  }
+
+  .headline {
+    color: rgba(0, 0, 0, 0.54);
+    font-size: 14px !important;
+    line-height: 16px !important;
+    font-weight: bold;
+  }
+</style>
