@@ -113,18 +113,12 @@ export default {
         });
       });
     },
-    completeGoalItemText(goalItem, period, date, taskRef) {
+    completeGoalItemText(goalItem, period, date) {
       // eslint-disable-next-line no-param-reassign
-      goalItem.isComplete = !goalItem.isComplete;
-      this.completeGoalItem(
-        goalItem.id,
-        goalItem.isComplete,
-        period,
-        date,
-        taskRef,
-        goalItem.isMilestone,
-        goalItem.goalRef,
-      );
+      goalItem.period = period;
+      // eslint-disable-next-line no-param-reassign
+      goalItem.date = date;
+      this.$emit('toggle-goal-display-dialog', true, goalItem);
     },
     completeGoalItem(id, isComplete, period, date, taskRef, isMilestone, goalRef) {
       this.lastCompleteItemId = id;

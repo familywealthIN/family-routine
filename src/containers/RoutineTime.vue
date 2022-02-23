@@ -183,6 +183,7 @@
                         :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
                         @delete-task-goal="deleteTaskGoal"
                         @refresh-task-goal="refreshTaskGoal"
+                        @toggle-goal-display-dialog="toggleGoalDisplayDialog"
                       />
                     </v-list>
                   </div>
@@ -252,6 +253,30 @@
         </v-alert>
       </v-card>
     </v-dialog>
+    <v-dialog
+      v-model="goalDisplayDialog"
+      fullscreen
+      hide-overlay
+      transition="dialog-bottom-transition"
+    >
+      <v-card>
+        <v-toolbar dark color="primary">
+          <v-btn icon dark @click="toggleGoalDisplayDialog(false)">
+            <v-icon>close</v-icon>
+          </v-btn>
+          <v-toolbar-title>Goal Details</v-toolbar-title>
+          <v-spacer></v-spacer>
+        </v-toolbar>
+        <v-card>
+          <v-card-text>
+            <goal-display
+              :selectedGoalItem="selectedGoalItem"
+              @toggle-goal-display-dialog="toggleGoalDisplayDialog"
+            />
+          </v-card-text>
+        </v-card>
+      </v-card>
+    </v-dialog>
   </container-box>
 </template>
 
@@ -266,6 +291,7 @@ import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 import GoalList from '../components/GoalList.vue';
 import GoalItemList from '../components/GoalItemList.vue';
 import ContainerBox from '../components/ContainerBox.vue';
+import GoalDisplay from '../components/GoalDisplay.vue';
 
 const threshold = {
   weekDays: 5,
@@ -283,6 +309,7 @@ export default {
     GoalList,
     GoalItemList,
     ContainerBox,
+    GoalDisplay,
   },
   apollo: {
     tasklist: {
@@ -349,6 +376,13 @@ export default {
               taskRef
               goalRef
               isMilestone
+              contribution,
+              reward,
+              subTasks {
+                id
+                body
+                isComplete
+              },
             }
           }
         }
@@ -372,6 +406,8 @@ export default {
     return {
       isLoading: true,
       goalDetailsDialog: false,
+      goalDisplayDialog: false,
+      selectedGoalItem: {},
       tasklist: [],
       did: '',
       timerId: '',
@@ -748,6 +784,18 @@ export default {
     },
     toggleGoalDetailsDialog(bool) {
       this.goalDetailsDialog = bool;
+    },
+    toggleGoalDisplayDialog(bool, selectedGoalItem) {
+      if (selectedGoalItem) {
+        console.log('selectedGoalItem', selectedGoalItem);
+        // this.selectedGoalItem = { ...selectedGoalItem };
+        // eslint-disable-next-line prefer-object-spread
+        this.selectedGoalItem = Object.assign({}, this.selectedGoalItem, selectedGoalItem);
+      }
+      this.goalDisplayDialog = bool;
+      if (!bool) {
+        this.$apollo.queries.goals.refetch();
+      }
     },
     countTaskPercentage(task) {
       const stimulus = task.stimuli.find((st) => st.name === 'K');
