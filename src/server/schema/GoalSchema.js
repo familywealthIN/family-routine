@@ -9,6 +9,11 @@ const {
 
 const mongoose = require('mongoose');
 
+const SubTaskItemSchema = new mongoose.Schema({
+  body: String,
+  isComplete: Boolean,
+});
+
 const GoalItemSchema = new mongoose.Schema({
   body: String,
   isComplete: Boolean,
@@ -18,6 +23,7 @@ const GoalItemSchema = new mongoose.Schema({
   reward: String,
   taskRef: String,
   goalRef: String,
+  subTasks: [SubTaskItemSchema],
 });
 
 const GoalSchema = new mongoose.Schema({
@@ -43,10 +49,20 @@ const GoalItemTypeFields = {
   goalRef: { type: GraphQLString },
 };
 
+const SubTaskItemType = new GraphQLObjectType({
+  name: 'SubTaskItem',
+  fields: {
+    id: { type: GraphQLID },
+    body: { type: GraphQLString },
+    isComplete: { type: GraphQLBoolean },
+  },
+});
+
 const GoalItemType = new GraphQLObjectType({
   name: 'GoalItem',
   fields: {
     ...GoalItemTypeFields,
+    subTasks: { type: new GraphQLList(SubTaskItemType) },
   },
 });
 
@@ -107,14 +123,18 @@ const GoalType = new GraphQLObjectType({
   },
 });
 
+const SubTaskItemModel = mongoose.model('SubTaskItem', SubTaskItemSchema);
 const GoalItemModel = mongoose.model('GoalItem', GoalItemSchema);
 const GoalModel = mongoose.model('Goal', GoalSchema);
 
 module.exports = {
+  SubTaskItemSchema,
   GoalSchema,
   GoalItemSchema,
+  SubTaskItemModel,
   GoalModel,
   GoalItemModel,
+  SubTaskItemType,
   GoalType,
   GoalItemType,
   GoalMilestoneType,

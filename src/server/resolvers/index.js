@@ -5,6 +5,7 @@ const {
 
 const routine = require('./routine');
 const goal = require('./goal');
+const subTaskItem = require('./subTaskItem');
 const routineItem = require('./routineItem');
 const userItem = require('./userItem');
 const motto = require('./motto');
@@ -18,6 +19,7 @@ const schema = new GraphQLSchema({
       ...routineItem.query,
       ...userItem.query,
       ...goal.query,
+      ...subTaskItem.query,
       ...motto.query,
       ...progress.query,
     },
@@ -29,6 +31,7 @@ const schema = new GraphQLSchema({
       ...routineItem.mutation,
       ...userItem.mutation,
       ...goal.mutation,
+      ...subTaskItem.mutation,
       ...motto.mutation,
       ...progress.mutation,
     },
