@@ -1,33 +1,68 @@
 <template>
-  <div>
-    <template v-for="(subTaskItem, i) in subTasks">
-      <v-list-tile v-bind:key="subTaskItem.id">
-        <v-list-tile-action>
-          <v-checkbox
-            v-model="subTaskItem.isComplete"
-            @change="completeSubTaskItem(
-              subTaskItem.id,
-              subTaskItem.isComplete,
-            )"
-          ></v-checkbox>
-        </v-list-tile-action>
-        <v-list-tile-content>
-          <v-list-tile-title :class="{ completed: subTaskItem.isComplete}">
-            {{subTaskItem.body}}
-          </v-list-tile-title>
-        </v-list-tile-content>
-        <v-list-tile-action>
-          <v-btn
-            flat
-            icon
-            @click="deleteSubTaskItem(subTaskItem, i)"
-          >
-            <v-icon>delete</v-icon>
-          </v-btn>
-        </v-list-tile-action>
-      </v-list-tile>
-    </template>
-  </div>
+  <v-card class="pl-3 pr-3 mb-3">
+    <v-card-title class="headline">Sub Tasks</v-card-title>
+    <div class="pl-3 pr-3 formGoal mt-3 mb-2">
+      <v-text-field
+        clearable
+        v-model="newSubTaskItemBody"
+        id="newSubTaskItemBody"
+        name="newSubTaskItemBody"
+        label="Type your sub task"
+        class="inputGoal"
+        @keyup.enter="addSubTaskItem"
+      >
+      </v-text-field>
+      <v-btn
+          icon
+          color="success"
+          fab
+          dark
+          class="ml-3 mr-0"
+          @click="addSubTaskItem(newSubTaskItemBody)"
+      >
+          <v-icon dark>send</v-icon>
+      </v-btn>
+    </div>
+    <v-list two-line subheader>
+      <v-spacer></v-spacer>
+        <v-subheader
+          class="subheading"
+          v-if="subTasks && subTasks.length == 0"
+        >
+          You have 0 sub tasks
+        </v-subheader>
+        <v-subheader class="subheading" v-else>
+          {{ subTasks && subTasks.length }} sub tasks
+        </v-subheader>
+        <template v-for="(subTaskItem, i) in subTasks">
+          <v-list-tile v-bind:key="subTaskItem.id">
+            <v-list-tile-action>
+              <v-checkbox
+                v-model="subTaskItem.isComplete"
+                @change="completeSubTaskItem(
+                  subTaskItem.id,
+                  subTaskItem.isComplete,
+                )"
+              ></v-checkbox>
+            </v-list-tile-action>
+            <v-list-tile-content>
+              <v-list-tile-title :class="{ completed: subTaskItem.isComplete}">
+                {{subTaskItem.body}}
+              </v-list-tile-title>
+            </v-list-tile-content>
+            <v-list-tile-action>
+              <v-btn
+                flat
+                icon
+                @click="deleteSubTaskItem(subTaskItem, i)"
+              >
+                <v-icon>delete</v-icon>
+              </v-btn>
+            </v-list-tile-action>
+          </v-list-tile>
+        </template>
+      </v-list>
+  </v-card>
 </template>
 <script>
 import gql from 'graphql-tag';
@@ -44,9 +79,67 @@ export default {
       subTaskItem: [],
       animateEntry: false,
       lastCompleteItemId: '',
+      newSubTaskItemBody: '',
     };
   },
   methods: {
+    addSubTaskItem() {
+      const value = this.newSubTaskItemBody && this.newSubTaskItemBody.trim();
+
+      if (!value) {
+        return;
+      }
+
+      const { date, taskId } = this;
+
+      this.$apollo.mutate({
+        mutation: gql`
+          mutation addSubTaskItem(
+            $taskId: ID!
+            $body: String!
+            $period: String!
+            $date: String!
+            $isComplete: Boolean!
+          ) {
+            addSubTaskItem(
+              taskId: $taskId
+              body: $body
+              period: $period
+              date: $date
+              isComplete: $isComplete
+            ) {
+              id
+              body
+              isComplete
+            }
+          }
+        `,
+        variables: {
+          taskId,
+          body: this.newSubTaskItemBody,
+          period: 'day',
+          date,
+          isComplete: false,
+        },
+        update: (scope, { data: { addSubTaskItem } }) => {
+          if (!this.subTasks) {
+            this.subTasks = [];
+          }
+
+          this.subTasks.push(
+            {
+              id: addSubTaskItem.id,
+              body: this.newSubTaskItemBody,
+              isComplete: false,
+            },
+          );
+          this.newSubTaskItemBody = '';
+        },
+        error: (error) => {
+          console.log('show task adding error', error);
+        },
+      });
+    },
     deleteSubTaskItem(subTaskItem, index) {
       const { id } = subTaskItem;
       const { taskId, period, date } = this;

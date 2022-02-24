@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 const {
   GraphQLID,
   GraphQLString,
@@ -84,7 +85,13 @@ const mutation = {
           date: args.date,
           period: args.period,
           email,
-          'goalItems._id': args.taskId,
+        },
+        {
+          goalItems: {
+            $elemMatch: {
+              _id: args.taskId,
+            },
+          },
         },
       ).exec();
 
@@ -152,7 +159,13 @@ const mutation = {
         date,
         period,
         email,
-        'goalItems._id': taskId,
+      },
+      {
+        goalItems: {
+          $elemMatch: {
+            _id: args.taskId,
+          },
+        },
       }).exec();
 
       const previousGoalItem = goalEntry
@@ -208,7 +221,13 @@ const mutation = {
         date,
         period,
         email,
-        'goalItems._id': taskId,
+      },
+      {
+        goalItems: {
+          $elemMatch: {
+            _id: args.taskId,
+          },
+        },
       }).exec();
 
       const previousGoalItem = goalEntry
