@@ -70,49 +70,12 @@
         ></v-select>
       </v-flex>
       <v-flex xs12 v-if="selectedGoalItem.period === 'day'">
-        <v-card class="pl-3 pr-3 mb-3">
-          <v-card-title class="headline">Sub Tasks</v-card-title>
-          <div class="pl-3 pr-3 formGoal mt-3 mb-2">
-            <v-text-field
-              clearable
-              v-model="newSubTaskItemBody"
-              id="newSubTaskItemBody"
-              name="newSubTaskItemBody"
-              label="Type your sub task"
-              class="inputGoal"
-              @keyup.enter="addSubTaskItem"
-            >
-            </v-text-field>
-            <v-btn
-                icon
-                color="success"
-                fab
-                dark
-                class="ml-3 mr-0"
-                @click="addSubTaskItem(newSubTaskItemBody)"
-            >
-                <v-icon dark>send</v-icon>
-            </v-btn>
-          </div>
-          <v-list two-line subheader>
-            <v-spacer></v-spacer>
-              <v-subheader
-                class="subheading"
-                v-if="selectedGoalItem && selectedGoalItem.subTasks && selectedGoalItem.subTasks.length == 0"
-              >
-                You have 0 sub tasks
-              </v-subheader>
-              <v-subheader class="subheading" v-else>
-                {{ selectedGoalItem && selectedGoalItem.subTasks && selectedGoalItem.subTasks.length }} sub tasks
-              </v-subheader>
-              <sub-task-item-list
-                  :subTasks="selectedGoalItem.subTasks"
-                  :taskId="selectedGoalItem.id"
-                  :period="selectedGoalItem.period"
-                  :date="selectedGoalItem.date"
-              />
-          </v-list>
-        </v-card>
+        <sub-task-item-list
+          :subTasks="selectedGoalItem.subTasks"
+          :taskId="selectedGoalItem.id"
+          :period="selectedGoalItem.period"
+          :date="selectedGoalItem.date"
+        />
       </v-flex>
       <v-flex xs12>
         <v-textarea
@@ -246,7 +209,6 @@ export default {
       valid: false,
       buttonLoading: false,
       isNewItemLoaded: false,
-      newSubTaskItemBody: '',
       formRules: {
         body: [
           (v) => !!v || 'Task Name is required',
@@ -330,64 +292,6 @@ export default {
           this.updateGoalItem();
         }
       }
-    },
-    addSubTaskItem() {
-      const value = this.newSubTaskItemBody && this.newSubTaskItemBody.trim();
-
-      if (!value) {
-        return;
-      }
-
-      const { date, id } = this.selectedGoalItem;
-
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation addSubTaskItem(
-            $taskId: ID!
-            $body: String!
-            $period: String!
-            $date: String!
-            $isComplete: Boolean!
-          ) {
-            addSubTaskItem(
-              taskId: $taskId
-              body: $body
-              period: $period
-              date: $date
-              isComplete: $isComplete
-            ) {
-              id
-              body
-              isComplete
-            }
-          }
-        `,
-        variables: {
-          taskId: id,
-          body: this.newSubTaskItemBody,
-          period: 'day',
-          date,
-          isComplete: false,
-        },
-        update: (scope, { data: { addSubTaskItem } }) => {
-          if (!this.selectedGoalItem.subTasks) {
-            this.selectedGoalItem.subTasks = [];
-          }
-
-          this.selectedGoalItem.subTasks = [
-            ...this.selectedGoalItem.subTasks,
-            {
-              id: addSubTaskItem.id,
-              body: this.newSubTaskItemBody,
-              isComplete: false,
-            }
-          ];
-          this.newSubTaskItemBody = '';
-        },
-        error: (error) => {
-          console.log('show task adding error', error);
-        },
-      });
     },
     updateGoalItem() {
       const {
