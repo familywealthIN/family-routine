@@ -69,6 +69,14 @@
           label="Goal Task"
         ></v-select>
       </v-flex>
+      <v-flex xs12 v-if="newGoalItem.period === 'day'">
+        <sub-task-item-list
+          :subTasks="newGoalItem.subTasks"
+          :taskId="newGoalItem.id"
+          :period="newGoalItem.period"
+          :date="newGoalItem.date"
+        />
+      </v-flex>
       <v-flex xs12>
         <v-textarea
           v-model="newGoalItem.contribution"
@@ -120,8 +128,10 @@ import {
   getYearsOfLife,
   stepupMilestonePeriodDate,
 } from '../utils/getDates';
+import SubTaskItemList from './SubTaskItemList.vue';
 
 export default {
+  components: { SubTaskItemList },
   props: ['newGoalItem'],
   apollo: {
     tasklist: {
