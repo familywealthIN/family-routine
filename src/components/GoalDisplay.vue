@@ -409,11 +409,4 @@ export default {
     flex-shrink: 0;
     flex-grow: 1;
   }
-
-  .headline {
-    color: rgba(0, 0, 0, 0.54);
-    font-size: 14px !important;
-    line-height: 16px !important;
-    font-weight: bold;
-  }
 </style>

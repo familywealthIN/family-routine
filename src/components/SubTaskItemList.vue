@@ -1,5 +1,5 @@
 <template>
-  <v-card class="pl-3 pr-3 mb-3">
+  <v-card class="pl-3 pr-3 mb-3 sub-task-list">
     <v-card-title class="headline">Sub Tasks</v-card-title>
     <div class="pl-3 pr-3 formGoal mt-3 mb-2">
       <v-text-field
@@ -241,10 +241,17 @@ export default {
 </script>
 
 <style>
-  .completed {
+  .sub-task-list .completed {
     text-decoration: line-through;
   }
-  .v-list__group__items--no-action .v-list__tile {
+  .sub-task-list .v-list__group__items--no-action .v-list__tile {
     padding-left: 16px;
+  }
+
+  .sub-task-list .headline {
+    color: rgba(0, 0, 0, 0.54);
+    font-size: 14px !important;
+    line-height: 16px !important;
+    font-weight: bold;
   }
 </style>
