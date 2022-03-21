@@ -48,7 +48,6 @@
           fab
           class="ml-3 mr-0"
           :loading="buttonLoading"
-          :disabled="buttonLoading"
           @click="addMottoItem(newMottoItem)"
         >
           <v-icon dark>send</v-icon>

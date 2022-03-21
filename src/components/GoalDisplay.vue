@@ -103,7 +103,7 @@
         <div style="float: right;">
           <v-btn
             color="primary"
-            :disabled="!valid || buttonLoading"
+            :disabled="!valid"
             :loading="buttonLoading"
             @click="saveGoalItem"
           >
@@ -356,7 +356,7 @@ export default {
           taskRef: taskRef || '',
           goalRef: goalRef || '',
         },
-        update: (scope, { data: { updateGoalItem } }) => {
+        update: () => {
           // const goalItem = {
           //   ...this.selectedGoalItem,
           //   id: updateGoalItem.id,

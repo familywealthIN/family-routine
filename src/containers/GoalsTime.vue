@@ -192,6 +192,11 @@ export default {
             reward,
             taskRef
             goalRef
+            subTasks {
+              id
+              body
+              isComplete
+            },
           }
         }
       }

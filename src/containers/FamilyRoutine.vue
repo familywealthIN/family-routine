@@ -67,7 +67,6 @@
             <v-btn
               color="primary"
               :loading="buttonLoading"
-              :disabled="buttonLoading"
               @click="sendInviteSubmit">
               Invite
             </v-btn>
@@ -151,7 +150,6 @@
             color="primary"
             text
             :loading="buttonLoading"
-            :disabled="buttonLoading"
             @click="acceptInviteSubmit"
           >
             Accept

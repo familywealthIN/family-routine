@@ -86,7 +86,6 @@
               <v-btn color="blue darken-1" flat @click="close(true)">Cancel</v-btn>
               <v-btn
                 color="primary"
-                :disabled="buttonLoading"
                 :loading="buttonLoading"
                 @click="save"
               >

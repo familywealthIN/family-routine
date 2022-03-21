@@ -103,7 +103,7 @@
         <div style="float: right;">
           <v-btn
             color="primary"
-            :disabled="!valid || buttonLoading"
+            :disabled="!valid"
             :loading="buttonLoading"
             @click="saveGoalItem"
           >

@@ -18,7 +18,6 @@
           fab
           class="ml-3 mr-0"
           :loading="buttonLoading"
-          :disabled="buttonLoading"
           @click="addGoalItem(newGoalItem)"
         >
           <v-icon dark>send</v-icon>
