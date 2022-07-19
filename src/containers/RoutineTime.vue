@@ -73,7 +73,7 @@
           <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
 
           <v-list-tile
-            :key="task.id"
+            :key="index"
             @click="updateSelectedTaskRef(task.id)"
             :class="task.id === selectedTaskRef ? 'active' : ''"
             avatar
@@ -806,7 +806,9 @@ export default {
       const dStimulus = task.stimuli.find((st) => st.name === 'D');
       const stimulus = task.stimuli.find((st) => st.name === 'K');
       const count = Number((dStimulus.splitRate / stimulus.splitRate).toFixed(0));
-      const completed = Number((count * (Number(stimulus.earned) / Number(task.points))).toFixed(0));
+      const completed = Number(
+        (count * (Number(stimulus.earned) / Number(task.points))).toFixed(0),
+      );
       return isNaN(completed) ? 0 : completed;
     },
     countTaskTotal(task) {

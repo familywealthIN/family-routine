@@ -10,7 +10,6 @@ admin.initializeApp({
   databaseURL: 'https://groutine-21c1b.firebaseio.com',
 });
 
-
 function sendNotification(token, name, description) {
   const payload = {
     notification: {
@@ -30,7 +29,6 @@ function sendNotification(token, name, description) {
     .then((response) => console.log('Successfully sent message:', response))
     .catch((error) => console.log('Error sending message:', error));
 }
-
 
 sendNotification(
   '',
