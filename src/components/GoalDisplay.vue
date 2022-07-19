@@ -357,6 +357,7 @@ export default {
           goalRef: goalRef || '',
         },
         update: (scope, { data: { updateGoalItem } }) => {
+          console.log(updateGoalItem);
           // const goalItem = {
           //   ...this.selectedGoalItem,
           //   id: updateGoalItem.id,

@@ -71,9 +71,8 @@
       <template v-else>
         <template v-for="(task, index) in tasklist">
           <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
-
           <v-list-tile
-            :key="task.id"
+            :key="index"
             @click="updateSelectedTaskRef(task.id)"
             :class="task.id === selectedTaskRef ? 'active' : ''"
             avatar
@@ -93,7 +92,7 @@
                   class="elevation-0"
                   :disabled="getButtonDisabled(task)"
                   :color="getButtonColor(task)"
-                  @click="checkClick($event, task)"
+                  @click="checkDialogClick($event, task)"
                 >
                   <v-icon>{{getButtonIcon(task)}}</v-icon>
                 </v-btn>
@@ -277,6 +276,27 @@
         </v-card>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="quickTaskDialog" max-width="600px">
+      <v-card>
+          <v-card-title>
+          <span class="headline">{{quickTaskTitle}}</span>
+        </v-card-title>
+          <v-card-text>
+            <p>
+              {{quickTaskDescription}}
+            </p>
+            <quick-goal-creation
+              :goals="goals"
+              :date="date"
+              period="day"
+              :tasklist="tasklist"
+              :selectedTaskRef="selectedTaskRef"
+              @start-quick-goal-task="checkClick"
+            />
+          </v-card-text>
+        </v-card>
+      </v-card>
+    </v-dialog>
   </container-box>
 </template>
 
@@ -292,6 +312,7 @@ import GoalList from '../components/GoalList.vue';
 import GoalItemList from '../components/GoalItemList.vue';
 import ContainerBox from '../components/ContainerBox.vue';
 import GoalDisplay from '../components/GoalDisplay.vue';
+import QuickGoalCreation from '../components/QuickGoalCreation.vue';
 
 const threshold = {
   weekDays: 5,
@@ -310,7 +331,8 @@ export default {
     GoalItemList,
     ContainerBox,
     GoalDisplay,
-  },
+    QuickGoalCreation,
+},
   apollo: {
     tasklist: {
       query: gql`
@@ -322,6 +344,7 @@ export default {
             tasklist {
               id
               name
+              description
               time
               points
               ticked
@@ -407,6 +430,9 @@ export default {
       isLoading: true,
       goalDetailsDialog: false,
       goalDisplayDialog: false,
+      quickTaskDialog: false,
+      quickTaskTitle: '',
+      quickTaskDescription: '',
       selectedGoalItem: {},
       tasklist: [],
       did: '',
@@ -527,8 +553,17 @@ export default {
       }
       return 'more_horiz';
     },
-    checkClick(e, task) {
+    checkDialogClick(e, task) {
       e.stopPropagation();
+      if (!task.passed && !task.wait && !task.ticked) {
+        this.selectedTaskRef = task.id;
+        this.quickTaskTitle = task.name;
+        this.quickTaskDescription = task.description;
+        this.quickTaskDialog = true;
+      }
+    },
+    checkClick(task) {
+      this.quickTaskDialog = false;
       if (!task.passed && !task.wait && !task.ticked) {
         task.ticked = true;
         this.$apollo.mutate({
@@ -806,7 +841,9 @@ export default {
       const dStimulus = task.stimuli.find((st) => st.name === 'D');
       const stimulus = task.stimuli.find((st) => st.name === 'K');
       const count = Number((dStimulus.splitRate / stimulus.splitRate).toFixed(0));
-      const completed = Number((count * (Number(stimulus.earned) / Number(task.points))).toFixed(0));
+      const completed = Number(
+        (count * (Number(stimulus.earned) / Number(task.points))).toFixed(0),
+      );
       return isNaN(completed) ? 0 : completed;
     },
     countTaskTotal(task) {

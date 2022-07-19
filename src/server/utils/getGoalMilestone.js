@@ -10,7 +10,7 @@ function updateMilestonesEntry(period, milestoneGoals, periodGoalItemList) {
 
   // const spliceList = [];
 
-  milestoneGoals.forEach((milestoneGoal, i) => {
+  milestoneGoals.forEach((milestoneGoal) => {
     const foundGoalItem = periodGoalItemList
       // eslint-disable-next-line no-underscore-dangle
       .find((periodGoalItem) => periodGoalItem._id === milestoneGoal.goalRef);

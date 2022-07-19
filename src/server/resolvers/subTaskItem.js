@@ -176,9 +176,11 @@ const mutation = {
       if (previousGoalItem
           && previousGoalItem.subTasks
           && previousGoalItem.subTasks.length) {
-        const returnSubTasks = previousGoalItem.subTasks.find((subTask) => subTask._id.toString() === id.toString());
+        const returnSubTasks = previousGoalItem.subTasks
+          .find((subTask) => subTask._id.toString() === id.toString());
 
-        const filteredSubTasks = previousGoalItem.subTasks.filter((subTask) => subTask._id.toString() !== id.toString());
+        const filteredSubTasks = previousGoalItem.subTasks
+          .filter((subTask) => subTask._id.toString() !== id.toString());
 
         await GoalModel.findOneAndUpdate(
           {
