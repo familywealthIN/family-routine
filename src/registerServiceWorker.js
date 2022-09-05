@@ -4,7 +4,7 @@ import { register } from 'register-service-worker';
 import { netlify } from './blob/config';
 
 if (netlify) {
-  register(`${process.env.BASE_URL}service-worker.js`, {
+  register(`${process.env.BASE_URL}sw.js`, {
     ready() {
       console.log(
         'App is being served from cache by a service worker.\n'
