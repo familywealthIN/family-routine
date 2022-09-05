@@ -1,6 +1,6 @@
 <template>
   <v-layout row >
-    <v-flex xs12 sm10 offset-sm1>
+    <v-flex xs12 lg10 offset-lg1>
       <v-card
         max-width="800"
         :class="transparent ? 'transparent mx-auto elevation-0' : 'mx-auto elevation-0'"

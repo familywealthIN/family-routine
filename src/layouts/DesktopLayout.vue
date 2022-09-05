@@ -4,6 +4,8 @@
       fixed
       clipped
       v-model="drawer"
+      width="240"
+      mobile-break-point="1024"
       v-if="$route.name !== 'login'"
     >
       <v-list class="pa-1" v-if="$gAuth.isAuthorized">
@@ -143,13 +145,13 @@ export default {
     margin-left: 8px;
   }
 
-  @media (min-width: 1264px) {
+  @media (min-width: 1024px) {
     .v-toolbar__side-icon {
       display: none;
     }
 
     nav + main.v-content {
-      padding-left: 300px !important;
+      padding-left: 240px !important;
     }
 
     .v-navigation-drawer--fixed {
