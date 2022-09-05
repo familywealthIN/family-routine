@@ -219,7 +219,7 @@ export default {
   data: () => ({
     type: 'month',
     start: moment().format('YYYY-MM-DD'),
-    end: '2022-12-01',
+    end: moment().endOf('year').format('YYYY-MM-DD'),
     currentMonth: moment().format('MMMM YYYY'),
     valid: true,
     addGoalItemDialog: false,
