@@ -13,10 +13,11 @@ module.exports = {
     themeColor: '#288bd5',
     msTileColor: '#FFFFFF',
     appleMobileWebAppCapable: 'yes',
-    appleMobileWebAppStatusBarStyle: '#288bd5',
+    appleMobileWebAppStatusBarStyle: 'black',
     workboxPluginMode: 'InjectManifest',
     manifestOptions: {
-      start_url: '/',
+      start_url: '/?standalone',
+      ios: {},
     },
     workboxOptions: {
       swSrc: 'src/sw.js',

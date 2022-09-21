@@ -22,15 +22,17 @@
         routine to further build quantifiable analytics for your day time
         efficiency.</p>
     </v-card-text>
+    <checkbox-editor></checkbox-editor>
   </container-box>
 </template>
 
 <script>
 import gql from 'graphql-tag';
 import ContainerBox from '../components/ContainerBox.vue';
+import CheckboxEditor from '../components/CheckboxEditor.vue';
 
 export default {
-  components: { ContainerBox },
+  components: { ContainerBox, CheckboxEditor },
   apollo: {
     routineItems: gql`
       query routineItems {

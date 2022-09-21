@@ -10,6 +10,13 @@
     "serve:server": "node ./node_modules/nodemon/bin/nodemon.js --watch src/server ./server.js"
   },
   "dependencies": {
+    "@tiptap/core": "^2.0.0-beta.196",
+    "@tiptap/extension-document": "^2.0.0-beta.196",
+    "@tiptap/extension-paragraph": "^2.0.0-beta.196",
+    "@tiptap/extension-task-item": "^2.0.0-beta.196",
+    "@tiptap/extension-task-list": "^2.0.0-beta.196",
+    "@tiptap/extension-text": "^2.0.0-beta.196",
+    "@tiptap/vue-2": "^2.0.0-beta.196",
     "apollo-boost": "^0.4.7",
     "apollo-cache-inmemory": "^1.6.5",
     "apollo-client": "^2.6.8",
