@@ -13,8 +13,13 @@ module.exports = {
     themeColor: '#288bd5',
     msTileColor: '#FFFFFF',
     appleMobileWebAppCapable: 'yes',
-    appleMobileWebAppStatusBarStyle: 'black',
+    appleMobileWebAppStatusBarStyle: '#288bd5',
+    workboxPluginMode: 'InjectManifest',
+    manifestOptions: {
+      start_url: '/',
+    },
     workboxOptions: {
+      swSrc: 'src/sw.js',
       exclude: ['_header', '_redirects', 'firebase-messaging-sw.js', 'firebase.html', '.htaccess'],
     },
   },

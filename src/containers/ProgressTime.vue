@@ -194,7 +194,9 @@ export default {
   },
   computed: {
     avg() {
-      const sum = this.routineSevenDays.reduce((acc, cur) => acc + this.countTotal(cur.tasklist), 0);
+      const sum = this.routineSevenDays.reduce(
+        (acc, cur) => acc + this.countTotal(cur.tasklist), 0,
+      );
       // eslint-disable-next-line vue/no-side-effects-in-computed-properties
       this.graphArray = this.routineSevenDays.map((routine) => this.countTotal(routine.tasklist));
       const { length } = this.routineSevenDays;

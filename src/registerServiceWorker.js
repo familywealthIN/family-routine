@@ -4,7 +4,11 @@ import { register } from 'register-service-worker';
 import { netlify } from './blob/config';
 
 if (netlify) {
-  register(`${process.env.BASE_URL}service-worker.js`, {
+  const serviceWorkerScriptFile = navigator.userAgent.match(/iPad/i) 
+    ? `${process.env.BASE_URL}basic-sw.js`
+    : `${process.env.BASE_URL}sw.js`;
+
+  register(serviceWorkerScriptFile, {
     ready() {
       console.log(
         'App is being served from cache by a service worker.\n'

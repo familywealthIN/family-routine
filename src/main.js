@@ -1,3 +1,5 @@
+import 'babel-polyfill';
+import 'isomorphic-unfetch';
 import Vue from 'vue';
 import { ApolloClient } from 'apollo-client';
 import { ApolloLink } from 'apollo-link';
@@ -79,6 +81,7 @@ const apolloClient = new ApolloClient({
   link: errorLink.concat(normalLink),
   cache,
   fetchOptions: {
+    fetch,
     mode: 'no-cors',
   },
   defaultOptions: {
