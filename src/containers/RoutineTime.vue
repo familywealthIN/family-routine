@@ -69,10 +69,10 @@
         </div>
       </template>
       <template v-else>
-        <template v-for="(task, index) in tasklist">
-          <v-divider v-if="index != 0" :key="index" :inset="task.inset"></v-divider>
+        <div v-for="(task, index) in tasklist" :key="task">
+          <v-divider v-if="index != 0" :key="task" :inset="task.inset"></v-divider>
           <v-list-tile
-            :key="index"
+            :key="task"
             @click="updateSelectedTaskRef(task.id)"
             :class="task.id === selectedTaskRef ? 'active' : ''"
             avatar
@@ -209,7 +209,7 @@
                 <v-list-tile-action-text>tasks</v-list-tile-action-text>
             </v-list-tile-action>
           </v-list-tile>
-        </template>
+        </div>
       </template>
     </v-list>
     <div v-if="tasklist && tasklist.length === 0">
@@ -278,23 +278,22 @@
     </v-dialog>
     <v-dialog v-model="quickTaskDialog" max-width="600px">
       <v-card>
-          <v-card-title>
+        <v-card-title>
           <span class="headline">{{quickTaskTitle}}</span>
         </v-card-title>
-          <v-card-text>
-            <p>
-              {{quickTaskDescription}}
-            </p>
-            <quick-goal-creation
-              :goals="goals"
-              :date="date"
-              period="day"
-              :tasklist="tasklist"
-              :selectedTaskRef="selectedTaskRef"
-              @start-quick-goal-task="checkClick"
-            />
-          </v-card-text>
-        </v-card>
+        <v-card-text>
+          <p>
+            {{quickTaskDescription}}
+          </p>
+          <quick-goal-creation
+            :goals="goals"
+            :date="date"
+            period="day"
+            :tasklist="tasklist"
+            :selectedTaskRef="selectedTaskRef"
+            @start-quick-goal-task="checkClick"
+          />
+        </v-card-text>
       </v-card>
     </v-dialog>
   </container-box>
@@ -305,7 +304,6 @@
 import moment from 'moment';
 import gql from 'graphql-tag';
 
-import redirectOnError from '../utils/redirectOnError';
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 
 import GoalList from '../components/GoalList.vue';
@@ -332,7 +330,7 @@ export default {
     ContainerBox,
     GoalDisplay,
     QuickGoalCreation,
-},
+  },
   apollo: {
     tasklist: {
       query: gql`
@@ -378,10 +376,16 @@ export default {
           date: this.date,
         };
       },
-      error(error) {
-        redirectOnError(this.$router, error);
+      error() {
         clearInterval(this.timerId);
         this.isLoading = false;
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       },
     },
     goals: {
@@ -401,6 +405,7 @@ export default {
               isMilestone
               contribution,
               reward,
+              tags,
               subTasks {
                 id
                 body
@@ -418,10 +423,16 @@ export default {
           date: this.date,
         };
       },
-      error(error) {
-        redirectOnError(this.$router, error);
+      error() {
         clearInterval(this.timerId);
         this.isLoading = false;
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       },
     },
   },
@@ -492,8 +503,7 @@ export default {
           this.setPassedWait();
           this.isLoading = false;
         },
-      }).catch((error) => {
-        redirectOnError(this.$router, error);
+      }).catch(() => {
         clearInterval(this.timerId);
         this.isLoading = false;
         this.$notify({
@@ -589,9 +599,8 @@ export default {
           },
         })
           .then(() => this.$apollo.queries.tasklist.refetch())
-          .catch((error) => {
+          .catch(() => {
             task.ticked = false;
-            redirectOnError(this.$router, error);
             clearInterval(this.timerId);
             this.$notify({
               title: 'Error',
@@ -620,17 +629,11 @@ export default {
           id: this.did,
           skip: !!(this.skipDay),
         },
-      }).catch((error) => {
-        let text = 'An unexpected error occured';
-        if (error.message) {
-          // eslint-disable-next-line prefer-destructuring
-          text = error.message.split('GraphQL error: ')[1];
-        }
+      }).catch(() => {
         setTimeout(() => { this.skipDay = false; }, 1000);
-        redirectOnError(this.$router, error);
         this.$notify({
           title: 'Error',
-          text,
+          text: 'An unexpected error occured',
           group: 'notify',
           type: 'error',
           duration: 3000,
@@ -676,8 +679,7 @@ export default {
                 }
               }
             },
-          }).catch((error) => {
-            redirectOnError(this.$router, error);
+          }).catch(() => {
             clearInterval(this.timerId);
             item.passed = false;
             this.$notify({
@@ -718,8 +720,7 @@ export default {
               taskId: item.id,
               wait: item.wait,
             },
-          }).catch((error) => {
-            redirectOnError(this.$router, error);
+          }).catch(() => {
             clearInterval(this.timerId);
             item.wait = false;
             this.$notify({
@@ -822,7 +823,6 @@ export default {
     },
     toggleGoalDisplayDialog(bool, selectedGoalItem) {
       if (selectedGoalItem) {
-        console.log('selectedGoalItem', selectedGoalItem);
         // this.selectedGoalItem = { ...selectedGoalItem };
         // eslint-disable-next-line prefer-object-spread
         this.selectedGoalItem = Object.assign({}, this.selectedGoalItem, selectedGoalItem);

@@ -115,7 +115,7 @@
 <script>
 import MottoList from '../components/MottoList.vue';
 import {
-  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN,
+  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN, USER_TAGS,
 } from '../constants/settings';
 
 export default {
@@ -185,6 +185,7 @@ export default {
           localStorage.removeItem(GC_USER_NAME);
           localStorage.removeItem(GC_PICTURE);
           localStorage.removeItem(GC_AUTH_TOKEN);
+          localStorage.removeItem(USER_TAGS);
           this.$root.$data.userName = localStorage.getItem(GC_USER_NAME);
           this.$root.$data.userEmail = localStorage.getItem(GC_USER_EMAIL);
           this.$root.$data.userEmail = localStorage.getItem(GC_PICTURE);

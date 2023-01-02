@@ -13,6 +13,14 @@ const validateGroupUser = require('../utils/validateGroupUser');
 const ApiError = require('../utils/ApiError');
 
 const query = {
+  getUserTags: {
+    type: UserItemType,
+    resolve: (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      return UserModel.findOne({ email }).exec();
+    },
+  },
   showInvite: {
     type: UserItemType,
     resolve: (root, args, context) => {
@@ -68,6 +76,7 @@ const mutation = {
               token: user.generateJWT(),
               isNew: user.isNew || false,
               motto: [],
+              tags: user.tags,
             });
           }
         }

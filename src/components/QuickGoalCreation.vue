@@ -2,14 +2,34 @@
   <v-layout pl-3 pr-3 row wrap>
     <v-flex xs12 d-flex>
       <div class="formGoal mt-2 mb-2">
-        <v-text-field clearable v-model="newGoalItem.body" id="newGoalItemBody" name="newGoalItemBody"
-          label="Type your task" class="inputGoal" @keyup.enter="addGoalItem">
+        <v-text-field
+          clearable
+          v-model="newGoalItem.body"
+          id="newGoalItemBody"
+          name="newGoalItemBody"
+          label="Type your task"
+          class="inputGoal"
+          @keyup.enter="addGoalItem"
+        >
         </v-text-field>
       </div>
     </v-flex>
     <v-flex xs12 d-flex>
-      <v-select :items="goalItemsRef" v-model="newGoalItem.goalRef" item-text="body" item-value="id" label="Goal Task">
+      <v-select
+        :items="goalItemsRef"
+        v-model="newGoalItem.goalRef"
+        item-text="body"
+        item-value="id"
+        label="Goal Task"
+      >
       </v-select>
+    </v-flex>
+    <v-flex xs12 d-flex>
+      <goal-tags-input
+        :goalTags="newGoalItem.tags"
+        :userTags="userTags"
+        @update-new-tag-items="updateNewTagItems"
+      ></goal-tags-input>
     </v-flex>
     <v-flex x12 d-flex>
       <v-btn
@@ -26,11 +46,22 @@
 <script>
 import gql from 'graphql-tag';
 
-import redirectOnError from '../utils/redirectOnError';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
+import GoalTagsInput from './GoalTagsInput.vue';
 
 export default {
-  props: ['goals', 'selectedBody', 'date', 'period', 'tasklist', 'goalDetailsDialog', 'selectedTaskRef'],
+  components: {
+    GoalTagsInput,
+  },
+  props: [
+    'goals',
+    'selectedBody',
+    'date',
+    'period',
+    'tasklist',
+    'goalDetailsDialog',
+    'selectedTaskRef',
+  ],
   apollo: {
     goalItemsRef: {
       query: gql`
@@ -73,15 +104,18 @@ export default {
         isMilestone: true,
         goalRef: '',
         taskRef: this.selectedTaskRef || '',
+        tags: [],
       },
       defaultGoalItem: {
         body: this.selectedBody || '',
         isMilestone: true,
         goalRef: '',
         taskRef: this.selectedTaskRef || '',
+        tags: [],
       },
       goalItems: [],
       showMilestoneOption: true,
+      userTags: JSON.parse(localStorage.getItem('USER_TAGS') || []),
     };
   },
   methods: {
@@ -111,68 +145,75 @@ export default {
         return;
       }
 
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation addGoalItem(
-            $body: String!
-            $period: String!
-            $date: String!
-            $isComplete: Boolean!
-            $isMilestone: Boolean!
-            $goalRef: String
-            $taskRef: String
-          ) {
-            addGoalItem(
-              body: $body
-              period: $period
-              date: $date
-              isComplete: $isComplete
-              isMilestone: $isMilestone
-              goalRef: $goalRef,
-              taskRef: $taskRef,
+      this.setLocalUserTag(this.newGoalItem.tags);
+
+      this.$apollo
+        .mutate({
+          mutation: gql`
+            mutation addGoalItem(
+              $body: String!
+              $period: String!
+              $date: String!
+              $isComplete: Boolean!
+              $isMilestone: Boolean!
+              $goalRef: String
+              $taskRef: String
+              $tags: [String]
             ) {
-              id
-              body
-              isComplete
-              isMilestone
-              goalRef
-              taskRef
+              addGoalItem(
+                body: $body
+                period: $period
+                date: $date
+                isComplete: $isComplete
+                isMilestone: $isMilestone
+                goalRef: $goalRef
+                taskRef: $taskRef
+                tags: $tags
+              ) {
+                id
+                body
+                isComplete
+                isMilestone
+                goalRef
+                taskRef
+              }
             }
-          }
-        `,
-        variables: {
-          body: this.newGoalItem.body,
-          period: this.period,
-          date,
-          isComplete: false,
-          isMilestone: this.newGoalItem.isMilestone,
-          goalRef: this.newGoalItem.goalRef,
-          taskRef: this.newGoalItem.taskRef,
-        },
-        update: (scope, { data: { addGoalItem } }) => {
-          goal.goalItems.push({
-            id: addGoalItem.id,
+          `,
+          variables: {
             body: this.newGoalItem.body,
-            isMilestone: this.newGoalItem.isMilestone,
+            period: this.period,
+            date,
             isComplete: false,
+            isMilestone: this.newGoalItem.isMilestone,
             goalRef: this.newGoalItem.goalRef,
             taskRef: this.newGoalItem.taskRef,
+            tags: this.newGoalItem.tags,
+          },
+          update: (scope, { data: { addGoalItem } }) => {
+            goal.goalItems.push({
+              id: addGoalItem.id,
+              body: this.newGoalItem.body,
+              isMilestone: this.newGoalItem.isMilestone,
+              isComplete: false,
+              goalRef: this.newGoalItem.goalRef,
+              taskRef: this.newGoalItem.taskRef,
+              tags: [...this.newGoalItem.tags],
+            });
+            const task = this.tasklist.find((taskItem) => taskItem.id === this.newGoalItem.taskRef);
+            this.newGoalItem = { ...this.defaultGoalItem };
+            this.$emit('start-quick-goal-task', task);
+            this.buttonLoading = false;
+          },
+        })
+        .catch(() => {
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
           });
-          const task = this.tasklist.find((taskItem) => taskItem.id === this.newGoalItem.taskRef);
-          this.newGoalItem = { ...this.defaultGoalItem };
-          this.$emit('start-quick-goal-task', task);
-          this.buttonLoading = false;
-        },
-      }).catch((error) => {
-        redirectOnError(this.$router, error);
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
         });
-      });
     },
     sortTimes(array) {
       return array.sort((a, b) => {
@@ -189,8 +230,12 @@ export default {
       const groupedGoalItems = [];
       let currentTaskRef = '';
       goalItems.sort((a, b) => {
-        if (a.taskRef < b.taskRef) { return -1; }
-        if (a.taskRef > b.taskRef) { return 1; }
+        if (a.taskRef < b.taskRef) {
+          return -1;
+        }
+        if (a.taskRef > b.taskRef) {
+          return 1;
+        }
         return 0;
       });
 
@@ -224,6 +269,19 @@ export default {
           }
         });
       }
+    },
+    updateNewTagItems(tags) {
+      this.newGoalItem.tags = tags;
+    },
+    setLocalUserTag(newTags) {
+      const userTags = JSON.parse(localStorage.getItem('USER_TAGS') || []);
+      newTags.forEach((tag) => {
+        if (!userTags.includes(tag)) {
+          userTags.push(tag);
+        }
+      });
+      localStorage.setItem('USER_TAGS', JSON.stringify(userTags));
+      this.userTags = [...userTags];
     },
   },
   watch: {

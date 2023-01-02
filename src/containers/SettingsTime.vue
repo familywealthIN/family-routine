@@ -118,7 +118,6 @@
 /* eslint-disable max-len */
 import gql from 'graphql-tag';
 
-import redirectOnError from '../utils/redirectOnError';
 import ContainerBox from '../components/ContainerBox.vue';
 
 export default {
@@ -138,9 +137,6 @@ export default {
           }
         }
       `,
-      error(error) {
-        redirectOnError(this.$router, error);
-      },
     },
   },
   data() {
@@ -248,8 +244,7 @@ export default {
         update: () => {
           this.routineItems.splice(index, 1);
         },
-      }).catch((error) => {
-          redirectOnError(this.$router, error);
+      }).catch(() => {
           this.$notify({
             title: 'Error',
             text: 'An unexpected error occured',
@@ -325,7 +320,6 @@ export default {
           this.resetEditItem();
           this.buttonLoading = false;
           this.close(false);
-          redirectOnError(this.$router, error);
           this.$notify({
             title: 'Error',
             text: 'An unexpected error occured',
@@ -395,7 +389,6 @@ export default {
           this.resetEditItem();
           this.buttonLoading = false;
           this.close(false);
-          redirectOnError(this.$router, error);
           this.$notify({
             title: 'Error',
             text: 'An unexpected error occured',

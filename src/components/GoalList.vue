@@ -25,6 +25,13 @@
       </div>
     </v-flex>
     <v-flex xs12 d-flex>
+      <goal-tags-input
+        :goalTags="newGoalItem.tags"
+        :userTags="userTags"
+        @update-new-tag-items="updateNewTagItems"
+      ></goal-tags-input>
+    </v-flex>
+    <v-flex xs12 d-flex>
       <v-select
         class="pl-3 pr-3"
         :items="tasklist"
@@ -54,10 +61,13 @@
 <script>
 import gql from 'graphql-tag';
 
-import redirectOnError from '../utils/redirectOnError';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
+import GoalTagsInput from './GoalTagsInput.vue';
 
 export default {
+  components: {
+    GoalTagsInput,
+  },
   props: ['goals', 'selectedBody', 'date', 'period', 'tasklist', 'goalDetailsDialog', 'selectedTaskRef'],
   apollo: {
     goalItemsRef: {
@@ -101,15 +111,18 @@ export default {
         isMilestone: false,
         goalRef: '',
         taskRef: this.selectedTaskRef || '',
+        tags: [],
       },
       defaultGoalItem: {
         body: this.selectedBody || '',
         isMilestone: false,
         goalRef: '',
         taskRef: this.selectedTaskRef || '',
+        tags: [],
       },
       goalItems: [],
       showMilestoneOption: true,
+      userTags: JSON.parse(localStorage.getItem('USER_TAGS') || []),
     };
   },
   methods: {
@@ -139,6 +152,8 @@ export default {
         return;
       }
 
+      this.setLocalUserTag(this.newGoalItem.tags);
+
       this.$apollo.mutate({
         mutation: gql`
           mutation addGoalItem(
@@ -149,6 +164,7 @@ export default {
             $isMilestone: Boolean!
             $goalRef: String
             $taskRef: String
+            $tags: [String]
           ) {
             addGoalItem(
               body: $body
@@ -158,6 +174,7 @@ export default {
               isMilestone: $isMilestone
               goalRef: $goalRef,
               taskRef: $taskRef,
+              tags: $tags
             ) {
               id
               body
@@ -176,6 +193,7 @@ export default {
           isMilestone: this.newGoalItem.isMilestone,
           goalRef: this.newGoalItem.goalRef,
           taskRef: this.newGoalItem.taskRef,
+          tags: this.newGoalItem.tags,
         },
         update: (scope, { data: { addGoalItem } }) => {
           goal.goalItems.push({
@@ -185,13 +203,13 @@ export default {
             isComplete: false,
             goalRef: this.newGoalItem.goalRef,
             taskRef: this.newGoalItem.taskRef,
+            tags: [...this.newGoalItem.tags],
           });
           this.newGoalItem = { ...this.defaultGoalItem };
           this.$emit('toggle-goal-details-dialog', false);
           this.buttonLoading = false;
         },
-      }).catch((error) => {
-        redirectOnError(this.$router, error);
+      }).catch(() => {
         this.$notify({
           title: 'Error',
           text: 'An unexpected error occured',
@@ -251,6 +269,19 @@ export default {
           }
         });
       }
+    },
+    updateNewTagItems(tags) {
+      this.newGoalItem.tags = tags;
+    },
+    setLocalUserTag(newTags) {
+      const userTags = JSON.parse(localStorage.getItem('USER_TAGS') || []);
+      newTags.forEach((tag) => {
+        if (!userTags.includes(tag)) {
+          userTags.push(tag);
+        }
+      });
+      localStorage.setItem('USER_TAGS', JSON.stringify(userTags));
+      this.userTags = [...userTags];
     },
   },
   watch: {

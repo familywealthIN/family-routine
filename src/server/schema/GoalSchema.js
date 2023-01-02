@@ -23,6 +23,9 @@ const GoalItemSchema = new mongoose.Schema({
   reward: String,
   taskRef: String,
   goalRef: String,
+  tags: [{
+    type: String,
+  }],
   subTasks: [SubTaskItemSchema],
 });
 
@@ -47,6 +50,7 @@ const GoalItemTypeFields = {
   taskRef: { type: GraphQLString },
   progress: { type: GraphQLInt },
   goalRef: { type: GraphQLString },
+  tags: { type: new GraphQLList(GraphQLString) },
 };
 
 const SubTaskItemType = new GraphQLObjectType({

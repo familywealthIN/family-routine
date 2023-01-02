@@ -29,6 +29,10 @@ const UserSchema = new mongoose.Schema({
     },
   },
   motto: [MottoItemSchema],
+  tags: [{
+    type: String,
+    unique: true,
+  }],
 });
 
 // Model Methods
@@ -52,6 +56,7 @@ const UserItemType = new GraphQLObjectType({
     motto: {
       type: new GraphQLList(MottoItemType),
     },
+    tags: { type: new GraphQLList(GraphQLString) },
   },
 });
 

@@ -180,8 +180,6 @@
 <script>
 import gql from 'graphql-tag';
 
-import redirectOnError from '../utils/redirectOnError';
-
 import FamilyUserHistory from '../components/FamilyUserHistory.vue';
 import ContainerBox from '../components/ContainerBox.vue';
 
@@ -216,9 +214,6 @@ export default {
       skip() {
         return this.skipQuery;
       },
-      error(error) {
-        redirectOnError(this.$router, error);
-      },
     },
     userDetails: {
       query: gql`
@@ -240,7 +235,13 @@ export default {
         }
       },
       error(error) {
-        redirectOnError(this.$router, error);
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       },
     },
   },
@@ -324,7 +325,6 @@ export default {
         },
       }).catch((error) => {
         this.buttonLoading = false;
-        redirectOnError(this.$router, error);
         this.$notify({
           title: 'Error',
           text: 'Unable to find the User',
@@ -365,7 +365,6 @@ export default {
         },
       }).catch((error) => {
         this.buttonLoading = false;
-        redirectOnError(this.$router, error);
         this.$notify({
           title: 'Error',
           text: 'Unable to Join the Group',
@@ -389,7 +388,13 @@ export default {
           this.inviterEmail = '';
         },
       }).catch((error) => {
-        redirectOnError(this.$router, error);
+        this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
       });
     },
     leaveGroup() {
@@ -409,7 +414,13 @@ export default {
             this.userItems = [];
           },
         }).catch((error) => {
-          redirectOnError(this.$router, error);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         });
       }
     },
@@ -442,9 +453,6 @@ export default {
         update({ routinesByGroupEmail }) {
           this.groupDetails.push(routinesByGroupEmail);
           return routinesByGroupEmail;
-        },
-        error(error) {
-          redirectOnError(this.$router, error);
         },
       });
     },

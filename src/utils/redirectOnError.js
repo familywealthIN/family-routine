@@ -1,5 +1,5 @@
-export default function redirectOnError(router, error) {
-  if (window && window.dispatchEvent && !window.appSignedOut && error && error.message.indexOf('401') > -1) {
+export default function redirectOnError(router, statusCode) {
+  if (window && window.dispatchEvent && !window.appSignedOut && statusCode === 401) {
     window.appSignedOut = true;
     router.push('/').catch(() => {});
     setTimeout(() => {
