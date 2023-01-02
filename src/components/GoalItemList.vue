@@ -58,7 +58,6 @@
 <script>
 import gql from 'graphql-tag';
 
-import redirectOnError from '../utils/redirectOnError';
 import StreakChecks from './StreakChecks.vue';
 
 export default {
@@ -102,8 +101,7 @@ export default {
           period,
           date,
         },
-      }).catch((error) => {
-        redirectOnError(this.$router, error);
+      }).catch(() => {
         this.$notify({
           title: 'Error',
           text: 'An unexpected error occured',
@@ -154,7 +152,7 @@ export default {
         },
       })
         .then(() => (this.$emit('refresh-task-goal', goalRef)))
-        .catch((error) => {
+        .catch(() => {
           this.$notify({
             title: 'Error',
             text: 'An unexpected error occured',
@@ -162,7 +160,6 @@ export default {
             type: 'error',
             duration: 3000,
           });
-          redirectOnError(this.$router, error);
         });
     },
     editGoalItem(goalItem, period, date) {

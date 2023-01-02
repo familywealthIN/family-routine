@@ -48,7 +48,6 @@
           fab
           class="ml-3 mr-0"
           :loading="buttonLoading"
-          :disabled="buttonLoading"
           @click="addMottoItem(newMottoItem)"
         >
           <v-icon dark>send</v-icon>
@@ -59,8 +58,6 @@
 </template>
 <script>
 import gql from 'graphql-tag';
-
-import redirectOnError from '../utils/redirectOnError';
 
 export default {
   props: [],
@@ -131,9 +128,7 @@ export default {
           this.newMottoItem = { ...this.defaultMottoItem };
           this.buttonLoading = false;
         },
-      }).catch((error) => {
-        console.log('motto error', error);
-        redirectOnError(this.$router, error);
+      }).catch(() => {
         this.$notify({
           title: 'Error',
           text: 'An unexpected error occured',
@@ -162,8 +157,7 @@ export default {
         variables: {
           id,
         },
-      }).catch((error) => {
-        redirectOnError(this.$router, error);
+      }).catch(() => {
         this.$notify({
           title: 'Error',
           text: 'An unexpected error occured',

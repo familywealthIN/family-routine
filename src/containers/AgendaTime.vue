@@ -217,8 +217,6 @@
 import moment from 'moment';
 import gql from 'graphql-tag';
 
-import redirectOnError from '../utils/redirectOnError';
-
 import GoalList from '../components/GoalList.vue';
 import TimelineItemList from '../components/TimelineItemList.vue';
 import ContainerBox from '../components/ContainerBox.vue';
@@ -269,8 +267,7 @@ export default {
           date: this.date,
         };
       },
-      error(error) {
-        redirectOnError(this.$router, error);
+      error() {
         this.isLoading = false;
       },
     },
@@ -300,8 +297,7 @@ export default {
           date: this.date,
         };
       },
-      error(error) {
-        redirectOnError(this.$router, error);
+      error() {
         this.isLoading = false;
       },
     },
@@ -380,8 +376,7 @@ export default {
           this.did = addRoutine.id;
           this.isLoading = false;
         },
-      }).catch((error) => {
-        redirectOnError(this.$router, error);
+      }).catch(() => {
         this.isLoading = false;
         this.$notify({
           title: 'Error',

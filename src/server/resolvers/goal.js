@@ -205,6 +205,21 @@ function weekOfMonth(d) {
   return moment(d, 'DD-MM-YYYY').week() - moment(d, 'DD-MM-YYYY').startOf('month').week() + addFirstWeek;
 }
 
+async function setUserTag(email, tags) {
+  // eslint-disable-next-line guard-for-in, no-restricted-syntax
+  for (const tag of tags) {
+    // eslint-disable-next-line no-await-in-loop
+    const userTag = await UserModel.find({ email, tags: tag });
+    if (userTag && userTag.length === 0) {
+      // eslint-disable-next-line no-await-in-loop
+      await UserModel.updateOne(
+        { email },
+        { $push: { tags: tag } },
+      );
+    }
+  }
+}
+
 const query = {
   goals: {
     type: GraphQLList(GoalType),
@@ -377,6 +392,7 @@ const mutation = {
       isMilestone: { type: GraphQLBoolean },
       taskRef: { type: GraphQLString },
       goalRef: { type: GraphQLString },
+      tags: { type: GraphQLList(GraphQLString) },
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
@@ -392,7 +408,10 @@ const mutation = {
         isMilestone,
         taskRef,
         goalRef,
+        tags,
       } = args;
+
+      await setUserTag(email, tags);
 
       const goalToAdd = {
         date,
@@ -408,6 +427,7 @@ const mutation = {
             isMilestone,
             taskRef,
             goalRef,
+            tags,
           },
         ],
       };
@@ -449,6 +469,7 @@ const mutation = {
       isMilestone: { type: GraphQLBoolean },
       taskRef: { type: GraphQLString },
       goalRef: { type: GraphQLString },
+      tags: { type: GraphQLList(GraphQLString) },
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
@@ -464,7 +485,10 @@ const mutation = {
         isMilestone,
         taskRef,
         goalRef,
+        tags,
       } = args;
+
+      await setUserTag(email, tags);
 
       await GoalModel.findOneAndUpdate(
         {
@@ -482,6 +506,7 @@ const mutation = {
             'goalItems.$.isMilestone': isMilestone,
             'goalItems.$.taskRef': taskRef,
             'goalItems.$.goalRef': goalRef,
+            'goalItems.$.tags': tags,
           },
         },
         { new: true },

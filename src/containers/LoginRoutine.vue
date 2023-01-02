@@ -69,6 +69,7 @@ import {
   GC_USER_EMAIL,
   GC_AUTH_TOKEN,
   GC_NOTIFICATION_TOKEN,
+  USER_TAGS,
 } from '../constants/settings';
 import ContainerBox from '../components/ContainerBox.vue';
 
@@ -113,6 +114,7 @@ export default {
           localStorage.removeItem(GC_USER_NAME);
           localStorage.removeItem(GC_PICTURE);
           localStorage.removeItem(GC_AUTH_TOKEN);
+          localStorage.removeItem(USER_TAGS);
           this.$root.$data.userName = localStorage.getItem(GC_USER_NAME);
           this.$root.$data.userEmail = localStorage.getItem(GC_USER_EMAIL);
           this.$root.$data.picture = localStorage.getItem(GC_PICTURE);
@@ -143,6 +145,7 @@ export default {
               picture
               isNew
               token
+              tags
             }
           }
         `,
@@ -152,7 +155,7 @@ export default {
         },
         update: (store, { data: { authGoogle } }) => {
           const {
-            name, email, picture, token, isNew,
+            name, email, picture, token, isNew, tags = []
           } = authGoogle;
 
           this.isSignIn = this.$gAuth.isAuthorized;
@@ -160,6 +163,7 @@ export default {
           localStorage.setItem(GC_USER_EMAIL, email);
           localStorage.setItem(GC_PICTURE, picture);
           localStorage.setItem(GC_AUTH_TOKEN, token);
+          localStorage.setItem(USER_TAGS, JSON.stringify(tags));
           this.$root.$data.name = localStorage.getItem(GC_USER_NAME);
           this.$root.$data.email = localStorage.getItem(GC_USER_EMAIL);
           this.$root.$data.picture = localStorage.getItem(GC_PICTURE);

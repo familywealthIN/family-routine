@@ -45,33 +45,13 @@ const httpLink = createHttpLink({
 const cache = new InMemoryCache();
 
 const errorLink = onError(({ graphQLErrors, networkError }) => {
-  if (graphQLErrors) {
-    graphQLErrors.map((error) => {
-      //       const { message, locations, path } = error;
-      //       console.log(
-      //         `[GraphQL error]: Message: ${message},
-      // Location: ${JSON.stringify(locations)},
-      // Path: ${path}`,
-      //       );
-      redirectOnError(router, error);
-      return null;
-    });
-  }
-
   if (networkError) {
+    redirectOnError(router, networkError.statusCode);
     // Add something like this to set the error message to the one from the server response
-    // eslint-disable-next-line no-param-reassign
-    networkError.message = networkError
-      && networkError.result
-      && networkError.result.errors
-      && networkError.result.errors.length
-      && networkError.result.errors[0].debugMessage;
-
-    if (networkError.message) {
-      redirectOnError(router, networkError);
+    if (graphQLErrors[0]) {
+      // eslint-disable-next-line no-param-reassign
+      networkError.message = graphQLErrors[0].message;
     }
-
-    console.error(`[Network error]: ${networkError}`);
   }
 });
 

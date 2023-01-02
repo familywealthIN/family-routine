@@ -69,12 +69,20 @@
           label="Goal Task"
         ></v-select>
       </v-flex>
-      <v-flex xs12 v-if="selectedGoalItem.period === 'day'">
+      <v-flex xs12 d-flex>
+        <goal-tags-input
+          :goalTags="selectedGoalItem.tags"
+          :userTags="userTags"
+          @update-new-tag-items="updateNewTagItems"
+        ></goal-tags-input>
+      </v-flex>
+      <v-flex xs12 v-if="selectedGoalItem.id && selectedGoalItem.period === 'day'">
         <sub-task-item-list
           :subTasks="selectedGoalItem.subTasks"
           :taskId="selectedGoalItem.id"
           :period="selectedGoalItem.period"
           :date="selectedGoalItem.date"
+          @update-sub-task-items="updateSubTaskItems"
         />
       </v-flex>
       <v-flex xs12>
@@ -103,7 +111,7 @@
         <div style="float: right;">
           <v-btn
             color="primary"
-            :disabled="!valid || buttonLoading"
+            :disabled="!valid"
             :loading="buttonLoading"
             @click="saveGoalItem"
           >
@@ -120,8 +128,7 @@ import gql from 'graphql-tag';
 import moment from 'moment';
 
 import SubTaskItemList from './SubTaskItemList.vue';
-
-import redirectOnError from '../utils/redirectOnError';
+import GoalTagsInput from './GoalTagsInput.vue';
 
 import {
   getDatesOfYear,
@@ -135,6 +142,7 @@ export default {
   props: ['selectedGoalItem'],
   components: {
     SubTaskItemList,
+    GoalTagsInput,
   },
   apollo: {
     tasklist: {
@@ -180,6 +188,7 @@ export default {
             goalItems {
               id
               body
+              taskRef
             }
           }
         }
@@ -238,6 +247,7 @@ export default {
           value: 'lifetime',
         },
       ],
+      userTags: JSON.parse(localStorage.getItem('USER_TAGS') || []),
     };
   },
   computed: {
@@ -305,11 +315,14 @@ export default {
         isMilestone = false,
         taskRef = '',
         goalRef = '',
+        tags = [],
       } = this.selectedGoalItem;
 
       if (!body) {
         return;
       }
+
+      this.setLocalUserTag(tags);
 
       this.$apollo.mutate({
         mutation: gql`
@@ -324,6 +337,7 @@ export default {
             $reward: String!
             $taskRef: String!
             $goalRef: String!
+            $tags: [String]
           ) {
             updateGoalItem(
               id: $id,
@@ -336,6 +350,7 @@ export default {
               reward: $reward
               taskRef: $taskRef
               goalRef: $goalRef
+              tags: $tags
             ) {
               id
               body
@@ -355,19 +370,15 @@ export default {
           isMilestone: isMilestone || false,
           taskRef: taskRef || '',
           goalRef: goalRef || '',
+          tags,
         },
         update: (scope, { data: { updateGoalItem } }) => {
           console.log(updateGoalItem);
-          // const goalItem = {
-          //   ...this.selectedGoalItem,
-          //   id: updateGoalItem.id,
-          // };
-          this.$emit('toggle-goal-display-dialog', false);
+          this.$emit('toggle-goal-display-dialog', false, updateGoalItem);
           this.resetForm();
         },
-      }).catch((error) => {
+      }).catch(() => {
         this.resetForm();
-        redirectOnError(this.$router, error);
         this.$notify({
           title: 'Error',
           text: 'An unexpected error occured',
@@ -380,6 +391,22 @@ export default {
     resetForm() {
       this.buttonLoading = false;
       this.$refs.form.reset();
+    },
+    updateNewTagItems(tags) {
+      this.selectedGoalItem.tags = tags;
+    },
+    updateSubTaskItems(subTasks) {
+      this.newGoalItem.subTasks = subTasks;
+    },
+    setLocalUserTag(newTags) {
+      const userTags = JSON.parse(localStorage.getItem('USER_TAGS') || []);
+      newTags.forEach((tag) => {
+        if (!userTags.includes(tag)) {
+          userTags.push(tag);
+        }
+      });
+      localStorage.setItem('USER_TAGS', JSON.stringify(userTags));
+      this.userTags = [...userTags];
     },
   },
   watch: {

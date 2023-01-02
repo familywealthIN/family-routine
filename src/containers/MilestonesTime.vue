@@ -47,7 +47,6 @@
 import gql from 'graphql-tag';
 import moment from 'moment';
 
-import redirectOnError from '../utils/redirectOnError';
 import { defaultGoalItem, periodsArray } from '../constants/goals';
 
 import GoalItemMilestoneList from '../components/GoalItemMilestoneList.vue';

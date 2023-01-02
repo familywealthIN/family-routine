@@ -1,9 +1,6 @@
 <template>
-  <v-form
-    ref="form"
-    v-model="valid"
-  >
-    <v-layout wrap >
+  <v-form ref="form" v-model="valid">
+    <v-layout wrap>
       <v-flex xs12 d-flex>
         <v-text-field
           v-model="newGoalItem.body"
@@ -43,8 +40,7 @@
           required
         ></v-select>
       </v-flex>
-      <v-flex v-else xs8 d-flex>
-      </v-flex>
+      <v-flex v-else xs8 d-flex> </v-flex>
       <v-flex xs12 d-flex>
         <v-select
           :items="tasklist"
@@ -54,11 +50,15 @@
           label="Routine Task"
         ></v-select>
       </v-flex>
+      <v-flex xs12 d-flex>
+        <goal-tags-input
+          :goalTags="newGoalItem.tags"
+          :userTags="userTags"
+          @update-new-tag-items="updateNewTagItems"
+        ></goal-tags-input>
+      </v-flex>
       <v-flex v-if="showMilestoneOption" xs6 d-flex>
-        <v-checkbox
-          v-model="newGoalItem.isMilestone"
-          label="Milestone?"
-        ></v-checkbox>
+        <v-checkbox v-model="newGoalItem.isMilestone" label="Milestone?"></v-checkbox>
       </v-flex>
       <v-flex v-if="newGoalItem.isMilestone" xs6 d-flex>
         <v-select
@@ -69,18 +69,17 @@
           label="Goal Task"
         ></v-select>
       </v-flex>
-      <v-flex xs12 v-if="newGoalItem.period === 'day'">
+      <v-flex xs12 v-if="newGoalItem.period === 'day' && newGoalItem.id">
         <sub-task-item-list
           :subTasks="newGoalItem.subTasks"
           :taskId="newGoalItem.id"
           :period="newGoalItem.period"
           :date="newGoalItem.date"
+          @update-sub-task-items="updateSubTaskItems"
         />
       </v-flex>
       <v-flex xs12>
-        <v-textarea
-          v-model="newGoalItem.contribution"
-        >
+        <v-textarea v-model="newGoalItem.contribution">
           <template v-slot:label>
             <div>
               Contribution / Description
@@ -89,9 +88,7 @@
         </v-textarea>
       </v-flex>
       <v-flex xs12>
-        <v-textarea
-          v-model="newGoalItem.reward"
-        >
+        <v-textarea v-model="newGoalItem.reward">
           <template v-slot:label>
             <div>
               Reward / Resolution
@@ -101,12 +98,7 @@
       </v-flex>
       <v-flex xs12>
         <div style="float: right;">
-          <v-btn
-            color="primary"
-            :disabled="!valid || buttonLoading"
-            :loading="buttonLoading"
-            @click="saveGoalItem"
-          >
+          <v-btn color="primary" :disabled="!valid" :loading="buttonLoading" @click="saveGoalItem">
             Save
           </v-btn>
         </div>
@@ -119,8 +111,6 @@
 import gql from 'graphql-tag';
 import moment from 'moment';
 
-import redirectOnError from '../utils/redirectOnError';
-
 import {
   getDatesOfYear,
   getWeeksOfYear,
@@ -129,9 +119,10 @@ import {
   stepupMilestonePeriodDate,
 } from '../utils/getDates';
 import SubTaskItemList from './SubTaskItemList.vue';
+import GoalTagsInput from './GoalTagsInput.vue';
 
 export default {
-  components: { SubTaskItemList },
+  components: { SubTaskItemList, GoalTagsInput },
   props: ['newGoalItem'],
   apollo: {
     tasklist: {
@@ -154,9 +145,7 @@ export default {
       `,
       update(data) {
         this.loading = false;
-        return data.routineDate && data.routineDate.date
-          ? data.routineDate.tasklist
-          : [];
+        return data.routineDate && data.routineDate.date ? data.routineDate.tasklist : [];
       },
       variables() {
         return {
@@ -183,9 +172,7 @@ export default {
       `,
       update(data) {
         this.loading = false;
-        return data.goalDatePeriod && data.goalDatePeriod.date
-          ? data.goalDatePeriod.goalItems
-          : [];
+        return data.goalDatePeriod && data.goalDatePeriod.date ? data.goalDatePeriod.goalItems : [];
       },
       skip() {
         return this.skipQuery;
@@ -235,6 +222,7 @@ export default {
           value: 'lifetime',
         },
       ],
+      userTags: JSON.parse(localStorage.getItem('USER_TAGS') || []),
     };
   },
   computed: {
@@ -257,16 +245,19 @@ export default {
     },
     showMilestoneOption() {
       // Important to trigger
-      console.log(this.newGoalItem.period,
+      console.log(
+        this.newGoalItem.period,
         this.newGoalItem.date,
         this.newGoalItem.date !== '01-01-1970',
-        this.goalItemsRef
-        && this.goalItemsRef.length);
-      return this.newGoalItem.period
+        this.goalItemsRef && this.goalItemsRef.length,
+      );
+      return (
+        this.newGoalItem.period
         && this.newGoalItem.date
         && this.newGoalItem.date !== '01-01-1970'
         && this.goalItemsRef
-        && this.goalItemsRef.length;
+        && this.goalItemsRef.length
+      );
     },
   },
   methods: {
@@ -293,6 +284,14 @@ export default {
       }
     },
 
+    updateNewTagItems(tags) {
+      this.newGoalItem.tags = tags;
+    },
+
+    updateSubTaskItems(subTasks) {
+      this.newGoalItem.subTasks = subTasks;
+    },
+
     addGoalItem() {
       const {
         body = '',
@@ -305,76 +304,83 @@ export default {
         isMilestone = false,
         taskRef = '',
         goalRef = '',
+        tags = [],
       } = this.newGoalItem;
 
       if (!body) {
         return;
       }
 
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation addGoalItem(
-            $body: String!
-            $period: String!
-            $date: String!
-            $isComplete: Boolean
-            $isMilestone: Boolean
-            $deadline: String,
-            $contribution: String,
-            $reward: String,
-            $taskRef: String,
-            $goalRef: String,
-          ) {
-            addGoalItem(
-              body: $body
-              period: $period
-              date: $date
-              isComplete: $isComplete
-              isMilestone: $isMilestone
-              deadline: $deadline,
-              contribution: $contribution,
-              reward: $reward,
-              taskRef: $taskRef,
-              goalRef: $goalRef,
+      this.setLocalUserTag(tags);
+
+      this.$apollo
+        .mutate({
+          mutation: gql`
+            mutation addGoalItem(
+              $body: String!
+              $period: String!
+              $date: String!
+              $isComplete: Boolean
+              $isMilestone: Boolean
+              $deadline: String
+              $contribution: String
+              $reward: String
+              $taskRef: String
+              $goalRef: String
+              $tags: [String]
             ) {
-              id
-              body
-              isComplete
-              isMilestone
+              addGoalItem(
+                body: $body
+                period: $period
+                date: $date
+                isComplete: $isComplete
+                isMilestone: $isMilestone
+                deadline: $deadline
+                contribution: $contribution
+                reward: $reward
+                taskRef: $taskRef
+                goalRef: $goalRef
+                tags: $tags
+              ) {
+                id
+                body
+                isComplete
+                isMilestone
+              }
             }
-          }
-        `,
-        variables: {
-          body,
-          period,
-          date,
-          deadline: deadline || '',
-          contribution: contribution || '',
-          reward: reward || '',
-          isComplete: isComplete || false,
-          isMilestone: isMilestone || false,
-          taskRef: taskRef || '',
-          goalRef: goalRef || '',
-        },
-        update: (scope, { data: { addGoalItem } }) => {
-          const goalItem = {
-            ...this.newGoalItem,
-            id: addGoalItem.id,
-          };
-          this.$emit('add-update-goal-entry', goalItem);
+          `,
+          variables: {
+            body,
+            period,
+            date,
+            deadline: deadline || '',
+            contribution: contribution || '',
+            reward: reward || '',
+            isComplete: isComplete || false,
+            isMilestone: isMilestone || false,
+            taskRef: taskRef || '',
+            goalRef: goalRef || '',
+            tags,
+          },
+          update: (scope, { data: { addGoalItem } }) => {
+            const goalItem = {
+              ...this.newGoalItem,
+              id: addGoalItem.id,
+            };
+            this.$emit('add-update-goal-entry', goalItem);
+            this.resetForm();
+          },
+        })
+        .catch(() => {
           this.resetForm();
-        },
-      }).catch((error) => {
-        this.resetForm();
-        redirectOnError(this.$router, error);
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         });
-      });
     },
     updateGoalItem() {
       const {
@@ -388,86 +394,106 @@ export default {
         isMilestone = false,
         taskRef = '',
         goalRef = '',
+        tags = [],
       } = this.newGoalItem;
+
+      this.setLocalUserTag(tags);
 
       if (!body) {
         return;
       }
 
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation updateGoalItem(
-            $id: ID!
-            $body: String!
-            $period: String!
-            $date: String!
-            $isMilestone: Boolean!
-            $deadline: String!
-            $contribution: String!
-            $reward: String!
-            $taskRef: String!
-            $goalRef: String!
-          ) {
-            updateGoalItem(
-              id: $id,
-              body: $body
-              period: $period
-              date: $date
-              isMilestone: $isMilestone
-              deadline: $deadline,
-              contribution: $contribution
-              reward: $reward
-              taskRef: $taskRef
-              goalRef: $goalRef
+      this.$apollo
+        .mutate({
+          mutation: gql`
+            mutation updateGoalItem(
+              $id: ID!
+              $body: String!
+              $period: String!
+              $date: String!
+              $isMilestone: Boolean!
+              $deadline: String!
+              $contribution: String!
+              $reward: String!
+              $taskRef: String!
+              $goalRef: String!
+              $tags: [String]
             ) {
-              id
-              body
-              isComplete
-              isMilestone
+              updateGoalItem(
+                id: $id
+                body: $body
+                period: $period
+                date: $date
+                isMilestone: $isMilestone
+                deadline: $deadline
+                contribution: $contribution
+                reward: $reward
+                taskRef: $taskRef
+                goalRef: $goalRef
+                tags: $tags
+              ) {
+                id
+                body
+                isComplete
+                isMilestone
+              }
             }
-          }
-        `,
-        variables: {
-          id,
-          body,
-          period,
-          date,
-          deadline: deadline || '',
-          contribution: contribution || '',
-          reward: reward || '',
-          isMilestone: isMilestone || false,
-          taskRef: taskRef || '',
-          goalRef: goalRef || '',
-        },
-        update: (scope, { data: { updateGoalItem } }) => {
-          const goalItem = {
-            ...this.newGoalItem,
-            id: updateGoalItem.id,
-          };
-          this.$emit('add-update-goal-entry', goalItem);
+          `,
+          variables: {
+            id,
+            body,
+            period,
+            date,
+            deadline: deadline || '',
+            contribution: contribution || '',
+            reward: reward || '',
+            isMilestone: isMilestone || false,
+            taskRef: taskRef || '',
+            goalRef: goalRef || '',
+            tags,
+          },
+          update: (scope, { data: { updateGoalItem } }) => {
+            const goalItem = {
+              ...this.newGoalItem,
+              id: updateGoalItem.id,
+            };
+            this.$emit('add-update-goal-entry', goalItem);
+            this.resetForm();
+          },
+        })
+        .catch(() => {
           this.resetForm();
-        },
-      }).catch((error) => {
-        this.resetForm();
-        redirectOnError(this.$router, error);
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         });
-      });
     },
     resetForm() {
       this.buttonLoading = false;
       this.$refs.form.reset();
     },
+    setLocalUserTag(newTags) {
+      const userTags = JSON.parse(localStorage.getItem('USER_TAGS') || []);
+      newTags.forEach((tag) => {
+        if (!userTags.includes(tag)) {
+          userTags.push(tag);
+        }
+      });
+      localStorage.setItem('USER_TAGS', JSON.stringify(userTags));
+      this.userTags = [...userTags];
+    },
   },
   watch: {
     newGoalItem(newVal, oldVal) {
       this.newItemLoaded = !!newVal.id && (oldVal.date === '' || typeof oldVal.date === 'undefined');
-      if (newVal.date !== oldVal.date && (oldVal.date === '' || typeof oldVal.date === 'undefined')) {
+      if (
+        newVal.date !== oldVal.date
+        && (oldVal.date === '' || typeof oldVal.date === 'undefined')
+      ) {
         this.triggerGoalItemsRef();
       }
     },

@@ -94,7 +94,6 @@ import NumericCard from '../components/DashboardCards/NumericCard.vue';
 import RadarCard from '../components/DashboardCards/RadarCard.vue';
 import TableCard from '../components/DashboardCards/TableCard.vue';
 import TasksCompletedCard from '../components/DashboardCards/TasksCompletedCard.vue';
-import redirectOnError from '../utils/redirectOnError';
 
 export default {
   components: {
@@ -122,9 +121,6 @@ export default {
           }
         }
       `,
-      error(error) {
-        redirectOnError(this.$router, error);
-      },
     },
     progress: {
       query: gql`

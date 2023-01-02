@@ -44,7 +44,6 @@
 <script>
 import gql from 'graphql-tag';
 
-import redirectOnError from '../utils/redirectOnError';
 import UserHistory from '../components/UserHistory.vue';
 import ContainerBox from '../components/ContainerBox.vue';
 
@@ -70,9 +69,6 @@ export default {
           }
         }
       `,
-      error(error) {
-        redirectOnError(this.$router, error);
-      },
     },
   },
   data() {
