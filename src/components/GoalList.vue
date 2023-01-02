@@ -26,6 +26,7 @@
     </v-flex>
     <v-flex xs12 d-flex>
       <goal-tags-input
+        class="ml-3 mr-3"
         :goalTags="newGoalItem.tags"
         :userTags="userTags"
         @update-new-tag-items="updateNewTagItems"

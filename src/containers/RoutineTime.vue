@@ -19,7 +19,9 @@
               :rotate="-90"
               class="mt-3"
               color="white"
-              width="6">{{Number(countTotal('D')).toFixed(1)}}</v-progress-circular>
+              width="6"
+              >{{ Number(countTotal("D")).toFixed(1) }}</v-progress-circular
+            >
           </v-flex>
           <v-flex xs4 class="mb-3 text-xs-center">
             <v-progress-circular
@@ -28,7 +30,9 @@
               :rotate="-90"
               class="mt-3"
               color="white"
-              width="6">{{Number(countTotal('K')).toFixed(1)}}</v-progress-circular>
+              width="6"
+              >{{ Number(countTotal("K")).toFixed(1) }}</v-progress-circular
+            >
           </v-flex>
           <v-flex xs4 class="mb-3 text-xs-center">
             <v-progress-circular
@@ -37,7 +41,9 @@
               :rotate="-90"
               class="mt-3"
               color="white"
-              width="6">{{Number(countTotal('G')).toFixed(1)}}</v-progress-circular>
+              width="6"
+              >{{ Number(countTotal("G")).toFixed(1) }}</v-progress-circular
+            >
           </v-flex>
         </v-layout>
       </v-card>
@@ -51,20 +57,16 @@
       <v-subheader>
         <div class="d-flex title-options">
           <div class="sub-header">
-            {{this.today}}
+            {{ this.today }}
           </div>
           <div>
-            <v-switch
-              v-model="skipDay"
-              label="Skip Day"
-              @change="skipClick()"
-            ></v-switch>
+            <v-switch v-model="skipDay" label="Skip Day" @change="skipClick()"></v-switch>
           </div>
         </div>
       </v-subheader>
       <template v-if="skipDay">
         <div class="skip-box">
-          <img src="/img/relax.jpg">
+          <img src="/img/relax.jpg" />
           <h1>Relax, Detox and Enjoy the Day</h1>
         </div>
       </template>
@@ -94,20 +96,20 @@
                   :color="getButtonColor(task)"
                   @click="checkDialogClick($event, task)"
                 >
-                  <v-icon>{{getButtonIcon(task)}}</v-icon>
+                  <v-icon>{{ getButtonIcon(task) }}</v-icon>
                 </v-btn>
               </v-list-tile-avatar>
             </v-progress-circular>
             <v-list-tile-content>
               <v-list-tile-title>
-                <span>{{task.name}}</span>
+                <span>{{ task.name }}</span>
               </v-list-tile-title>
               <v-list-tile-sub-title v-if="task.id === selectedTaskRef">
                 <div class="time-text">
-                  {{task.time}} - {{countTaskCompleted(task)}}/{{countTaskTotal(task)}}
+                  {{ task.time }} - {{ countTaskCompleted(task) }}/{{ countTaskTotal(task) }}
                 </div>
                 <div>
-                  <v-btn-toggle v-model="currentGoalPeriod" >
+                  <v-btn-toggle v-model="currentGoalPeriod">
                     <v-btn flat value="day">
                       Today
                     </v-btn>
@@ -123,31 +125,27 @@
                   </v-btn-toggle>
                 </div>
               </v-list-tile-sub-title>
-              <v-list-tile-sub-title v-else >
-                {{task.time}}
+              <v-list-tile-sub-title v-else>
+                {{ task.time }}
               </v-list-tile-sub-title>
               <div v-if="task.id === selectedTaskRef" class="pt-2 pb-2 task-goals">
                 <v-layout
                   row
                   wrap
-                  v-if="filterTaskGoalsPeriod(task.id, 'week').length
-                    && filterTaskGoalsPeriod(task.id, 'month').length"
+                  v-if="
+                    filterTaskGoalsPeriod(task.id, 'week').length &&
+                      filterTaskGoalsPeriod(task.id, 'month').length
+                  "
                 >
                   <v-flex xs12>
-                    <v-alert
-                      :value="true"
-                      color="success"
-                      icon="check_circle"
-                      outline
-                    >
-                      You are all set.
-                      Do daily milestones to complete weekly and monthly goals.
+                    <v-alert :value="true" color="success" icon="check_circle" outline>
+                      You are all set. Do daily milestones to complete weekly and monthly goals.
                     </v-alert>
                   </v-flex>
                 </v-layout>
                 <v-layout row wrap v-else>
                   <v-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, 'month').length">
-                    <v-chip @click="currentGoalPeriod = 'month', goalDetailsDialog = true">
+                    <v-chip @click="(currentGoalPeriod = 'month'), (goalDetailsDialog = true)">
                       <v-avatar class="red text-white"><v-icon>close</v-icon></v-avatar>
                       Set Month's Goal
                     </v-chip>
@@ -159,7 +157,7 @@
                     </v-chip>
                   </v-flex>
                   <v-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, 'week').length">
-                    <v-chip @click="currentGoalPeriod = 'week', goalDetailsDialog = true">
+                    <v-chip @click="(currentGoalPeriod = 'week'), (goalDetailsDialog = true)">
                       <v-avatar class="red text-white"><v-icon>close</v-icon></v-avatar>
                       Set Week's Goal
                     </v-chip>
@@ -171,7 +169,7 @@
                     </v-chip>
                   </v-flex>
                 </v-layout>
-                <div v-if="filterTaskGoalsPeriod(task.id, currentGoalPeriod).length" >
+                <div v-if="filterTaskGoalsPeriod(task.id, currentGoalPeriod).length">
                   <div
                     :key="taskGoals.id"
                     v-for="taskGoals in filterTaskGoalsPeriod(task.id, currentGoalPeriod)"
@@ -191,11 +189,7 @@
                   No goal or activity logged.
                 </small>
                 <div class="add-new">
-                  <v-btn
-                    small
-                    flat
-                    @click="goalDetailsDialog = true"
-                  >
+                  <v-btn small flat @click="goalDetailsDialog = true">
                     <v-icon>add</v-icon>
                     Add Goal or Activity
                   </v-btn>
@@ -203,10 +197,11 @@
               </div>
             </v-list-tile-content>
             <v-list-tile-action v-if="task.id !== selectedTaskRef">
-                <v-list-tile-action-text>
-                  <b>{{countTaskCompleted(task)}}</b>/{{countTaskTotal(task)}}
-                </v-list-tile-action-text>
-                <v-list-tile-action-text>tasks</v-list-tile-action-text>
+              <v-list-tile-action-text>
+                <b>{{ countTaskCompleted(task) }}</b
+                >/{{ countTaskTotal(task) }}
+              </v-list-tile-action-text>
+              <v-list-tile-action-text>tasks</v-list-tile-action-text>
             </v-list-tile-action>
           </v-list-tile>
         </div>
@@ -241,13 +236,7 @@
           :selectedTaskRef="selectedTaskRef"
           @toggle-goal-details-dialog="toggleGoalDetailsDialog"
         />
-        <v-alert
-          :value="true"
-          color="success"
-          icon="ev_station"
-          outline
-          class="ml-3 mr-3"
-        >
+        <v-alert :value="true" color="success" icon="ev_station" outline class="ml-3 mr-3">
           It's better to set Month and Weekly goals first to better guide daily milestones.
         </v-alert>
       </v-card>
@@ -279,11 +268,11 @@
     <v-dialog v-model="quickTaskDialog" max-width="600px">
       <v-card>
         <v-card-title>
-          <span class="headline">{{quickTaskTitle}}</span>
+          <span class="headline">{{ quickTaskTitle }}</span>
         </v-card-title>
         <v-card-text>
           <p>
-            {{quickTaskDescription}}
+            {{ quickTaskDescription }}
           </p>
           <quick-goal-creation
             :goals="goals"
@@ -319,8 +308,18 @@ const threshold = {
 };
 
 function weekOfMonth(d) {
-  const addFirstWeek = moment(d, 'DD-MM-YYYY').startOf('month').weekday() < 2 ? 1 : 0;
-  return moment(d, 'DD-MM-YYYY').week() - moment(d, 'DD-MM-YYYY').startOf('month').week() + addFirstWeek;
+  const addFirstWeek = moment(d, 'DD-MM-YYYY')
+    .startOf('month')
+    .weekday() < 2
+    ? 1
+    : 0;
+  return (
+    moment(d, 'DD-MM-YYYY').week()
+    - moment(d, 'DD-MM-YYYY')
+      .startOf('month')
+      .week()
+    + addFirstWeek
+  );
 }
 
 export default {
@@ -359,16 +358,14 @@ export default {
       `,
       update(data) {
         this.isLoading = false;
-        this.tasklist = data.routineDate && data.routineDate.date
-          ? data.routineDate.tasklist
-          : [];
+        this.tasklist = data.routineDate && data.routineDate.date ? data.routineDate.tasklist : [];
         if (data.routineDate === null) {
           this.addNewDayRoutine();
           return this.tasklist;
         }
         this.did = data.routineDate.id;
         this.setPassedWait();
-        this.skipDay = !!(data.routineDate.skip);
+        this.skipDay = !!data.routineDate.skip;
         return data.routineDate.tasklist;
       },
       variables() {
@@ -403,14 +400,14 @@ export default {
               taskRef
               goalRef
               isMilestone
-              contribution,
-              reward,
-              tags,
+              contribution
+              reward
+              tags
               subTasks {
                 id
                 body
                 isComplete
-              },
+              }
             }
           }
         }
@@ -470,50 +467,52 @@ export default {
   methods: {
     addNewDayRoutine() {
       this.isLoading = true;
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation addRoutine($date: String!) {
-            addRoutine(date: $date) {
-              id
-              date
-              skip
-              tasklist {
+      this.$apollo
+        .mutate({
+          mutation: gql`
+            mutation addRoutine($date: String!) {
+              addRoutine(date: $date) {
                 id
-                name
-                time
-                points
-                ticked
-                passed
-                wait
-                stimuli {
+                date
+                skip
+                tasklist {
+                  id
                   name
-                  splitRate
-                  earned
+                  time
+                  points
+                  ticked
+                  passed
+                  wait
+                  stimuli {
+                    name
+                    splitRate
+                    earned
+                  }
                 }
               }
             }
-          }
-        `,
-        variables: {
-          date: this.date,
-        },
-        update: (store, { data: { addRoutine } }) => {
-          this.tasklist = addRoutine && addRoutine.date ? addRoutine.tasklist : [];
-          this.did = addRoutine.id;
-          this.setPassedWait();
+          `,
+          variables: {
+            date: this.date,
+          },
+          update: (store, { data: { addRoutine } }) => {
+            this.tasklist = addRoutine && addRoutine.date ? addRoutine.tasklist : [];
+            this.did = addRoutine.id;
+            this.setPassedWait();
+            this.isLoading = false;
+          },
+        })
+        .catch(() => {
+          clearInterval(this.timerId);
           this.isLoading = false;
-        },
-      }).catch(() => {
-        clearInterval(this.timerId);
-        this.isLoading = false;
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         });
-      });
     },
     deleteTaskGoal(id) {
       this.goals.forEach((goal) => {
@@ -528,9 +527,9 @@ export default {
     getWeekProgress(currentGoalPeriod) {
       if (currentGoalPeriod === 'day') {
         if (this.goals && this.goals.length) {
-          const weekGoals = this.goals.find((goal) => (goal.period === 'week'));
-          const weekGoalItemMilestoneChecked = weekGoals && weekGoals
-            .goalItems.find((goalItem) => (goalItem.id === this.lastCompleteItemGoalRef));
+          const weekGoals = this.goals.find((goal) => goal.period === 'week');
+          const weekGoalItemMilestoneChecked = weekGoals
+            && weekGoals.goalItems.find((goalItem) => goalItem.id === this.lastCompleteItemGoalRef);
           return (weekGoalItemMilestoneChecked && weekGoalItemMilestoneChecked.progress) || 0;
         }
       }
@@ -542,7 +541,8 @@ export default {
     getButtonColor(task) {
       if (task.ticked) {
         return 'success';
-      } if (task.passed) {
+      }
+      if (task.passed) {
         return 'error';
       }
       return '';
@@ -556,9 +556,11 @@ export default {
     getButtonIcon(task) {
       if (task.ticked) {
         return 'check';
-      } if (task.passed && !task.ticked) {
+      }
+      if (task.passed && !task.ticked) {
         return 'close';
-      } if (!task.passed && !task.ticked && !task.wait) {
+      }
+      if (!task.passed && !task.ticked && !task.wait) {
         return 'alarm';
       }
       return 'more_horiz';
@@ -566,39 +568,41 @@ export default {
     checkDialogClick(e, task) {
       e.stopPropagation();
       if (!task.passed && !task.wait && !task.ticked) {
-        this.selectedTaskRef = task.id;
-        this.quickTaskTitle = task.name;
-        this.quickTaskDescription = task.description;
-        this.quickTaskDialog = true;
+        if (this.filterTaskGoalsPeriod(task.id, 'day').length) {
+          this.checkClick(task);
+        } else {
+          this.selectedTaskRef = task.id;
+          this.quickTaskTitle = task.name;
+          this.quickTaskDescription = task.description;
+          this.quickTaskDialog = true;
+        }
       }
     },
     checkClick(task) {
       this.quickTaskDialog = false;
       if (!task.passed && !task.wait && !task.ticked) {
         task.ticked = true;
-        this.$apollo.mutate({
-          mutation: gql`
-            mutation tickRoutineItem(
-              $id: ID!
-              $taskId: String!
-              $ticked: Boolean!
-            ) {
-              tickRoutineItem(id: $id, taskId: $taskId, ticked: $ticked) {
-                id
-                tasklist {
-                  name
-                  ticked
+        this.$apollo
+          .mutate({
+            mutation: gql`
+              mutation tickRoutineItem($id: ID!, $taskId: String!, $ticked: Boolean!) {
+                tickRoutineItem(id: $id, taskId: $taskId, ticked: $ticked) {
+                  id
+                  tasklist {
+                    name
+                    ticked
+                  }
                 }
               }
-            }
-          `,
-          variables: {
-            id: this.did,
-            taskId: task.id,
-            ticked: task.ticked,
-          },
-        })
+            `,
+            variables: {
+              id: this.did,
+              taskId: task.id,
+              ticked: task.ticked,
+            },
+          })
           .then(() => this.$apollo.queries.tasklist.refetch())
+          .then(() => this.$apollo.queries.goals.refetch())
           .catch(() => {
             task.ticked = false;
             clearInterval(this.timerId);
@@ -613,32 +617,33 @@ export default {
       }
     },
     skipClick() {
-      this.$apollo.mutate({
-        mutation: gql`
-            mutation skipRoutine(
-              $id: ID!
-              $skip: Boolean!
-            ) {
+      this.$apollo
+        .mutate({
+          mutation: gql`
+            mutation skipRoutine($id: ID!, $skip: Boolean!) {
               skipRoutine(id: $id, skip: $skip) {
                 id
                 skip
               }
             }
           `,
-        variables: {
-          id: this.did,
-          skip: !!(this.skipDay),
-        },
-      }).catch(() => {
-        setTimeout(() => { this.skipDay = false; }, 1000);
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
+          variables: {
+            id: this.did,
+            skip: !!this.skipDay,
+          },
+        })
+        .catch(() => {
+          setTimeout(() => {
+            this.skipDay = false;
+          }, 1000);
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         });
-      });
     },
     passedTime(item) {
       if (!item.ticked) {
@@ -646,50 +651,52 @@ export default {
         const exp = timestamp.diff(moment());
         if (moment.duration(exp).asMinutes() < -TIMES_UP_TIME && !item.passed) {
           item.passed = true;
-          this.$apollo.mutate({
-            mutation: gql`
-              mutation passRoutineItem(
-                $id: ID!
-                $taskId: String!
-                $ticked: Boolean!
-                $passed: Boolean!
-              ) {
-                passRoutineItem(id: $id, taskId: $taskId, ticked: $ticked, passed: $passed) {
-                  id
-                  tasklist {
+          this.$apollo
+            .mutate({
+              mutation: gql`
+                mutation passRoutineItem(
+                  $id: ID!
+                  $taskId: String!
+                  $ticked: Boolean!
+                  $passed: Boolean!
+                ) {
+                  passRoutineItem(id: $id, taskId: $taskId, ticked: $ticked, passed: $passed) {
                     id
-                    name
-                    ticked
+                    tasklist {
+                      id
+                      name
+                      ticked
+                    }
                   }
                 }
-              }
-            `,
-            variables: {
-              id: this.did,
-              taskId: item.id,
-              ticked: item.ticked,
-              passed: item.passed,
-            },
-            update: (store, { data: { passRoutineItem } }) => {
-              if (passRoutineItem.tasklist) {
-                const currentTask = passRoutineItem.tasklist.find((task) => task.id === item.id);
-                if (currentTask.ticked) {
-                  item.passed = false;
-                  item.ticked = true;
+              `,
+              variables: {
+                id: this.did,
+                taskId: item.id,
+                ticked: item.ticked,
+                passed: item.passed,
+              },
+              update: (store, { data: { passRoutineItem } }) => {
+                if (passRoutineItem.tasklist) {
+                  const currentTask = passRoutineItem.tasklist.find((task) => task.id === item.id);
+                  if (currentTask.ticked) {
+                    item.passed = false;
+                    item.ticked = true;
+                  }
                 }
-              }
-            },
-          }).catch(() => {
-            clearInterval(this.timerId);
-            item.passed = false;
-            this.$notify({
-              title: 'Error',
-              text: 'An unexpected error occured',
-              group: 'notify',
-              type: 'error',
-              duration: 3000,
+              },
+            })
+            .catch(() => {
+              clearInterval(this.timerId);
+              item.passed = false;
+              this.$notify({
+                title: 'Error',
+                text: 'An unexpected error occured',
+                group: 'notify',
+                type: 'error',
+                duration: 3000,
+              });
             });
-          });
         }
       }
     },
@@ -699,38 +706,36 @@ export default {
         const exp = timestamp.diff(moment());
         if (moment.duration(exp).asMinutes() < PROACTIVE_START_TIME && item.wait) {
           item.wait = false;
-          this.$apollo.mutate({
-            mutation: gql`
-              mutation waitRoutineItem(
-                $id: ID!
-                $taskId: String!
-                $wait: Boolean!
-              ) {
-                waitRoutineItem(id: $id, taskId: $taskId, wait: $wait) {
-                  id
-                  tasklist {
-                    name
-                    wait
+          this.$apollo
+            .mutate({
+              mutation: gql`
+                mutation waitRoutineItem($id: ID!, $taskId: String!, $wait: Boolean!) {
+                  waitRoutineItem(id: $id, taskId: $taskId, wait: $wait) {
+                    id
+                    tasklist {
+                      name
+                      wait
+                    }
                   }
                 }
-              }
-            `,
-            variables: {
-              id: this.did,
-              taskId: item.id,
-              wait: item.wait,
-            },
-          }).catch(() => {
-            clearInterval(this.timerId);
-            item.wait = false;
-            this.$notify({
-              title: 'Error',
-              text: 'An unexpected error occured',
-              group: 'notify',
-              type: 'error',
-              duration: 3000,
+              `,
+              variables: {
+                id: this.did,
+                taskId: item.id,
+                wait: item.wait,
+              },
+            })
+            .catch(() => {
+              clearInterval(this.timerId);
+              item.wait = false;
+              this.$notify({
+                title: 'Error',
+                text: 'An unexpected error occured',
+                group: 'notify',
+                type: 'error',
+                duration: 3000,
+              });
             });
-          });
         }
       }
     },
@@ -750,10 +755,10 @@ export default {
       }, 0);
 
       if (stimulus === 'G') {
-        if (moment(this.date, 'DD-MM-YYYY').weekday() >= (threshold.weekDays - 1)) {
-          if (weekOfMonth(this.date) >= (threshold.monthWeeks - 1)) {
+        if (moment(this.date, 'DD-MM-YYYY').weekday() >= threshold.weekDays - 1) {
+          if (weekOfMonth(this.date) >= threshold.monthWeeks - 1) {
             // TODO: Enable this later
-            if (moment(this.date, 'DD-MM-YYYY').month() >= (threshold.yearMonths - 1)) {
+            if (moment(this.date, 'DD-MM-YYYY').month() >= threshold.yearMonths - 1) {
               return aggregatePoints;
             }
             console.log('month', Number((aggregatePoints * 1.334).toFixed(1)));
@@ -781,8 +786,26 @@ export default {
     filterTaskGoals(id) {
       const taskGoalList = [];
       if (this.goals && this.goals.length) {
-        this.goals
-          .forEach((goal) => {
+        this.goals.forEach((goal) => {
+          const taskGoalItems = goal.goalItems.filter((goalItem) => goalItem.taskRef === id);
+          if (taskGoalItems.length) {
+            const newGoal = {
+              id: goal.id,
+              period: goal.period,
+              date: goal.date,
+              goalItems: taskGoalItems,
+            };
+            taskGoalList.push(newGoal);
+          }
+        });
+      }
+      return taskGoalList;
+    },
+    filterTaskGoalsPeriod(id, currentGoalPeriod) {
+      const taskGoalList = [];
+      if (this.goals && this.goals.length) {
+        this.goals.forEach((goal) => {
+          if (goal.period === currentGoalPeriod) {
             const taskGoalItems = goal.goalItems.filter((goalItem) => goalItem.taskRef === id);
             if (taskGoalItems.length) {
               const newGoal = {
@@ -793,28 +816,8 @@ export default {
               };
               taskGoalList.push(newGoal);
             }
-          });
-      }
-      return taskGoalList;
-    },
-    filterTaskGoalsPeriod(id, currentGoalPeriod) {
-      const taskGoalList = [];
-      if (this.goals && this.goals.length) {
-        this.goals
-          .forEach((goal) => {
-            if (goal.period === currentGoalPeriod) {
-              const taskGoalItems = goal.goalItems.filter((goalItem) => goalItem.taskRef === id);
-              if (taskGoalItems.length) {
-                const newGoal = {
-                  id: goal.id,
-                  period: goal.period,
-                  date: goal.date,
-                  goalItems: taskGoalItems,
-                };
-                taskGoalList.push(newGoal);
-              }
-            }
-          });
+          }
+        });
       }
       return taskGoalList;
     },
@@ -865,189 +868,191 @@ export default {
 </script>
 
 <style>
-  .text-white {
-    color: #fff;
-  }
-  .inline-goals {
-    padding: 8px 16px;
-    background-color: antiquewhite;
-  }
-  .inline-goals summary {
-    outline: none;
-  }
-  .inline-goals ul {
-    list-style: none;
-    padding-left: 4px;
-  }
+.text-white {
+  color: #fff;
+}
+.inline-goals {
+  padding: 8px 16px;
+  background-color: antiquewhite;
+}
+.inline-goals summary {
+  outline: none;
+}
+.inline-goals ul {
+  list-style: none;
+  padding-left: 4px;
+}
 
-  .title-options {
-    width: 100%;
-    justify-content: space-between;
-    align-items: center;
-  }
+.title-options {
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+}
 
-  .title-options > .sub-header {
-    flex: 12 !important;
-  }
+.title-options > .sub-header {
+  flex: 12 !important;
+}
 
-  .concentrated-view .active {
-    background-color: #fff;
-  }
+.concentrated-view .active {
+  background-color: #fff;
+}
 
-  .concentrated-view .active .v-list__tile--avatar,
-  .concentrated-view .v-list__tile--avatar {
-    transition: 0.35s;
-  }
+.concentrated-view .active .v-list__tile--avatar,
+.concentrated-view .v-list__tile--avatar {
+  transition: 0.35s;
+}
 
-  .concentrated-view .active .v-list__tile--avatar {
-    height: 300px;
-  }
+.concentrated-view .active .v-list__tile--avatar {
+  height: 300px;
+}
 
-  .concentrated-view .active .circular-task,
-  .concentrated-view .active .v-list__tile__avatar {
-    align-self: start;
-  }
+.concentrated-view .active .circular-task,
+.concentrated-view .active .v-list__tile__avatar {
+  align-self: start;
+}
 
 /* TODO: Fix zoom problem */
-  .concentrated-view .active .v-list__tile .circular-task{
-    min-width: 48px;
-  }
+.concentrated-view .active .v-list__tile .circular-task {
+  min-width: 48px;
+}
 
-  .concentrated-view .active .v-list__tile{
-    padding-top: 16px;
-    padding-bottom: 16px;
-  }
-  .concentrated-view .active .v-list__tile__avatar {
-    justify-content: start;
-  }
+.concentrated-view .active .v-list__tile {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+.concentrated-view .active .v-list__tile__avatar {
+  justify-content: start;
+}
 
-  .concentrated-view .active .v-list__tile__content {
-    justify-content: start;
-  }
+.concentrated-view .active .v-list__tile__content {
+  justify-content: start;
+}
 
-  .concentrated-view .active .v-list__tile__title {
-    font-size: 24px;
-    height: 28px;
-  }
+.concentrated-view .active .v-list__tile__title {
+  font-size: 24px;
+  height: 28px;
+}
 
-  .concentrated-view .active .goal-list .v-list__tile__title {
-    font-size: 10px;
-  }
+.concentrated-view .active .goal-list .v-list__tile__title {
+  font-size: 10px;
+}
 
-  .concentrated-view .v-list__tile__sub-title {
-    display: flex;
-    justify-content: space-between;
-    align-content: center;
-    padding: 4px 0;
-  }
+.concentrated-view .v-list__tile__sub-title {
+  display: flex;
+  justify-content: space-between;
+  align-content: center;
+  padding: 4px 0;
+}
 
-  .concentrated-view .v-list__tile__sub-title .time-text {
-    align-self: center;
-  }
+.concentrated-view .v-list__tile__sub-title .time-text {
+  align-self: center;
+}
 
-  .concentrated-view .v-list__tile__sub-title .v-item-group {
-    border: 1px solid #1976d2;
-    border-radius: 4px;
-    box-shadow: none;
-  }
+.concentrated-view .v-list__tile__sub-title .v-item-group {
+  border: 1px solid #1976d2;
+  border-radius: 4px;
+  box-shadow: none;
+}
 
-  .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn {
-    height: 24px;
-  }
-  .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn__content {
-    font-size: 10px;
-    color: #000;
-  }
+.concentrated-view .v-list__tile__sub-title .v-item-group .v-btn {
+  height: 24px;
+}
+.concentrated-view .v-list__tile__sub-title .v-item-group .v-btn__content {
+  font-size: 10px;
+  color: #000;
+}
 
-   .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn--active {
-    background-color: #1976d2;
-  }
+.concentrated-view .v-list__tile__sub-title .v-item-group .v-btn--active {
+  background-color: #1976d2;
+}
 
-  .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn--active .v-btn__content {
-    color: #fff;
-  }
+.concentrated-view .v-list__tile__sub-title .v-item-group .v-btn--active .v-btn__content {
+  color: #fff;
+}
 
-  .concentrated-view .task-goals {
-    width: 100%;
-    height: 240px;
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-  .concentrated-view .task-goals .v-list__tile {
-    padding: 4px 0;
-    height: 32px;
-  }
-  .concentrated-view .task-goals .v-input--selection-controls__ripple,
-  .concentrated-view .task-goals .v-list__tile__action .v-btn,
-  .concentrated-view .task-goals .v-list__tile__title {
-    height: 24px;
-  }
+.concentrated-view .task-goals {
+  width: 100%;
+  height: 240px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.concentrated-view .task-goals .v-list__tile {
+  padding: 4px 0;
+  height: 32px;
+}
+.concentrated-view .task-goals .v-input--selection-controls__ripple,
+.concentrated-view .task-goals .v-list__tile__action .v-btn,
+.concentrated-view .task-goals .v-list__tile__title {
+  height: 24px;
+}
 
-  .concentrated-view .task-goals .v-input--selection-controls__ripple {
-    top: calc(50% - 19px);
-  }
+.concentrated-view .task-goals .v-input--selection-controls__ripple {
+  top: calc(50% - 19px);
+}
 
-  .v-list__tile__side-title {
-    color: rgba(0,0,0,0.54);
-    padding-left: 8px;
-  }
-  .concentrated-view .task-goals .v-list {
-    background: transparent;
-  }
-  .concentrated-view .task-goals .v-list__tile__action {
-    min-width: 36px;
-  }
-  .concentrated-view
-  .task-goals .v-input--selection-controls:not(.v-input--hide-details) .v-input__slot {
-    margin-bottom: 3px;
-  }
-  .concentrated-view .task-goals .v-list__tile__title {
-    font-size: 14px;
-  }
-  .concentrated-view .task-goals .v-chip {
-    cursor: pointer;
-    font-size: 11px;
-    margin: 0 2px 0 0;
-  }
-  .concentrated-view .task-goals .no-goals-text {
-    /* text-align: center; */
-    display: block;
-    padding: 20px 0 20px 36px;
-    color: #777;
-  }
-  .concentrated-view .task-goals .v-alert.v-alert--outline {
-    padding: 4px;
-    font-size: 11px;
-  }
-  .concentrated-view .task-goals .add-new {
-    border-top: 1px solid #ccc;
-    padding-top: 8px;
-  }
-  .concentrated-view .task-goals .add-new .v-btn {
-    padding: 0;
-    margin: 0;
-    text-align: left;
-    color: rgba(0,0,0,0.87);
-    text-transform: initial;
-    font-size: 14px;
-    font-weight: 400;
-  }
-  .concentrated-view .task-goals .add-new .v-btn .v-icon {
-    padding-right: 12px;
-  }
-  .concentrated-view .task-goals .add-new .v-btn .v-btn__content {
-    justify-content: initial;
-  }
-  .skip-box {
-    text-align: center;
-    padding: 32px 16px;
-  }
-  .skip-box img {
-    max-width: 100%;
-    width: auto;
-  }
+.v-list__tile__side-title {
+  color: rgba(0, 0, 0, 0.54);
+  padding-left: 8px;
+}
+.concentrated-view .task-goals .v-list {
+  background: transparent;
+}
+.concentrated-view .task-goals .v-list__tile__action {
+  min-width: 36px;
+}
+.concentrated-view
+  .task-goals
+  .v-input--selection-controls:not(.v-input--hide-details)
+  .v-input__slot {
+  margin-bottom: 3px;
+}
+.concentrated-view .task-goals .v-list__tile__title {
+  font-size: 14px;
+}
+.concentrated-view .task-goals .v-chip {
+  cursor: pointer;
+  font-size: 11px;
+  margin: 0 2px 0 0;
+}
+.concentrated-view .task-goals .no-goals-text {
+  /* text-align: center; */
+  display: block;
+  padding: 20px 0 20px 36px;
+  color: #777;
+}
+.concentrated-view .task-goals .v-alert.v-alert--outline {
+  padding: 4px;
+  font-size: 11px;
+}
+.concentrated-view .task-goals .add-new {
+  border-top: 1px solid #ccc;
+  padding-top: 8px;
+}
+.concentrated-view .task-goals .add-new .v-btn {
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  color: rgba(0, 0, 0, 0.87);
+  text-transform: initial;
+  font-size: 14px;
+  font-weight: 400;
+}
+.concentrated-view .task-goals .add-new .v-btn .v-icon {
+  padding-right: 12px;
+}
+.concentrated-view .task-goals .add-new .v-btn .v-btn__content {
+  justify-content: initial;
+}
+.skip-box {
+  text-align: center;
+  padding: 32px 16px;
+}
+.skip-box img {
+  max-width: 100%;
+  width: auto;
+}
 
-  .circular-task .v-avatar {
-    margin: 0 auto;
-  }
+.circular-task .v-avatar {
+  margin: 0 auto;
+}
 </style>
