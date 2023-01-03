@@ -7,67 +7,50 @@
         v-model="newSubTaskItemBody"
         id="newSubTaskItemBody"
         name="newSubTaskItemBody"
-        label="Type your sub task"
-        class="inputGoal"
-        @keyup.enter="addSubTaskItem"
-      >
+        label="Type your sub task" class="inputGoal" @keyup.enter="addSubTaskItem">
       </v-text-field>
-      <v-btn
-          icon
-          color="success"
-          fab
-          dark
-          class="ml-3 mr-0"
-          @click="addSubTaskItem(newSubTaskItemBody)"
-      >
-          <v-icon dark>send</v-icon>
+      <v-btn icon
+        color="success"
+        fab
+        dark
+        class="ml-3 mr-0"
+        @click="addSubTaskItem(newSubTaskItemBody)">
+        <v-icon dark>send</v-icon>
       </v-btn>
     </div>
     <v-list two-line subheader>
       <v-spacer></v-spacer>
-        <v-subheader
-          class="subheading"
-          v-if="subTasks && subTasks.length == 0"
-        >
-          You have 0 sub tasks
-        </v-subheader>
-        <v-subheader class="subheading" v-else>
-          {{ subTasks && subTasks.length }} sub tasks
-        </v-subheader>
-        <template v-for="(subTaskItem, i) in subTasks">
-          <v-list-tile v-bind:key="subTaskItem.id">
-            <v-list-tile-action>
-              <v-checkbox
-                v-model="subTaskItem.isComplete"
-                @change="completeSubTaskItem(
-                  subTaskItem.id,
-                  subTaskItem.isComplete,
-                )"
-              ></v-checkbox>
-            </v-list-tile-action>
-            <v-list-tile-content>
-              <v-list-tile-title :class="{ completed: subTaskItem.isComplete}">
-                {{subTaskItem.body}}
-              </v-list-tile-title>
-            </v-list-tile-content>
-            <v-list-tile-action>
-              <v-btn
-                flat
-                icon
-                @click="deleteSubTaskItem(subTaskItem, i)"
-              >
-                <v-icon>delete</v-icon>
-              </v-btn>
-            </v-list-tile-action>
-          </v-list-tile>
-        </template>
-      </v-list>
+      <v-subheader class="subheading" v-if="subTasks && subTasks.length == 0">
+        You have 0 sub tasks
+      </v-subheader>
+      <v-subheader class="subheading" v-else>
+        {{ subTasks && subTasks.length }} sub tasks
+      </v-subheader>
+      <div v-for="(subTaskItem, i) in subTasks" v-bind:key="subTaskItem">
+        <v-list-tile v-bind:key="subTaskItem.id">
+          <v-list-tile-action>
+            <v-checkbox v-model="subTaskItem.isComplete" @change="completeSubTaskItem(
+              subTaskItem.id,
+              subTaskItem.isComplete,
+            )"></v-checkbox>
+          </v-list-tile-action>
+          <v-list-tile-content>
+            <v-list-tile-title :class="{ completed: subTaskItem.isComplete }">
+              {{ subTaskItem.body }}
+            </v-list-tile-title>
+          </v-list-tile-content>
+          <v-list-tile-action>
+            <v-btn flat icon @click="deleteSubTaskItem(subTaskItem, i)">
+              <v-icon>delete</v-icon>
+            </v-btn>
+          </v-list-tile-action>
+        </v-list-tile>
+      </div>
+    </v-list>
   </v-card>
 </template>
 <script>
 import gql from 'graphql-tag';
-
-import redirectOnError from '../utils/redirectOnError';
 
 export default {
   props: ['subTasks', 'editMode', 'newGoalItem', 'taskId', 'date', 'period'],
@@ -133,17 +116,25 @@ export default {
               isComplete: false,
             },
           );
+          this.$emit('update-sub-task-items', this.subTasks);
           this.newSubTaskItemBody = '';
         },
-        error: (error) => {
-          console.log('show task adding error', error);
-        },
+      }).catch(() => {
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occured',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
       });
     },
     deleteSubTaskItem(subTaskItem, index) {
       const { id } = subTaskItem;
       const { taskId, period, date } = this;
       this.subTasks.splice(index, 1);
+
+      this.$emit('update-sub-task-items', this.subTasks);
 
       this.$apollo.mutate({
         mutation: gql`
@@ -169,8 +160,7 @@ export default {
           period,
           date,
         },
-      }).catch((error) => {
-        redirectOnError(this.$router, error);
+      }).catch(() => {
         this.$notify({
           title: 'Error',
           text: 'An unexpected error occured',
@@ -217,7 +207,7 @@ export default {
         },
       })
         // .then(() => (this.$emit('refresh-task-goal', goalRef)))
-        .catch((error) => {
+        .catch(() => {
           this.$notify({
             title: 'Error',
             text: 'An unexpected error occured',
@@ -225,7 +215,6 @@ export default {
             type: 'error',
             duration: 3000,
           });
-          redirectOnError(this.$router, error);
         });
     },
   },
@@ -241,17 +230,18 @@ export default {
 </script>
 
 <style>
-  .sub-task-list .completed {
-    text-decoration: line-through;
-  }
-  .sub-task-list .v-list__group__items--no-action .v-list__tile {
-    padding-left: 16px;
-  }
+.sub-task-list .completed {
+  text-decoration: line-through;
+}
 
-  .sub-task-list .headline {
-    color: rgba(0, 0, 0, 0.54);
-    font-size: 14px !important;
-    line-height: 16px !important;
-    font-weight: bold;
-  }
+.sub-task-list .v-list__group__items--no-action .v-list__tile {
+  padding-left: 16px;
+}
+
+.sub-task-list .headline {
+  color: rgba(0, 0, 0, 0.54);
+  font-size: 14px !important;
+  line-height: 16px !important;
+  font-weight: bold;
+}
 </style>

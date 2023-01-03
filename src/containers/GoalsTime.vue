@@ -161,7 +161,6 @@
 import gql from 'graphql-tag';
 import moment from 'moment';
 
-import redirectOnError from '../utils/redirectOnError';
 import { defaultGoalItem, periodsArray } from '../constants/goals';
 
 import GoalItemList from '../components/GoalItemList.vue';
@@ -186,12 +185,18 @@ export default {
           goalItems {
             id
             body
+            tags
             isComplete
             isMilestone
             contribution,
             reward,
             taskRef
             goalRef
+            subTasks {
+              id
+              body
+              isComplete
+            },
           }
         }
       }
@@ -236,6 +241,7 @@ export default {
       isMilestone: false,
       taskRef: '',
       goalRef: '',
+      tags: [],
     },
     periods: periodsArray,
     rangeType: 'upcoming',
@@ -272,6 +278,7 @@ export default {
     updateNewGoalItem(goalItem, period, date) {
       this.newGoalItem = {
         ...goalItem,
+        tags: [...goalItem.tags],
         period,
         date,
       };
