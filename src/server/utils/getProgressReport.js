@@ -5,7 +5,7 @@ const moment = require('moment');
 const threshold = {
   weekDays: 5,
   monthWeeks: 3,
-  yearMonths: 9,
+  yearMonths: 6,
 };
 
 function weekOfMonth(d) {

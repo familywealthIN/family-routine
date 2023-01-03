@@ -120,6 +120,7 @@ import {
 } from '../utils/getDates';
 import SubTaskItemList from './SubTaskItemList.vue';
 import GoalTagsInput from './GoalTagsInput.vue';
+import getJSON from '../utils/getJSON';
 
 export default {
   components: { SubTaskItemList, GoalTagsInput },
@@ -222,7 +223,7 @@ export default {
           value: 'lifetime',
         },
       ],
-      userTags: JSON.parse(localStorage.getItem('USER_TAGS') || []),
+      userTags: getJSON(localStorage.getItem('USER_TAGS'), []),
     };
   },
   computed: {
@@ -477,7 +478,7 @@ export default {
       this.$refs.form.reset();
     },
     setLocalUserTag(newTags) {
-      const userTags = JSON.parse(localStorage.getItem('USER_TAGS') || []);
+      const userTags = getJSON(localStorage.getItem('USER_TAGS'), []);
       newTags.forEach((tag) => {
         if (!userTags.includes(tag)) {
           userTags.push(tag);

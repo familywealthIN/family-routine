@@ -47,6 +47,7 @@
 import gql from 'graphql-tag';
 
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
+import getJSON from '../utils/getJSON';
 import GoalTagsInput from './GoalTagsInput.vue';
 
 export default {
@@ -115,7 +116,7 @@ export default {
       },
       goalItems: [],
       showMilestoneOption: true,
-      userTags: JSON.parse(localStorage.getItem('USER_TAGS') || []),
+      userTags: getJSON(localStorage.getItem('USER_TAGS'), []),
     };
   },
   methods: {
@@ -274,7 +275,7 @@ export default {
       this.newGoalItem.tags = tags;
     },
     setLocalUserTag(newTags) {
-      const userTags = JSON.parse(localStorage.getItem('USER_TAGS') || []);
+      const userTags = getJSON(localStorage.getItem('USER_TAGS'), []);
       newTags.forEach((tag) => {
         if (!userTags.includes(tag)) {
           userTags.push(tag);

@@ -137,6 +137,7 @@ import {
   getYearsOfLife,
   stepupMilestonePeriodDate,
 } from '../utils/getDates';
+import getJSON from '../utils/getJSON';
 
 export default {
   props: ['selectedGoalItem'],
@@ -247,7 +248,7 @@ export default {
           value: 'lifetime',
         },
       ],
-      userTags: JSON.parse(localStorage.getItem('USER_TAGS') || []),
+      userTags: getJSON(localStorage.getItem('USER_TAGS'), []),
     };
   },
   computed: {
@@ -399,7 +400,7 @@ export default {
       this.newGoalItem.subTasks = subTasks;
     },
     setLocalUserTag(newTags) {
-      const userTags = JSON.parse(localStorage.getItem('USER_TAGS') || []);
+      const userTags = getJSON(localStorage.getItem('USER_TAGS'), []);
       newTags.forEach((tag) => {
         if (!userTags.includes(tag)) {
           userTags.push(tag);

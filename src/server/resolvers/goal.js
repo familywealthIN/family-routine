@@ -29,7 +29,7 @@ const { buildStimuliForRoutineItem } = require('./routine');
 const threshold = {
   weekDays: 5,
   monthWeeks: 3,
-  yearMonths: 9,
+  yearMonths: 6,
 };
 
 async function findTodayandSort(args, email) {
@@ -408,7 +408,7 @@ const mutation = {
         isMilestone,
         taskRef,
         goalRef,
-        tags,
+        tags = [],
       } = args;
 
       await setUserTag(email, tags);
@@ -485,7 +485,7 @@ const mutation = {
         isMilestone,
         taskRef,
         goalRef,
-        tags,
+        tags = [],
       } = args;
 
       await setUserTag(email, tags);

@@ -59,19 +59,19 @@ export default {
 
 <style>
 .vue-tags-input {
-  width: 100%;
+  width: 100% !important;
   max-width: unset !important;
-  margin-bottom: 8px;
-  padding: 4px 0;
+  margin-bottom: 8px !important;
+  padding: 4px 0 !important;
 }
 
 .vue-tags-input .ti-input {
-  border: none;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+  border: none !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.42) !important;
 }
 
 .vue-tags-input .ti-input input {
-  font-size: 1rem;
-  padding: 3px 0;
+  font-size: 1rem !important;
+  padding: 3px 0 !important;
 }
 </style>
