@@ -49,6 +49,7 @@ async function upsertGoogleUser({ accessToken, profile }, notificationId) {
       // eslint-disable-next-line no-underscore-dangle
       picture: profile._json.picture,
       groupId: '',
+      tags: [],
       'social.googleProvider': {
         id: profile.id,
         token: accessToken,

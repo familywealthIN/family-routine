@@ -31,7 +31,6 @@ const UserSchema = new mongoose.Schema({
   motto: [MottoItemSchema],
   tags: [{
     type: String,
-    unique: true,
   }],
 });
 
