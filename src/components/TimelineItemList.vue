@@ -45,6 +45,12 @@
 <script>
 import gql from 'graphql-tag';
 
+const threshold = {
+  weekDays: 5,
+  monthWeeks: 3,
+  yearMonths: 6,
+};
+
 export default {
   props: ['goal', 'editMode', 'newGoalItem', 'period'],
   data() {
@@ -57,11 +63,11 @@ export default {
   methods: {
     progressText(period, progress) {
       if (period === 'year') {
-        return `(${progress || 0}/10)`;
+        return `(${progress || 0}/${threshold.weekDays})`;
       } if (period === 'month') {
-        return `(${progress || 0}/3)`;
+        return `(${progress || 0}/${threshold.monthWeeks})`;
       } if (period === 'week') {
-        return `(${progress || 0}/5)`;
+        return `(${progress || 0}/${threshold.weekDays})`;
       }
       return '';
     },
