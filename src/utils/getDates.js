@@ -25,7 +25,7 @@ export function getDatesOfYear(beginDate) {
 
 export function getWeeksOfYear() {
   const currentWeek = moment().week();
-  const lastWeekOfYear = moment().endOf('year').week();
+  const lastWeekOfYear = moment().weeksInYear();
   const weeks = [];
   // eslint-disable-next-line no-plusplus
   for (let i = currentWeek; i <= lastWeekOfYear; i++) {
@@ -127,5 +127,25 @@ export function getPeriodDate(period, date, separator = ' - ') {
 
     default:
       return date;
+  }
+}
+
+export function isItBeforeToday(period, date) {
+  try {
+    switch (period) {
+      case 'day':
+        return moment(date, 'DD-MM-YYYY').diff(moment(0, 'HH')) < 0;
+      case 'week':
+        return moment(date, 'DD-MM-YYYY').diff(moment(0, 'HH')) < 0;
+      case 'month':
+        return moment(date, 'DD-MM-YYYY').diff(moment(0, 'HH')) < 0;
+      case 'year':
+        return moment(date, 'DD-MM-YYYY').diff(moment(0, 'HH')) < 0;
+      default:
+        return true;
+    }
+  } catch (e) {
+    console.log(e);
+    return true;
   }
 }

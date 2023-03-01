@@ -278,7 +278,7 @@ export default {
     updateNewGoalItem(goalItem, period, date) {
       this.newGoalItem = {
         ...goalItem,
-        tags: [...goalItem.tags],
+        tags: Array.isArray(goalItem.tags) ? [...goalItem.tags] : [],
         period,
         date,
       };
