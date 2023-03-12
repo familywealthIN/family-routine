@@ -80,12 +80,12 @@
                 <v-icon class="white--text" >{{getButtonIcon(task)}}</v-icon>
               </template>
               <v-layout>
-                <v-flex xs3 class="pr-3">
+                <v-flex xs2>
                   <strong>{{task.time}}</strong>
                 </v-flex>
                 <v-flex>
                   <strong>{{task.name}}</strong>
-                  <div class="caption">{{task.description}}</div>
+                  <div class="caption"><pre>{{task.description}}</pre></div>
                 </v-flex>
               </v-layout>
             </v-timeline-item>
@@ -150,6 +150,7 @@
                   <timeline-item-list
                     :key="task.id + period + i"
                     :goal="taskGoals"
+                    :period="period"
                     @delete-task-goal="deleteTaskGoal"
                   />
                 </template>
