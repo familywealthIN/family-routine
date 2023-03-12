@@ -22,7 +22,7 @@
               </v-list-tile-content>
             </v-list-tile>
           </template>
-          <goal-item-list @update-new-goal-item="updateNewGoalItem" :goal="goal" :editMode="true" />
+          <goal-item-list @update-new-goal-item="updateNewGoalItem" :goal="goal" :editMode="isItBeforeToday(goal.period, date)" />
         </v-list-group>
       </template>
     </div>
@@ -35,7 +35,7 @@
 <script>
 import moment from 'moment';
 
-import { getPeriodDate } from '../utils/getDates';
+import { getPeriodDate, isItBeforeToday } from '../utils/getDates';
 import GoalItemList from './GoalItemList.vue';
 
 export default {
@@ -43,7 +43,13 @@ export default {
     GoalItemList,
   },
   props: ['goals', 'periodFilter', 'updateNewGoalItem', 'rangeType'],
+  data() {
+    return {
+      date: moment().format('DD-MM-YYYY'),
+    };
+  },
   methods: {
+    isItBeforeToday,
     getPeriodDate: (period, date) => {
       const periodDate = getPeriodDate(period, date, '');
       switch (period) {
