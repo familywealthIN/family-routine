@@ -85,6 +85,8 @@
                 </v-flex>
                 <v-flex>
                   <strong>{{task.name}}</strong>
+                  <br />
+                  <a @click="() => $router.push(`/agenda/tree/${task.id}`)">Go to Month Planner</a>
                   <div class="caption"><pre>{{task.description}}</pre></div>
                 </v-flex>
               </v-layout>
