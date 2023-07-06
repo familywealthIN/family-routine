@@ -48,7 +48,7 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (networkError) {
     redirectOnError(router, networkError.statusCode);
     // Add something like this to set the error message to the one from the server response
-    if (graphQLErrors[0]) {
+    if (Array.isArray(graphQLErrors) && graphQLErrors[0]) {
       // eslint-disable-next-line no-param-reassign
       networkError.message = graphQLErrors[0].message;
     }

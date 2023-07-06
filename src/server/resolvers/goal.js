@@ -32,6 +32,30 @@ const threshold = {
   yearMonths: 6,
 };
 
+const getDaysArray = (year, month) => {
+  let firstMonday = '';
+  const threeFridays = [];
+  const monthIndex = month; // 0..11 instead of 1..12
+  const names = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const date = new Date(year, monthIndex, 1);
+  const result = [];
+  while (threeFridays.length <= 2) {
+    if (!firstMonday && names[date.getDay()] === 'mon') {
+      firstMonday = `${date.getDate()}-${month}-${year}`;
+    }
+
+    if (firstMonday && !['sun', 'sat'].includes(names[date.getDay()])) {
+      result.push(`${date.getDate()}-${month + 1}-${year}`);
+    }
+
+    if (firstMonday && names[date.getDay()] === 'fri' && threeFridays.length <= 2) {
+      threeFridays.push(`${date.getDate()}-${month + 1}-${year}`);
+    }
+    date.setDate(date.getDate() + 1);
+  }
+  return { result, threeFridays };
+};
+
 async function findTodayandSort(args, email) {
   const todaysRoutine = await RoutineModel.findOne({ date: args.date, email }).exec();
   if (todaysRoutine && todaysRoutine.tasklist) {
@@ -137,9 +161,10 @@ function updateGTasksMap(gRoutineTasks, tempGRoutineTasks) {
 }
 
 async function autoCheckTaskPeriod({
-  currentPeriod, stepDownPeriod, cleanGoals, completionThreshold, args, email, gRoutineTasks = null,
+  currentPeriod, stepDownPeriod, cleanGoals, completionThreshold, date, email, gRoutineTasks = null,
 }) {
-  const periodGoals = await GoalModel.find({ period: currentPeriod, date: periodGoalDates(currentPeriod, args.date), email }).exec();
+  const periodGoals = await GoalModel.find({ period: currentPeriod, date: periodGoalDates(currentPeriod, date), email }).exec();
+  console.log('periodGoals', currentPeriod, periodGoalDates(currentPeriod, date), periodGoals);
   const updatePromises = [];
   periodGoals.forEach((periodGoal) => {
     periodGoal.goalItems.forEach((periodGoalItem) => {
@@ -197,6 +222,7 @@ async function autoCheckTaskPeriod({
 
   await Promise.all(updatePromises);
 
+  // console.log('periodGoals', periodGoals);
   return periodGoals;
 }
 
@@ -244,16 +270,18 @@ const query = {
 
       const dayGoals = await GoalModel.find({ period: 'day', date: args.date, email }).exec();
 
+      const { date } = args;
+
       const weekGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, args, email,
+        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, date, email,
       });
 
       const monthGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, args, email,
+        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, date, email,
       });
 
       const yearGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: threshold.yearMonths, args, email,
+        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: threshold.yearMonths, date, email,
       });
 
       return [
@@ -261,6 +289,62 @@ const query = {
         ...weekGoals,
         ...monthGoals,
         ...yearGoals,
+      ];
+    },
+  },
+  monthTaskGoals: {
+    type: GraphQLList(GoalType),
+    args: {
+      date: { type: GraphQLNonNull(GraphQLString) },
+      taskRef: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const month = moment(args.date, 'DD-MM-YYYY').month();
+      const year = moment(args.date, 'DD-MM-YYYY').year();
+      const { result, threeFridays } = getDaysArray(year, month);
+      const goals = await GoalModel
+        .find(
+          { email, 'goalItems.taskRef': args.taskRef },
+        )
+        .exec();
+      const getMappedGoals = (gls) => gls && gls.map((goal) => {
+        if (goal.goalItems && goal.goalItems.length) {
+          goal.goalItems = goal.goalItems.filter((goalItem) => goalItem.taskRef === args.taskRef);
+          return goal;
+        }
+        return null;
+      });
+      const mappedGoals = getMappedGoals(goals);
+      const cleanGoals = mappedGoals.filter((goal) => goal.goalItems && goal.goalItems.length);
+
+      const dayGoals = cleanGoals.filter((gl) => gl.period === 'day' && month === moment(gl.date, 'DD-MM-YYYY').month());
+
+      const weekGoals01 = getMappedGoals(await autoCheckTaskPeriod({
+        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, date: threeFridays[0], email,
+      }));
+      const weekGoals02 = getMappedGoals(await autoCheckTaskPeriod({
+        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, date: threeFridays[1], email,
+      }));
+      const weekGoals03 = getMappedGoals(await autoCheckTaskPeriod({
+        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, date: threeFridays[2], email,
+      }));
+
+      const monthGoals = getMappedGoals(await autoCheckTaskPeriod({
+        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, date: args.date, email,
+      }));
+
+      console.log('result', result);
+      console.log('week goals', cleanGoals.filter((gl) => gl.period === 'week'));
+      console.log('threeFridays', threeFridays);
+
+      return [
+        // ...cleanGoals,
+        ...dayGoals,
+        ...weekGoals01,
+        ...weekGoals02,
+        ...weekGoals03,
+        ...monthGoals,
       ];
     },
   },
