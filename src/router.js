@@ -63,6 +63,16 @@ export default new Router({
       component: () => import(/* webpackChunkName: "milestones" */'./views/Milestones.vue'),
     },
     {
+      path: '/agenda/tree',
+      name: 'agendaTree',
+      component: () => import(/* webpackChunkName: "agendaTree" */ './views/AgendaTree.vue'),
+    },
+    {
+      path: '/agenda/tree/:selectedTaskRef',
+      name: 'agendaTree',
+      component: () => import(/* webpackChunkName: "agendaTree" */ './views/AgendaTree.vue'),
+    },
+    {
       path: '/agenda',
       name: 'agenda',
       component: () => import(/* webpackChunkName: "agenda" */ './views/Agenda.vue'),
