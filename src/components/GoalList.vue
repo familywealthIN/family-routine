@@ -70,7 +70,7 @@ export default {
   components: {
     GoalTagsInput,
   },
-  props: ['goals', 'selectedBody', 'date', 'period', 'tasklist', 'goalDetailsDialog', 'selectedTaskRef'],
+  props: ['goals', 'selectedBody', 'date', 'period', 'tasklist', 'goalDetailsDialog', 'selectedTaskRef', 'isDefaultMilestone'],
   apollo: {
     goalItemsRef: {
       query: gql`
@@ -110,14 +110,14 @@ export default {
       buttonLoading: false,
       newGoalItem: {
         body: this.selectedBody || '',
-        isMilestone: false,
+        isMilestone: this.isDefaultMilestone || false,
         goalRef: '',
         taskRef: this.selectedTaskRef || '',
         tags: [],
       },
       defaultGoalItem: {
         body: this.selectedBody || '',
-        isMilestone: false,
+        isMilestone: this.isDefaultMilestone || false,
         goalRef: '',
         taskRef: this.selectedTaskRef || '',
         tags: [],
@@ -129,7 +129,7 @@ export default {
   },
   methods: {
     getGoal(period, date) {
-      const goal = this.goals.find((aGoal) => aGoal.period === period && aGoal.date === date);
+      const goal = this.goals.find((aGoal) => aGoal && aGoal.period === period && aGoal.date === date);
       if (!goal) {
         const newGoal = {
           id: `${Math.random()}`,
@@ -208,6 +208,7 @@ export default {
             tags: [...this.newGoalItem.tags],
           });
           this.newGoalItem = { ...this.defaultGoalItem };
+          this.$apollo.queries.goalItemsRef.refetch();
           this.$emit('toggle-goal-details-dialog', false);
           this.buttonLoading = false;
         },
