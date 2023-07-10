@@ -270,18 +270,16 @@ const query = {
 
       const dayGoals = await GoalModel.find({ period: 'day', date: args.date, email }).exec();
 
-      const { date } = args;
-
       const weekGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, date, email,
+        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, date: args.date, email,
       });
 
       const monthGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, date, email,
+        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, date: args.date, email,
       });
 
       const yearGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: threshold.yearMonths, date, email,
+        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: threshold.yearMonths, date: args.date, email,
       });
 
       return [
@@ -362,15 +360,15 @@ const query = {
       const dayGoals = await GoalModel.find({ period: 'day', date: args.date, email }).exec();
 
       const weekGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, args, email,
+        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, date: args.date, email,
       });
 
       const monthGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, args, email,
+        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, date: args.date, email,
       });
 
       const yearGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: threshold.yearMonths, args, email,
+        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: threshold.yearMonths, date: args.date, email,
       });
 
       const lifetimeGoals = await GoalModel.find({ period: 'lifetime', email }).exec();
@@ -702,7 +700,7 @@ const mutation = {
           stepDownPeriod: 'day',
           cleanGoals,
           completionThreshold: threshold.weekDays,
-          args,
+          date: args.date,
           email,
           gRoutineTasks,
         });
@@ -714,7 +712,7 @@ const mutation = {
             stepDownPeriod: 'week',
             cleanGoals,
             completionThreshold: threshold.monthWeeks,
-            args,
+            date: args.date,
             email,
             gRoutineTasks,
           });
@@ -725,7 +723,7 @@ const mutation = {
               stepDownPeriod: 'month',
               cleanGoals,
               completionThreshold: threshold.yearMonths,
-              args,
+              date: args.date,
               email,
               gRoutineTasks,
             });
