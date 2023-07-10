@@ -44,15 +44,15 @@ const query = {
       const dayGoals = await GoalModel.find({ period: 'day', date: args.endDate, email }).exec();
 
       const weekGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, args: newArgs, email,
+        currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, date: newArgs.date, email,
       });
 
       const monthGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, args: newArgs, email,
+        currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, date: newArgs.date, email,
       });
 
       const yearGoals = await autoCheckTaskPeriod({
-        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: threshold.yearMonths, args: newArgs, email,
+        currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: threshold.yearMonths, date: newArgs.date, email,
       });
 
       const goals = [

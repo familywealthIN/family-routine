@@ -11,10 +11,16 @@
           </span>
           <ul class="children first-child">
             <li v-bind:key="monthMilestone" class="long" v-for="monthMilestone in goal.milestones">
-              <span class="rounded-long" @click="newGoalItem(monthMilestone.date, monthMilestone.name, monthMilestone.period)">{{ formatDate(monthMilestone.date) }} {{ monthMilestone.name }}</span>
+              <span class="rounded-long"
+                @click="newGoalItem(monthMilestone.date, monthMilestone.name, monthMilestone.period)">
+                {{ formatDate(monthMilestone.date) }} {{ monthMilestone.name }}
+              </span>
               <ul class="children first-child top-child last-child">
                 <li v-bind:key="weekMilestone" class="long" v-for="weekMilestone in monthMilestone.milestones">
-                  <span class="rounded-long" @click="newGoalItem(weekMilestone.date, weekMilestone.name, weekMilestone.period)">{{ formatDate(weekMilestone.date) }} {{ weekMilestone.name }}</span>
+                  <span class="rounded-long"
+                    @click="newGoalItem(weekMilestone.date, weekMilestone.name, weekMilestone.period)">
+                    {{ formatDate(weekMilestone.date) }} {{ weekMilestone.name }}
+                  </span>
                 </li>
               </ul>
             </li>
@@ -31,8 +37,9 @@
           <v-toolbar-title>Add Goal</v-toolbar-title>
           <v-spacer></v-spacer>
         </v-toolbar>
-        <goal-list :goals="monthTaskGoals" :date="correctDate(selectedDate)" :period="currentGoalPeriod" :selectedBody="selectedBody"
-          :tasklist="tasklist" :selectedTaskRef="selectedTaskRef" @toggle-goal-details-dialog="toggleGoalDetailsDialog" />
+        <goal-list :goals="monthTaskGoals" :date="correctDate(selectedDate)" :period="currentGoalPeriod"
+          :selectedBody="selectedBody" :tasklist="tasklist" :selectedTaskRef="selectedTaskRef" :isDefaultMilestone="true"
+          @toggle-goal-details-dialog="toggleGoalDetailsDialog" />
         <v-alert :value="true" color="success" icon="ev_station" outline class="ml-3 mr-3">
           It's better to set Month and Weekly goals first to better guide daily milestones.
         </v-alert>
@@ -117,31 +124,34 @@ export default {
       `,
       update(data) {
         console.log('===', data, this.agendaTreeGoals[0]);
-        const monthGoal = data.monthTaskGoals
-          .find((monthTaskGoal) => monthTaskGoal.period === 'month');
-        const weekGoals = data.monthTaskGoals
-          .filter((monthTaskGoal) => monthTaskGoal.period === 'week');
-        const dayGoals = data.monthTaskGoals
-          .filter((monthTaskGoal) => monthTaskGoal.period === 'day');
-        if (monthGoal.goalItems.length) {
-          this.agendaTreeGoals[0].name = `${this.agendaTreeGoals[0].name} ${monthGoal.goalItems[0].body}`;
-        }
-        this.agendaTreeGoals[0].milestones = this.agendaTreeGoals[0].milestones.map((milestone) => {
-          const milestoneWeek = weekGoals.find((weekGoal) => weekGoal.date === moment(milestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
-          if (milestoneWeek && milestoneWeek.goalItems && milestoneWeek.goalItems.length) {
-            milestone.name = milestoneWeek.goalItems[0].body;
-
-            milestone.milestones = milestone.milestones.map((dayMilestone) => {
-              const milestoneDay = dayGoals.find((dayGoal) => dayGoal.date === moment(dayMilestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
-              if (milestoneDay && milestoneDay.goalItems && milestoneDay.goalItems.length) {
-                dayMilestone.name = milestoneDay.goalItems[0].body;
-              }
-              return dayMilestone;
-            });
+        if (data.monthTaskGoals && data.monthTaskGoals.length) {
+          const monthGoal = data.monthTaskGoals
+            .find((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'month');
+          const weekGoals = data.monthTaskGoals
+            .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'week');
+          const dayGoals = data.monthTaskGoals
+            .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'day');
+          if (monthGoal.goalItems.length) {
+            this.agendaTreeGoals[0].name = `${this.agendaTreeGoals[0].name} ${monthGoal.goalItems[0].body}`;
           }
-          return milestone;
-        });
-        return data.monthTaskGoals;
+          this.agendaTreeGoals[0].milestones = this.agendaTreeGoals[0].milestones.map((milestone) => {
+            const milestoneWeek = weekGoals.find((weekGoal) => weekGoal.date === moment(milestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
+            if (milestoneWeek && milestoneWeek.goalItems && milestoneWeek.goalItems.length) {
+              milestone.name = milestoneWeek.goalItems[0].body;
+
+              milestone.milestones = milestone.milestones.map((dayMilestone) => {
+                const milestoneDay = dayGoals.find((dayGoal) => dayGoal.date === moment(dayMilestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
+                if (milestoneDay && milestoneDay.goalItems && milestoneDay.goalItems.length) {
+                  dayMilestone.name = milestoneDay.goalItems[0].body;
+                }
+                return dayMilestone;
+              });
+            }
+            return milestone;
+          });
+          return data.monthTaskGoals;
+        }
+        return [];
       },
       variables() {
         return {
