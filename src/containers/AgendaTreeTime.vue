@@ -3,6 +3,38 @@
     <pre style="display: none;">
       {{ JSON.stringify(monthTaskGoals, null, 2) }}
     </pre>
+    <v-layout>
+      <v-flex xs12 sm4 d-flex>
+        <v-select
+          :items="months"
+          label="Months"
+          v-model="selectedMonth"
+          item-text="label"
+          item-value="value"
+          outline
+        ></v-select>
+      </v-flex>
+      <v-flex xs12 sm4 d-flex>
+        <v-select
+          :items="tasklist"
+          label="Task List"
+          v-model="selectedTaskRef"
+          item-text="name"
+          item-value="id"
+          outline
+        ></v-select>
+      </v-flex>
+      <v-flex xs12 sm4 d-flex>
+        <v-select
+          :items="monthGoals"
+          v-model="monthGoalRef"
+          label="Month Goal"
+          item-text="name"
+          item-value="id"
+          outline
+        ></v-select>
+      </v-flex>
+    </v-layout>
     <div class="wrapper">
       <ul class="parent">
         <li v-bind:key="goal" class="long" v-for="goal in agendaTreeGoals">
@@ -123,7 +155,7 @@ export default {
         }
       `,
       update(data) {
-        console.log('===', data, this.agendaTreeGoals[0]);
+        this.buildAgendaTreeGoals();
         if (data.monthTaskGoals && data.monthTaskGoals.length) {
           const monthGoal = data.monthTaskGoals
             .find((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'month');
@@ -133,6 +165,7 @@ export default {
             .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'day');
           if (monthGoal.goalItems.length) {
             this.agendaTreeGoals[0].name = `${this.agendaTreeGoals[0].name} ${monthGoal.goalItems[0].body}`;
+            this.monthGoalRef = monthGoal.goalItems[0].id;
           }
           this.agendaTreeGoals[0].milestones = this.agendaTreeGoals[0].milestones.map((milestone) => {
             const milestoneWeek = weekGoals.find((weekGoal) => weekGoal.date === moment(milestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
@@ -170,14 +203,31 @@ export default {
       agendaTreeGoals: [],
       goalDetailsDialog: false,
       tasklist: [],
+      monthGoals: [],
       did: '',
       skipDay: false,
       currentGoalPeriod: 'day',
       selectedBody: '',
       date: moment().format('DD-MM-YYYY'),
+      selectedMonth: '',
+      monthGoalRef: '',
       weekDays: this.buildWeekdays(),
+      months: [
+        { value: '0', label: 'January' },
+        { value: '1', label: 'February' },
+        { value: '2', label: 'March' },
+        { value: '3', label: 'April' },
+        { value: '4', label: 'May' },
+        { value: '5', label: 'June' },
+        { value: '6', label: 'July' },
+        { value: '7', label: 'August' },
+        { value: '8', label: 'September' },
+        { value: '9', label: 'October' },
+        { value: '10', label: 'November' },
+        { value: '11', label: 'December' },
+      ],
       month: '',
-      years: '',
+      year: '',
       periods: ['year', 'month', 'week', 'day'],
       isEditable: true,
     };
@@ -193,32 +243,36 @@ export default {
     },
   },
   mounted() {
-    this.month = moment(this.date, 'DD-MM-YYYY').month();
-    this.year = moment(this.date, 'DD-MM-YYYY').year();
-    const { monthWeekDays, threeFridays } = this.getDaysArray(this.year, this.month);
-    const seperatedWeekDays = [];
-    seperatedWeekDays.push(monthWeekDays.slice(0, 5));
-    seperatedWeekDays.push(monthWeekDays.slice(5, 10));
-    seperatedWeekDays.push(monthWeekDays.slice(10, 15));
-
-    this.agendaTreeGoals[0] = {
-      period: 'month',
-      // name: moment(this.date, 'DD-MM-YYYY').format('MMMM'),
-      name: '',
-      date: `01-${this.month + 1}-${this.year}`,
-      milestones: threeFridays.map((workWeek, i) => ({
-        period: 'week',
-        name: '',
-        date: workWeek,
-        milestones: seperatedWeekDays[i].map((seperatedWeekDay) => ({
-          period: 'day',
-          name: '',
-          date: seperatedWeekDay,
-        })),
-      })),
-    };
+    this.buildAgendaTreeGoals();
   },
   methods: {
+    buildAgendaTreeGoals() {
+      this.month = moment(this.date, 'DD-MM-YYYY').month();
+      this.selectedMonth = String(this.month);
+      this.year = moment(this.date, 'DD-MM-YYYY').year();
+      const { monthWeekDays, threeFridays } = this.getDaysArray(this.year, this.month);
+      const seperatedWeekDays = [];
+      seperatedWeekDays.push(monthWeekDays.slice(0, 5));
+      seperatedWeekDays.push(monthWeekDays.slice(5, 10));
+      seperatedWeekDays.push(monthWeekDays.slice(10, 15));
+
+      this.agendaTreeGoals[0] = {
+        period: 'month',
+        // name: moment(this.date, 'DD-MM-YYYY').format('MMMM'),
+        name: '',
+        date: `01-${this.month + 1}-${this.year}`,
+        milestones: threeFridays.map((workWeek, i) => ({
+          period: 'week',
+          name: '',
+          date: workWeek,
+          milestones: seperatedWeekDays[i].map((seperatedWeekDay) => ({
+            period: 'day',
+            name: '',
+            date: seperatedWeekDay,
+          })),
+        })),
+      };
+    },
     buildWeekdays() {
       const weekDays = [];
       const dayShort = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
@@ -257,6 +311,11 @@ export default {
                   ticked
                   passed
                   wait
+                  stimuli {
+                    name
+                    splitRate
+                    earned
+                  }
                 }
               }
             }
