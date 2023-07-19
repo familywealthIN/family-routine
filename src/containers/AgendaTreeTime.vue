@@ -5,34 +5,16 @@
     </pre>
     <v-layout>
       <v-flex xs12 sm4 d-flex>
-        <v-select
-          :items="months"
-          label="Months"
-          v-model="selectedMonth"
-          item-text="label"
-          item-value="value"
-          outline
-        ></v-select>
+        <v-select :items="months" label="Months" v-model="selectedMonth" item-text="label" item-value="value"
+          outline></v-select>
       </v-flex>
       <v-flex xs12 sm4 d-flex>
-        <v-select
-          :items="tasklist"
-          label="Task List"
-          v-model="selectedTaskRef"
-          item-text="name"
-          item-value="id"
-          outline
-        ></v-select>
+        <v-select :items="tasklist" label="Task List" v-model="selectedTaskRef" item-text="name" item-value="id"
+          outline></v-select>
       </v-flex>
       <v-flex xs12 sm4 d-flex>
-        <v-select
-          :items="monthGoals"
-          v-model="monthGoalRef"
-          label="Month Goal"
-          item-text="name"
-          item-value="id"
-          outline
-        ></v-select>
+        <v-select :items="monthGoals" v-model="monthGoalRef" label="Month Goal" item-text="name" item-value="id"
+          outline></v-select>
       </v-flex>
     </v-layout>
     <div class="wrapper">
@@ -155,33 +137,8 @@ export default {
         }
       `,
       update(data) {
-        this.buildAgendaTreeGoals();
+        this.buildAgendaTreeGoals(data.monthTaskGoals);
         if (data.monthTaskGoals && data.monthTaskGoals.length) {
-          const monthGoal = data.monthTaskGoals
-            .find((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'month');
-          const weekGoals = data.monthTaskGoals
-            .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'week');
-          const dayGoals = data.monthTaskGoals
-            .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'day');
-          if (monthGoal.goalItems.length) {
-            this.agendaTreeGoals[0].name = `${this.agendaTreeGoals[0].name} ${monthGoal.goalItems[0].body}`;
-            this.monthGoalRef = monthGoal.goalItems[0].id;
-          }
-          this.agendaTreeGoals[0].milestones = this.agendaTreeGoals[0].milestones.map((milestone) => {
-            const milestoneWeek = weekGoals.find((weekGoal) => weekGoal.date === moment(milestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
-            if (milestoneWeek && milestoneWeek.goalItems && milestoneWeek.goalItems.length) {
-              milestone.name = milestoneWeek.goalItems[0].body;
-
-              milestone.milestones = milestone.milestones.map((dayMilestone) => {
-                const milestoneDay = dayGoals.find((dayGoal) => dayGoal.date === moment(dayMilestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
-                if (milestoneDay && milestoneDay.goalItems && milestoneDay.goalItems.length) {
-                  dayMilestone.name = milestoneDay.goalItems[0].body;
-                }
-                return dayMilestone;
-              });
-            }
-            return milestone;
-          });
           return data.monthTaskGoals;
         }
         return [];
@@ -241,12 +198,17 @@ export default {
         this.isEditable = moment(date).isSameOrAfter(todayDate, 'day');
       }
     },
+    monthGoalRef(newVal, oldVal) {
+      if (oldVal && newVal !== oldVal) {
+        this.buildAgendaTreeGoals(this.monthTaskGoals);
+      }
+    },
   },
   mounted() {
-    this.buildAgendaTreeGoals();
+    this.buildCleanAgendaTreeGoals();
   },
   methods: {
-    buildAgendaTreeGoals() {
+    buildCleanAgendaTreeGoals() {
       this.month = moment(this.date, 'DD-MM-YYYY').month();
       this.selectedMonth = String(this.month);
       this.year = moment(this.date, 'DD-MM-YYYY').year();
@@ -255,6 +217,8 @@ export default {
       seperatedWeekDays.push(monthWeekDays.slice(0, 5));
       seperatedWeekDays.push(monthWeekDays.slice(5, 10));
       seperatedWeekDays.push(monthWeekDays.slice(10, 15));
+
+      this.agendaTreeGoals = [];
 
       this.agendaTreeGoals[0] = {
         period: 'month',
@@ -272,6 +236,58 @@ export default {
           })),
         })),
       };
+    },
+    buildAgendaTreeGoals(monthTaskGoals) {
+      this.buildCleanAgendaTreeGoals();
+      if (monthTaskGoals && monthTaskGoals.length) {
+        if (this.monthGoals && this.monthGoals.length === 0) {
+          monthTaskGoals
+            .forEach((monthTaskGoal) => {
+              if (monthTaskGoal && monthTaskGoal.period === 'month') {
+                monthTaskGoal.goalItems.forEach((goalItem) => {
+                  this.monthGoals.push({
+                    id: goalItem.id,
+                    name: goalItem.body,
+                  });
+                });
+              }
+            });
+        }
+
+        const monthGoal = monthTaskGoals
+          .find((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'month');
+        const weekGoals = monthTaskGoals
+          .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'week');
+        const dayGoals = monthTaskGoals
+          .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'day');
+
+        if (monthGoal.goalItems.length) {
+          if (!this.monthGoalRef) {
+            this.monthGoalRef = monthGoal.goalItems[0].id;
+          }
+          const monthGoalSelected = this.monthGoals.find((mG) => mG.id === this.monthGoalRef);
+          this.agendaTreeGoals[0].name = `${this.agendaTreeGoals[0].name} ${monthGoalSelected.name}`;
+        }
+
+        this.agendaTreeGoals[0].milestones = this.agendaTreeGoals[0].milestones.map((milestone) => {
+          const milestoneWeek = weekGoals.find((weekGoal) => weekGoal.date === moment(milestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
+          if (milestoneWeek && milestoneWeek.goalItems && milestoneWeek.goalItems.length) {
+
+            const weekGoalSelected = milestoneWeek.goalItems.find((goalItem) => goalItem.goalRef === this.monthGoalRef);
+            milestone.name = weekGoalSelected ? weekGoalSelected.body : milestone.name;
+
+            milestone.milestones = milestone.milestones.map((dayMilestone) => {
+              const milestoneDay = dayGoals.find((dayGoal) => dayGoal.date === moment(dayMilestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
+              if (milestoneDay && milestoneDay.goalItems && milestoneDay.goalItems.length) {
+                const dayGoalSelected = milestoneDay.goalItems.find((goalItem) => goalItem.goalRef === weekGoalSelected.id);
+                dayMilestone.name = dayGoalSelected ? dayGoalSelected.body : dayMilestone.name;
+              }
+              return dayMilestone;
+            });
+          }
+          return milestone;
+        });
+      }
     },
     buildWeekdays() {
       const weekDays = [];
