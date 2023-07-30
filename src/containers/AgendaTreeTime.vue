@@ -3,16 +3,16 @@
     <pre style="display: none;">
       {{ JSON.stringify(monthTaskGoals, null, 2) }}
     </pre>
-    <v-layout>
-      <v-flex xs12 sm4 d-flex>
+    <v-layout pt-3>
+      <v-flex xs12 sm4 pl-3 pr-2 d-flex>
         <v-select :items="months" label="Months" v-model="selectedMonth" item-text="label" item-value="value"
           outline></v-select>
       </v-flex>
-      <v-flex xs12 sm4 d-flex>
+      <v-flex xs12 sm4 pl-2 pr-2 d-flex>
         <v-select :items="tasklist" label="Task List" v-model="selectedTaskRef" item-text="name" item-value="id"
           outline></v-select>
       </v-flex>
-      <v-flex xs12 sm4 d-flex>
+      <v-flex xs12 sm4 pl-2 pr-3 d-flex>
         <v-select :items="monthGoals" v-model="monthGoalRef" label="Month Goal" item-text="name" item-value="id"
           outline></v-select>
       </v-flex>
@@ -198,6 +198,12 @@ export default {
         this.isEditable = moment(date).isSameOrAfter(todayDate, 'day');
       }
     },
+    selectedMonth(newVal, oldVal) {
+      if (oldVal && newVal !== oldVal) {
+        this.date = moment(Number(newVal) + 1, 'MM').format('DD-MM-YYYY');
+        // console.log('=== this.date newVal', this.date, newVal);
+      }
+    },
     monthGoalRef(newVal, oldVal) {
       if (oldVal && newVal !== oldVal) {
         this.buildAgendaTreeGoals(this.monthTaskGoals);
@@ -219,6 +225,7 @@ export default {
       seperatedWeekDays.push(monthWeekDays.slice(10, 15));
 
       this.agendaTreeGoals = [];
+      this.monthGoals = [];
 
       this.agendaTreeGoals[0] = {
         period: 'month',
