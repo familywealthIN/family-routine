@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="timeline-item-list">
     <template v-for="(goalItem, i) in goal.goalItems">
       <v-timeline-item
         :class="`${periodPadding(period)} mb-0 pb-0`"

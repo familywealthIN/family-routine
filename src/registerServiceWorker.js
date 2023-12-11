@@ -4,7 +4,7 @@ import { register } from 'register-service-worker';
 import { netlify } from './blob/config';
 
 if (netlify) {
-  const serviceWorkerScriptFile = navigator.userAgent.match(/iPad/i) 
+  const serviceWorkerScriptFile = navigator.userAgent.match(/iPad/i)
     ? `${process.env.BASE_URL}basic-sw.js`
     : `${process.env.BASE_URL}sw.js`;
 

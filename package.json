@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "node ./node_modules/@vue/cli-service/bin/vue-cli-service serve",
-    "serve": "node ./node_modules/@vue/cli-service/bin/vue-cli-service serve",
-    "build": "node ./node_modules/@vue/cli-service/bin/vue-cli-service build",
-    "lint": "node ./node_modules/@vue/cli-service/bin/vue-cli-service lint",
-    "serve:server": "node ./node_modules/nodemon/bin/nodemon.js --watch src/server ./server.js"
+    "start": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/@vue/cli-service/bin/vue-cli-service serve",
+    "serve": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/@vue/cli-service/bin/vue-cli-service serve",
+    "build": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/@vue/cli-service/bin/vue-cli-service build",
+    "lint": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/@vue/cli-service/bin/vue-cli-service lint",
+    "serve:server": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/nodemon/bin/nodemon.js --watch src/server ./server.js"
   },
   "dependencies": {
     "@johmun/vue-tags-input": "^2.1.0",
@@ -81,5 +81,8 @@
     "last 2 versions",
     "iOS 9",
     "ie 11"
-  ]
+  ],
+  "prettier": {
+    "singleQuote": true
+  }
 }

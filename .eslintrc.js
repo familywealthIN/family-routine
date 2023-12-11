@@ -16,6 +16,7 @@ module.exports = {
     'no-restricted-globals': 'off',
     'no-alert': 'off',
     'no-console': 'off',
+    "linebreak-style": 0,
   },
   overrides: [
     {
