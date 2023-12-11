@@ -78,6 +78,7 @@
       :value="true"
       fixed
       color="white"
+      class="pb-2"
       v-if="$route.name !== 'login'"
     >
       <v-btn
@@ -130,7 +131,7 @@ export default {
         {
           header: 'App',
           items: [
-            { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
+            // { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
             { title: 'Family', icon: 'supervisor_account', route: '/family' },
             { title: 'History', icon: 'update', route: '/history' },
             { title: 'Milestones', icon: 'filter_hdr', route: '/goals/milestones' },
@@ -202,7 +203,7 @@ export default {
 
 <style>
 #mobileLayout {
-    padding-bottom: 56px;
+    padding-bottom: 64px;
 }
 
 #mobileLayout .v-card {
@@ -253,5 +254,8 @@ export default {
 #mobileLayout .v-navigation-drawer--temporary:not(.v-navigation-drawer--close),
 #mobileLayout .v-navigation-drawer--is-mobile:not(.v-navigation-drawer--close) {
   width: 100% !important;
+}
+.v-bottom-nav {
+  height: 64px !important;
 }
 </style>
