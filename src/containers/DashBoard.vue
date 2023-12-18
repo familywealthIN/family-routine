@@ -1383,6 +1383,10 @@ export default {
           const nextTask = this.tasklist[idx + 1];
           const nextTimeString = nextTask ? nextTask.time : '23:59';
           const nextTime = moment(nextTimeString, 'HH:mm');
+          const isTimeBeforeFirstTask = idx === 0 && currentTime.diff(taskTime, 'minutes') < -1;
+          if (isTimeBeforeFirstTask) {
+            return isTimeBeforeFirstTask;
+          }
           const isTimeGreaterThanTask = currentTime.diff(taskTime, 'minutes') > 1;
           const isTimeLessThanNextTask = currentTime.diff(nextTime, 'minutes') < -1;
           return isTimeGreaterThanTask && isTimeLessThanNextTask;
