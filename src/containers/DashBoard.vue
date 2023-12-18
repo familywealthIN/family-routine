@@ -180,7 +180,6 @@
                     :size="50"
                     :rotate="-90"
                     class="mt-3"
-                    color="white"
                     width="6"
                     >D</v-progress-circular
                   >
@@ -193,7 +192,6 @@
                     :size="50"
                     :rotate="-90"
                     class="mt-3"
-                    color="white"
                     width="6"
                     >K</v-progress-circular
                   >
@@ -206,7 +204,6 @@
                     :size="50"
                     :rotate="-90"
                     class="mt-3"
-                    color="white"
                     width="6"
                     >G</v-progress-circular
                   >
@@ -981,13 +978,18 @@ export default {
       this.goalDetailsDialog = true;
     },
     filterUpcomingPastTask(isPast, tasklist) {
+      let returnTasklist = [];
       if (Array.isArray(tasklist)) {
+        const currentTaskId = this.currentTask ? this.currentTask.id : '0';
         if (isPast) {
-          return tasklist.filter((task) => task.passed && task.id !== this.currentTask.id);
+          returnTasklist = tasklist
+            .filter((task) => task.passed && task.id !== currentTaskId);
+        } else {
+          returnTasklist = tasklist
+            .filter((task) => (task.wait || !task.passed) && task.id !== currentTaskId);
         }
-        return tasklist.filter((task) => (task.wait || !task.passed) && task.id !== this.currentTask.id);
       }
-      return [];
+      return returnTasklist;
     },
     filterTaskGoalsPeriod(id, goals, currentGoalPeriod) {
       const taskGoalList = [];
@@ -1375,16 +1377,16 @@ export default {
     },
     currentTask() {
       if (Array.isArray(this.tasklist) && this.tasklist.length) {
-        const currentActiveTask = this.tasklist.find((task) => !task.passed && !task.wait);
-        if (!currentActiveTask) {
-          const passedTaskList = this.tasklist.filter((task) => task.passed);
-
-          if (passedTaskList.length) {
-            return passedTaskList[passedTaskList.length - 1];
-          }
-
-          return this.tasklist[0];
-        }
+        const currentActiveTask = this.tasklist.find((task, idx) => {
+          const taskTime = moment(task.time, 'HH:mm');
+          const currentTime = moment();
+          const nextTask = this.tasklist[idx + 1];
+          const nextTimeString = nextTask ? nextTask.time : '23:59';
+          const nextTime = moment(nextTimeString, 'HH:mm');
+          const isTimeGreaterThanTask = currentTime.diff(taskTime, 'minutes') > 1;
+          const isTimeLessThanNextTask = currentTime.diff(nextTime, 'minutes') < -1;
+          return isTimeGreaterThanTask && isTimeLessThanNextTask;
+        });
         return currentActiveTask;
       }
 
