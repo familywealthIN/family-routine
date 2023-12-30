@@ -181,6 +181,7 @@
                     :rotate="-90"
                     class="mt-3"
                     width="6"
+                    color="primary"
                     >D</v-progress-circular
                   >
                 </div>
@@ -193,6 +194,7 @@
                     :rotate="-90"
                     class="mt-3"
                     width="6"
+                    color="primary"
                     >K</v-progress-circular
                   >
                 </div>
@@ -205,6 +207,7 @@
                     :rotate="-90"
                     class="mt-3"
                     width="6"
+                    color="primary"
                     >G</v-progress-circular
                   >
                 </div>
@@ -981,12 +984,21 @@ export default {
       let returnTasklist = [];
       if (Array.isArray(tasklist)) {
         const currentTaskId = this.currentTask ? this.currentTask.id : '0';
+        const currentTime = moment();
         if (isPast) {
           returnTasklist = tasklist
-            .filter((task) => task.passed && task.id !== currentTaskId);
+            .filter((task) => {
+              const taskTime = moment(task.time, 'HH:mm');
+              const isTimeGreaterThanTask = currentTime.diff(taskTime, 'minutes') > 1;
+              return isTimeGreaterThanTask && task.id !== currentTaskId;
+            });
         } else {
           returnTasklist = tasklist
-            .filter((task) => (task.wait || !task.passed) && task.id !== currentTaskId);
+            .filter((task) => {
+              const taskTime = moment(task.time, 'HH:mm');
+              const isTimeLessThanNextTask = currentTime.diff(taskTime, 'minutes') < -1;
+              return isTimeLessThanNextTask && task.id !== currentTaskId;
+            });
         }
       }
       return returnTasklist;
@@ -1396,6 +1408,14 @@ export default {
 
       return {};
     },
+  },
+  mounted() {
+    this.timerId = setInterval(() => {
+      if (this.date !== moment().format('DD-MM-YYYY')) {
+        this.date = moment().format('DD-MM-YYYY');
+      }
+      this.setPassedWait();
+    }, 60 * 1000);
   },
 };
 </script>
