@@ -1409,6 +1409,14 @@ export default {
       return {};
     },
   },
+  mounted() {
+    this.timerId = setInterval(() => {
+      if (this.date !== moment().format('DD-MM-YYYY')) {
+        this.date = moment().format('DD-MM-YYYY');
+      }
+      this.setPassedWait();
+    }, 60 * 1000);
+  },
 };
 </script>
 
