@@ -1,14 +1,14 @@
 <template>
   <v-layout pl-3 pr-3 row wrap>
     <v-flex xs12 d-flex>
-      <div class="formGoal mt-2 mb-2">
+      <div class="form-goal mt-2 mb-2">
         <v-text-field
           clearable
           v-model="newGoalItem.body"
           id="newGoalItemBody"
           name="newGoalItemBody"
           label="Type your task"
-          class="inputGoal"
+          class="input-goal"
           @keyup.enter="addGoalItem"
         >
         </v-text-field>
@@ -102,14 +102,14 @@ export default {
       buttonLoading: false,
       newGoalItem: {
         body: this.selectedBody || '',
-        isMilestone: true,
+        isMilestone: false,
         goalRef: '',
         taskRef: this.selectedTaskRef || '',
         tags: [],
       },
       defaultGoalItem: {
         body: this.selectedBody || '',
-        isMilestone: true,
+        isMilestone: false,
         goalRef: '',
         taskRef: this.selectedTaskRef || '',
         tags: [],
@@ -185,7 +185,7 @@ export default {
             period: this.period,
             date,
             isComplete: false,
-            isMilestone: this.newGoalItem.isMilestone,
+            isMilestone: !!this.newGoalItem.goalRef || this.newGoalItem.isMilestone,
             goalRef: this.newGoalItem.goalRef,
             taskRef: this.newGoalItem.taskRef,
             tags: this.newGoalItem.tags,
@@ -194,7 +194,7 @@ export default {
             goal.goalItems.push({
               id: addGoalItem.id,
               body: this.newGoalItem.body,
-              isMilestone: this.newGoalItem.isMilestone,
+              isMilestone: !!this.newGoalItem.goalRef || this.newGoalItem.isMilestone,
               isComplete: false,
               goalRef: this.newGoalItem.goalRef,
               taskRef: this.newGoalItem.taskRef,
@@ -326,13 +326,13 @@ export default {
 </script>
 
 <style>
-.formGoal {
+.form-goal {
   display: flex;
   grid-column: 2;
   width: 100%;
 }
 
-.inputGoal {
+.input-goal {
   display: inline-block;
   flex-shrink: 0;
   flex-grow: 1;
