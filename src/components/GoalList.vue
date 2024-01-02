@@ -245,7 +245,7 @@ export default {
       goalItems.forEach((goalItem) => {
         const timeTask = this.tasklist.find((task) => task.id === goalItem.taskRef);
         // eslint-disable-next-line no-param-reassign
-        goalItem.time = timeTask.time;
+        if (timeTask) goalItem.time = timeTask.time;
       });
 
       this.sortTimes(goalItems);

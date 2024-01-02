@@ -146,12 +146,14 @@ export default {
     margin-left: 8px;
   }
 
-  @media (min-width: 1024px) {
+  @media (min-width: 1200px) {
     .v-toolbar__side-icon {
       display: none;
     }
+  }
+  @media (min-width: 1024px) {
 
-    nav + main.v-content {
+    .v-navigation-drawer--open ~ main.v-content {
       padding-left: 240px !important;
     }
 
