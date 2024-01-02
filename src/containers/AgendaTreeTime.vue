@@ -19,18 +19,18 @@
     </v-layout>
     <div class="wrapper">
       <ul class="parent">
-        <li v-bind:key="goal" class="long" v-for="goal in agendaTreeGoals">
+        <li v-bind:key="String(goal.date + goal.name +goal.period)" class="long" v-for="goal in agendaTreeGoals">
           <span class="rounded-long" @click="newGoalItem(goal.date, goal.name, goal.period)">
             {{ formatDate(goal.date) }} {{ goal.name }}
           </span>
           <ul class="children first-child">
-            <li v-bind:key="monthMilestone" class="long" v-for="monthMilestone in goal.milestones">
+            <li v-bind:key="String(monthMilestone.date + monthMilestone.name + monthMilestone.period)" class="long" v-for="monthMilestone in goal.milestones">
               <span class="rounded-long"
                 @click="newGoalItem(monthMilestone.date, monthMilestone.name, monthMilestone.period)">
                 {{ formatDate(monthMilestone.date) }} {{ monthMilestone.name }}
               </span>
               <ul class="children first-child top-child last-child">
-                <li v-bind:key="weekMilestone" class="long" v-for="weekMilestone in monthMilestone.milestones">
+                <li v-bind:key="String(weekMilestone.date + weekMilestone.name + weekMilestone.period)" class="long" v-for="weekMilestone in monthMilestone.milestones">
                   <span class="rounded-long"
                     @click="newGoalItem(weekMilestone.date, weekMilestone.name, weekMilestone.period)">
                     {{ formatDate(weekMilestone.date) }} {{ weekMilestone.name }}
@@ -166,6 +166,7 @@ export default {
       currentGoalPeriod: 'day',
       selectedBody: '',
       date: moment().format('DD-MM-YYYY'),
+      selectedDate: moment().format('DD-MM-YYYY'),
       selectedMonth: '',
       monthGoalRef: '',
       weekDays: this.buildWeekdays(),
@@ -273,7 +274,7 @@ export default {
             this.monthGoalRef = monthGoal.goalItems[0].id;
           }
           const monthGoalSelected = this.monthGoals.find((mG) => mG.id === this.monthGoalRef);
-          this.agendaTreeGoals[0].name = `${this.agendaTreeGoals[0].name} ${monthGoalSelected.name}`;
+          this.agendaTreeGoals[0].name = `${this.agendaTreeGoals[0].name} ${monthGoalSelected && monthGoalSelected.name || ''}`;
         }
 
         this.agendaTreeGoals[0].milestones = this.agendaTreeGoals[0].milestones.map((milestone) => {
