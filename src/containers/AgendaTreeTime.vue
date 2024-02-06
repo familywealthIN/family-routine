@@ -24,13 +24,21 @@
             {{ formatDate(goal.date) }} {{ goal.name }}
           </span>
           <ul class="children first-child">
-            <li v-bind:key="String(monthMilestone.date + monthMilestone.name + monthMilestone.period)" class="long" v-for="monthMilestone in goal.milestones">
+            <li
+              v-bind:key="String(monthMilestone.date + monthMilestone.name + monthMilestone.period)"
+              class="long"
+              v-for="monthMilestone in goal.milestones"
+            >
               <span class="rounded-long"
                 @click="newGoalItem(monthMilestone.date, monthMilestone.name, monthMilestone.period)">
                 {{ formatDate(monthMilestone.date) }} {{ monthMilestone.name }}
               </span>
               <ul class="children first-child top-child last-child">
-                <li v-bind:key="String(weekMilestone.date + weekMilestone.name + weekMilestone.period)" class="long" v-for="weekMilestone in monthMilestone.milestones">
+                <li
+                  v-bind:key="String(weekMilestone.date + weekMilestone.name + weekMilestone.period)"
+                  class="long"
+                  v-for="weekMilestone in monthMilestone.milestones"
+                >
                   <span class="rounded-long"
                     @click="newGoalItem(weekMilestone.date, weekMilestone.name, weekMilestone.period)">
                     {{ formatDate(weekMilestone.date) }} {{ weekMilestone.name }}
@@ -274,19 +282,20 @@ export default {
             this.monthGoalRef = monthGoal.goalItems[0].id;
           }
           const monthGoalSelected = this.monthGoals.find((mG) => mG.id === this.monthGoalRef);
-          this.agendaTreeGoals[0].name = `${this.agendaTreeGoals[0].name} ${monthGoalSelected && monthGoalSelected.name || ''}`;
+          this.agendaTreeGoals[0].name = `${this.agendaTreeGoals[0].name} ${monthGoalSelected ? monthGoalSelected.name : ''}`;
         }
 
         this.agendaTreeGoals[0].milestones = this.agendaTreeGoals[0].milestones.map((milestone) => {
           const milestoneWeek = weekGoals.find((weekGoal) => weekGoal.date === moment(milestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
           if (milestoneWeek && milestoneWeek.goalItems && milestoneWeek.goalItems.length) {
-
             const weekGoalSelected = milestoneWeek.goalItems.find((goalItem) => goalItem.goalRef === this.monthGoalRef);
             milestone.name = weekGoalSelected ? weekGoalSelected.body : milestone.name;
 
             milestone.milestones = milestone.milestones.map((dayMilestone) => {
               const milestoneDay = dayGoals.find((dayGoal) => dayGoal.date === moment(dayMilestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
-              if (milestoneDay && milestoneDay.goalItems && milestoneDay.goalItems.length) {
+              const hasMilestoneDayValues = milestoneDay && milestoneDay.goalItems && milestoneDay.goalItems.length;
+              const hasWeekGoalSelectedId = weekGoalSelected && weekGoalSelected.id;
+              if (hasMilestoneDayValues && hasWeekGoalSelectedId) {
                 const dayGoalSelected = milestoneDay.goalItems.find((goalItem) => goalItem.goalRef === weekGoalSelected.id);
                 dayMilestone.name = dayGoalSelected ? dayGoalSelected.body : dayMilestone.name;
               }
