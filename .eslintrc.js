@@ -17,6 +17,7 @@ module.exports = {
     'no-alert': 'off',
     'no-console': 'off',
     "linebreak-style": 0,
+    "max-len": ["error", { "code": 150 }],
   },
   overrides: [
     {
