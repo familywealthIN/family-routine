@@ -46,7 +46,7 @@
           v-model="newPendingItem.mottoItem"
           id="newPendingItem"
           name="newPendingItem"
-          label="Type your Pending"
+          label="Type your unplanned task"
           class="inputPending"
           @keyup.enter="addPendingItem"
         >
