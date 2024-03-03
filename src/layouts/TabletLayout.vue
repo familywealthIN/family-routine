@@ -46,8 +46,8 @@
       <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
       <v-toolbar-title class="white--text">{{ pageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon @click="mottoDialog = true">
-        <v-icon>favorite</v-icon>
+      <v-btn icon @click="pendingDialog = true">
+        <v-icon>checklist</v-icon>
       </v-btn>
     </v-toolbar>
     <v-content>

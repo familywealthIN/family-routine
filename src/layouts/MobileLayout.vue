@@ -62,8 +62,8 @@
     <v-toolbar v-if="$route.name !== 'login'" class="elevation-0" color="white" app>
       <v-toolbar-title style="font-size: 24px">{{ pageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon @click="mottoDialog = true">
-        <v-icon size="28">favorite</v-icon>
+      <v-btn icon @click="pendingDialog = true">
+        <v-icon size="28">checklist</v-icon>
       </v-btn>
       <v-btn icon @click.stop="drawer = !drawer">
         <v-avatar size="32">
@@ -94,39 +94,39 @@
       </v-btn>
     </v-bottom-nav>
     <v-dialog
-      v-model="mottoDialog"
+      v-model="pendingDialog"
       fullscreen
       hide-overlay
       transition="dialog-bottom-transition"
     >
       <v-card>
         <v-toolbar dark color="primary">
-          <v-btn icon dark @click="mottoDialog = false">
+          <v-btn icon dark @click="pendingDialog = false">
             <v-icon>close</v-icon>
           </v-btn>
-          <v-toolbar-title>Motto</v-toolbar-title>
+          <v-toolbar-title>Pending Items</v-toolbar-title>
           <v-spacer></v-spacer>
         </v-toolbar>
-        <motto-list />
+        <pending-list />
       </v-card>
     </v-dialog>
   </div>
 </template>
 
 <script>
-import MottoList from '../components/MottoList.vue';
+import PendingList from '../components/PendingList.vue';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN, USER_TAGS,
 } from '../constants/settings';
 
 export default {
   components: {
-    MottoList,
+    PendingList,
   },
   data() {
     return {
       drawer: null,
-      mottoDialog: false,
+      pendingDialog: false,
       drawerItems: [
         {
           header: 'App',
