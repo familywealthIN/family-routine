@@ -1,6 +1,6 @@
 <template>
   <container-box transparent="true" :isLoading="isLoading">
-    <v-card class="mb-3 pb-3">
+    <v-card class="mb-3 pb-3" style="border-radius: 0;">
       <div class="weekdays pt-3 pl-2 pr-2">
         <template v-for="(weekDay, i) in weekDays">
           <div
@@ -67,8 +67,9 @@
                     <v-list-tile-content>
                       <v-list-tile-title>
                         <span>{{ currentTask.name }}</span>
+                        <div class="step-info" @click="toggleStepModal = true"><v-icon>info</v-icon></div>
                       </v-list-tile-title>
-                      <v-list-tile-sub-title>
+                      <v-list-tile-sub-title class="pt-2">
                         <div class="time-text">
                           {{ currentTask.time }} - {{ countTaskCompleted(currentTask) }}/{{ countTaskTotal(currentTask) }}
                         </div>
@@ -655,6 +656,38 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+    <v-dialog
+      v-model="toggleStepModal"
+      width="500"
+    >
+      <v-card>
+        <v-card-title
+          class="headline grey lighten-2"
+          primary-title
+        >
+          Routine Steps
+        </v-card-title>
+
+        <v-card-text>
+          <ul>
+            <li v-for="step in currentTask.steps" v-bind:key="step.name">{{ step.name }}</li>
+          </ul>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="primary"
+            flat
+            @click="toggleStepModal = false"
+          >
+            Close
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </container-box>
 </template>
 
@@ -722,6 +755,9 @@ export default {
               ticked
               passed
               wait
+              steps {
+                name
+              }
               stimuli {
                 name
                 splitRate
@@ -851,6 +887,7 @@ export default {
       isEditable: true,
       activeSelectionId: '',
       tabs: null,
+      toggleStepModal: false,
     };
   },
   watch: {
@@ -1698,6 +1735,12 @@ export default {
 
 .circular-task .v-avatar {
   margin: 0 auto;
+}
+
+.step-info {
+  float: right;
+  height: 24px;
+  line-height: 0;
 }
 
 @media screen and (max-width: 600px) {

@@ -10,6 +10,19 @@ const {
 
 const mongoose = require('mongoose');
 
+const StepItemSchema = new mongoose.Schema({
+  id: String,
+  name: String,
+});
+
+const StepItemType = new GraphQLObjectType({
+  name: 'StepItem',
+  fields: {
+    id: { type: GraphQLID },
+    name: { type: GraphQLString },
+  },
+});
+
 const StimulusItemSchema = new mongoose.Schema({
   name: String,
   splitRate: Number,
@@ -33,6 +46,7 @@ const RoutineItemSchema = new mongoose.Schema({
   time: String,
   points: Number,
   stimuli: [StimulusItemSchema],
+  steps: [StepItemSchema],
   ticked: Boolean,
   passed: Boolean,
   wait: Boolean,
@@ -49,6 +63,9 @@ const RoutineItemType = new GraphQLObjectType({
     points: { type: GraphQLInt },
     stimuli: {
       type: new GraphQLList(StimulusItemType),
+    },
+    steps: {
+      type: new GraphQLList(StepItemType),
     },
     ticked: { type: GraphQLBoolean },
     passed: { type: GraphQLBoolean },
