@@ -277,7 +277,7 @@ export default {
         const dayGoals = monthTaskGoals
           .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'day');
 
-        if (monthGoal.goalItems.length) {
+        if (monthGoal && monthGoal.goalItems && monthGoal.goalItems.length) {
           if (!this.monthGoalRef) {
             this.monthGoalRef = monthGoal.goalItems[0].id;
           }

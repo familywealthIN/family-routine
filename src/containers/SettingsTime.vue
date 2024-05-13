@@ -50,6 +50,45 @@
                       required
                     ></v-text-field>
                   </v-flex>
+                  <div>
+                    <v-list subheader>
+                      <v-subheader>Steps</v-subheader>
+                      <div class="formStep pl-3">
+                        <v-text-field
+                          clearable
+                          v-model="stepBody"
+                          id="newStepBody"
+                          name="newStepBody"
+                          label="Type your step"
+                          class="inputGoal"
+                          @keyup.enter="addStep"
+                        >
+                        </v-text-field>
+                        <v-btn
+                          icon
+                          color="success"
+                          fab
+                          class="ml-3 mr-0"
+                          :loading="buttonLoading"
+                          @click="addStep(editedItem.steps)"
+                        >
+                          <v-icon dark>send</v-icon>
+                        </v-btn>
+                      </div>
+                    </v-list>
+                    <draggable v-model="editedItem.steps">
+                      <transition-group>
+                        <v-list-tile v-for="step in editedItem.steps" :key="step.id">
+                          <v-list-tile-content>
+                            <v-list-tile-title>{{ step.name }}</v-list-tile-title>
+                          </v-list-tile-content>
+                          <v-list-tile-action @click="removeStep(editedItem.steps, step.id)">
+                            <v-icon color="grey">close</v-icon>
+                          </v-list-tile-action>
+                        </v-list-tile>
+                      </transition-group>
+                  </draggable>
+                  </div>
                   <v-flex xs12 sm12 md12>
                     <v-textarea
                       :rules="descriptionRules"
@@ -119,9 +158,10 @@
 import gql from 'graphql-tag';
 
 import ContainerBox from '../components/ContainerBox.vue';
+import draggable from 'vuedraggable'
 
 export default {
-  components: { ContainerBox },
+  components: { ContainerBox, draggable },
   apollo: {
     routineItems: {
       query: gql`
@@ -129,6 +169,10 @@ export default {
           routineItems {
             id
             name
+            steps {
+              id
+              name
+            }
             description
             time
             points
@@ -145,6 +189,7 @@ export default {
       valid: true,
       buttonLoading: false,
       editedIndex: -1,
+      stepBody: '',
       routineItems: [],
       nameRules: [
         (v) => !!v || 'Name is required',
@@ -189,6 +234,7 @@ export default {
       editedItem: {
         id: '',
         name: '',
+        steps: [],
         description: '',
         time: '00:00',
         points: 0,
@@ -196,6 +242,7 @@ export default {
       defaultItem: {
         id: '',
         name: '',
+        steps: [],
         description: '',
         time: '00:00',
         points: 0,
@@ -216,6 +263,25 @@ export default {
     },
   },
   methods: {
+    addStep(steps) {
+      this.stepBody = this.stepBody.trim();
+      if (this.stepBody && Array.isArray(steps)) {
+        this.editedItem.steps = [
+          ...steps,
+          {
+            id: window.crypto.randomUUID(),
+            name: this.stepBody,
+          },
+        ];
+        this.stepBody = '';
+      }
+    },
+
+    removeStep(steps, id) {
+      if (Array.isArray(steps)) {
+        this.editedItem.steps = steps.filter((step) => step.id !== id);
+      }
+    },
     editItem(item) {
       this.editedIndex = this.routineItems.indexOf(item);
       this.editedItem = { ...item };
@@ -289,15 +355,21 @@ export default {
             $description: String!
             $time: String!
             $points: Int!
+            $steps: [StepInputItem]!
           ) {
             addRoutineItem(
               name: $name
               description: $description
               time: $time
               points: $points
+              steps: $steps
             ) {
               id
               name
+              steps {
+                id
+                name
+              }
               description
               time
               points
@@ -309,6 +381,7 @@ export default {
           description: item.description,
           time: item.time,
           points: Number(item.points),
+          steps: item.steps.map((step) => ({ id: step.id, name: step.name })),
         },
         update: (scope, { data: { addRoutineItem } }) => {
           this.routineItems.push(addRoutineItem);
@@ -356,16 +429,22 @@ export default {
             $description: String!
             $time: String!
             $points: Int!
+            $steps: [StepInputItem]!
           ) {
             updateRoutineItem(
               id: $id
               name: $name
+              steps: $steps
               description: $description
               time: $time
               points: $points
             ) {
               id
               name
+              steps {
+                id
+                name
+              }
               description
               time
               points
@@ -375,6 +454,7 @@ export default {
         variables: {
           id: item.id,
           name: item.name,
+          steps: item.steps.map((step) => ({ id: step.id, name: step.name })),
           description: item.description,
           time: item.time,
           points: Number(item.points),
@@ -386,6 +466,7 @@ export default {
           this.close(false);
         },
       }).catch((error) => {
+        console.log('error', error);
           this.resetEditItem();
           this.buttonLoading = false;
           this.close(false);
@@ -405,5 +486,11 @@ export default {
 <style>
 .elevation-1 {
   width: 100%;
+}
+
+.inputGoal {
+  display:inline-block;
+  flex-shrink: 0;
+  flex-grow: 1;
 }
 </style>
