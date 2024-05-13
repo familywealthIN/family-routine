@@ -47,6 +47,7 @@
     "vue-notification": "^1.3.20",
     "vue-radar": "^0.1.5",
     "vue-router": "^3.0.3",
+    "vuedraggable": "^2.24.3",
     "vuetify": "^1.5.5"
   },
   "devDependencies": {

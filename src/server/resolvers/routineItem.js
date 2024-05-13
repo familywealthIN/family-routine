@@ -4,6 +4,7 @@ const {
   GraphQLString,
   GraphQLList,
   GraphQLNonNull,
+  GraphQLInputObjectType,
 } = require('graphql');
 
 const { RoutineItemModel, RoutineItemType } = require('../schema/RoutineItemSchema');
@@ -20,11 +21,20 @@ const query = {
   },
 };
 
+const StepInputItemType = new GraphQLInputObjectType({
+  name: 'StepInputItem',
+  fields: {
+    id: { type: GraphQLID },
+    name: { type: GraphQLString },
+  },
+});
+
 const mutation = {
   addRoutineItem: {
     type: RoutineItemType,
     args: {
       name: { type: GraphQLNonNull(GraphQLString) },
+      steps: { type: GraphQLList(StepInputItemType) },
       description: { type: GraphQLNonNull(GraphQLString) },
       time: { type: GraphQLNonNull(GraphQLString) },
       points: { type: GraphQLNonNull(GraphQLInt) },
@@ -58,6 +68,7 @@ const mutation = {
     args: {
       id: { type: GraphQLNonNull(GraphQLID) },
       name: { type: GraphQLNonNull(GraphQLString) },
+      steps: { type: GraphQLNonNull(GraphQLList(StepInputItemType)) },
       description: { type: GraphQLNonNull(GraphQLString) },
       time: { type: GraphQLNonNull(GraphQLString) },
       points: { type: GraphQLNonNull(GraphQLInt) },
