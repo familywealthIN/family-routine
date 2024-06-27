@@ -670,7 +670,7 @@
 
         <v-card-text>
           <ul>
-            <li v-for="step in currentTask.steps" v-bind:key="step.name">{{ step.name }}</li>
+            <li v-for="step in currentTask?.steps" v-bind:key="step.name">{{ step.name }}</li>
           </ul>
         </v-card-text>
 
