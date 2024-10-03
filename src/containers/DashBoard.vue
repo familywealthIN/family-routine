@@ -668,7 +668,7 @@
           Routine Steps
         </v-card-title>
 
-        <v-card-text>
+        <v-card-text v-if="currentTask && currentTask.steps">
           <ul>
             <li v-for="step in currentTask.steps" v-bind:key="step.name">{{ step.name }}</li>
           </ul>
