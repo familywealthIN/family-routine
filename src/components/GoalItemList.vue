@@ -116,7 +116,7 @@ export default {
       goalItem.period = period;
       // eslint-disable-next-line no-param-reassign
       goalItem.date = date;
-      this.$emit('toggle-goal-display-dialog', true, goalItem);
+      this.$emit('toggle-goal-display-dialog', goalItem, true);
     },
     completeGoalItem(id, isComplete, period, date, taskRef, isMilestone, goalRef) {
       this.lastCompleteItemId = id;
