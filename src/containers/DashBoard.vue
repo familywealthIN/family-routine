@@ -620,7 +620,7 @@
     >
       <v-card>
         <v-toolbar dark color="primary">
-          <v-btn icon dark @click="toggleGoalDisplayDialog(false)">
+          <v-btn icon dark @click="toggleGoalDisplayDialog(null, false)">
             <v-icon>close</v-icon>
           </v-btn>
           <v-toolbar-title>Goal Details</v-toolbar-title>
@@ -628,9 +628,9 @@
         </v-toolbar>
         <v-card>
           <v-card-text>
-            <goal-display
-              :selectedGoalItem="selectedGoalItem"
-              @toggle-goal-display-dialog="toggleGoalDisplayDialog"
+            <goal-creation
+              :newGoalItem="selectedGoalItem"
+              v-on:add-update-goal-entry="toggleGoalDisplayDialog"
             />
           </v-card-text>
         </v-card>
@@ -703,9 +703,9 @@ import TimelineItemList from '../components/TimelineItemList.vue';
 import GoalItemList from '../components/GoalItemList.vue';
 import ContainerBox from '../components/ContainerBox.vue';
 import { stepupMilestonePeriodDate } from '../utils/getDates';
-import GoalDisplay from '../components/GoalDisplay.vue';
 import QuickGoalCreation from '../components/QuickGoalCreation.vue';
 import StreakChecks from '../components/StreakChecks.vue';
+import GoalCreation from '../components/GoalCreation.vue';
 
 const threshold = {
   weekDays: 5,
@@ -734,9 +734,9 @@ export default {
     GoalItemList,
     TimelineItemList,
     ContainerBox,
-    GoalDisplay,
     QuickGoalCreation,
     StreakChecks,
+    GoalCreation,
   },
   apollo: {
     tasklist: {
@@ -1379,7 +1379,7 @@ export default {
       }
       return taskGoalList;
     },
-    toggleGoalDisplayDialog(bool, selectedGoalItem) {
+    toggleGoalDisplayDialog(selectedGoalItem, bool) {
       if (selectedGoalItem) {
         // this.selectedGoalItem = { ...selectedGoalItem };
         // eslint-disable-next-line prefer-object-spread
