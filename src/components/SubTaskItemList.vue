@@ -1,32 +1,22 @@
 <template>
-  <v-card class="pl-3 pr-3 mb-3 sub-task-list">
-    <v-card-title class="headline">Sub Tasks</v-card-title>
-    <div class="pl-3 pr-3 formGoal mt-3 mb-2">
-      <v-text-field
-        clearable
-        v-model="newSubTaskItemBody"
-        id="newSubTaskItemBody"
-        name="newSubTaskItemBody"
+  <v-card class="pl-3 mb-3 sub-task-list">
+    <v-card-title class="headline pb-0 pt-3 pl-0">SUB TASKS</v-card-title>
+    <div class="formGoal mb-1">
+      <v-text-field clearable v-model="newSubTaskItemBody" id="newSubTaskItemBody" name="newSubTaskItemBody"
         label="Type your sub task" class="inputGoal" @keyup.enter="addSubTaskItem">
       </v-text-field>
-      <v-btn icon
-        color="success"
-        fab
-        dark
-        class="ml-3 mr-0"
-        @click="addSubTaskItem(newSubTaskItemBody)">
+      <v-btn icon color="success" fab small dark class="ml-3 mr-3" @click="addSubTaskItem(newSubTaskItemBody)">
         <v-icon dark>send</v-icon>
       </v-btn>
     </div>
-    <v-list two-line subheader>
-      <v-spacer></v-spacer>
+    <v-list dense subheader>
       <v-subheader class="subheading" v-if="subTasks && subTasks.length == 0">
         You have 0 sub tasks
       </v-subheader>
       <v-subheader class="subheading" v-else>
         {{ subTasks && subTasks.length }} sub tasks
       </v-subheader>
-      <div v-for="(subTaskItem, i) in subTasks" v-bind:key="subTaskItem">
+      <template v-for="(subTaskItem, i) in subTasks">
         <v-list-tile v-bind:key="subTaskItem.id">
           <v-list-tile-action>
             <v-checkbox v-model="subTaskItem.isComplete" @change="completeSubTaskItem(
@@ -45,7 +35,7 @@
             </v-btn>
           </v-list-tile-action>
         </v-list-tile>
-      </div>
+      </template>
     </v-list>
   </v-card>
 </template>
@@ -230,12 +220,30 @@ export default {
 </script>
 
 <style>
+@media screen and (min-width: 600px) {
+  .sub-task-list {
+    box-shadow: none;
+    margin-left: 16px;
+    border-left: 1px solid #ccc !important;
+    height: 100%;
+  }
+}
+
 .sub-task-list .completed {
   text-decoration: line-through;
 }
 
 .sub-task-list .v-list__group__items--no-action .v-list__tile {
   padding-left: 16px;
+}
+
+.sub-task-list .v-list__tile__action {
+  min-width: 36px;
+}
+
+.sub-task-list .v-list__tile,
+.sub-task-list .v-subheader {
+  padding: 0 4px;
 }
 
 .sub-task-list .headline {

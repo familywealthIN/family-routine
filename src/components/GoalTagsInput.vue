@@ -1,6 +1,8 @@
 <template>
   <div>
+    <v-icon class="tag-icon">label</v-icon>
     <vue-tags-input
+      prepend-inner-icon="history"
       v-model="tag"
       :tags="tags"
       :autocomplete-items="filteredItems"
@@ -58,6 +60,11 @@ export default {
 </script>
 
 <style>
+.tag-icon {
+  position: absolute;
+  z-index: 1;
+  padding-top: 12px;
+}
 .vue-tags-input {
   width: 100% !important;
   max-width: unset !important;
@@ -68,6 +75,7 @@ export default {
 .vue-tags-input .ti-input {
   border: none !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.42) !important;
+  padding-left: 24px;
 }
 
 .vue-tags-input .ti-input input {

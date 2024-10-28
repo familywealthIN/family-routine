@@ -14,62 +14,129 @@
         >
         </v-text-field>
       </v-flex>
-      <v-flex xs4 d-flex>
-        <v-select
-          :items="periodOptionList"
-          :disabled="newItemLoaded"
-          v-model="newGoalItem.period"
-          item-text="label"
-          item-value="value"
-          :rules="formRules.dropDown"
-          label="Period"
-          @change="updatePeriod()"
-          required
-        ></v-select>
-      </v-flex>
-      <v-flex v-if="dateOptionList.length" xs8 d-flex>
-        <v-select
-          :items="dateOptionList"
-          :disabled="newItemLoaded"
-          v-model="newGoalItem.date"
-          item-text="label"
-          item-value="value"
-          :rules="formRules.dropDown"
-          label="Date"
-          @change="triggerGoalItemsRef()"
-          required
-        ></v-select>
-      </v-flex>
-      <v-flex v-else xs8 d-flex> </v-flex>
-      <v-flex xs12 d-flex>
-        <v-select
-          :items="tasklist"
-          v-model="newGoalItem.taskRef"
-          item-text="name"
-          item-value="id"
-          label="Routine Task"
-        ></v-select>
-      </v-flex>
-      <v-flex xs12 d-flex>
+      <v-flex xs12>
+        <v-card>
+          <v-toolbar dense class="toolbar">
+            <v-btn-toggle
+              small
+              v-model="newGoalItem.period"
+              rounded="0"
+              group
+              label="Period"
+              @change="updatePeriod()"
+              :disabled="newItemLoaded"
+              required
+            >
+              <v-btn value="year" small :disabled="newItemLoaded">
+                Year
+              </v-btn>
+
+              <v-btn value="month" small :disabled="newItemLoaded">
+                Month
+              </v-btn>
+
+              <v-btn value="week" small :disabled="newItemLoaded">
+                Week
+              </v-btn>
+
+              <v-btn value="day" small :disabled="newItemLoaded">
+                Day
+              </v-btn>
+            </v-btn-toggle>
+            <!-- <v-select
+              :items="periodOptionList"
+              :disabled="newItemLoaded"
+              v-model="newGoalItem.period"
+              item-text="label"
+              item-value="value"
+              :rules="formRules.dropDown"
+              label="Period"
+              @change="updatePeriod()"
+              required
+            ></v-select> -->
+            
+            <v-select
+              prepend-inner-icon="event"
+              small
+              class="ml-1 mr-1"
+              v-if="dateOptionList.length"
+              :items="dateOptionList"
+              :disabled="newItemLoaded"
+              v-model="newGoalItem.date"
+              item-text="label"
+              item-value="value"
+              :rules="formRules.dropDown"
+              label="Date"
+              @change="triggerGoalItemsRef()"
+              solo
+              required
+            ></v-select>
+            <v-select
+              small
+              prepend-inner-icon="history"
+              class="ml-1 mr-1"
+              :items="tasklist"
+              :disabled="newItemLoaded"
+              v-model="newGoalItem.taskRef"
+              item-text="name"
+              item-value="id"
+              label="Routine Task"
+              solo
+            ></v-select>
+            <template v-if="showMilestoneOption">
+              <v-checkbox :disabled="newItemLoaded" v-model="newGoalItem.isMilestone" label="Milestone?" class="pt-0 pr-2"></v-checkbox>
+            </template>
+            <template v-if="newGoalItem.isMilestone">
+              <v-select
+                prepend-inner-icon="assignment"
+                :items="goalItemsRef"
+                v-model="newGoalItem.goalRef"
+                :disabled="newItemLoaded"
+                item-text="body"
+                item-value="id"
+                label="Goal Task"
+                solo
+              ></v-select>
+            </template>
+          </v-toolbar>
+          <v-card-text class="pt-0">
+          <v-flex xs12 d-flex>
         <goal-tags-input
           :goalTags="newGoalItem.tags"
           :userTags="userTags"
           @update-new-tag-items="updateNewTagItems"
         ></goal-tags-input>
       </v-flex>
-      <v-flex v-if="showMilestoneOption" xs6 d-flex>
-        <v-checkbox v-model="newGoalItem.isMilestone" label="Milestone?"></v-checkbox>
+      <v-layout row wrap>
+      <v-flex sm8 d-flex>
+        <v-tabs
+        v-model="active"
+      >
+        <v-tab>Description</v-tab>
+        <v-tab>Reward</v-tab>
+        <v-tab-item>
+          <v-card flat>
+            <v-card-text class="pt-2 pr-0 pb-0 pl-0">
+              <vue-simplemde v-model="newGoalItem.contribution" ref="markdownEditor" />
+            </v-card-text>
+          </v-card>
+        </v-tab-item>
+        <v-tab-item>
+          <v-card flat>
+            <v-card-text>
+              <v-textarea v-model="newGoalItem.reward">
+                <template v-slot:label>
+                  <div>
+                    Reward / Resolution
+                  </div>
+                </template>
+              </v-textarea>
+            </v-card-text>
+          </v-card>
+        </v-tab-item>
+      </v-tabs>
       </v-flex>
-      <v-flex v-if="newGoalItem.isMilestone" xs6 d-flex>
-        <v-select
-          :items="goalItemsRef"
-          v-model="newGoalItem.goalRef"
-          item-text="body"
-          item-value="id"
-          label="Goal Task"
-        ></v-select>
-      </v-flex>
-      <v-flex xs12 v-if="newGoalItem.period === 'day' && newGoalItem.id">
+      <v-flex sm4  d-flex v-if="newGoalItem.period === 'day' && newGoalItem.id">
         <sub-task-item-list
           :subTasks="newGoalItem.subTasks"
           :taskId="newGoalItem.id"
@@ -78,30 +145,16 @@
           @update-sub-task-items="updateSubTaskItems"
         />
       </v-flex>
-      <v-flex xs12>
-        <v-textarea v-model="newGoalItem.contribution">
-          <template v-slot:label>
-            <div>
-              Contribution / Description
-            </div>
-          </template>
-        </v-textarea>
-      </v-flex>
-      <v-flex xs12>
-        <v-textarea v-model="newGoalItem.reward">
-          <template v-slot:label>
-            <div>
-              Reward / Resolution
-            </div>
-          </template>
-        </v-textarea>
-      </v-flex>
+    </v-layout>
+  </v-card-text>
       <v-flex xs12>
         <div style="float: right;">
           <v-btn color="primary" :disabled="!valid" :loading="buttonLoading" @click="saveGoalItem">
             Save
           </v-btn>
         </div>
+      </v-flex>
+        </v-card>
       </v-flex>
     </v-layout>
   </v-form>
@@ -110,6 +163,7 @@
 <script>
 import gql from 'graphql-tag';
 import moment from 'moment';
+import VueSimplemde from 'vue-simplemde';
 
 import {
   getDatesOfYear,
@@ -123,7 +177,7 @@ import GoalTagsInput from './GoalTagsInput.vue';
 import getJSON from '../utils/getJSON';
 
 export default {
-  components: { SubTaskItemList, GoalTagsInput },
+  components: { SubTaskItemList, GoalTagsInput, VueSimplemde },
   props: ['newGoalItem'],
   apollo: {
     tasklist: {
@@ -192,6 +246,7 @@ export default {
     return {
       skipQuery: true,
       valid: false,
+      active: 0,
       buttonLoading: false,
       newItemLoaded: false,
       formRules: {
@@ -368,7 +423,7 @@ export default {
               ...this.newGoalItem,
               id: addGoalItem.id,
             };
-            this.$emit('add-update-goal-entry', goalItem);
+            this.$emit('add-update-goal-entry', goalItem, false);
             this.resetForm();
           },
         })
@@ -458,7 +513,7 @@ export default {
               ...this.newGoalItem,
               id: updateGoalItem.id,
             };
-            this.$emit('add-update-goal-entry', goalItem);
+            this.$emit('add-update-goal-entry', goalItem, false);
             this.resetForm();
           },
         })
@@ -501,3 +556,38 @@ export default {
   },
 };
 </script>
+
+<style>
+  @import '~simplemde/dist/simplemde.min.css';
+  .v-toolbar {
+    box-shadow: none;
+  }
+  .v-toolbar .v-input__control {
+    min-height: auto !important;
+    min-width: 175px;
+  }
+  .v-toolbar .v-input__control .v-input__slot {
+    margin-bottom: 0;
+    background: transparent !important;
+    border: none;
+    box-shadow: none !important;
+  }
+  .v-input--checkbox .v-messages {
+    display: none;
+  }
+  #newGoalItemBody {
+    max-height: 42px;
+    font-size: 36px;
+    font-weight: 700;
+  }
+
+  .toolbar {
+    overflow-y: hidden;
+    overflow-x: auto;
+    width: 100%;
+  }
+  .v-toolbar__content {
+    min-width: 700px;
+  }
+
+</style>
