@@ -1,6 +1,6 @@
 <template>
   <v-form ref="form" v-model="valid">
-    <v-layout wrap>
+    <v-layout wrap class="goal-creation">
       <v-flex xs12 d-flex>
         <v-text-field
           v-model="newGoalItem.body"
@@ -54,7 +54,6 @@
               @change="updatePeriod()"
               required
             ></v-select> -->
-            
             <v-select
               prepend-inner-icon="event"
               small
@@ -575,7 +574,7 @@ export default {
   .v-input--checkbox .v-messages {
     display: none;
   }
-  #newGoalItemBody {
+  .goal-creation #newGoalItemBody {
     max-height: 42px;
     font-size: 36px;
     font-weight: 700;

@@ -65,6 +65,7 @@ export default {
   z-index: 1;
   padding-top: 12px;
 }
+
 .vue-tags-input {
   width: 100% !important;
   max-width: unset !important;
@@ -75,7 +76,7 @@ export default {
 .vue-tags-input .ti-input {
   border: none !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.42) !important;
-  padding-left: 24px;
+  padding-left: 24px !important;
 }
 
 .vue-tags-input .ti-input input {
