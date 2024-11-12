@@ -697,6 +697,7 @@ import moment from 'moment';
 import gql from 'graphql-tag';
 
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
+import { defaultGoalItem } from '../constants/goals';
 
 import GoalList from '../components/GoalList.vue';
 import TimelineItemList from '../components/TimelineItemList.vue';
@@ -873,6 +874,7 @@ export default {
       quickTaskDialog: false,
       quickTaskTitle: '',
       quickTaskDescription: '',
+      defaultGoalItem,
       selectedGoalItem: {},
       tasklist: [],
       did: '',
@@ -1381,13 +1383,12 @@ export default {
     },
     toggleGoalDisplayDialog(selectedGoalItem, bool) {
       if (selectedGoalItem) {
-        // this.selectedGoalItem = { ...selectedGoalItem };
-        // eslint-disable-next-line prefer-object-spread
-        this.selectedGoalItem = Object.assign({}, this.selectedGoalItem, selectedGoalItem);
+        this.selectedGoalItem = { ...selectedGoalItem };
       }
       this.goalDisplayDialog = bool;
       if (!bool) {
         this.$apollo.queries.goals.refetch();
+        this.selectedGoalItem = { ...this.defaultGoalItem };
       }
     },
     countTaskPercentage(task) {
@@ -1432,12 +1433,12 @@ export default {
           const nextTask = this.tasklist[idx + 1];
           const nextTimeString = nextTask ? nextTask.time : '23:59';
           const nextTime = moment(nextTimeString, 'HH:mm');
-          const isTimeBeforeFirstTask = idx === 0 && currentTime.diff(taskTime, 'minutes') < -1;
+          const isTimeBeforeFirstTask = idx === 0 && currentTime.diff(taskTime, 'minutes') <= 0;
           if (isTimeBeforeFirstTask) {
             return isTimeBeforeFirstTask;
           }
-          const isTimeGreaterThanTask = currentTime.diff(taskTime, 'minutes') > 1;
-          const isTimeLessThanNextTask = currentTime.diff(nextTime, 'minutes') < -1;
+          const isTimeGreaterThanTask = currentTime.diff(taskTime, 'minutes') >= 0;
+          const isTimeLessThanNextTask = currentTime.diff(nextTime, 'minutes') <= 0;
           return isTimeGreaterThanTask && isTimeLessThanNextTask;
         });
         return currentActiveTask;

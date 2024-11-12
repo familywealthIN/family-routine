@@ -15,7 +15,7 @@
         </v-text-field>
       </v-flex>
       <v-flex xs12>
-        <v-card>
+        <v-card class="no-shadow">
           <v-toolbar dense class="toolbar">
             <v-btn-toggle
               small
@@ -147,8 +147,8 @@
     </v-layout>
   </v-card-text>
       <v-flex xs12>
-        <div style="float: right;">
-          <v-btn color="primary" :disabled="!valid" :loading="buttonLoading" @click="saveGoalItem">
+        <div style="float: right;" class="mr-1">
+          <v-btn color="primary" :disabled="!valid" :loading="buttonLoading" @click="saveGoalItem" class="mr-3">
             Save
           </v-btn>
         </div>
@@ -571,6 +571,9 @@ export default {
     border: none;
     box-shadow: none !important;
   }
+  .no-shadow {
+    box-shadow: none !important;
+  }
   .v-input--checkbox .v-messages {
     display: none;
   }
@@ -586,7 +589,7 @@ export default {
     width: 100%;
   }
   .v-toolbar__content {
-    min-width: 700px;
+    width: 100%;
   }
 
 </style>
