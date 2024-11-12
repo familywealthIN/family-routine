@@ -89,6 +89,7 @@
 <script>
 import gql from 'graphql-tag';
 import GoalCreation from './GoalCreation.vue';
+import { defaultGoalItem } from '../constants/goals';
 
 export default {
   props: [],
@@ -130,10 +131,7 @@ export default {
         body: '',
         index: undefined,
       },
-      defaultGoalItem: {
-        body: '',
-        index: undefined,
-      },
+      defaultGoalItem,
     };
   },
   methods: {
@@ -183,6 +181,7 @@ export default {
     addUpdateGoalEntry(newGoalItem) {
       this.deletePendingItem(newGoalItem.index);
       this.addGoalItemDialog = false;
+      this.newGoalItem = { ...this.defaultGoalItem };
     },
     openGoalItemDialog(body, index) {
       this.newGoalItem = { body, index };
