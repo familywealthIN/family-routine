@@ -149,3 +149,9 @@ export function isItBeforeToday(period, date) {
     return true;
   }
 }
+
+export const threshold = {
+  weekDays: 5,
+  monthWeeks: 3,
+  yearMonths: 6,
+};

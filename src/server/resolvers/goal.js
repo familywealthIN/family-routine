@@ -25,12 +25,7 @@ const sortTimes = require('../utils/sortTimes');
 const { RoutineItemModel } = require('../schema/RoutineItemSchema');
 const { RoutineModel } = require('../schema/RoutineSchema');
 const { buildStimuliForRoutineItem } = require('./routine');
-
-const threshold = {
-  weekDays: 5,
-  monthWeeks: 3,
-  yearMonths: 6,
-};
+const { threshold } = require('../utils/getProgressReport');
 
 const getDaysArray = (year, month) => {
   let firstMonday = '';
