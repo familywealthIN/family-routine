@@ -34,12 +34,7 @@
 </template>
 <script>
 import gql from 'graphql-tag';
-
-const threshold = {
-  weekDays: 5,
-  monthWeeks: 3,
-  yearMonths: 6,
-};
+import { threshold } from '../utils/getDates';
 
 export default {
   props: ['goal', 'editMode', 'newGoalItem', 'period'],

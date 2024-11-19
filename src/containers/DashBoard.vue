@@ -220,13 +220,14 @@
           <v-flex xs12 class="pr-3 pl-3 mb-3" d-flex v-if="!!countTaskTotal(currentTask) && currentGoalPeriod === 'day'">
             <v-card>
               <v-card-title>
-                Week Goal Streak
+                <b>Week Goal Streak</b>
               </v-card-title>
               <div
                 :key="taskGoals.id"
                 v-for="taskGoals in filterTaskGoalsPeriod(currentTask.id, goals, currentGoalPeriod)"
                 class="pb-3 pl-3 pr-3"
               >
+                {{ getWeekProgressName(currentGoalPeriod, taskGoals) }}
                 <streak-checks :progress="getWeekProgress(currentGoalPeriod, taskGoals) || 0"></streak-checks>
               </div>
             </v-card>
@@ -703,16 +704,10 @@ import GoalList from '../components/GoalList.vue';
 import TimelineItemList from '../components/TimelineItemList.vue';
 import GoalItemList from '../components/GoalItemList.vue';
 import ContainerBox from '../components/ContainerBox.vue';
-import { stepupMilestonePeriodDate } from '../utils/getDates';
+import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
 import QuickGoalCreation from '../components/QuickGoalCreation.vue';
 import StreakChecks from '../components/StreakChecks.vue';
 import GoalCreation from '../components/GoalCreation.vue';
-
-const threshold = {
-  weekDays: 5,
-  monthWeeks: 3,
-  yearMonths: 6,
-};
 
 function weekOfMonth(d) {
   const addFirstWeek = moment(d, 'DD-MM-YYYY')
@@ -1028,14 +1023,14 @@ export default {
           returnTasklist = tasklist
             .filter((task) => {
               const taskTime = moment(task.time, 'HH:mm');
-              const isTimeGreaterThanTask = currentTime.diff(taskTime, 'minutes') > 1;
+              const isTimeGreaterThanTask = currentTime.diff(taskTime, 'minutes') >= 0;
               return isTimeGreaterThanTask && task.id !== currentTaskId;
             });
         } else {
           returnTasklist = tasklist
             .filter((task) => {
               const taskTime = moment(task.time, 'HH:mm');
-              const isTimeLessThanNextTask = currentTime.diff(taskTime, 'minutes') < -1;
+              const isTimeLessThanNextTask = currentTime.diff(taskTime, 'minutes') <= -1;
               return isTimeLessThanNextTask && task.id !== currentTaskId;
             });
         }
@@ -1138,6 +1133,18 @@ export default {
         }
       }
       return 0;
+    },
+    getWeekProgressName(currentGoalPeriod, taskGoals) {
+      if (currentGoalPeriod === 'day') {
+        const mainTaskGoalRef = taskGoals.goalItems.length === 1 ? taskGoals.goalItems[0].goalRef : 0;
+        if (this.goals && this.goals.length) {
+          const weekGoals = this.goals.find((goal) => goal.period === 'week');
+          const weekGoalItemMilestoneChecked = weekGoals
+            && weekGoals.goalItems.find((goalItem) => goalItem.id === this.lastCompleteItemGoalRef || mainTaskGoalRef);
+          return (weekGoalItemMilestoneChecked && weekGoalItemMilestoneChecked.body) || '';
+        }
+      }
+      return '';
     },
     getButtonDisabled(task) {
       if (!task.ticked && (task.passed || task.wait)) {
@@ -1438,7 +1445,7 @@ export default {
             return isTimeBeforeFirstTask;
           }
           const isTimeGreaterThanTask = currentTime.diff(taskTime, 'minutes') >= 0;
-          const isTimeLessThanNextTask = currentTime.diff(nextTime, 'minutes') <= 0;
+          const isTimeLessThanNextTask = currentTime.diff(nextTime, 'minutes') <= -1;
           return isTimeGreaterThanTask && isTimeLessThanNextTask;
         });
         return currentActiveTask;

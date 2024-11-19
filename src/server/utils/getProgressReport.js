@@ -622,4 +622,5 @@ module.exports = {
   getPeriodData,
   getProgressReport,
   getBestRoutineSorted,
+  threshold,
 };
