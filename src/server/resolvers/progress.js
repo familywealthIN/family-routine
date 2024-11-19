@@ -9,14 +9,8 @@ const { autoCheckTaskPeriod } = require('./goal');
 const { RoutineModel } = require('../schema/RoutineSchema');
 const { ProgressType } = require('../schema/ProgressSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
-const { getProgressReport } = require('../utils/getProgressReport');
+const { getProgressReport, threshold } = require('../utils/getProgressReport');
 // const ApiError = require('../utils/ApiError');
-
-const threshold = {
-  weekDays: 5,
-  monthWeeks: 3,
-  yearMonths: 6,
-};
 
 const query = {
   getProgress: {

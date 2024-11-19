@@ -300,12 +300,7 @@ import GoalItemList from '../components/GoalItemList.vue';
 import ContainerBox from '../components/ContainerBox.vue';
 import GoalDisplay from '../components/GoalDisplay.vue';
 import QuickGoalCreation from '../components/QuickGoalCreation.vue';
-
-const threshold = {
-  weekDays: 5,
-  monthWeeks: 3,
-  yearMonths: 6,
-};
+import { threshold } from '../utils/getDates';
 
 function weekOfMonth(d) {
   const addFirstWeek = moment(d, 'DD-MM-YYYY')
