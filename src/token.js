@@ -20,8 +20,8 @@ export async function saveData(data) {
 
 // Function to load data from Cache Storage
 export async function loadData() {
-  const token = localStorage.getItem(GC_AUTH_TOKEN);
-  if (!token) {
+  const tokenExists = localStorage.getItem(GC_AUTH_TOKEN);
+  if (!tokenExists) {
     const cache = await caches.open(CACHE_NAME);
     const response = await cache.match(DATA_KEY);
     if (response) {
@@ -29,7 +29,6 @@ export async function loadData() {
       const {
         name, email, picture, token,
       } = userData;
-      console.log('Data from cache', userData);
       localStorage.setItem(GC_USER_NAME, name);
       localStorage.setItem(GC_USER_EMAIL, email);
       localStorage.setItem(GC_PICTURE, picture);

@@ -80,6 +80,7 @@ import PendingList from '../components/PendingList.vue';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN, USER_TAGS,
 } from '../constants/settings';
+import { clearData } from '../token';
 
 export default {
   components: {
@@ -119,13 +120,10 @@ export default {
     handleClickSignOut() {
       this.$gAuth
         .signOut()
-        .then(() => {
+        .then(async () => {
           // On success do something
           this.isSignIn = this.$gAuth.isAuthorized;
-          localStorage.removeItem(GC_USER_EMAIL);
-          localStorage.removeItem(GC_USER_NAME);
-          localStorage.removeItem(GC_PICTURE);
-          localStorage.removeItem(GC_AUTH_TOKEN);
+          await clearData();
           localStorage.removeItem(USER_TAGS);
           this.$root.$data.userName = localStorage.getItem(GC_USER_NAME);
           this.$root.$data.userEmail = localStorage.getItem(GC_USER_EMAIL);
