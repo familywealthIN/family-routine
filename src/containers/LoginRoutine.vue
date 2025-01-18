@@ -62,12 +62,12 @@
 <script>
 
 import gql from 'graphql-tag';
+import { saveData, clearData } from '../token';
 
 import {
   GC_USER_NAME,
   GC_PICTURE,
   GC_USER_EMAIL,
-  GC_AUTH_TOKEN,
   GC_NOTIFICATION_TOKEN,
   USER_TAGS,
 } from '../constants/settings';
@@ -108,12 +108,9 @@ export default {
     handleClickSignOut() {
       this.$gAuth
         .signOut()
-        .then(() => {
+        .then(async () => {
           this.isSignIn = this.$gAuth.isAuthorized;
-          localStorage.removeItem(GC_USER_EMAIL);
-          localStorage.removeItem(GC_USER_NAME);
-          localStorage.removeItem(GC_PICTURE);
-          localStorage.removeItem(GC_AUTH_TOKEN);
+          await clearData();
           localStorage.removeItem(USER_TAGS);
           this.$root.$data.userName = localStorage.getItem(GC_USER_NAME);
           this.$root.$data.userEmail = localStorage.getItem(GC_USER_EMAIL);
@@ -153,16 +150,14 @@ export default {
           accessToken,
           notificationId,
         },
-        update: (store, { data: { authGoogle } }) => {
+        update: async (store, { data: { authGoogle } }) => {
           const {
             name, email, picture, token, isNew, tags = []
           } = authGoogle;
 
           this.isSignIn = this.$gAuth.isAuthorized;
-          localStorage.setItem(GC_USER_NAME, name);
-          localStorage.setItem(GC_USER_EMAIL, email);
-          localStorage.setItem(GC_PICTURE, picture);
-          localStorage.setItem(GC_AUTH_TOKEN, token);
+          const userData = { token, email, name, picture };
+          await saveData(userData);
           localStorage.setItem(USER_TAGS, JSON.stringify(tags));
           this.$root.$data.name = localStorage.getItem(GC_USER_NAME);
           this.$root.$data.email = localStorage.getItem(GC_USER_EMAIL);
@@ -217,7 +212,7 @@ export default {
   align-items: center;
   min-height: 46px;
   background-color: #4285F4;
-  font-family: 'Roboto',sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 14px;
   color: white;
   text-decoration: none;
@@ -225,19 +220,23 @@ export default {
   border-radius: 2px;
   cursor: pointer;
 }
+
 .google-button .g-box {
   background-color: white;
-  margin:2px;
+  margin: 2px;
   padding-top: 12px;
   min-height: 42px;
   border-radius: 2px;
 }
+
 .google-button .g-text {
   margin-left: 12px;
 }
+
 .login {
   background-color: #fff;
 }
+
 .login-box {
   text-align: center;
   width: 100%;
