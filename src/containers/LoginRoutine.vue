@@ -62,7 +62,7 @@
 <script>
 
 import gql from 'graphql-tag';
-import { saveData, clearData } from '../token';
+import { saveData, clearData, getSessionItem } from '../token';
 
 import {
   GC_USER_NAME,
@@ -95,7 +95,7 @@ export default {
         .then((user) => {
           // On success do something, refer to https://developers.google.com/api-client-library/javascript/reference/referencedocs#googleusergetid
           const accessToken = user.getAuthResponse().access_token;
-          const notificationId = localStorage.getItem(GC_NOTIFICATION_TOKEN) || '';
+          const notificationId = getSessionItem(GC_NOTIFICATION_TOKEN) || '';
           this.createSession(accessToken, notificationId);
         })
         .catch((error) => {
@@ -112,9 +112,9 @@ export default {
           this.isSignIn = this.$gAuth.isAuthorized;
           await clearData();
           localStorage.removeItem(USER_TAGS);
-          this.$root.$data.userName = localStorage.getItem(GC_USER_NAME);
-          this.$root.$data.userEmail = localStorage.getItem(GC_USER_EMAIL);
-          this.$root.$data.picture = localStorage.getItem(GC_PICTURE);
+          this.$root.$data.userName = getSessionItem(GC_USER_NAME);
+          this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
+          this.$root.$data.picture = getSessionItem(GC_PICTURE);
         })
         .catch((error) => {
           console.log(error);
@@ -159,9 +159,9 @@ export default {
           const userData = { token, email, name, picture };
           await saveData(userData);
           localStorage.setItem(USER_TAGS, JSON.stringify(tags));
-          this.$root.$data.name = localStorage.getItem(GC_USER_NAME);
-          this.$root.$data.email = localStorage.getItem(GC_USER_EMAIL);
-          this.$root.$data.picture = localStorage.getItem(GC_PICTURE);
+          this.$root.$data.name = getSessionItem(GC_USER_NAME);
+          this.$root.$data.email = getSessionItem(GC_USER_EMAIL);
+          this.$root.$data.picture = getSessionItem(GC_PICTURE);
 
           if (isNew) {
             this.$router.push('wizard');
