@@ -8,35 +8,25 @@
       <img src="/img/login-banner.png" alt="Login Banner">
     </div>
     <h2 class="text-xs-center pt-3">Set Progressive Goals</h2>
-    <p class="text-xs-center pt-2 pl-3 pr-3 text-muted">Build a harmony between your routine and goals to live a prosperous healthy life.</p>
+    <p class="text-xs-center pt-2 pl-3 pr-3 text-muted">Build a harmony between your routine and goals to live a
+      prosperous healthy life.</p>
     <div class="login-box">
-      <a
-        href="javascript:void(0)"
-        class="google-button"
-        alt="Login with Google"
-        @click="handleClickSignIn"
-        v-if="!isSignIn"
-        :disabled="!isInit"
-      >
+      <a href="javascript:void(0)" class="google-button" alt="Login with Google" @click="handleClickSignIn"
+        v-if="!isSignIn" :disabled="!isInit">
         <div class="g-box">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 533.5 544.3"
-            width="40px" height="20" style="display:inline-flex; align-items:center;" >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 533.5 544.3" width="40px" height="20"
+            style="display:inline-flex; align-items:center;">
             <path
               d="M533.5 278.4c0-18.5-1.5-37.1-4.7-55.3H272.1v104.8h147c-6.1 33.8-25.7 63.7-54.4 82.7v68h87.7c51.5-47.4 81.1-117.4 81.1-200.2z"
-              fill="#4285f4"
-            />
+              fill="#4285f4" />
             <path
               d="M272.1 544.3c73.4 0 135.3-24.1 180.4-65.7l-87.7-68c-24.4 16.6-55.9 26-92.6 26-71 0-131.2-47.9-152.8-112.3H28.9v70.1c46.2 91.9 140.3 149.9 243.2 149.9z"
-              fill="#34a853"
-            />
-            <path
-              d="M119.3 324.3c-11.4-33.8-11.4-70.4 0-104.2V150H28.9c-38.6 76.9-38.6 167.5 0 244.4l90.4-70.1z"
-              fill="#fbbc04"
-            />
+              fill="#34a853" />
+            <path d="M119.3 324.3c-11.4-33.8-11.4-70.4 0-104.2V150H28.9c-38.6 76.9-38.6 167.5 0 244.4l90.4-70.1z"
+              fill="#fbbc04" />
             <path
               d="M272.1 107.7c38.8-.6 76.3 14 104.4 40.8l77.7-77.7C405 24.6 339.7-.8 272.1 0 169.2 0 75.1 58 28.9 150l90.4 70.1c21.5-64.5 81.8-112.4 152.8-112.4z"
-              fill="#ea4335"
-            />
+              fill="#ea4335" />
           </svg>
         </div>
         <div class="g-text">
@@ -56,7 +46,15 @@
         </small>
       </div>
     </footer>
+    <div style="margin: 16px;"><details>
+      <summary>Stats</summary>
+      <span>
+        <Stats />
+      </span>
+    </details>
+  </div>
   </container-box>
+
 </template>
 
 <script>
@@ -72,11 +70,13 @@ import {
   USER_TAGS,
 } from '../constants/settings';
 import ContainerBox from '../components/ContainerBox.vue';
+import Stats from '../views/Stats.vue';
 
 export default {
   name: 'Login',
   components: {
     ContainerBox,
+    Stats,
   },
   data() {
     return {
