@@ -6,7 +6,7 @@
       v-model="drawer"
       width="240"
       mobile-break-point="1024"
-      v-if="$route.name !== 'login'"
+      v-if="$route.name !== 'login' && $route.name !== 'stats'"
     >
       <v-list class="pa-1" v-if="$gAuth.isAuthorized">
         <v-list-tile avatar>
