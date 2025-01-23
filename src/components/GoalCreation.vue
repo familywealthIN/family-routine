@@ -174,6 +174,7 @@ import {
 import SubTaskItemList from './SubTaskItemList.vue';
 import GoalTagsInput from './GoalTagsInput.vue';
 import getJSON from '../utils/getJSON';
+import { USER_TAGS } from '../constants/settings';
 
 export default {
   components: { SubTaskItemList, GoalTagsInput, VueSimplemde },
@@ -277,7 +278,7 @@ export default {
           value: 'lifetime',
         },
       ],
-      userTags: getJSON(localStorage.getItem('USER_TAGS'), []),
+      userTags: getJSON(localStorage.getItem(USER_TAGS), []),
     };
   },
   computed: {
@@ -532,13 +533,13 @@ export default {
       this.$refs.form.reset();
     },
     setLocalUserTag(newTags) {
-      const userTags = getJSON(localStorage.getItem('USER_TAGS'), []);
+      const userTags = getJSON(localStorage.getItem(USER_TAGS), []);
       newTags.forEach((tag) => {
         if (!userTags.includes(tag)) {
           userTags.push(tag);
         }
       });
-      localStorage.setItem('USER_TAGS', JSON.stringify(userTags));
+      localStorage.setItem(USER_TAGS, JSON.stringify(userTags));
       this.userTags = [...userTags];
     },
   },

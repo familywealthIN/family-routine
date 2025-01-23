@@ -20,15 +20,25 @@ import {
 } from './constants/settings';
 import redirectOnError from './utils/redirectOnError';
 import './registerServiceWorker';
-import { loadData } from './token';
+import { getSessionItem, loadData } from './token';
 
 Vue.config.productionTip = false;
 
-loadData();
-setTimeout(() => {
+// localStorage.__proto__ = Object.create(Storage.prototype);
+// localStorage.__proto__.setItem = function () {
+//   console.log('localstorage.setItem is disabled');
+// };
+// localStorage.__proto__.removeItem = function () {
+//   console.log('localstorage.removeItem is disabled');
+// };
+// localStorage.__proto__.getItem = function () {
+//   console.log('localstorage.getItem is disabled');
+// };
+
+loadData().then(() => {
   const authMiddleware = new ApolloLink((operation, forward) => {
     // add the authorization to the headers
-    const token = localStorage.getItem(GC_AUTH_TOKEN);
+    const token = getSessionItem(GC_AUTH_TOKEN);
     operation.setContext({
       headers: {
         authorization: token ? `Bearer ${token}` : null,
@@ -83,9 +93,9 @@ setTimeout(() => {
     defaultClient: apolloClient,
   });
 
-  const name = localStorage.getItem(GC_USER_NAME);
-  const email = localStorage.getItem(GC_USER_EMAIL);
-  const picture = localStorage.getItem(GC_PICTURE);
+  const name = getSessionItem(GC_USER_NAME);
+  const email = getSessionItem(GC_USER_EMAIL);
+  const picture = getSessionItem(GC_PICTURE);
 
   new Vue({
     router,
@@ -97,4 +107,4 @@ setTimeout(() => {
     },
     render: (h) => h(App),
   }).$mount('#app');
-}, 100);
+});

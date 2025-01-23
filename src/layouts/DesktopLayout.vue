@@ -78,9 +78,9 @@
 <script>
 import PendingList from '../components/PendingList.vue';
 import {
-  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN, USER_TAGS,
+  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
-import { clearData } from '../token';
+import { clearData, getSessionItem } from '../token';
 
 export default {
   components: {
@@ -125,9 +125,9 @@ export default {
           this.isSignIn = this.$gAuth.isAuthorized;
           await clearData();
           localStorage.removeItem(USER_TAGS);
-          this.$root.$data.userName = localStorage.getItem(GC_USER_NAME);
-          this.$root.$data.userEmail = localStorage.getItem(GC_USER_EMAIL);
-          this.$root.$data.userEmail = localStorage.getItem(GC_PICTURE);
+          this.$root.$data.userName = getSessionItem(GC_USER_NAME);
+          this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
+          this.$root.$data.userEmail = getSessionItem(GC_PICTURE);
           this.$router.push('/').catch(() => {});
         })
         .catch((error) => {
