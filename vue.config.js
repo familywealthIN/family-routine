@@ -10,13 +10,15 @@ module.exports = {
   },
   pwa: {
     name: 'Family Routine',
-    themeColor: '#288bd5',
+    themeColor: '#FFFFFF',
     msTileColor: '#FFFFFF',
     appleMobileWebAppCapable: 'yes',
-    appleMobileWebAppStatusBarStyle: '#288bd5',
+    appleMobileWebAppStatusBarStyle: '#FFFFFF',
     workboxPluginMode: 'InjectManifest',
     manifestOptions: {
-      start_url: '/',
+      start_url: '/?install=true',
+      gcm_sender_id: '350952942983',
+      gcm_user_visible_only: true,
     },
     workboxOptions: {
       swSrc: 'src/sw.js',
