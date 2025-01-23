@@ -4,7 +4,7 @@
       fixed
       clipped
       v-model="drawer"
-      v-if="$route.name !== 'login'"
+      v-if="$route.name !== 'login' && $route.name !== 'stats'"
     >
       <v-list class="pa-1" v-if="$gAuth.isAuthorized">
         <v-list-tile avatar>

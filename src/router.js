@@ -88,6 +88,11 @@ export default new Router({
       component: () => import(/* webpackChunkName: "profile" */ './views/Profile.vue'),
     },
     {
+      path: '/stats',
+      name: 'stats',
+      component: () => import(/* webpackChunkName: "stats" */'./views/Stats.vue'),
+    },
+    {
       path: '/',
       name: 'login',
       component: Login,

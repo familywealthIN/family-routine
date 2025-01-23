@@ -5,7 +5,7 @@
       clipped
       right
       v-model="drawer"
-      v-if="$route.name !== 'login'"
+      v-if="$route.name !== 'login' && $route.name !== 'stats'"
     >
       <v-list-tile @click.stop="drawer = !drawer">
         <v-list-tile-action style="min-width: 40px;">
@@ -79,7 +79,7 @@
       fixed
       color="white"
       class="pb-2"
-      v-if="$route.name !== 'login'"
+      v-if="$route.name !== 'login' && $route.name !== 'stats'"
     >
       <v-btn
         color="primary"
