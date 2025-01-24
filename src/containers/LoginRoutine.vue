@@ -2,7 +2,7 @@
 /* eslint-disable max-len */
 </script>
 <template>
-  <container-box :isLoading="isLoading || $gAuth.isAuthorized">
+  <container-box :isLoading="isLoading || isAuthenticatedSignIn">
     <h2 class="text-xs-center pt-5">Build Your Routine</h2>
     <div class="banner-box">
       <img src="/img/login-banner.png" alt="Login Banner">
@@ -201,6 +201,7 @@ export default {
         this.redirectCount++;
         if (this.redirectCount > 2) {
           window.dispatchEvent(new Event('sign-out'));
+          clearInterval(checkGauthLoad);
         }
       }
       if (this.isInit) {
@@ -208,7 +209,7 @@ export default {
         clearInterval(checkGauthLoad);
       }
     }, 10);
-    window.addEventListener('sign-out', () => this.handleClickSignOut(), false);
+    // window.addEventListener('sign-out', () => this.handleClickSignOut(), false);
   },
 };
 </script>
