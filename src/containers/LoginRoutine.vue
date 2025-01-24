@@ -46,13 +46,6 @@
         </small>
       </div>
     </footer>
-    <div style="margin: 16px;"><details>
-      <summary>Stats</summary>
-      <span>
-        <Stats />
-      </span>
-    </details>
-  </div>
   </container-box>
 
 </template>
@@ -71,13 +64,11 @@ import {
   GC_AUTH_TOKEN,
 } from '../constants/settings';
 import ContainerBox from '../components/ContainerBox.vue';
-import Stats from '../views/Stats.vue';
 
 export default {
   name: 'Login',
   components: {
     ContainerBox,
-    Stats,
   },
   data() {
     return {
