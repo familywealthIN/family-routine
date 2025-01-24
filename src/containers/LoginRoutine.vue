@@ -69,7 +69,6 @@ export default {
   name: 'Login',
   components: {
     ContainerBox,
-    Stats,
   },
   data() {
     return {
