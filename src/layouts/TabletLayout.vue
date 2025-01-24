@@ -6,7 +6,7 @@
       v-model="drawer"
       v-if="$route.name !== 'login' && $route.name !== 'stats'"
     >
-      <v-list class="pa-1" v-if="$gAuth.isAuthorized">
+      <v-list class="pa-1">
         <v-list-tile avatar>
           <v-list-tile-avatar>
             <img :src="picture" />
