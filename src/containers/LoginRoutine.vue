@@ -60,7 +60,7 @@
 <script>
 
 import gql from 'graphql-tag';
-import { saveData, clearData, getSessionItem } from '../token';
+import { saveData, clearData, getSessionItem, isRunningStandalone } from '../token';
 
 import {
   GC_USER_NAME,
@@ -68,6 +68,7 @@ import {
   GC_USER_EMAIL,
   GC_NOTIFICATION_TOKEN,
   USER_TAGS,
+  GC_AUTH_TOKEN,
 } from '../constants/settings';
 import ContainerBox from '../components/ContainerBox.vue';
 import Stats from '../views/Stats.vue';
@@ -82,6 +83,7 @@ export default {
     return {
       isInit: false,
       isSignIn: false,
+      isAuthenticatedSignIn: false,
       isLoading: true,
       redirectCount: 0,
     };
@@ -110,6 +112,7 @@ export default {
         .signOut()
         .then(async () => {
           this.isSignIn = this.$gAuth.isAuthorized;
+          this.isAuthenticatedSignIn = false;
           await clearData();
           localStorage.removeItem(USER_TAGS);
           this.$root.$data.userName = getSessionItem(GC_USER_NAME);
@@ -156,6 +159,7 @@ export default {
           } = authGoogle;
 
           this.isSignIn = this.$gAuth.isAuthorized;
+          this.isAuthenticatedSignIn = this.$gAuth.isAuthorized;
           const userData = { token, email, name, picture };
           await saveData(userData);
           localStorage.setItem(USER_TAGS, JSON.stringify(tags));
@@ -185,9 +189,12 @@ export default {
   },
   mounted() {
     const checkGauthLoad = setInterval(() => {
+      const token = getSessionItem(GC_AUTH_TOKEN);
       this.isInit = this.$gAuth.isInit;
       this.isSignIn = this.$gAuth.isAuthorized && !window.appSignedOut;
-      if (this.isSignIn) {
+      this.isStandalone = isRunningStandalone() && token;
+      this.isAuthenticatedSignIn = this.isSignIn || this.isStandalone;
+      if (this.isAuthenticatedSignIn) {
         this.$router.push('home');
         this.isLoading = false;
         // eslint-disable-next-line no-plusplus
