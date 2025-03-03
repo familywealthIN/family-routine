@@ -259,6 +259,12 @@ export default {
   width: auto;
 }
 
+@media (min-width: 768px) and (max-width: 1200px) {
+  .banner-box img {
+    width: 60%;
+  }
+}
+
 .text-muted,
 .text-muted a {
   color: rgba(0, 0, 0, .54);

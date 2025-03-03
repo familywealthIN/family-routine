@@ -1,4 +1,4 @@
-var PRECACHE = 'precache-v13';
+var PRECACHE = 'precache-v14';
 var RUNTIME = 'runtime';
 var PRECACHE_URLS = ['index.html'];
 
