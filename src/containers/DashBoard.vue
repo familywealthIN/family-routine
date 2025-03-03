@@ -19,8 +19,9 @@
         <h2>
           {{ this.today }}
         </h2>
-        <div>
-          <v-switch v-model="skipDay" label="Skip Day" style="justify-content: end;" @change="skipClick()"></v-switch>
+        <div class="action-box">
+          <div><wake-check></wake-check></div>
+          <div><v-switch v-model="skipDay" label="Skip Day" @change="skipClick()"></v-switch></div>
         </div>
       </div>
       <template v-if="skipDay">
@@ -708,6 +709,7 @@ import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
 import QuickGoalCreation from '../components/QuickGoalCreation.vue';
 import StreakChecks from '../components/StreakChecks.vue';
 import GoalCreation from '../components/GoalCreation.vue';
+import WakeCheck from '../components/WakeCheck.vue';
 
 function weekOfMonth(d) {
   const addFirstWeek = moment(d, 'DD-MM-YYYY')
@@ -733,6 +735,7 @@ export default {
     QuickGoalCreation,
     StreakChecks,
     GoalCreation,
+    WakeCheck,
   },
   apollo: {
     tasklist: {
@@ -1739,6 +1742,7 @@ export default {
 .skip-box img {
   max-width: 100%;
   width: auto;
+  border-radius: 16px;
 }
 
 .circular-task .v-avatar {
@@ -1755,5 +1759,9 @@ export default {
   .hidden-xs {
     display: none !important;
   }
+}
+.action-box {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>
