@@ -63,6 +63,9 @@
       <v-toolbar-title style="font-size: 24px">{{ pageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn icon @click="pendingDialog = true">
+        <v-icon size="28">search</v-icon>
+      </v-btn>
+      <v-btn icon @click="pendingDialog = true">
         <v-icon size="28">checklist</v-icon>
       </v-btn>
       <v-btn icon @click.stop="drawer = !drawer">
