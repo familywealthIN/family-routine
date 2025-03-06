@@ -1,7 +1,7 @@
 <template>
   <container-box transparent="true" :isLoading="isLoading">
-    <v-card class="mb-3 pb-3" style="border-radius: 0;">
-      <div class="weekdays pt-3 pl-2 pr-2">
+    <v-card class="ma-3">
+      <div class="weekdays pt-2 pb-2">
         <template v-for="(weekDay, i) in weekDays">
           <div
             @click="setDate(i)"
@@ -1641,7 +1641,7 @@ export default {
 }
 
 .concentrated-view .v-list__tile__sub-title .v-item-group {
-  border: 1px solid #1976d2;
+  border: 1px solid #288bd5;
   border-radius: 4px;
   box-shadow: none;
 }
@@ -1655,7 +1655,7 @@ export default {
 }
 
 .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn--active {
-  background-color: #1976d2;
+  background-color: #288bd5;
 }
 
 .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn--active .v-btn__content {
