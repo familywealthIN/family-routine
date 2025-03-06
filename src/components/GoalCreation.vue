@@ -116,7 +116,7 @@
         <v-tab-item>
           <v-card flat>
             <v-card-text class="pt-2 pr-0 pb-0 pl-0">
-              <vue-simplemde v-model="newGoalItem.contribution" ref="markdownEditor" />
+              <vue-easymde v-model="newGoalItem.contribution" ref="markdownEditor" />
             </v-card-text>
           </v-card>
         </v-tab-item>
@@ -162,7 +162,7 @@
 <script>
 import gql from 'graphql-tag';
 import moment from 'moment';
-import VueSimplemde from 'vue-simplemde';
+import VueEasymde from 'vue-easymde';
 
 import {
   getDatesOfYear,
@@ -177,7 +177,7 @@ import getJSON from '../utils/getJSON';
 import { USER_TAGS } from '../constants/settings';
 
 export default {
-  components: { SubTaskItemList, GoalTagsInput, VueSimplemde },
+  components: { SubTaskItemList, GoalTagsInput, VueEasymde },
   props: ['newGoalItem'],
   apollo: {
     tasklist: {
@@ -558,7 +558,7 @@ export default {
 </script>
 
 <style>
-  @import '~simplemde/dist/simplemde.min.css';
+  @import '~easymde/dist/easymde.min.css';
   .v-toolbar {
     box-shadow: none;
   }

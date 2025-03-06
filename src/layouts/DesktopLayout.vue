@@ -44,9 +44,13 @@
         </v-list-tile>
       </v-list>
     </v-navigation-drawer>
-    <v-toolbar v-if="$route.name !== 'login'" dark color="primary" app>
+    <v-toolbar v-if="$route.name !== 'login'" color="white" app style="border-bottom: 1px solid rgba(0,0,0,0.12) !important;">
       <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
-      <v-toolbar-title class="white--text">{{ pageTitle }}</v-toolbar-title>
+      <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>
+      <div class="ai-search-box">
+          <span>Build your routine goals with AI</span>
+          <v-icon class="search-icon">search</v-icon>
+        </div>
       <v-spacer></v-spacer>
       <v-btn icon @click="pendingDialog = true">
         <v-icon>checklist</v-icon>
@@ -158,5 +162,24 @@ export default {
     .v-navigation-drawer--fixed {
       padding-top: 64px;
     }
+  }
+  .ai-search-box * {
+    vertical-align: middle;
+  }
+  .ai-search-box {
+    background-color: #ddd;
+    color: #777;
+    border-radius: 4px;
+    display: inline-block;
+    margin: 8px 8px 8px calc(40% - 250px);
+    padding: 8px 16px;
+    min-width: 500px;
+    line-height: 1
+  }
+  .search-icon {
+    position: relative;
+    left: 256px;
+    margin: 0;
+    padding: 0;
   }
 </style>
