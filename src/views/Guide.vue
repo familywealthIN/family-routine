@@ -2,7 +2,7 @@
   <div class="about">
     <container-box>
       <v-card-text>
-        <p>Family Routine helps you organize your routine and goals.</p>
+        <p>Routine Notes helps you organize your routine and goals.</p>
         <ul>
           <li>Groom your routine with Discipline</li>
           <li>Measure your actions with Kinetics</li>
@@ -210,7 +210,7 @@
           <li>year: 25%</li>
         </ul>
         <p>
-          It is an overview of how point systems work within the family routine
+          It is an overview of how point systems work within the Routine Notes
           app. This design is an attempt to evolve individuals beyond their
           potential. Let me know if I have missed any feature by contacting at
           support@familywealth.in

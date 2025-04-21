@@ -48,9 +48,9 @@ export default new Router({
       component: () => import(/* webpackChunkName: "wizard" */'./views/Wizard.vue'),
     },
     {
-      path: '/family',
-      name: 'family',
-      component: () => import(/* webpackChunkName: "family" */'./views/Family.vue'),
+      path: '/groups',
+      name: 'groups',
+      component: () => import(/* webpackChunkName: "groups" */'./views/Family.vue'),
     },
     {
       path: '/goals',

@@ -136,7 +136,7 @@ export default {
           header: 'App',
           items: [
             // { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
-            { title: 'Family', icon: 'supervisor_account', route: '/family' },
+            { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
             { title: 'History', icon: 'update', route: '/history' },
             { title: 'Milestones', icon: 'filter_hdr', route: '/goals/milestones' },
           ],
@@ -176,7 +176,7 @@ export default {
     },
     pageTitle() {
       return (this.$route.name && this.$route.name[0].toUpperCase() + this.$route.name.substr(1))
-      || 'Family Routine';
+      || 'Routine Notes';
     },
   },
   methods: {

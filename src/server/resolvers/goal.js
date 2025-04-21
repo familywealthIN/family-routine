@@ -159,7 +159,7 @@ async function autoCheckTaskPeriod({
   currentPeriod, stepDownPeriod, cleanGoals, completionThreshold, date, email, gRoutineTasks = null,
 }) {
   const periodGoals = await GoalModel.find({ period: currentPeriod, date: periodGoalDates(currentPeriod, date), email }).exec();
-  console.log('periodGoals', currentPeriod, periodGoalDates(currentPeriod, date), periodGoals);
+  // console.log('periodGoals', currentPeriod, periodGoalDates(currentPeriod, date), periodGoals);
   const updatePromises = [];
   periodGoals.forEach((periodGoal) => {
     periodGoal.goalItems.forEach((periodGoalItem) => {
@@ -327,9 +327,9 @@ const query = {
         currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, date: args.date, email,
       }));
 
-      console.log('result', result);
-      console.log('week goals', cleanGoals.filter((gl) => gl.period === 'week'));
-      console.log('threeFridays', threeFridays);
+      // console.log('result', result);
+      // console.log('week goals', cleanGoals.filter((gl) => gl.period === 'week'));
+      // console.log('threeFridays', threeFridays);
 
       return [
         // ...cleanGoals,
@@ -688,7 +688,7 @@ const mutation = {
           date: args.date,
           taskRef: args.taskRef,
         });
-        console.log('Work on my week', email);
+        // console.log('Work on my week', email);
 
         await autoCheckTaskPeriod({
           currentPeriod: 'week',
@@ -701,7 +701,7 @@ const mutation = {
         });
 
         if (weekOfMonth(args.date) >= (threshold.monthWeeks - 1)) {
-          console.log('Work on my month', email);
+          // console.log('Work on my month', email);
           await autoCheckTaskPeriod({
             currentPeriod: 'month',
             stepDownPeriod: 'week',
@@ -712,7 +712,7 @@ const mutation = {
             gRoutineTasks,
           });
           if (moment(args.date, 'DD-MM-YYYY').month() >= (threshold.yearMonths - 1)) {
-            console.log('Work on my year', email);
+            // console.log('Work on my year', email);
             await autoCheckTaskPeriod({
               currentPeriod: 'year',
               stepDownPeriod: 'month',

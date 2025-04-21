@@ -45,7 +45,7 @@ export default {
     },
     pageTitle() {
       return (this.$route.name && this.$route.name[0].toUpperCase() + this.$route.name.substr(1))
-      || 'Family Routine';
+      || 'Routine Notes';
     },
     isMobile() {
       return this.$vuetify.breakpoint.name === 'xs';

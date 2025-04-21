@@ -99,7 +99,7 @@ export default {
         // { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
         { title: 'Goals', icon: 'assignment', route: '/goals' },
         { title: 'Progress', icon: 'pie_chart', route: '/progress' },
-        { title: 'Family', icon: 'supervisor_account', route: '/family' },
+        { title: 'Group', icon: 'supervisor_account', route: '/groups' },
         { title: 'Routine Settings', icon: 'settings', route: '/settings' },
         { title: 'About', icon: 'info', route: '/about' },
       ],
@@ -117,7 +117,7 @@ export default {
     },
     pageTitle() {
       return (this.$route.name && this.$route.name[0].toUpperCase() + this.$route.name.substr(1))
-      || 'Family Routine';
+      || 'Routine Notes';
     },
   },
   methods: {
