@@ -110,7 +110,7 @@ function getCompletedTotal({
   const getTasksTotal = () => {
     const periodDailyTask = periodDailyTasks.find((goal) => goal.date === routine.date);
 
-    console.log('periodDailyTasks', periodDailyTasks);
+    // console.log('periodDailyTasks', periodDailyTasks);
 
     const tasksTotal = {
       value: 0,
@@ -187,15 +187,22 @@ function getCompletedTotal({
 function getEfficiency({ periodRoutines }) {
   // TODO: Get the dharma points to determine efficiency
   try {
-    const sum = periodRoutines.reduce((acc, routine) => acc + countTotal(routine), 0);
-    const { length } = periodRoutines;
+    let consideredDays = 0;
+    const sum = periodRoutines.reduce((acc, routine) => {
+      if (countTotal(routine) > 0 && !routine.skip) {
+        console.log('=== routine', routine);
+        consideredDays += 1;
+        return acc + countTotal(routine);
+      }
+      return acc;
+    }, 0);
 
-    if (!sum && !length) return 0;
+    if (!sum && !consideredDays) return 0;
 
     return {
       id: 'efficiency',
       name: 'Routine Efficiency',
-      value: `${Math.ceil(sum / length)}%`,
+      value: `${Math.ceil(sum / consideredDays)}%`,
     };
   } catch (e) {
     console.log(e);
@@ -335,7 +342,7 @@ function getProgressStatement({ periodRoutines }) {
 
     return 'Stay Calm and focus on what\'s right?';
   } catch (e) {
-    console.log(e);
+    // console.log(e);
     return 'Great Going!';
   }
 }
@@ -363,7 +370,7 @@ function getBestRoutineSorted({
     return fullTasklistScore;
   }, []);
 
-  console.log('fullTasklistScore', fullTasklistScore);
+  // console.log('fullTasklistScore', fullTasklistScore);
 
   fullTasklistScore.sort((a, b) => b.value - a.value);
 

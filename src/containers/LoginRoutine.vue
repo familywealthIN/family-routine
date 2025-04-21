@@ -38,7 +38,7 @@
       <div class="text-xs-center text-muted">
         <small>
           By using
-          Family Routine,
+          Routine Notes,
           you accept our
           <a href="https://familywealth.in/terms">Terms</a>
           and

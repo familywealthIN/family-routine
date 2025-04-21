@@ -9,7 +9,7 @@ module.exports = {
     config.plugins.delete('prefetch');
   },
   pwa: {
-    name: 'Family Routine',
+    name: 'Routine Notes',
     themeColor: '#FFFFFF',
     msTileColor: '#FFFFFF',
     appleMobileWebAppCapable: 'yes',
