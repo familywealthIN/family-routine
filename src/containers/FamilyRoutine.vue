@@ -110,7 +110,7 @@
         </template>
       </v-list>
       <p v-else class="pt-3 pb-3 text-xs-center">
-        No Family Members have been added.
+        No Group Members have been added.
       </p>
       <v-btn
         v-if="groupId"
@@ -356,7 +356,7 @@ export default {
           this.userInviteDialog = false;
           this.$notify({
             title: 'Success',
-            text: 'You joined your family group',
+            text: 'You joined your special group',
             group: 'notify',
             duration: 3000,
           });

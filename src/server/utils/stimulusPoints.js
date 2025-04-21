@@ -8,18 +8,18 @@ function getEstimatedStimulusUnit(action, task, isRemove = false, period) {
       return { earned };
     case 'K':
       const dStimulus = task.stimuli.find((st) => st.name === 'D');
-      console.log('dStimulus', dStimulus);
+      // console.log('dStimulus', dStimulus);
       const count = Number((dStimulus.splitRate / stimulus.splitRate).toFixed(0));
-      console.log('count', count);
+      // console.log('count', count);
       if (isRemove) {
         earned = stimulus.earned >= (task.points / count) ? (task.points / count) : earned;
       } else {
         earned = stimulus.earned < task.points ? (task.points / count) : earned;
       }
-      console.log('earned', earned);
+      // console.log('earned', earned);
       return { earned, count };
     case 'G':
-      console.log('period G', period);
+      // console.log('period G', period);
       let periodPoint = 0;
       switch (period) {
         case 'day':
@@ -44,7 +44,7 @@ function getEstimatedStimulusUnit(action, task, isRemove = false, period) {
 
 function updateStimulusEarnedPoint(action, task, period) {
   const earnedDetail = getEstimatedStimulusUnit(action, task, false, period);
-  console.log('earnedDetail', earnedDetail);
+  // console.log('earnedDetail', earnedDetail);
   if (action === 'G') {
     task.stimuli.forEach((st) => {
       if (st.name === action) {
@@ -72,8 +72,8 @@ function removeStimulusEarnedPoint(action, task) {
   const earnedDetail = getEstimatedStimulusUnit(action, task, true);
   task.stimuli.forEach((st) => {
     if (st.name === action) {
-      console.log('st.earned', st.earned);
-      console.log('earnedDetail.earned', earnedDetail.earned);
+      // console.log('st.earned', st.earned);
+      // console.log('earnedDetail.earned', earnedDetail.earned);
       // eslint-disable-next-line no-param-reassign
       st.earned -= earnedDetail.earned;
     }

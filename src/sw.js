@@ -2,7 +2,7 @@
 /* eslint-disable no-undef */
 /* eslint-disable func-names */
 /* eslint-disable prefer-arrow-callback */
-workbox.core.setCacheNameDetails({ prefix: 'family-routine' });
+workbox.core.setCacheNameDetails({ prefix: 'routine-notes' });
 
 // self.addEventListener('message', function (event) {
 //   if (event.data && event.data.type === 'SKIP_WAITING') {
