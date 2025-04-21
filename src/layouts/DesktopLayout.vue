@@ -99,7 +99,7 @@ export default {
         // { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
         { title: 'Goals', icon: 'assignment', route: '/goals' },
         { title: 'Progress', icon: 'pie_chart', route: '/progress' },
-        { title: 'Group', icon: 'supervisor_account', route: '/groups' },
+        { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
         { title: 'Routine Settings', icon: 'settings', route: '/settings' },
         { title: 'About', icon: 'info', route: '/about' },
       ],
