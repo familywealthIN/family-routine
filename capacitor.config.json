@@ -1,0 +1,7 @@
+{
+  "appId": "com.routine.note",
+  "appName": "routine-notes",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+
+}
