@@ -22,7 +22,7 @@ module.exports = {
     },
     workboxOptions: {
       swSrc: 'src/sw.js',
-      exclude: ['_header', '_redirects', 'firebase-messaging-sw.js', 'firebase.html', '.htaccess'],
+      exclude: ['_header', '_redirects', 'public/firebase-messaging-sw.js', 'public/firebase.html', '.htaccess'],
     },
   },
 };

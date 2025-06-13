@@ -2,6 +2,28 @@
   "appId": "com.routine.note",
   "appName": "routine-notes",
   "webDir": "dist",
-  "bundledWebRuntime": false
+  "bundledWebRuntime": false,
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 3000,
+      "launchAutoHide": true,
+      "backgroundColor": "#ffffff",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+       "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#488AFF",
+      "sound": "beep.wav"
+    },
+    "GoogleAuth": {
+      "scopes": ["profile", "email"],
+      "serverClientId": "350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com", 
+      "androidClientId": "350952942983-9i5gdkf7n1415jm9ot1g1qe85kjnqpep.apps.googleusercontent.com",
+      "iosClientId": "350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
+    }
 
+  }
 }

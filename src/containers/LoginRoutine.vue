@@ -54,6 +54,8 @@
 
 import gql from 'graphql-tag';
 import { saveData, clearData, getSessionItem, isRunningStandalone } from '../token';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 
 import {
   GC_USER_NAME,
@@ -77,12 +79,53 @@ export default {
       isAuthenticatedSignIn: false,
       isLoading: true,
       redirectCount: 0,
+      isNative: false,
     };
   },
 
   methods: {
-    handleClickSignIn() {
+    async handleClickSignIn() {
       this.isLoading = true;
+
+      if (this.isNative) {
+        console.log('native function called')
+        // Native Google login
+        try {
+          // Re-initialize GoogleAuth to ensure it's properly configured
+          await GoogleAuth.initialize({
+            clientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+            scopes: ['profile', 'email'],
+            grantOfflineAccess: true,
+            androidClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+            iosClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+            webClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+            forceCodeForRefreshToken: true
+          });
+          
+          console.log('Attempting to sign in with GoogleAuth');
+          const result = await GoogleAuth.signIn();
+          console.log('GoogleAuth sign in result:', result);
+          
+          if (!result || !result.authentication) {
+            throw new Error('Authentication data missing from sign in result');
+          }
+          
+          const accessToken = result.authentication.accessToken;
+          const notificationId = getSessionItem(GC_NOTIFICATION_TOKEN) || '';
+          this.createSession(accessToken, notificationId);
+        } catch (err) {
+          console.error('Native Google login failed:', err);
+          this.$notify({
+            title: 'Login Error',
+            text: 'Google sign in failed. Please try again.',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+          this.isLoading = false;
+        }
+      } else {
+        console.log('web function called')
       this.$gAuth
         .signIn()
         .then((user) => {
@@ -96,9 +139,24 @@ export default {
           this.isLoading = false;
           window.location.reload();
         });
+      }
     },
 
+
     handleClickSignOut() {
+      if (this.isNative) {
+        GoogleAuth.signOut().then(async () => {
+          this.isSignIn = false;
+          this.isAuthenticatedSignIn = false;
+          await clearData();
+          localStorage.removeItem(USER_TAGS);
+          this.$root.$data.userName = '';
+          this.$root.$data.userEmail = '';
+          this.$root.$data.picture = '';
+        }).catch((error) => {
+          console.log(error);
+        });
+      } else {
       this.$gAuth
         .signOut()
         .then(async () => {
@@ -121,6 +179,7 @@ export default {
           });
           window.location.reload();
         });
+      }
     },
 
     createSession(accessToken, notificationId = '') {
@@ -178,11 +237,32 @@ export default {
         });
     },
   },
-  mounted() {
+  mounted() { 
+    console.log('Capacitor platform:', Capacitor.getPlatform());
+    this.isNative = Capacitor.isNativePlatform();
+    console.log('Is native platform:', this.isNative);
+    
+    // Initialize Google Auth for native platforms
+    if (this.isNative) {
+      try {
+        // No need to initialize here as it's already done in main.js
+        // and will be re-initialized in handleClickSignIn
+        console.log('GoogleAuth will be initialized when signing in');
+      } catch (error) {
+        console.error('Failed to initialize GoogleAuth:', error);
+      }
+    }
+    // this.isNative = window?.Capacitor?.isNativePlatform?.() || !window.location.href.startsWith('http');
+    // this.isNative = window && window.location && window.location.protocol && window.location.protocol.startsWith('http')
     const checkGauthLoad = setInterval(() => {
       const token = getSessionItem(GC_AUTH_TOKEN);
-      this.isInit = this.$gAuth.isInit;
-      this.isSignIn = this.$gAuth.isAuthorized && !window.appSignedOut;
+      // this.isInit = this.$gAuth.isInit;
+      // this.isSignIn = this.$gAuth.isAuthorized && !window.appSignedOut;
+
+      this.isInit = this.isNative ? true : this.$gAuth.isInit;
+      //this.$gAuth.isInit;
+      this.isSignIn = this.isNative ? false :(this.$gAuth.isAuthorized && !window.appSignedOut)
+
       this.isStandalone = isRunningStandalone() && token;
       this.isAuthenticatedSignIn = this.isSignIn || this.isStandalone;
       if (this.isAuthenticatedSignIn) {

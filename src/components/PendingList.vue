@@ -63,12 +63,7 @@
         </v-btn>
       </div>
     </v-flex>
-    <v-dialog
-    v-model="addGoalItemDialog"
-    fullscreen
-    hide-overlay
-    transition="dialog-bottom-transition"
-  >
+    <v-dialog v-model="addGoalItemDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
     <v-card>
       <v-toolbar dark color="primary">
         <v-btn icon dark @click="closeGoalItemDialog()">
@@ -132,6 +127,7 @@ export default {
         index: undefined,
       },
       defaultGoalItem,
+      addGoalItemDialog: false, 
     };
   },
   methods: {
