@@ -45,6 +45,11 @@ const RoutineItemSchema = new mongoose.Schema({
   email: String,
   time: String,
   points: Number,
+  startEvent: String,
+  endEvent: String,
+  tags: [{
+    type: String,
+  }],
   stimuli: [StimulusItemSchema],
   steps: [StepItemSchema],
   ticked: Boolean,
@@ -61,6 +66,9 @@ const RoutineItemType = new GraphQLObjectType({
     email: { type: GraphQLString },
     time: { type: GraphQLString },
     points: { type: GraphQLInt },
+    startEvent: { type: GraphQLString },
+    endEvent: { type: GraphQLString },
+    tags: { type: new GraphQLList(GraphQLString) },
     stimuli: {
       type: new GraphQLList(StimulusItemType),
     },

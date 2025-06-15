@@ -407,6 +407,22 @@ const query = {
         .exec();
     },
   },
+  goalsByTag: {
+    type: new GraphQLList(GoalType),
+    args: {
+      tag: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      
+      const goals = await GoalModel.find({ 
+        email,
+        'goalItems.tags': args.tag 
+      }).exec();
+
+      return goals;
+    },
+  },
   goal: {
     type: GoalType,
     args: {

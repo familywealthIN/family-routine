@@ -3,75 +3,51 @@
 </script>
 <template>
   <container-box :isLoading="$apollo.queries.routineItems.loading">
-    <v-card
-      dark
-      flat
-      class="image-card"
-    >
-      <v-btn
-        absolute
-        bottom
-        color="info"
-        right
-        fab
-        @click="dialog = true"
-      >
+    <v-card dark flat class="image-card">
+      <v-btn absolute bottom color="info" right fab @click="dialog = true">
         <v-icon>add</v-icon>
       </v-btn>
-      <v-img
-        src="https://cdn.vuetifyjs.com/images/cards/forest.jpg"
-        gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
-      >
-        <v-container fill-height>
-          <v-layout align-center>
-            <strong class="display-4 font-weight-regular mr-4">{{routineItems && routineItems.length}}</strong>
-            <v-layout column justify-end>
-              <div class="headline font-weight-light">Routine Items</div>
-            </v-layout>
-          </v-layout>
-        </v-container>
-      </v-img>
+      <v-container class="py-4" style="background: rgba(0,0,0,0.8)">
+        <div class="d-flex justify-center">
+          <circadian-cycle
+            :routine-items="routineItems"
+            :size="320"
+          />
+        </div>
+      </v-container>
     </v-card>
     <v-card-text class="image-card-page px-0">
-      <v-dialog v-model="dialog" >
+      <v-dialog v-model="dialog">
         <v-card>
           <v-card-title>
             <span class="headline">{{ formTitle }}</span>
           </v-card-title>
           <v-form ref="form" v-model="valid">
             <v-card-text>
-              <v-container grid-list-md>
-                <v-layout wrap>
+              <v-container grid-list-sm>
+                <v-layout wrap> <v-flex xs12 sm12 md12>
+                    <v-text-field v-model="editedItem.name" :rules="nameRules" label="Routine Name"
+                      required></v-text-field>
+                  </v-flex>                  <v-flex xs12 sm12 md12>
+                    <v-textarea :rules="descriptionRules" label="Description"
+                      v-model="editedItem.description"></v-textarea>
+                  </v-flex>
                   <v-flex xs12 sm12 md12>
-                    <v-text-field
-                      v-model="editedItem.name"
-                      :rules="nameRules"
-                      label="Routine Name"
-                      required
-                    ></v-text-field>
+                    <goal-tags-input
+                      :goalTags="editedItem.tags"
+                      :userTags="userTags"
+                      @update-new-tag-items="updateNewTagItems"
+                    />
                   </v-flex>
                   <div>
                     <v-list subheader>
                       <v-subheader>Steps</v-subheader>
                       <div class="formStep pl-3">
-                        <v-text-field
-                          clearable
-                          v-model="stepBody"
-                          id="newStepBody"
-                          name="newStepBody"
-                          label="Type your step"
-                          class="inputGoal"
-                          @keyup.enter="addStep"
-                        >
+                        <v-text-field clearable v-model="stepBody" id="newStepBody" name="newStepBody"
+                          label="Type your step" class="inputGoal" @keyup.enter="addStep">
                         </v-text-field>
-                        <v-btn
-                          icon
-                          color="success"
-                          fab
-                          class="ml-3 mr-0"
-                          :loading="buttonLoading"
-                          @click="addStep(editedItem.steps)"
-                        >
+                        <v-btn icon color="success" fab class="ml-3 mr-0" :loading="buttonLoading"
+                          @click="addStep(editedItem.steps)">
                           <v-icon dark>send</v-icon>
                         </v-btn>
                       </div>
@@ -79,6 +55,9 @@
                     <draggable v-model="editedItem.steps">
                       <transition-group>
                         <v-list-tile v-for="step in editedItem.steps" :key="step.id">
+                          <v-list-tile-action class="mr-3">
+                            <v-icon color="grey lighten-1" class="drag-handle">drag_indicator</v-icon>
+                          </v-list-tile-action>
                           <v-list-tile-content>
                             <v-list-tile-title>{{ step.name }}</v-list-tile-title>
                           </v-list-tile-content>
@@ -87,34 +66,33 @@
                           </v-list-tile-action>
                         </v-list-tile>
                       </transition-group>
-                  </draggable>
+                    </draggable>
                   </div>
                   <v-flex xs12 sm12 md12>
+                    <v-text-field type="time" :rules="timeRules" v-model="editedItem.time" step="600" label="Time"
+                      required></v-text-field>
+                  </v-flex>
+                  <v-flex xs12 sm12 md12>                    <v-text-field type="number" v-model="editedItem.points" :rules="pointsRules" label="Points"
+                      required></v-text-field>
+                    Point Remaining: {{ maxInputPoints() }}
+                  </v-flex>
+                  <v-flex xs12 sm12 md12>
                     <v-textarea
-                      :rules="descriptionRules"
-                      label="Description"
-                      v-model="editedItem.description"
+                      v-model="editedItem.startEvent"
+                      label="Start Event"
+                      class="monospace-font"
+                      rows="3"
+                      auto-grow
                     ></v-textarea>
                   </v-flex>
                   <v-flex xs12 sm12 md12>
-                    <v-text-field
-                      type="time"
-                      :rules="timeRules"
-                      v-model="editedItem.time"
-                      step="600"
-                      label="Time"
-                      required
-                    ></v-text-field>
-                  </v-flex>
-                  <v-flex xs12 sm12 md12>
-                    <v-text-field
-                      type="number"
-                      v-model="editedItem.points"
-                      :rules="pointsRules"
-                      label="Points"
-                      required
-                    ></v-text-field>
-                    Point Remaining: {{maxInputPoints()}}
+                    <v-textarea
+                      v-model="editedItem.endEvent"
+                      label="End Event"
+                      class="monospace-font"
+                      rows="3"
+                      auto-grow
+                    ></v-textarea>
                   </v-flex>
                 </v-layout>
               </v-container>
@@ -123,11 +101,7 @@
             <v-card-actions>
               <v-spacer></v-spacer>
               <v-btn color="blue darken-1" flat @click="close(true)">Cancel</v-btn>
-              <v-btn
-                color="primary"
-                :loading="buttonLoading"
-                @click="save"
-              >
+              <v-btn color="primary" :loading="buttonLoading" @click="save">
                 Save
               </v-btn>
             </v-card-actions>
@@ -158,10 +132,13 @@
 import gql from 'graphql-tag';
 
 import ContainerBox from '../components/ContainerBox.vue';
-import draggable from 'vuedraggable'
+import draggable from 'vuedraggable';
+import CircadianCycle from '../components/CircadianCycle.vue';
+import GoalTagsInput from '../components/GoalTagsInput.vue';
+import getJSON from '../utils/getJSON';
 
 export default {
-  components: { ContainerBox, draggable },
+  components: { ContainerBox, draggable, CircadianCycle, GoalTagsInput },
   apollo: {
     routineItems: {
       query: gql`
@@ -174,10 +151,14 @@ export default {
               name
             }
             description
+            tags
             time
             points
             ticked
             passed
+            startEvent
+            endEvent
+            tags
           }
         }
       `,
@@ -191,6 +172,29 @@ export default {
       editedIndex: -1,
       stepBody: '',
       routineItems: [],
+      editedItem: {
+        id: '',
+        name: '',
+        steps: [],
+        description: '',
+        time: '00:00',
+        points: 0,
+        startEvent: '',
+        endEvent: '',
+        tags: [],
+        userTags: getJSON(localStorage.getItem('userTags'), []),
+      },
+      defaultItem: {
+        id: '',
+        name: '',
+        steps: [],
+        description: '',
+        time: '00:00',
+        points: 0,
+        startEvent: '',
+        endEvent: '',
+        tags: [],
+      },
       nameRules: [
         (v) => !!v || 'Name is required',
         (v) => (v && v.length <= 100) || 'Name must be less than 100 characters',
@@ -206,6 +210,7 @@ export default {
           || `Name must be less than ${this.maxInputPoints()} characters`,
       ],
       timeRules: [(v) => !!v || 'Time is required'],
+      goalRules: [(v) => !!v || 'At least one goal is required'],
       headers: [
         {
           text: 'Task',
@@ -231,22 +236,6 @@ export default {
           sortable: false,
         },
       ],
-      editedItem: {
-        id: '',
-        name: '',
-        steps: [],
-        description: '',
-        time: '00:00',
-        points: 0,
-      },
-      defaultItem: {
-        id: '',
-        name: '',
-        steps: [],
-        description: '',
-        time: '00:00',
-        points: 0,
-      },
     };
   },
   computed: {
@@ -293,6 +282,10 @@ export default {
       if (confirm('Are you sure you want to delete this item?')) {
         this.deleteRoutineItem(item, index);
       }
+    },
+
+    updateNewTagItems(tags) {
+      this.editedItem.tags = tags;
     },
 
     deleteRoutineItem(item, index) {
@@ -356,6 +349,9 @@ export default {
             $time: String!
             $points: Int!
             $steps: [StepInputItem]!
+            $startEvent: String
+            $endEvent: String
+            $tags: [String]!
           ) {
             addRoutineItem(
               name: $name
@@ -363,6 +359,9 @@ export default {
               time: $time
               points: $points
               steps: $steps
+              startEvent: $startEvent
+              endEvent: $endEvent
+              tags: $tags
             ) {
               id
               name
@@ -373,15 +372,16 @@ export default {
               description
               time
               points
+              tags
             }
           }
         `,
-        variables: {
-          name: item.name,
+        variables: {          name: item.name,
           description: item.description,
           time: item.time,
           points: Number(item.points),
           steps: item.steps.map((step) => ({ id: step.id, name: step.name })),
+          tags: item.tags || [],
         },
         update: (scope, { data: { addRoutineItem } }) => {
           this.routineItems.push(addRoutineItem);
@@ -422,14 +422,16 @@ export default {
     updateRoutineItem() {
       const item = this.editedItem;
       this.$apollo.mutate({
-        mutation: gql`
-          mutation updateRoutineItem(
+        mutation: gql`          mutation updateRoutineItem(
             $id: ID!
             $name: String!
             $description: String!
             $time: String!
             $points: Int!
             $steps: [StepInputItem]!
+            $startEvent: String
+            $endEvent: String
+            $tags: [String]!
           ) {
             updateRoutineItem(
               id: $id
@@ -438,6 +440,9 @@ export default {
               description: $description
               time: $time
               points: $points
+              startEvent: $startEvent
+              endEvent: $endEvent
+              tags: $tags
             ) {
               id
               name
@@ -448,16 +453,19 @@ export default {
               description
               time
               points
+              tags
             }
           }
         `,
-        variables: {
-          id: item.id,
+        variables: {          id: item.id,
           name: item.name,
           steps: item.steps.map((step) => ({ id: step.id, name: step.name })),
           description: item.description,
           time: item.time,
           points: Number(item.points),
+          startEvent: item.startEvent,
+          endEvent: item.endEvent,
+          tags: item.tags || [],
         },
         update: () => {
           Object.assign(this.routineItems[this.editedIndex], this.editedItem);
@@ -489,8 +497,21 @@ export default {
 }
 
 .inputGoal {
-  display:inline-block;
+  display: inline-block;
   flex-shrink: 0;
   flex-grow: 1;
+}
+
+.drag-handle {
+  cursor: move;
+}
+
+.v-list__tile--active {
+  background: #f5f5f5;
+}
+
+.monospace-font >>> textarea {
+  font-family: 'Courier New', Courier, monospace !important;
+  font-size: 14px;
 }
 </style>

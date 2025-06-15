@@ -1,6 +1,7 @@
 import Vue from 'vue';
 import Router from 'vue-router';
 import Login from './views/Login.vue';
+import Projects from './views/Projects.vue';
 
 Vue.use(Router);
 
@@ -91,6 +92,13 @@ export default new Router({
       path: '/stats',
       name: 'stats',
       component: () => import(/* webpackChunkName: "stats" */'./views/Stats.vue'),
+    },
+    {
+      path: '/projects/:tag',
+      name: 'projects',
+      component: Projects,
+      props: true,
+      meta: { requiresAuth: true },
     },
     {
       path: '/',

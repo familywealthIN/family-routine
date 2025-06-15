@@ -19,6 +19,24 @@ const query = {
       return RoutineItemModel.find({ email }).exec();
     },
   },
+  projectTags: {
+    type: new GraphQLList(GraphQLString),
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const items = await RoutineItemModel.find({ email }).exec();
+      
+      const tags = new Set();
+      items.forEach((item) => {
+        if (item.tags) {
+          item.tags
+            .filter((tag) => tag.startsWith('project:'))
+            .forEach((tag) => tags.add(tag));
+        }
+      });
+      
+      return Array.from(tags).sort();
+    },
+  },
 };
 
 const StepInputItemType = new GraphQLInputObjectType({
@@ -38,6 +56,9 @@ const mutation = {
       description: { type: GraphQLNonNull(GraphQLString) },
       time: { type: GraphQLNonNull(GraphQLString) },
       points: { type: GraphQLNonNull(GraphQLInt) },
+      startEvent: { type: GraphQLString },
+      endEvent: { type: GraphQLString },
+      tags: { type: new GraphQLList(GraphQLString) },
     },
     resolve: (root, args, context) => {
       const email = getEmailfromSession(context);
@@ -72,6 +93,9 @@ const mutation = {
       description: { type: GraphQLNonNull(GraphQLString) },
       time: { type: GraphQLNonNull(GraphQLString) },
       points: { type: GraphQLNonNull(GraphQLInt) },
+      startEvent: { type: GraphQLString },
+      endEvent: { type: GraphQLString },
+      tags: { type: new GraphQLList(GraphQLString) },
     },
     resolve: (root, args, context) => {
       const email = getEmailfromSession(context);

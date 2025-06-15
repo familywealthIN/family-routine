@@ -20,7 +20,6 @@
           </v-list-tile-content>
         </v-list-tile>
       </v-list>
-
       <v-list class="pt-0" dense>
         <v-divider></v-divider>
 
@@ -33,6 +32,7 @@
             <v-list-tile-title>{{ item.title }}</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
+        <project-sidebar />
         <v-list-tile @click="handleClickSignOut">
           <v-list-tile-action>
             <v-icon>logout</v-icon>
@@ -80,6 +80,7 @@
 </template>
 
 <script>
+import ProjectSidebar from '@/components/ProjectSidebar.vue';
 import PendingList from '../components/PendingList.vue';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
@@ -89,6 +90,7 @@ import { clearData, getSessionItem } from '../token';
 export default {
   components: {
     PendingList,
+    ProjectSidebar,
   },
   data() {
     return {
