@@ -80,9 +80,13 @@ loadData().then(() => {
   });
 
   // HTTP connection to the API
+  console.log('GraphQL URL:', graphQLUrl);
+  console.log('Is Native Platform:', Capacitor.isNativePlatform());
+  
   const httpLink = createHttpLink({
     // You should use an absolute URL here
-    uri: graphQLUrl,
+    uri: graphQLUrl || 'https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com/dev/graphql',
+    fetch: Capacitor.isNativePlatform() ? undefined : fetch,
   });
 
   // Cache implementation
@@ -104,10 +108,12 @@ loadData().then(() => {
   const apolloClient = new ApolloClient({
     link: errorLink.concat(normalLink),
     cache,
-    fetchOptions: {
-      fetch,
-      mode: 'no-cors',
-    },
+    ...(Capacitor.isNativePlatform() ? {} : {
+      fetchOptions: {
+        fetch,
+        mode: 'no-cors',
+      },
+    }),
     defaultOptions: {
       watchQuery: {
         fetchPolicy: 'no-cache',

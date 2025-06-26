@@ -183,6 +183,22 @@ export default {
     },
 
     createSession(accessToken, notificationId = '') {
+      console.log('createSession called with:', { accessToken, notificationId });
+      console.log('Apollo client available:', !!this.$apollo);
+      
+      if (!this.$apollo) {
+        console.error('Apollo client not available');
+        this.isLoading = false;
+        this.$notify({
+          title: 'Login Error',
+          text: 'GraphQL client not initialized',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+        return;
+      }
+      
       this.$apollo.mutate({
         mutation: gql`
           mutation authGoogle($accessToken: String!, $notificationId: String!) {
@@ -208,8 +224,14 @@ export default {
             name, email, picture, token, isNew, tags = []
           } = authGoogle;
 
-          this.isSignIn = this.$gAuth.isAuthorized;
-          this.isAuthenticatedSignIn = this.$gAuth.isAuthorized;
+          // Set authentication state based on platform
+          if (this.isNative) {
+            this.isSignIn = true;
+            this.isAuthenticatedSignIn = true;
+          } else {
+            this.isSignIn = this.$gAuth.isAuthorized;
+            this.isAuthenticatedSignIn = this.$gAuth.isAuthorized;
+          }
           const userData = { token, email, name, picture };
           await saveData(userData);
           localStorage.setItem(USER_TAGS, JSON.stringify(tags));
