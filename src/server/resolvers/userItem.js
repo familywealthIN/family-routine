@@ -66,6 +66,7 @@ const mutation = {
         const { data, info } = await authenticateGoogle(req);
         if (data) {
           const user = await UserModel.upsertGoogleUser(data, args.notificationId);
+          console.log('new user', user.tags);
           if (user) {
             return ({
               id: user.id,
@@ -76,7 +77,7 @@ const mutation = {
               token: user.generateJWT(),
               isNew: user.isNew || false,
               motto: [],
-              tags: user.tags,
+              tags: user.tags || [],
             });
           }
         }
