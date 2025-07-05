@@ -4,12 +4,12 @@
     >
         <template v-for="indx in stars">
           <template v-if="indx < Number(progress)">
-            <v-avatar :key="indx" size="24">
+            <v-avatar :key="`avatar-${indx}`" size="24">
               <v-icon color="green" size="24">check_circle</v-icon>
             </v-avatar>
           </template>
           <template v-else-if="indx === Number(progress)">
-            <v-avatar :key="indx" size="24">
+            <v-avatar :key="`avatar-${indx}`" size="24">
               <v-icon color="green" size="24">
                 <template v-if="animate">
                   <template v-if="animateComplete">check_circle</template>
@@ -20,11 +20,11 @@
             </v-avatar>
           </template>
           <template v-else>
-            <v-avatar :key="indx" size="24">
+            <v-avatar :key="`avatar-${indx}`" size="24">
               <v-icon color="green" size="24">check_circle_outline</v-icon>
             </v-avatar>
           </template>
-          <v-divider :key="indx" v-if="indx !== 5"></v-divider>
+          <v-divider :key="`divider-${indx}`" v-if="indx !== 5"></v-divider>
         </template>
     </span>
 </template>

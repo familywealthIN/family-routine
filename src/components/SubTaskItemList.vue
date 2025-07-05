@@ -1,11 +1,29 @@
-<template>
-  <v-card class="pl-3 mb-3 sub-task-list">
+<template>  <v-card class="pl-3 mb-3 sub-task-list">
     <v-card-title class="headline pb-0 pt-3 pl-0">SUB TASKS</v-card-title>
     <div class="formGoal mb-1">
-      <v-text-field clearable v-model="newSubTaskItemBody" id="newSubTaskItemBody" name="newSubTaskItemBody"
-        label="Type your sub task" class="inputGoal" @keyup.enter="addSubTaskItem">
+      <v-text-field
+        clearable
+        v-model="newSubTaskItemBody"
+        id="newSubTaskItemBody"
+        name="newSubTaskItemBody"
+        label="Type your sub task"
+        class="inputGoal"
+        @keyup.enter="addSubTaskItem"
+        :disabled="isAddingSubTask"
+        :loading="isAddingSubTask"
+      >
       </v-text-field>
-      <v-btn icon color="success" fab small dark class="ml-3 mr-3" @click="addSubTaskItem(newSubTaskItemBody)">
+      <v-btn
+        icon
+        color="success"
+        fab
+        small
+        dark
+        class="ml-3 mr-3"
+        @click="addSubTaskItem(newSubTaskItemBody)"
+        :disabled="isAddingSubTask"
+        :loading="isAddingSubTask"
+      >
         <v-icon dark>send</v-icon>
       </v-btn>
     </div>
@@ -53,6 +71,7 @@ export default {
       animateEntry: false,
       lastCompleteItemId: '',
       newSubTaskItemBody: '',
+      isAddingSubTask: false,
     };
   },
   methods: {
@@ -64,6 +83,8 @@ export default {
       }
 
       const { date, taskId } = this;
+      this.isAddingSubTask = true;
+      this.$emit('sub-task-loading', true);
 
       this.$apollo.mutate({
         mutation: gql`
@@ -108,8 +129,12 @@ export default {
           );
           this.$emit('update-sub-task-items', this.subTasks);
           this.newSubTaskItemBody = '';
+          this.isAddingSubTask = false;
+          this.$emit('sub-task-loading', false);
         },
       }).catch(() => {
+        this.isAddingSubTask = false;
+        this.$emit('sub-task-loading', false);
         this.$notify({
           title: 'Error',
           text: 'An unexpected error occured',

@@ -2,6 +2,7 @@ import Vue from 'vue';
 import Router from 'vue-router';
 import Login from './views/Login.vue';
 import Projects from './views/Projects.vue';
+import YearGoals from './views/YearGoals.vue';
 
 Vue.use(Router);
 
@@ -30,7 +31,7 @@ export default new Router({
     },
     {
       path: '/progress/:period',
-      name: 'progress',
+      name: 'progressPeriod',
       component: () => import(/* webpackChunkName: "progress" */'./views/Progress.vue'),
     },
     {
@@ -70,7 +71,7 @@ export default new Router({
     },
     {
       path: '/agenda/tree/:selectedTaskRef',
-      name: 'agendaTree',
+      name: 'agendaTreeWithTask',
       component: () => import(/* webpackChunkName: "agendaTree" */ './views/AgendaTree.vue'),
     },
     // {
@@ -98,7 +99,12 @@ export default new Router({
       name: 'projects',
       component: Projects,
       props: true,
-      meta: { requiresAuth: true },
+    },
+    {
+      path: '/year-goals/:tag?',
+      name: 'yearGoals',
+      component: YearGoals,
+      props: true,
     },
     {
       path: '/',

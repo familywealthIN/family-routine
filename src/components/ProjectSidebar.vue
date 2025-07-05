@@ -3,7 +3,7 @@
     <v-list-group
       v-if="filteredProjectTags.length"
       prepend-icon="folder_shared"
-      value="true"
+      :value="false"
     >
       <template v-slot:activator>
         <v-list-tile-title class="subheader">Projects</v-list-tile-title>

@@ -4,15 +4,26 @@
       <v-flex xs12>
         <h1 class="display-1">{{ projectTitle }}</h1>
       </v-flex>
-      <v-flex xs12 sm6 md3 v-for="period in periods" :key="period.name">
-        <v-card class="ma-2">
+
+      <!-- Summary Cards -->
+      <v-flex xs12 md6 class="d-flex">
+        <summary-cards
+          :goal-items="goals
+        .flatMap(goal => Array.isArray(goal.goalItems) && goal.goalItems.map((goalItem) => ({ ...goalItem, period: goal.period, date: goal.date })))"
+          class="mb-4 flex-grow-1"
+        />
+      </v-flex>
+      <v-flex xs12 md6 class="d-flex">
+        <v-layout row wrap class="flex-grow-1">
+        <v-flex xs12 md6 v-for="period in periods" :key="period.name" class="d-flex">
+        <v-card class="ma-2 flex-column" style="width: 100%;">
           <v-card-title class="pb-1">
             <div class="d-flex justify-space-between align-center" style="width: 100%">
               <span>{{ period.label }} Goals</span>
             </div>
           </v-card-title>
-          <v-card-text>
-            <v-list v-if="!loading">
+          <v-card-text class="flex-grow-1 d-flex align-center justify-center">
+            <v-list v-if="!loading" class="w-100">
               <template v-if="period.goals.length">
                 <h2>{{ period.completedCount }}/{{ period.goals.length }}</h2>
               </template>
@@ -24,15 +35,17 @@
                 </v-list-tile-content>
               </v-list-tile>
             </v-list>
-            <div v-else class="text-xs-center">
+            <div v-else class="text-xs-center w-100">
               <v-progress-circular indeterminate></v-progress-circular>
             </div>
           </v-card-text>
         </v-card>
       </v-flex>
+      </v-layout>
+      </v-flex>
 
       <!-- Recent Activity Timeline -->
-      <v-flex xs12>
+      <v-flex xs12 md6>
         <v-card class="ma-2">
           <v-card-title>Recent Activity</v-card-title>
           <v-card-text>
@@ -72,6 +85,13 @@
           </v-card-text>
         </v-card>
       </v-flex>
+      <v-flex xs12 md6>
+        <next-steps
+          :goal-items="goals
+        .flatMap(goal => Array.isArray(goal.goalItems) && goal.goalItems.map((goalItem) => ({ ...goalItem, period: goal.period, date: goal.date })))"
+          class="ma-2"
+        />
+      </v-flex>
     </v-layout>
   </v-container>
 </template>
@@ -79,9 +99,15 @@
 <script>
 import gql from 'graphql-tag';
 import moment from 'moment';
+import SummaryCards from '@/components/DashboardCards/SummaryCards.vue';
+import NextSteps from '@/components/DashboardCards/NextSteps.vue';
 
 export default {
   name: 'Projects',
+  components: {
+    SummaryCards,
+    NextSteps,
+  },
   props: {
     tag: {
       type: String,
@@ -155,8 +181,6 @@ export default {
     },
     recentActivity() {
       if (!Array.isArray(this.goals)) return [];
-
-      console.log('Goals data:', this.goals);
 
       const last7Days = Array.from({ length: 7 }, (_, i) => {
         const date = moment().subtract(i, 'days');

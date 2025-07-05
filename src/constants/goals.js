@@ -9,6 +9,7 @@ export const defaultGoalItem = {
   isMilestone: false,
   taskRef: '',
   goalRef: '',
+  tags: [],
 };
 
 export const periodsArray = [

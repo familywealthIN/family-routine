@@ -83,4 +83,50 @@ export default {
   font-size: 1rem !important;
   padding: 3px 0 !important;
 }
+
+/* Fix for tag close icon */
+.vue-tags-input .ti-tag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  margin: 2px 4px 2px 0;
+}
+
+.vue-tags-input .ti-tag .ti-actions {
+  display: flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.vue-tags-input .ti-tag .ti-actions .ti-icon-close {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: white;
+  font-size: 12px;
+  line-height: 1;
+  margin-left: 4px;
+}
+
+.vue-tags-input .ti-tag .ti-actions .ti-icon-close:hover {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.vue-tags-input .ti-tag .ti-actions .ti-icon-close::before {
+  content: '×';
+  font-weight: bold;
+}
+
+/* Ensure the close button is visible and clickable */
+.vue-tags-input .ti-tag .ti-actions .ti-icon-close {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
 </style>

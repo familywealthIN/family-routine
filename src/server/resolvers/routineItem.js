@@ -24,7 +24,7 @@ const query = {
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
       const items = await RoutineItemModel.find({ email }).exec();
-      
+
       const tags = new Set();
       items.forEach((item) => {
         if (item.tags) {
@@ -33,7 +33,7 @@ const query = {
             .forEach((tag) => tags.add(tag));
         }
       });
-      
+
       return Array.from(tags).sort();
     },
   },

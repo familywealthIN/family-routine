@@ -11,7 +11,9 @@ import 'firebase/messaging';
 import { graphQLUrl } from './blob/config';
 import './plugins/vuetify';
 import './plugins/notifications';
+import './plugins/curl-executor';
 import VueApollo from './plugins/apollo';
+import currentTaskPlugin from './plugins/currentTask';
 import App from './App.vue';
 import './plugins/vue-google-oauth2';
 import router from './router';
@@ -96,6 +98,9 @@ loadData().then(() => {
   const name = getSessionItem(GC_USER_NAME);
   const email = getSessionItem(GC_USER_EMAIL);
   const picture = getSessionItem(GC_PICTURE);
+
+  // Install the currentTask plugin
+  Vue.use(currentTaskPlugin);
 
   new Vue({
     router,

@@ -155,3 +155,49 @@ export const threshold = {
   monthWeeks: 3,
   yearMonths: 6,
 };
+
+export function getTimelineEntryPeriod(milestonePeriod) {
+  // Map the milestone period to the appropriate timeline entry period
+  switch (milestonePeriod) {
+    case 'week':
+      return 'day'; // Week plans have daily entries
+    case 'month':
+      return 'week'; // Month plans have weekly entries
+    case 'year':
+      return 'month'; // Year plans have monthly entries
+    case 'day':
+    default:
+      return 'day'; // Day plans or fallback to daily entries
+  }
+}
+
+/**
+ * For week plans, convert daily dates to Friday of that week for timeline entries
+ * For month plans, convert dates to the end of that month for timeline entries
+ * @param {string} date - Date in DD-MM-YYYY format
+ * @param {string} milestonePeriod - The period of the milestone plan
+ * @returns {string} - Date in DD-MM-YYYY format, converted appropriately based on the period
+ */
+export function getTimelineEntryDate(date, milestonePeriod) {
+  if (milestonePeriod === 'week') {
+    // For week plans, convert any daily date to Friday of that week
+    const momentDate = moment(date, 'DD-MM-YYYY');
+    const friday = momentDate.clone().day(5); // 5 = Friday
+
+    // If the original date is after Friday, get Friday of next week
+    if (momentDate.day() > 5) {
+      friday.add(1, 'week');
+    }
+
+    return friday.format('DD-MM-YYYY');
+  }
+
+  if (milestonePeriod === 'month') {
+    // For month plans, convert any date to the end of that month
+    const momentDate = moment(date, 'DD-MM-YYYY');
+    return momentDate.endOf('month').format('DD-MM-YYYY');
+  }
+
+  // For other periods, return the date as-is
+  return date;
+}

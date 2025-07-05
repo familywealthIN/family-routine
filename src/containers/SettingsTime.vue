@@ -7,7 +7,7 @@
       <v-btn absolute bottom color="info" right fab @click="dialog = true">
         <v-icon>add</v-icon>
       </v-btn>
-      <v-container class="py-4" style="background: rgba(0,0,0,0.8)">
+      <v-container class="py-4">
         <div class="d-flex justify-center">
           <circadian-cycle
             :routine-items="routineItems"
@@ -17,97 +17,7 @@
       </v-container>
     </v-card>
     <v-card-text class="image-card-page px-0">
-      <v-dialog v-model="dialog">
-        <v-card>
-          <v-card-title>
-            <span class="headline">{{ formTitle }}</span>
-          </v-card-title>
-          <v-form ref="form" v-model="valid">
-            <v-card-text>
-              <v-container grid-list-sm>
-                <v-layout wrap> <v-flex xs12 sm12 md12>
-                    <v-text-field v-model="editedItem.name" :rules="nameRules" label="Routine Name"
-                      required></v-text-field>
-                  </v-flex>                  <v-flex xs12 sm12 md12>
-                    <v-textarea :rules="descriptionRules" label="Description"
-                      v-model="editedItem.description"></v-textarea>
-                  </v-flex>
-                  <v-flex xs12 sm12 md12>
-                    <goal-tags-input
-                      :goalTags="editedItem.tags"
-                      :userTags="userTags"
-                      @update-new-tag-items="updateNewTagItems"
-                    />
-                  </v-flex>
-                  <div>
-                    <v-list subheader>
-                      <v-subheader>Steps</v-subheader>
-                      <div class="formStep pl-3">
-                        <v-text-field clearable v-model="stepBody" id="newStepBody" name="newStepBody"
-                          label="Type your step" class="inputGoal" @keyup.enter="addStep">
-                        </v-text-field>
-                        <v-btn icon color="success" fab class="ml-3 mr-0" :loading="buttonLoading"
-                          @click="addStep(editedItem.steps)">
-                          <v-icon dark>send</v-icon>
-                        </v-btn>
-                      </div>
-                    </v-list>
-                    <draggable v-model="editedItem.steps">
-                      <transition-group>
-                        <v-list-tile v-for="step in editedItem.steps" :key="step.id">
-                          <v-list-tile-action class="mr-3">
-                            <v-icon color="grey lighten-1" class="drag-handle">drag_indicator</v-icon>
-                          </v-list-tile-action>
-                          <v-list-tile-content>
-                            <v-list-tile-title>{{ step.name }}</v-list-tile-title>
-                          </v-list-tile-content>
-                          <v-list-tile-action @click="removeStep(editedItem.steps, step.id)">
-                            <v-icon color="grey">close</v-icon>
-                          </v-list-tile-action>
-                        </v-list-tile>
-                      </transition-group>
-                    </draggable>
-                  </div>
-                  <v-flex xs12 sm12 md12>
-                    <v-text-field type="time" :rules="timeRules" v-model="editedItem.time" step="600" label="Time"
-                      required></v-text-field>
-                  </v-flex>
-                  <v-flex xs12 sm12 md12>                    <v-text-field type="number" v-model="editedItem.points" :rules="pointsRules" label="Points"
-                      required></v-text-field>
-                    Point Remaining: {{ maxInputPoints() }}
-                  </v-flex>
-                  <v-flex xs12 sm12 md12>
-                    <v-textarea
-                      v-model="editedItem.startEvent"
-                      label="Start Event"
-                      class="monospace-font"
-                      rows="3"
-                      auto-grow
-                    ></v-textarea>
-                  </v-flex>
-                  <v-flex xs12 sm12 md12>
-                    <v-textarea
-                      v-model="editedItem.endEvent"
-                      label="End Event"
-                      class="monospace-font"
-                      rows="3"
-                      auto-grow
-                    ></v-textarea>
-                  </v-flex>
-                </v-layout>
-              </v-container>
-            </v-card-text>
 
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn color="blue darken-1" flat @click="close(true)">Cancel</v-btn>
-              <v-btn color="primary" :loading="buttonLoading" @click="save">
-                Save
-              </v-btn>
-            </v-card-actions>
-          </v-form>
-        </v-card>
-      </v-dialog>
       <v-data-table :headers="headers" :items="routineItems" class="elevation-0 mt-2" hide-actions>
         <template v-slot:items="props">
           <td>{{ props.item.name }}</td>
@@ -124,6 +34,95 @@
         </template>
       </v-data-table>
     </v-card-text>
+    <v-dialog width="600" v-model="dialog" persistent>
+      <v-card>
+        <v-card-title>
+          <span class="headline">{{ formTitle }}</span>
+        </v-card-title>
+        <v-form ref="form" v-model="valid">
+          <v-card-text>
+              <v-layout wrap> <v-flex xs12 sm12 md12>
+                  <v-text-field v-model="editedItem.name" :rules="nameRules" label="Routine Name"
+                    required></v-text-field>
+                </v-flex>                  <v-flex xs12 sm12 md12>
+                  <v-textarea :rules="descriptionRules" label="Description"
+                    v-model="editedItem.description"></v-textarea>
+                </v-flex>
+                <v-flex xs12 sm12 md12>
+                  <goal-tags-input
+                    :goalTags="editedItem.tags"
+                    :userTags="userTags"
+                    @update-new-tag-items="updateNewTagItems"
+                  />
+                </v-flex>
+                <div>
+                  <v-list subheader>
+                    <v-subheader>Steps</v-subheader>
+                    <div class="formStep pl-3">
+                      <v-text-field clearable v-model="stepBody" id="newStepBody" name="newStepBody"
+                        label="Type your step" class="inputGoal" @keyup.enter="addStep">
+                      </v-text-field>
+                      <v-btn icon color="success" fab class="ml-3 mr-0" :loading="buttonLoading"
+                        @click="addStep(editedItem.steps)">
+                        <v-icon dark>send</v-icon>
+                      </v-btn>
+                    </div>
+                  </v-list>
+                  <draggable v-model="editedItem.steps">
+                    <transition-group>
+                      <v-list-tile v-for="step in editedItem.steps" :key="step.id">
+                        <v-list-tile-action class="mr-3">
+                          <v-icon color="grey lighten-1" class="drag-handle">drag_indicator</v-icon>
+                        </v-list-tile-action>
+                        <v-list-tile-content>
+                          <v-list-tile-title>{{ step.name }}</v-list-tile-title>
+                        </v-list-tile-content>
+                        <v-list-tile-action @click="removeStep(editedItem.steps, step.id)">
+                          <v-icon color="grey">close</v-icon>
+                        </v-list-tile-action>
+                      </v-list-tile>
+                    </transition-group>
+                  </draggable>
+                </div>
+                <v-flex xs12 sm12 md12>
+                  <v-text-field type="time" :rules="timeRules" v-model="editedItem.time" step="600" label="Time"
+                    required></v-text-field>
+                </v-flex>
+                <v-flex xs12 sm12 md12>                    <v-text-field type="number" v-model="editedItem.points" :rules="pointsRules" label="Points"
+                    required></v-text-field>
+                  Point Remaining: {{ maxInputPoints() }}
+                </v-flex>
+                <v-flex xs12 sm12 md12>
+                  <v-textarea
+                    v-model="editedItem.startEvent"
+                    label="Start Event"
+                    class="monospace-font"
+                    rows="3"
+                    auto-grow
+                  ></v-textarea>
+                </v-flex>
+                <v-flex xs12 sm12 md12>
+                  <v-textarea
+                    v-model="editedItem.endEvent"
+                    label="End Event"
+                    class="monospace-font"
+                    rows="3"
+                    auto-grow
+                  ></v-textarea>
+                </v-flex>
+              </v-layout>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="blue darken-1" flat @click="close(true)">Cancel</v-btn>
+            <v-btn color="primary" :loading="buttonLoading" @click="save">
+              Save
+            </v-btn>
+          </v-card-actions>
+        </v-form>
+      </v-card>
+    </v-dialog>
   </container-box>
 </template>
 

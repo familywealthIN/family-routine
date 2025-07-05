@@ -62,7 +62,7 @@
     <v-toolbar v-if="$route.name !== 'login'" class="elevation-0" color="white" app>
       <v-toolbar-title style="font-size: 24px">{{ pageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon @click="pendingDialog = true">
+      <v-btn icon @click="aiSearchModal = true">
         <v-icon size="28">search</v-icon>
       </v-btn>
       <v-btn icon @click="pendingDialog = true">
@@ -113,11 +113,18 @@
         <pending-list />
       </v-card>
     </v-dialog>
+
+    <!-- AI Search Modal -->
+    <ai-search-modal
+      v-model="aiSearchModal"
+      @goals-saved="onGoalsSaved"
+    />
   </div>
 </template>
 
 <script>
 import PendingList from '../components/PendingList.vue';
+import AiSearchModal from '../components/AiSearchModal.vue';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
@@ -126,11 +133,13 @@ import { clearData, getSessionItem } from '../token';
 export default {
   components: {
     PendingList,
+    AiSearchModal,
   },
   data() {
     return {
       drawer: null,
       pendingDialog: false,
+      aiSearchModal: false,
       drawerItems: [
         {
           header: 'App',
@@ -197,6 +206,43 @@ export default {
           window.location.reload();
           console.log(error);
         });
+    },
+    onGoalsSaved(eventData) {
+      // Handle successful goals save
+      console.log('Goals saved:', eventData);
+
+      const message = eventData && eventData.count
+        ? `Successfully created ${eventData.count} goals for ${eventData.period}`
+        : 'Successfully saved goals';
+
+      this.$emit('show-success', message);
+
+      // Refetch daily goals if day goals were created and we're on the dashboard
+      if (this.$route.name === 'home' && eventData && eventData.hasDayGoals) {
+        console.log('Refetching daily goals on dashboard...');
+        // Use Vue's $root to access the dashboard component and refetch daily goals
+        this.$nextTick(() => {
+          const dashboardComponent = this.$children.find((child) => child.$options.name === 'DashBoard');
+          if (dashboardComponent && dashboardComponent.$apollo && dashboardComponent.$apollo.queries.goals) {
+            dashboardComponent.$apollo.queries.goals.refetch()
+              .then(() => {
+                console.log('Daily goals refetched successfully');
+              })
+              .catch((error) => {
+                console.error('Error refetching daily goals:', error);
+                // Fallback to page reload if refetch fails
+                window.location.reload();
+              });
+          } else {
+            // Fallback to page reload if we can't find the dashboard component
+            console.log('Dashboard component not found, falling back to page reload');
+            window.location.reload();
+          }
+        });
+      } else if (this.$route.name === 'home') {
+        // For non-day goals or when we can't determine, still reload the page
+        window.location.reload();
+      }
     },
   },
 };
