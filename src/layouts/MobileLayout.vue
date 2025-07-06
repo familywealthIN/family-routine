@@ -5,7 +5,7 @@
       clipped
       right
       v-model="drawer"
-      v-if="$route.name !== 'login' && $route.name !== 'stats'"
+      v-if="$route.name !== 'login' && $route.name !== 'stats'" class="header"
     >
       <v-list-tile @click.stop="drawer = !drawer">
         <v-list-tile-action style="min-width: 40px;">
@@ -59,7 +59,7 @@
         </v-flex>
       </v-layout>
     </v-navigation-drawer>
-    <v-toolbar v-if="$route.name !== 'login'" class="elevation-0" color="white" app>
+    <v-toolbar v-if="$route.name !== 'login'" class="elevation-0 fixed-toolbar safe-area-top" color="white" app>
       <v-toolbar-title style="font-size: 24px">{{ pageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn icon @click="pendingDialog = true">
@@ -74,14 +74,19 @@
         </v-avatar>
       </v-btn>
     </v-toolbar>
-    <v-content>
+    <div v-if="$route.name !== 'login'" class="scrollable-content safe-area-content">
+      <v-content>
+        <router-view></router-view>
+      </v-content>
+    </div>
+    <div v-else class="login-content-wrapper">
       <router-view></router-view>
-    </v-content>
+    </div>
     <v-bottom-nav
       :value="true"
       fixed
       color="white"
-      class="pb-2"
+      class="pb-2 fixed-bottom-nav safe-area-bottom"
       v-if="$route.name !== 'login' && $route.name !== 'stats'"
     >
       <v-btn
@@ -122,6 +127,8 @@ import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
 import { clearData, getSessionItem } from '../token';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 
 export default {
   components: {
@@ -181,30 +188,122 @@ export default {
   },
   methods: {
     handleClickSignOut() {
-      this.$gAuth
-        .signOut()
-        .then(async () => {
+      if (Capacitor.isNativePlatform()) {
+        GoogleAuth.signOut().then(async () => {
           this.drawer = false;
-          this.isSignIn = this.$gAuth.isAuthorized;
           await clearData();
           localStorage.removeItem(USER_TAGS);
-          this.$root.$data.userName = getSessionItem(GC_USER_NAME);
-          this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
-          this.$root.$data.userEmail = getSessionItem(GC_PICTURE);
+          this.$root.$data.userName = '';
+          this.$root.$data.userEmail = '';
+          this.$root.$data.picture = '';
           this.$router.push('/').catch(() => {});
-        })
-        .catch((error) => {
-          window.location.reload();
+        }).catch((error) => {
           console.log(error);
+          window.location.reload();
         });
+      } else {
+        this.$gAuth
+          .signOut()
+          .then(async () => {
+            this.drawer = false;
+            this.isSignIn = this.$gAuth.isAuthorized;
+            await clearData();
+            localStorage.removeItem(USER_TAGS);
+            this.$root.$data.userName = getSessionItem(GC_USER_NAME);
+            this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
+            this.$root.$data.userEmail = getSessionItem(GC_PICTURE);
+            this.$router.push('/').catch(() => {});
+          })
+          .catch((error) => {
+            window.location.reload();
+            console.log(error);
+          });
+      }
     },
+  },
+  mounted() {
+    if (typeof window !== 'undefined') {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      // Android 15 user agent detection (API 35, Android 15 is codename 'Vanilla Ice Cream')
+      // This is a best-effort guess, update as needed for your app's UA string
+      if (/Android\s15|Android\sVanilla|Android\sVIC/i.test(ua)) {
+        document.body.classList.add('android15');
+      }
+    }
   },
 };
 </script>
 
 <style>
 #mobileLayout {
-    padding-bottom: 64px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.fixed-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+body.android15 .safe-area-top {
+  padding-top: max(env(safe-area-inset-top, 0px), 8px);
+}
+
+.fixed-bottom-nav {
+  position: fixed !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  padding-bottom: 0 !important; /* Remove padding-bottom from footer, let scrollable-content handle it */
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+body.android15 .safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px);
+}
+
+.scrollable-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 60px; /* height of toolbar */
+  padding-bottom: 100px;
+  min-height: 0;
+}
+
+body.android15 .scrollable-content {
+  padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.safe-area-content {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  background: #fff;
+  min-height: 100%;
+  box-sizing: border-box;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body.android15 .safe-area-content {
+  padding-left: max(env(safe-area-inset-left, 0px), 0px);
+  padding-right: max(env(safe-area-inset-right, 0px), 0px);
 }
 
 #mobileLayout .v-card {
@@ -258,5 +357,17 @@ export default {
 }
 .v-bottom-nav {
   height: 64px !important;
+}
+
+.login-content-wrapper {
+  min-height: 100vh;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+body.android15 #mobileLayout .header {
+  padding-top: max(env(safe-area-inset-top, 0px), 8px);
 }
 </style>

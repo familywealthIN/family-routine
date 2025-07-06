@@ -12,6 +12,7 @@ import { graphQLUrl } from './blob/config';
 import './plugins/vuetify';
 import './plugins/notifications';
 import VueApollo from './plugins/apollo';
+import './styles/ios-safe-area.css';
 import App from './App.vue';
 // Load Google Identity Services script
 const script = document.createElement('script');
@@ -45,7 +46,7 @@ if (Capacitor.isNativePlatform()) {
       scopes: ['profile', 'email'],
       grantOfflineAccess: true,
       androidClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
-      iosClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+      iosClientId: '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com',
       webClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
     });
     console.log('GoogleAuth initialized in main.js');
@@ -80,13 +81,12 @@ loadData().then(() => {
   });
 
   // HTTP connection to the API
-  console.log('GraphQL URL:', graphQLUrl);
-  console.log('Is Native Platform:', Capacitor.isNativePlatform());
-  
+  console.log('Graph url:',graphQLUrl)
+  console.log('is native platform', Capacitor.isNativePlatform())
   const httpLink = createHttpLink({
     // You should use an absolute URL here
     uri: graphQLUrl || 'https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com/dev/graphql',
-    fetch: Capacitor.isNativePlatform() ? undefined : fetch,
+    fetch:Capacitor.isNativePlatform() ?  undefined : fetch
   });
 
   // Cache implementation
@@ -108,12 +108,12 @@ loadData().then(() => {
   const apolloClient = new ApolloClient({
     link: errorLink.concat(normalLink),
     cache,
-    ...(Capacitor.isNativePlatform() ? {} : {
-      fetchOptions: {
-        fetch,
-        mode: 'no-cors',
-      },
-    }),
+    ...(Capacitor.isNativePlatform()?{} :{
+    fetchOptions: {
+      fetch,
+      mode: 'no-cors',
+    }
+  }),
     defaultOptions: {
       watchQuery: {
         fetchPolicy: 'no-cache',

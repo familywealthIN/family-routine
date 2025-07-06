@@ -93,11 +93,11 @@ export default {
         try {
           // Re-initialize GoogleAuth to ensure it's properly configured
           await GoogleAuth.initialize({
-            clientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+            //clientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
             scopes: ['profile', 'email'],
             grantOfflineAccess: true,
             androidClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
-            iosClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+            iosClientId: '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com',
             webClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
             forceCodeForRefreshToken: true
           });
@@ -112,6 +112,8 @@ export default {
           
           const accessToken = result.authentication.accessToken;
           const notificationId = getSessionItem(GC_NOTIFICATION_TOKEN) || '';
+          console.log('Access Token:', accessToken);
+          //console.log('Notification ID:', notificationId);
           this.createSession(accessToken, notificationId);
         } catch (err) {
           console.error('Native Google login failed:', err);
@@ -132,6 +134,9 @@ export default {
           // On success do something, refer to https://developers.google.com/api-client-library/javascript/reference/referencedocs#googleusergetid
           const accessToken = user.getAuthResponse().access_token;
           const notificationId = getSessionItem(GC_NOTIFICATION_TOKEN) || '';
+          console.log('Access Token:', accessToken);  
+          console.log('Notification ID:', notificationId);
+
           this.createSession(accessToken, notificationId);
         })
         .catch((error) => {
@@ -183,22 +188,18 @@ export default {
     },
 
     createSession(accessToken, notificationId = '') {
-      console.log('createSession called with:', { accessToken, notificationId });
-      console.log('Apollo client available:', !!this.$apollo);
-      
-      if (!this.$apollo) {
-        console.error('Apollo client not available');
-        this.isLoading = false;
+      console.log('Creating session with access token:', {accessToken, notificationId});
+      if(!this.$apollo){
+        this.isLoading=false;
         this.$notify({
-          title: 'Login Error',
-          text: 'GraphQL client not initialized',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
+          title:'Login Error',
+          text:'GraphQL client not initialized',
+          group:'notify',
+          type:'error',
+          duration:3000
         });
         return;
       }
-      
       this.$apollo.mutate({
         mutation: gql`
           mutation authGoogle($accessToken: String!, $notificationId: String!) {
@@ -223,20 +224,30 @@ export default {
           const {
             name, email, picture, token, isNew, tags = []
           } = authGoogle;
-
-          // Set authentication state based on platform
-          if (this.isNative) {
-            this.isSignIn = true;
-            this.isAuthenticatedSignIn = true;
-          } else {
+          
+          if(this.isNative){
+            this.isSignIn=true;
+            this.isAuthenticatedSignIn=true;
+          }else{
             this.isSignIn = this.$gAuth.isAuthorized;
             this.isAuthenticatedSignIn = this.$gAuth.isAuthorized;
           }
+          
           const userData = { token, email, name, picture };
-          await saveData(userData);
+          try {
+            await saveData(userData);
+            console.log('saveData completed successfully');
+          } catch (saveError) {
+            console.error('saveData failed:', saveError);
+            // Continue execution even if saveData fails
+          }
+          
           localStorage.setItem(USER_TAGS, JSON.stringify(tags));
+          
           this.$root.$data.name = getSessionItem(GC_USER_NAME);
+          
           this.$root.$data.email = getSessionItem(GC_USER_EMAIL);
+          
           this.$root.$data.picture = getSessionItem(GC_PICTURE);
 
           if (isNew) {
@@ -245,9 +256,11 @@ export default {
             this.$router.push('home');
           }
 
-          setTimeout(() => { this.isLoading = false; }, 500);
+          setTimeout(() => { 
+            this.isLoading = false;
+          }, 500);
         },
-      }).catch(() => {
+      }).catch((error) => {
           this.isLoading = false;
           this.$notify({
             title: 'Login',
@@ -283,7 +296,7 @@ export default {
 
       this.isInit = this.isNative ? true : this.$gAuth.isInit;
       //this.$gAuth.isInit;
-      this.isSignIn = this.isNative ? false :(this.$gAuth.isAuthorized && !window.appSignedOut)
+      this.isSignIn = this.isNative ? !!token : (this.$gAuth.isAuthorized && !window.appSignedOut)
 
       this.isStandalone = isRunningStandalone() && token;
       this.isAuthenticatedSignIn = this.isSignIn || this.isStandalone;
@@ -385,13 +398,26 @@ export default {
 .login .layout,
 .login .v-card {
   height: 100%;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .login footer {
   position: absolute;
-  bottom: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom));
   margin: 0 auto;
   display: block;
   width: 100%;
+  padding: 0 16px;
+}
+
+/* Add top spacing for status bar */
+.login h2:first-of-type {
+  margin-top: 20px;
+}
+
+/* Ensure content doesn't overlap with footer */
+.login-box {
+  margin-bottom: 80px;
 }
 </style>

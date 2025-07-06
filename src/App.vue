@@ -108,6 +108,7 @@ export default {
       }
 
       PushNotifications.requestPermissions().then(result => {
+      console.log('pust notification result', result)
         if (result.receive === 'granted') {
           PushNotifications.register();
         }

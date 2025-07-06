@@ -20,9 +20,14 @@
     "GoogleAuth": {
       "scopes": ["profile", "email"],
       "serverClientId": "350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com", 
-      "androidClientId": "350952942983-9i5gdkf7n1415jm9ot1g1qe85kjnqpep.apps.googleusercontent.com",
-      "iosClientId": "350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com",
+      "androidClientId": "350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com",
+      "iosClientId": "350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com",
       "forceCodeForRefreshToken": true
+    },
+    "StatusBar": {
+      "style": "Light",
+      "backgroundColor": "#ffffff",
+      "overlaysWebView": false
     }
 
   }

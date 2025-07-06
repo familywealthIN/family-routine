@@ -25,4 +25,5 @@ module.exports = {
       exclude: ['_header', '_redirects', 'public/firebase-messaging-sw.js', 'public/firebase.html', '.htaccess'],
     },
   },
+  lintOnSave: false
 };

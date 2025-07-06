@@ -1,4 +1,4 @@
-/* iOS Safe Area Global Styles */
+/* iOS Safe Area Global Styles
  .v-toolbar {
   margin-top:40px!important;
   padding-top: env(safe-area-inset-top) !important;
@@ -27,7 +27,7 @@ body {
     padding: 0;
     display: flex;
     flex-direction: column;
-    height: 100vh; /* Full viewport height */
+    height: 100vh; 
 
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
@@ -40,21 +40,18 @@ body {
 
     @media (max-width: 600px) {
     .v-toolbar, .v-item-group {
-      padding-top: env(safe-area-inset-top); /* Add top padding for iPhone notch */
+      padding-top: env(safe-area-inset-top); 
        padding-bottom: env(safe-area-inset-bottom);
-      /* margin-bottom: env(safe-area-inset-bottom); ; */
     }
     .v-item-group{
-         /* sheight: 120px!important; */
     }
-  }
+  } */
 
   /* @media (max-width: 600px) { */
-    .v-toolbar, .v-item-group{
-      padding-top: env(safe-area-inset-top); /* Add top padding for iPhone notch */
+    /* .v-toolbar, .v-item-group{
+      padding-top: env(safe-area-inset-top);
        padding-bottom: env(safe-area-inset-bottom);
-      /* margin-bottom: env(safe-area-inset-bottom); ; */
-    }
+    } */
     /* .v-item-group{
          padding-bottom: 30px!important;
          height: 140px!important;
@@ -62,10 +59,10 @@ body {
   /* } */
 
 
-  html, body {
+  /* html, body {
   padding-top: env(safe-area-inset-top) !important;
   padding-bottom: env(safe-area-inset-bottom) !important;
-}
+} */
 
 /* .v-app {
   padding-top: env(safe-area-inset-top) !important;
@@ -81,6 +78,6 @@ body {
   height: calc(64px + env(safe-area-inset-bottom)) !important;
 } */
 
-.header{
+/* .header{
  padding-top:40px !important;
-}
+} */
