@@ -18,6 +18,7 @@ module.exports = {
     'no-console': 'off',
     "linebreak-style": 0,
     "max-len": ["error", { "code": 150 }],
+    "vue/valid-v-for": "off",
   },
   overrides: [
     {

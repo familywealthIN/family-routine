@@ -88,8 +88,6 @@
     <!-- AI Search Modal -->
     <ai-search-modal
       v-model="aiSearchModal"
-      @goals-saved="onGoalsSaved"
-      @task-created="onTaskCreated"
     />
   </div>
 </template>
@@ -161,38 +159,6 @@ export default {
           console.log(error);
         });
     },
-    onGoalsSaved(eventData) {
-      this.$emit('goals-saved', eventData);
-    },
-    onTaskCreated(taskData) {
-      // Handle successful task creation
-      console.log('Task created:', taskData);
-
-      this.$emit('show-success', 'Task successfully created!');
-
-      // Refetch daily goals since tasks are day goals
-      if (this.$route.name === 'home') {
-        console.log('Refetching daily goals after task creation...');
-        this.$nextTick(() => {
-          const dashboardComponent = this.$children.find((child) => child.$options.name === 'DashBoard');
-          if (dashboardComponent && dashboardComponent.$apollo && dashboardComponent.$apollo.queries.goals) {
-            dashboardComponent.$apollo.queries.goals.refetch()
-              .then(() => {
-                console.log('Daily goals refetched successfully after task creation');
-              })
-              .catch((error) => {
-                console.error('Error refetching daily goals after task creation:', error);
-                // Fallback to page reload if refetch fails
-                window.location.reload();
-              });
-          } else {
-            // Fallback to page reload if we can't find the dashboard component
-            console.log('Dashboard component not found, falling back to page reload');
-            window.location.reload();
-          }
-        });
-      }
-    },
   },
 };
 </script>
@@ -216,11 +182,6 @@ export default {
     .v-navigation-drawer--fixed {
       padding-top: 64px;
     }
-  }
-
-  /* Desktop rounded borders to match mobile */
-  #desktopLayout .v-card {
-    border-radius: 16px;
   }
 
   .ai-search-box * {
