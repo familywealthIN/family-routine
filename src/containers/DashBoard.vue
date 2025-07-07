@@ -144,7 +144,7 @@
                             <v-list two-line subheader>
                               <goal-item-list
                                 :goal="taskGoals"
-                                :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
+                                :progress="getWeekProgress(currentGoalPeriod)"
                                 @delete-task-goal="deleteTaskGoal"
                                 @refresh-task-goal="refreshTaskGoal"
                                 @toggle-goal-display-dialog="toggleGoalDisplayDialog"
@@ -217,19 +217,26 @@
             </div>
           </v-flex>
           <!-- <v-flex xs6 d-flex>goal time left </v-flex> -->
-          <!-- <v-flex xs6 d-flex>Routine time left</v-flex> -->
-          <v-flex xs12 class="pr-3 pl-3 mb-3" d-flex v-if="!!countTaskTotal(currentTask) && currentGoalPeriod === 'day'">
+          <!-- Week Goal Streak Section -->
+          <v-flex
+            xs12
+            class="pr-3 pl-3 mb-3"
+            d-flex
+            v-if="!!countTaskTotal(currentTask) && currentGoalPeriod === 'day' && filterTaskGoalsPeriod(currentTask.id, goals, 'week').length"
+          >
             <v-card>
               <v-card-title>
                 <b>Week Goal Streak</b>
               </v-card-title>
               <div
-                :key="taskGoals.id"
-                v-for="taskGoals in filterTaskGoalsPeriod(currentTask.id, goals, currentGoalPeriod)"
+                :key="weekGoal.id"
+                v-for="weekGoal in filterTaskGoalsPeriod(currentTask.id, goals, 'week')"
                 class="pb-3 pl-3 pr-3"
               >
-                {{ getWeekProgressName(currentGoalPeriod, taskGoals) }}
-                <streak-checks :progress="getWeekProgress(currentGoalPeriod, taskGoals) || 0"></streak-checks>
+                <div v-for="weekGoalItem in weekGoal.goalItems" :key="weekGoalItem.id" class="mb-2">
+                  <div class="week-goal-name">{{ weekGoalItem.body }}</div>
+                  <streak-checks :progress="weekGoalItem.progress || 0"></streak-checks>
+                </div>
               </div>
             </v-card>
           </v-flex>
@@ -252,10 +259,10 @@
                 v-if="filterUpcomingPastTask(tabs, tasklist) && filterUpcomingPastTask(tabs, tasklist).length > 0"
                 class="concentrated-view elevation-0"
               >
-                <div v-for="(task, index) in filterUpcomingPastTask(tabs, tasklist)" :key="task">
-                  <v-divider v-if="index != 0" :key="task" :inset="task.inset"></v-divider>
+                <div v-for="(task, index) in filterUpcomingPastTask(tabs, tasklist)" :key="task.id">
+                  <v-divider v-if="index != 0" :key="`divider-${task.id}`" :inset="task.inset"></v-divider>
                   <v-list-tile
-                    :key="task"
+                    :key="`tile-${task.id}`"
                     @click="updateSelectedTaskRef(task.id)"
                     :class="task.id === selectedTaskRef ? 'active' : ''"
                     avatar
@@ -362,7 +369,7 @@
                             <v-list two-line subheader>
                               <goal-item-list
                                 :goal="taskGoals"
-                                :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
+                                :progress="getWeekProgress(currentGoalPeriod)"
                                 @delete-task-goal="deleteTaskGoal"
                                 @refresh-task-goal="refreshTaskGoal"
                                 @toggle-goal-display-dialog="toggleGoalDisplayDialog"
@@ -621,12 +628,11 @@
       transition="dialog-bottom-transition"
     >
       <v-card>
-        <v-toolbar dark color="primary">
-          <v-btn icon dark @click="toggleGoalDisplayDialog(null, false)">
+        <v-toolbar color="white">
+          <v-spacer></v-spacer>
+          <v-btn icon @click="toggleGoalDisplayDialog(null, false)">
             <v-icon>close</v-icon>
           </v-btn>
-          <v-toolbar-title>Goal Details</v-toolbar-title>
-          <v-spacer></v-spacer>
         </v-toolbar>
         <v-card>
           <v-card-text>
@@ -754,6 +760,8 @@ export default {
               ticked
               passed
               wait
+              startEvent
+              endEvent
               steps {
                 name
               }
@@ -888,6 +896,7 @@ export default {
       activeSelectionId: '',
       tabs: null,
       toggleStepModal: false,
+      executedEndEvents: new Set(), // Track tasks that have had their endEvent executed
     };
   },
   watch: {
@@ -899,8 +908,121 @@ export default {
         this.isEditable = moment(date).isSameOrAfter(todayDate, 'day');
       }
     },
+    tasklist: {
+      handler(newTasklist) {
+        // Update the global currentTask store whenever tasklist changes
+        this.$currentTask.setTasklist(newTasklist);
+      },
+      immediate: true,
+    },
+    // Watch for route changes to detect login/logout
+    $route(to, from) {
+      // If user navigates from login page to another page, refresh Apollo queries
+      if (from.name === 'login' && to.name !== 'login') {
+        this.refreshApolloQueries();
+      }
+    },
+
+    // Watch for user email changes (indicates login/logout)
+    '$root.$data.email': function watchUserEmail(newEmail, oldEmail) {
+      // If email changes from null/undefined to a value, or from one user to another
+      if ((!oldEmail && newEmail) || (oldEmail && newEmail && oldEmail !== newEmail)) {
+        this.refreshApolloQueries();
+      }
+    },
+
+    // Watch for currentTask changes to check for completion and execute endEvent
+    currentTask: {
+      handler(newTask) {
+        if (newTask && newTask.id && newTask.endEvent) {
+          const isComplete = this.countTaskCompleted(newTask) >= this.countTaskTotal(newTask);
+          const taskKey = `${this.date}-${newTask.id}`;
+
+          // Execute endEvent if task is complete and endEvent hasn't been executed yet
+          if (isComplete && !this.executedEndEvents.has(taskKey)) {
+            this.executeEvent(newTask.endEvent, 'endEvent', newTask.name);
+            this.executedEndEvents.add(taskKey);
+          }
+        }
+      },
+      immediate: true,
+    },
   },
   methods: {
+    refreshApolloQueries() {
+      // Refresh all Apollo queries in this component when user logs in
+      try {
+        if (this.$apollo.queries.tasklist) {
+          this.$apollo.queries.tasklist.refetch();
+        }
+        if (this.$apollo.queries.goals) {
+          this.$apollo.queries.goals.refetch();
+        }
+        console.log('DashBoard: Apollo queries refreshed after login');
+      } catch (error) {
+        console.warn('DashBoard: Error refreshing Apollo queries:', error);
+      }
+    },
+
+    executeEvent(eventScript, eventType, taskName) {
+      if (!eventScript || !eventScript.trim()) {
+        return;
+      }
+
+      try {
+        // Split the event script into lines and process each line
+        const lines = eventScript.split('\n').filter((line) => line.trim());
+
+        lines.forEach((line) => {
+          const trimmedLine = line.trim();
+
+          // Skip empty lines and comments
+          if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('//')) {
+            return;
+          }
+
+          // Check if it's a URL (starts with http:// or https://)
+          if (trimmedLine.match(/^https?:\/\/.+/)) {
+            window.open(trimmedLine, '_blank');
+            console.log(`${eventType} executed for "${taskName}": Opened URL ${trimmedLine}`);
+          } else if (trimmedLine.toLowerCase().startsWith('notify:')) {
+            const message = trimmedLine.substring(7).trim();
+            this.$notify({
+              title: `${eventType} - ${taskName}`,
+              text: message,
+              group: 'notify',
+              type: 'success',
+              duration: 5000,
+            });
+            console.log(`${eventType} executed for "${taskName}": Notification sent`);
+          } else if (trimmedLine.toLowerCase().startsWith('log:')) {
+            const message = trimmedLine.substring(4).trim();
+            console.log(`${eventType} for "${taskName}": ${message}`);
+          } else {
+            console.log(`${eventType} executed for "${taskName}": ${trimmedLine}`);
+          }
+        });
+
+        // Show a general notification that the event was executed
+        this.$notify({
+          title: `Task ${eventType.replace('Event', '')} Complete`,
+          text: `${taskName} ${eventType} has been executed`,
+          group: 'notify',
+          type: 'info',
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error(`Error executing ${eventType} for "${taskName}":`, error);
+        this.$notify({
+          title: 'Event Execution Error',
+          text: `Failed to execute ${eventType} for ${taskName}`,
+          group: 'notify',
+          type: 'error',
+          duration: 5000,
+        });
+      }
+    },
+
     setActiveSelection(task) {
       this.activeSelectionId = task.id;
     },
@@ -1125,25 +1247,23 @@ export default {
       this.$apollo.queries.goals.refetch();
       this.lastCompleteItemGoalRef = taskRef;
     },
-    getWeekProgress(currentGoalPeriod, taskGoals) {
+    getWeekProgress(currentGoalPeriod) {
       if (currentGoalPeriod === 'day') {
-        const mainTaskGoalRef = taskGoals.goalItems.length === 1 ? taskGoals.goalItems[0].goalRef : 0;
         if (this.goals && this.goals.length) {
           const weekGoals = this.goals.find((goal) => goal.period === 'week');
           const weekGoalItemMilestoneChecked = weekGoals
-            && weekGoals.goalItems.find((goalItem) => goalItem.id === this.lastCompleteItemGoalRef || mainTaskGoalRef);
+            && weekGoals.goalItems.find((goalItem) => goalItem.id === this.lastCompleteItemGoalRef);
           return (weekGoalItemMilestoneChecked && weekGoalItemMilestoneChecked.progress) || 0;
         }
       }
       return 0;
     },
-    getWeekProgressName(currentGoalPeriod, taskGoals) {
+    getWeekProgressName(currentGoalPeriod) {
       if (currentGoalPeriod === 'day') {
-        const mainTaskGoalRef = taskGoals.goalItems.length === 1 ? taskGoals.goalItems[0].goalRef : 0;
         if (this.goals && this.goals.length) {
           const weekGoals = this.goals.find((goal) => goal.period === 'week');
           const weekGoalItemMilestoneChecked = weekGoals
-            && weekGoals.goalItems.find((goalItem) => goalItem.id === this.lastCompleteItemGoalRef || mainTaskGoalRef);
+            && weekGoals.goalItems.find((goalItem) => goalItem.id === this.lastCompleteItemGoalRef);
           return (weekGoalItemMilestoneChecked && weekGoalItemMilestoneChecked.body) || '';
         }
       }
@@ -1451,9 +1571,15 @@ export default {
           const isTimeLessThanNextTask = currentTime.diff(nextTime, 'minutes') <= -1;
           return isTimeGreaterThanTask && isTimeLessThanNextTask;
         });
+
+        // Update the global currentTask store
+        this.$currentTask.setCurrentTask(currentActiveTask || {});
+
         return currentActiveTask;
       }
 
+      // Update the global currentTask store to empty
+      this.$currentTask.setCurrentTask({});
       return {};
     },
   },
@@ -1763,5 +1889,10 @@ export default {
 .action-box {
   display: flex;
   justify-content: flex-end;
+}
+.week-goal-name {
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #1976d2;
 }
 </style>

@@ -2,10 +2,12 @@ service: familywealth-graphql-api
 
 custom:
   secrets: ${file(secrets.json)}
-
+package:
+  exclude:
+    - dist
 provider:
   name: aws
-  runtime: nodejs12.x
+  runtime: nodejs18.x
   stage: dev
   region: ap-south-1
   environment:

@@ -412,6 +412,16 @@ export default {
     },
   },
   watch: {
+    'selectedGoalItem.taskRef': function selectedGoalItemTaskRef(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        // Find the selected task and get its tags
+        const selectedTask = this.tasklist.find((task) => task.id === newVal);
+        const taskTags = selectedTask && selectedTask.tags ? [...selectedTask.tags] : [];
+
+        // Update the tags in the selectedGoalItem
+        this.selectedGoalItem.tags = taskTags;
+      }
+    },
     selectedGoalItem(newVal, oldVal) {
       this.isNewItemLoaded = !!newVal.id && (oldVal.date === '' || typeof oldVal.date === 'undefined');
       const isNewDateItemLoaded = newVal.date !== oldVal.date && (oldVal.date === '' || typeof oldVal.date === 'undefined');

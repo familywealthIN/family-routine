@@ -11,8 +11,10 @@ import { Capacitor } from '@capacitor/core';
 import { graphQLUrl } from './blob/config';
 import './plugins/vuetify';
 import './plugins/notifications';
+import './plugins/curl-executor';
 import VueApollo from './plugins/apollo';
 import './styles/ios-safe-area.css';
+import currentTaskPlugin from './plugins/currentTask';
 import App from './App.vue';
 // Load Google Identity Services script
 const script = document.createElement('script');
@@ -133,6 +135,9 @@ loadData().then(() => {
   const name = getSessionItem(GC_USER_NAME);
   const email = getSessionItem(GC_USER_EMAIL);
   const picture = getSessionItem(GC_PICTURE);
+
+  // Install the currentTask plugin
+  Vue.use(currentTaskPlugin);
 
   new Vue({
     router,

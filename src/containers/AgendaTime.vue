@@ -1,11 +1,11 @@
 <template>
-  <container-box :isLoading="isLoading">
+  <container-box :is-loading="isLoading">
     <div class="weekdays pt-3 pl-2 pr-2">
       <template v-for="(weekDay, i) in weekDays">
         <div
-          @click="setDate(i)"
-          :class="`day ${weekDay.isActive ? 'active' : ''}`"
           :key="weekDay.day"
+          :class="`day ${weekDay.isActive ? 'active' : ''}`"
+          @click="setDate(i)"
         >
           <div>{{ weekDay.day }}</div>
           <div>{{ weekDay.dayNumber }}</div>
@@ -16,8 +16,8 @@
       <p class="pt-4">
         Work on your daily agenda to bring you closer to your lifetime goal.
       </p>
-      <template v-if="goals && goals.find((goal) => goal.period === 'lifetime')" >
-        <v-card>
+      <template v-if="goals && goals.find((goal) => goal.period === 'lifetime')">
+        <v-card class="modern-card">
           <v-card-title>
             <h3>Remember your Lifetime Goals</h3>
           </v-card-title>
@@ -27,14 +27,17 @@
                 v-for="goalItem in goals.find((goal) => goal.period === 'lifetime').goalItems"
                 :key="goalItem.id"
               >
-                {{goalItem.body}}
+                {{ goalItem.body }}
               </li>
             </ul>
           </v-card-text>
         </v-card>
       </template>
     </div>
-    <div class="text-xs-center date-navigation" hidden>
+    <div
+      class="text-xs-center date-navigation"
+      hidden
+    >
       <v-btn
         fab
         outline
@@ -64,10 +67,15 @@
           keyboard_arrow_right
         </v-icon>
       </v-btn>
-      <div class="date-today">{{today}}</div>
+      <div class="date-today">
+        {{ today }}
+      </div>
     </div>
     <div v-if="tasklist && tasklist.length">
-      <v-timeline dense clipped>
+      <v-timeline
+        dense
+        clipped
+      >
         <template v-for="task in tasklist">
           <span :key="task.id">
             <v-timeline-item
@@ -76,32 +84,39 @@
               :color="getButtonColor(task)"
               medium
             >
-              <template v-slot:icon>
-                <v-icon class="white--text" >{{getButtonIcon(task)}}</v-icon>
+              <template #icon>
+                <v-icon class="white--text">{{ getButtonIcon(task) }}</v-icon>
               </template>
               <v-layout>
                 <v-flex xs2>
-                  <strong>{{task.time}}</strong>
+                  <strong>{{ task.time }}</strong>
                 </v-flex>
                 <v-flex>
-                  <strong>{{task.name}}</strong>
+                  <strong>{{ task.name }}</strong>
                   <br />
                   <a @click="() => $router.push(`/agenda/tree/${task.id}`)">Go to Month Planner</a>
-                  <div class="caption"><pre>{{task.description}}</pre></div>
+                  <div class="caption"><pre>{{ task.description }}</pre></div>
                 </v-flex>
               </v-layout>
             </v-timeline-item>
             <template v-for="period in periods">
               <v-timeline-item
-                hide-dot
                 :key="period + task.id"
+                hide-dot
                 class="pb-0 pt-2"
               >
-                <v-layout class="period-separator" align-center justify-space-between>
+                <v-layout
+                  class="period-separator"
+                  align-center
+                  justify-space-between
+                >
                   <v-flex xs7>
-                    <span style="text-transform: uppercase">{{period}}</span>
+                    <span style="text-transform: uppercase">{{ period }}</span>
                   </v-flex>
-                  <v-flex xs5 text-xs-right>
+                  <v-flex
+                    xs5
+                    text-xs-right
+                  >
                     <!-- <v-btn
                       flat
                       icon
@@ -116,36 +131,36 @@
                       <v-icon class="overlay-icon">arrow_back</v-icon>
                     </v-btn> -->
                     <v-btn
+                      v-if="isEditable && period !== 'year'"
                       flat
                       icon
                       color="primary"
-                      v-if="isEditable && period !== 'year'"
                       @click="clonePeriodGoalItem(task, period)"
-                      >
+                    >
                       <v-icon>content_copy</v-icon>
                       <v-icon class="overlay-icon">arrow_upward</v-icon>
                     </v-btn>
                     <v-btn
+                      v-if="isEditable"
                       flat
                       icon
                       color="primary"
-                      v-if="isEditable"
                       @click="newGoalItem(task, period)"
-                      >
+                    >
                       <v-icon>add</v-icon>
                     </v-btn>
                     <v-btn
+                      v-else
                       flat
                       icon
                       color="primary"
-                      v-else
                     >
-                      <v-icon></v-icon>
+                      <v-icon />
                     </v-btn>
                   </v-flex>
                 </v-layout>
               </v-timeline-item>
-              <template v-if="filterTaskGoalsPeriod(task.id, period).length" >
+              <template v-if="filterTaskGoalsPeriod(task.id, period).length">
                 <template
                   v-for="(taskGoals, i) in filterTaskGoalsPeriod(task.id, period)"
                 >
@@ -172,7 +187,7 @@
       </v-timeline>
     </div>
     <div v-if="tasklist && tasklist.length === 0">
-      <v-card>
+      <v-card class="modern-card">
         <v-card-text class="text-xs-center">
           <p>No items to display. Please go to Routine Settings and add routine items.</p>
         </v-card-text>
@@ -184,21 +199,28 @@
       hide-overlay
       transition="dialog-bottom-transition"
     >
-      <v-card>
-        <v-toolbar dark color="primary">
-          <v-btn icon dark @click="goalDetailsDialog = false">
+      <v-card class="modern-card-elevated">
+        <v-toolbar
+          dark
+          color="primary"
+        >
+          <v-btn
+            icon
+            dark
+            @click="goalDetailsDialog = false"
+          >
             <v-icon>close</v-icon>
           </v-btn>
           <v-toolbar-title>Add Goal</v-toolbar-title>
-          <v-spacer></v-spacer>
+          <v-spacer />
         </v-toolbar>
         <goal-list
           :goals="goals"
           :date="date"
           :period="currentGoalPeriod"
-          :selectedBody="selectedBody"
+          :selected-body="selectedBody"
           :tasklist="tasklist"
-          :selectedTaskRef="selectedTaskRef"
+          :selected-task-ref="selectedTaskRef"
           @toggle-goal-details-dialog="toggleGoalDetailsDialog"
         />
         <v-alert
@@ -320,6 +342,11 @@ export default {
       periods: ['year', 'month', 'week', 'day'],
       isEditable: true,
     };
+  },
+  computed: {
+    today() {
+      return moment(this.date, 'DD-MM-YYYY').format('DD MMMM YYYY');
+    },
   },
   watch: {
     date(newVal, oldVal) {
@@ -487,11 +514,6 @@ export default {
       this.goalDetailsDialog = bool;
     },
   },
-  computed: {
-    today() {
-      return moment(this.date, 'DD-MM-YYYY').format('DD MMMM YYYY');
-    },
-  },
 };
 </script>
 
@@ -538,7 +560,7 @@ export default {
   }
   .weekdays .day {
     padding: 16px;
-    border-radius: 4px;
+    border-radius: 16px;
     text-align: center;
   }
 
