@@ -239,18 +239,41 @@
           </v-flex>
           <!-- <v-flex xs6 d-flex>goal time left </v-flex> -->
           <!-- <v-flex xs6 d-flex>Routine time left</v-flex> -->
-          <v-flex xs12 class="pr-3 pl-3 mb-3" d-flex v-if="!!countTaskTotal(currentTask) && currentGoalPeriod === 'day'">
+          <v-flex
+            xs12
+            class="pr-3 pl-3 mb-3"
+            d-flex
+            v-if="!!countTaskTotal(currentTask) &&
+                  currentGoalPeriod === 'day' &&
+                  filterTaskGoalsPeriod(currentTask.id, goals, 'week').length > 0"
+          >
             <v-card>
               <v-card-title>
                 <b>Week Goal Streak</b>
               </v-card-title>
               <div
-                :key="taskGoals.id"
-                v-for="taskGoals in filterTaskGoalsPeriod(currentTask.id, goals, currentGoalPeriod)"
+                :key="weekGoal.id"
+                v-for="weekGoal in filterTaskGoalsPeriod(currentTask.id, goals, 'week')"
                 class="pb-3 pl-3 pr-3"
               >
-                {{ getWeekProgressName(currentGoalPeriod, taskGoals) }}
-                <streak-checks :progress="getWeekProgress(currentGoalPeriod, taskGoals) || 0"></streak-checks>
+                <!-- Show each goal item in the week goal -->
+                <div
+                  v-for="(goalItem, index) in weekGoal.goalItems"
+                  :key="goalItem.id"
+                  class="mb-2"
+                >
+                  <div class="caption text--secondary" v-if="weekGoal.goalItems.length > 1">
+                    Goal {{ index + 1 }} of {{ weekGoal.goalItems.length }}
+                  </div>
+                  <div class="body-1">{{ goalItem.body }}</div>
+                  <streak-checks :progress="goalItem.progress || 0"></streak-checks>
+                </div>
+
+                <!-- Fallback for when no goal items exist -->
+                <div v-if="!weekGoal.goalItems || weekGoal.goalItems.length === 0" class="mb-2">
+                  <div class="body-1 text--secondary">No week goal items</div>
+                  <streak-checks :progress="0"></streak-checks>
+                </div>
               </div>
             </v-card>
           </v-flex>
@@ -958,10 +981,11 @@ export default {
         if (newTask && oldTask && newTask.id && oldTask.id && newTask.endEvent) {
           console.log('DashBoard: Current task changed:', newTask, oldTask);
           const isComplete = this.countTaskCompleted(newTask) >= this.countTaskTotal(newTask);
+          const isOldComplete = this.countTaskCompleted(oldTask) >= this.countTaskTotal(oldTask);
           const taskKey = `${this.date}-${newTask.id}`;
 
           // Execute endEvent if task is complete and endEvent hasn't been executed yet
-          if (isComplete && !this.executedEndEvents.has(taskKey)) {
+          if (isComplete && !isOldComplete && !this.executedEndEvents.has(taskKey)) {
             this.checkEventExecutionForTask(newTask.id, 'K');
           }
         }
