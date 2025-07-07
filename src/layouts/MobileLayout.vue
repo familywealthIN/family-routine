@@ -356,6 +356,10 @@ body.android15 .safe-area-content {
     border-radius: 16px;
 }
 
+.login footer {
+  bottom: calc(30px + env(safe-area-inset-bottom))!important;
+}
+
 #mobileLayout .progress .v-card .headline {
     color: rgba(0, 0, 0, 0.54);
     font-size: 14px !important;
