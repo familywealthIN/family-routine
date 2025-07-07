@@ -26,3 +26,27 @@ functions:
           path: graphql
           method: post
           cors: true
+
+  mcp:
+    handler: serverless-mcp.handler
+    events:
+      - http:
+          path: mcp
+          method: get
+          cors: true
+      - http:
+          path: mcp/call
+          method: post
+          cors: true
+      - http:
+          path: mcp/resources
+          method: get
+          cors: true
+      - http:
+          path: mcp/tools
+          method: get
+          cors: true
+      - http:
+          path: mcp/graphql
+          method: post
+          cors: true

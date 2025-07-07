@@ -177,6 +177,85 @@
             </v-list-tile-action>
         </v-list-tile>
     </v-list>
+
+    <!-- API Integration Section -->
+    <v-alert
+      :value="true"
+      type="info"
+      style="margin-top: 20px;"
+    >
+      API Integration - Use these credentials to access the Routine Notes API via MCP
+    </v-alert>
+
+    <v-list
+        subheader
+        three-line
+    >
+        <v-subheader>API Access</v-subheader>
+
+        <v-list-tile>
+          <v-list-tile-content>
+              <v-list-tile-title>MCP Server URL</v-list-tile-title>
+              <v-list-tile-sub-title>
+                  Use this URL with any MCP client to access the Routine Notes API
+              </v-list-tile-sub-title>
+          </v-list-tile-content>
+          <v-list-tile-action style="width: 300px;">
+              <v-text-field
+                  label="MCP Server URL"
+                  readonly
+                  :value="mcpServerUrl"
+                  append-icon="mdi-content-copy"
+                  @click:append="copyToClipboard(mcpServerUrl)"
+              ></v-text-field>
+          </v-list-tile-action>
+        </v-list-tile>
+
+        <v-list-tile>
+          <v-list-tile-content>
+              <v-list-tile-title>API Key</v-list-tile-title>
+              <v-list-tile-sub-title>
+                  Your personal API key for authentication. Keep this secure and don't share it.
+              </v-list-tile-sub-title>
+          </v-list-tile-content>
+          <v-list-tile-action style="width: 300px;">
+              <v-text-field
+                  label="API Key"
+                  readonly
+                  :value="userApiKey || 'No API key generated'"
+                  :type="showApiKey ? 'text' : 'password'"
+                  :append-icon="showApiKey ? 'mdi-eye' : 'mdi-eye-off'"
+                  @click:append="showApiKey = !showApiKey"
+              ></v-text-field>
+          </v-list-tile-action>
+        </v-list-tile>
+
+        <v-list-tile>
+          <v-list-tile-content>
+              <v-list-tile-title>API Key Actions</v-list-tile-title>
+              <v-list-tile-sub-title>
+                  Generate a new API key or copy the existing one
+              </v-list-tile-sub-title>
+          </v-list-tile-content>
+          <v-list-tile-action>
+              <v-btn
+                color="primary"
+                :loading="generatingApiKey"
+                @click="generateApiKey"
+                class="mr-2"
+              >
+                {{ userApiKey ? 'Regenerate' : 'Generate' }} API Key
+              </v-btn>
+              <v-btn
+                color="secondary"
+                :disabled="!userApiKey"
+                @click="copyToClipboard(userApiKey)"
+              >
+                Copy API Key
+              </v-btn>
+          </v-list-tile-action>
+        </v-list-tile>
+    </v-list>
   </container-box>
 </template>
 
@@ -193,7 +272,83 @@ export default {
       profileSettings: PROFILE_SETTINGS,
       weekStartOptions: WEEK_START_OPTIONS,
       timezoneOptions: TIMEZONE_OPTIONS,
+      userApiKey: null,
+      showApiKey: false,
+      generatingApiKey: false,
+      mcpServerUrl: process.env.NODE_ENV === 'production'
+        ? 'https://your-api-domain.com/dev/mcp'
+        : 'http://localhost:4000/mcp',
     };
+  },
+  apollo: {
+    userTags: {
+      query: gql`
+        query getUserTags {
+          getUserTags {
+            name
+            email
+            apiKey
+          }
+        }
+      `,
+      result({ data }) {
+        if (data && data.getUserTags && data.getUserTags.apiKey) {
+          this.userApiKey = data.getUserTags.apiKey;
+        }
+      },
+      error(error) {
+        console.error('Error fetching user data:', error);
+      },
+    },
+  },
+  methods: {
+    async generateApiKey() {
+      this.generatingApiKey = true;
+      try {
+        const result = await this.$apollo.mutate({
+          mutation: gql`
+            mutation generateApiKey {
+              generateApiKey {
+                apiKey
+              }
+            }
+          `,
+        });
+
+        if (result.data && result.data.generateApiKey && result.data.generateApiKey.apiKey) {
+          this.userApiKey = result.data.generateApiKey.apiKey;
+          // Show success message
+          console.log('API Key generated successfully!');
+          alert('API Key generated successfully!');
+        }
+      } catch (error) {
+        console.error('Error generating API key:', error);
+        alert('Failed to generate API key. Please try again.');
+      } finally {
+        this.generatingApiKey = false;
+      }
+    },
+
+    async copyToClipboard(text) {
+      if (!text) {
+        alert('Nothing to copy');
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('Copied to clipboard!');
+      } catch (error) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('Copied to clipboard!');
+      }
+    },
   },
 };
 </script>

@@ -22,6 +22,11 @@ const UserSchema = new mongoose.Schema({
   inviterEmail: String,
   notificationId: String,
   holidays: Number,
+  apiKey: {
+    type: String,
+    unique: true,
+    sparse: true, // allows multiple null values
+  },
   social: {
     googleProvider: {
       id: String,
@@ -52,6 +57,7 @@ const UserItemType = new GraphQLObjectType({
     inviterEmail: { type: GraphQLString },
     invitedEmail: { type: GraphQLString },
     isNew: { type: GraphQLBoolean },
+    apiKey: { type: GraphQLString },
     motto: {
       type: new GraphQLList(MottoItemType),
     },

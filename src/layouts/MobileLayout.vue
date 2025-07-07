@@ -122,7 +122,6 @@
     <!-- AI Search Modal -->
     <ai-search-modal
       v-model="aiSearchModal"
-      @goals-saved="onGoalsSaved"
     />
   </div>
 </template>
@@ -227,43 +226,6 @@ export default {
             window.location.reload();
             console.log(error);
           });
-      }
-    },
-    onGoalsSaved(eventData) {
-      // Handle successful goals save
-      console.log('Goals saved:', eventData);
-
-      const message = eventData && eventData.count
-        ? `Successfully created ${eventData.count} goals for ${eventData.period}`
-        : 'Successfully saved goals';
-
-      this.$emit('show-success', message);
-
-      // Refetch daily goals if day goals were created and we're on the dashboard
-      if (this.$route.name === 'home' && eventData && eventData.hasDayGoals) {
-        console.log('Refetching daily goals on dashboard...');
-        // Use Vue's $root to access the dashboard component and refetch daily goals
-        this.$nextTick(() => {
-          const dashboardComponent = this.$children.find((child) => child.$options.name === 'DashBoard');
-          if (dashboardComponent && dashboardComponent.$apollo && dashboardComponent.$apollo.queries.goals) {
-            dashboardComponent.$apollo.queries.goals.refetch()
-              .then(() => {
-                console.log('Daily goals refetched successfully');
-              })
-              .catch((error) => {
-                console.error('Error refetching daily goals:', error);
-                // Fallback to page reload if refetch fails
-                window.location.reload();
-              });
-          } else {
-            // Fallback to page reload if we can't find the dashboard component
-            console.log('Dashboard component not found, falling back to page reload');
-            window.location.reload();
-          }
-        });
-      } else if (this.$route.name === 'home') {
-        // For non-day goals or when we can't determine, still reload the page
-        window.location.reload();
       }
     },
   },

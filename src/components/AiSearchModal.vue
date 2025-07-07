@@ -328,6 +328,7 @@ import GoalTagsInput from './GoalTagsInput.vue';
 import { USER_TAGS } from '../constants/settings';
 import getJSON from '../utils/getJSON';
 import { stepupMilestonePeriodDate, getTimelineEntryPeriod, getTimelineEntryDate } from '../utils/getDates';
+import eventBus, { EVENTS } from '../utils/eventBus';
 
 export default {
   name: 'AiSearchModal',
@@ -562,6 +563,22 @@ export default {
       // For goals mode, use the milestone data period
       return stepupMilestonePeriodDate(this.milestoneData.period, moment().format('DD-MM-YYYY'));
     },
+    currentTaskHasWeekGoals() {
+      // Check if the current task has week goals available
+      if (!this.$currentTaskData || !this.$currentTaskData.id || !this.goalItemsRef || !Array.isArray(this.goalItemsRef)) {
+        return false;
+      }
+
+      return this.goalItemsRef.some((item) => item.taskRef === this.$currentTaskData.id);
+    },
+    currentTaskWeekGoal() {
+      // Get the week goal for the current task
+      if (!this.currentTaskHasWeekGoals) {
+        return null;
+      }
+
+      return this.goalItemsRef.find((item) => item.taskRef === this.$currentTaskData.id);
+    },
     planTitlePeriodData() {
       // Generate the correct period data for saving the plan title based on the original query period
       if (!this.milestoneData || !this.milestoneData.period) {
@@ -644,23 +661,32 @@ export default {
               this.$nextTick(() => {
                 if (this.taskData) {
                   this.taskData.taskRef = this.$currentTaskData.id;
+                  console.log('AiSearchModal: Task mode - taskData.taskRef set to:', this.taskData.taskRef);
                 }
               });
             }
+          } else {
+            console.log('AiSearchModal: No current task data available for auto-selection');
           }
 
-          // Set default goalRef from currentTask if available (task mode only)
+          // Set default goalRef and milestone checkbox from currentTask if available (task mode only)
           if (this.$currentTaskData && this.$currentTaskData.id && this.isTaskMode) {
+            // Wait for goalItemsRef to load, then check for week goals
             this.$nextTick(() => {
-              // Find the goal item that matches the current task
-              if (this.goalItemsRef && Array.isArray(this.goalItemsRef)) {
-                const matchingGoalItem = this.goalItemsRef.find((item) => item.taskRef === this.$currentTaskData.id);
-                if (matchingGoalItem && this.taskData) {
-                  this.taskData.goalRef = matchingGoalItem.id;
-                  // Ensure isMilestone is true when goalRef is set
-                  this.taskData.isMilestone = true;
+              this.$watch('goalItemsRef', (newGoalItems) => {
+                if (newGoalItems && Array.isArray(newGoalItems) && this.taskData) {
+                  const matchingGoalItem = newGoalItems.find((item) => item.taskRef === this.$currentTaskData.id);
+                  if (matchingGoalItem) {
+                    this.taskData.goalRef = matchingGoalItem.id;
+                    this.taskData.isMilestone = true;
+                    console.log('Auto-selected week goal for current task:', matchingGoalItem);
+                  } else {
+                    console.log('AiSearchModal: No matching week goal found for current task');
+                  }
+                } else {
+                  console.log('AiSearchModal: goalItemsRef not ready or taskData not available');
                 }
-              }
+              }, { immediate: true });
             });
           }
         });
@@ -674,6 +700,18 @@ export default {
         if (newVal && !oldVal && this.$currentTaskData && this.$currentTaskData.id) {
           if (!newVal.taskRef) {
             this.$set(this.taskData, 'taskRef', this.$currentTaskData.id);
+            console.log('AiSearchModal: Auto-selected taskRef in taskData watcher:', this.$currentTaskData.id);
+          }
+        }
+
+        // When taskRef is set to current task, check for week goals and auto-select
+        if (newVal && newVal.taskRef === this.$currentTaskData.id && this.goalItemsRef && Array.isArray(this.goalItemsRef)) {
+          console.log('AiSearchModal: taskRef matches current task, checking for week goals');
+          const matchingGoalItem = this.goalItemsRef.find((item) => item.taskRef === this.$currentTaskData.id);
+          if (matchingGoalItem && !newVal.goalRef) {
+            this.$set(this.taskData, 'goalRef', matchingGoalItem.id);
+            this.$set(this.taskData, 'isMilestone', true);
+            console.log('Auto-selected week goal via taskData watcher:', matchingGoalItem);
           }
         }
 
@@ -706,6 +744,22 @@ export default {
           if (this.isTaskMode && this.taskData && !this.taskData.taskRef) {
             this.taskData.taskRef = this.$currentTaskData.id;
           }
+        } else {
+          console.log('AiSearchModal: Current task not found in routines list');
+        }
+      } else {
+        console.log('AiSearchModal: Routines data not available or current task not set');
+      }
+    },
+
+    // Watch goalItemsRef to auto-select week goals when they load
+    goalItemsRef(newVal) {
+      if (newVal && Array.isArray(newVal) && this.$currentTaskData && this.$currentTaskData.id && this.isTaskMode && this.taskData) {
+        const matchingGoalItem = newVal.find((item) => item.taskRef === this.$currentTaskData.id);
+        if (matchingGoalItem && !this.taskData.goalRef) {
+          this.taskData.goalRef = matchingGoalItem.id;
+          this.taskData.isMilestone = true;
+          console.log('Auto-selected week goal via goalItemsRef watcher:', matchingGoalItem);
         }
       }
     },
@@ -887,12 +941,14 @@ export default {
           if (this.$currentTaskData && this.$currentTaskData.id) {
             this.taskData.taskRef = this.$currentTaskData.id;
 
-            // Also set default goalRef from currentTask if available
+            // Also set default goalRef and milestone checkbox from currentTask if available
             this.$nextTick(() => {
               if (this.goalItemsRef && Array.isArray(this.goalItemsRef)) {
                 const matchingGoalItem = this.goalItemsRef.find((item) => item.taskRef === this.$currentTaskData.id);
                 if (matchingGoalItem) {
                   this.taskData.goalRef = matchingGoalItem.id;
+                  this.taskData.isMilestone = true; // Auto-check milestone if week goal exists
+                  console.log('Auto-selected week goal for task creation:', matchingGoalItem);
                 }
               }
             });
@@ -967,13 +1023,12 @@ export default {
           this.taskSuccess = true;
           this.setLocalUserTag(this.taskData.tags || []);
 
-          // Emit event to parent to refresh data
-          this.$emit('task-created', result.data.addGoalItem);
+          // Emit global event for dashboard refetch
+          eventBus.$emit(EVENTS.TASK_CREATED, result.data.addGoalItem);
 
-          // Reset form after short delay
-          setTimeout(() => {
-            this.resetForm();
-          }, 2000);
+          // Close modal and reset form immediately for better UX
+          this.resetForm();
+          this.closeModal();
         } else {
           this.error = 'Failed to create task';
         }
@@ -1227,12 +1282,16 @@ export default {
           const savedItems = result.data.bulkAddGoalItems;
           const hasDayGoals = savedItems.some((item) => item.period === 'day');
 
-          this.$emit('goals-saved', {
+          const eventData = {
             count: savedItems.length,
             period: this.milestoneData.period,
             hasDayGoals,
             items: savedItems,
-          });
+          };
+
+          // Emit global event for dashboard refetch
+          eventBus.$emit(EVENTS.GOALS_SAVED, eventData);
+
           this.resetForm();
           this.closeModal();
         } else {
@@ -1317,12 +1376,16 @@ export default {
           // Emit with estimated data since we don't have the response data structure
           const hasDayGoals = getTimelineEntryPeriod(this.milestoneData.period) === 'day';
 
-          this.$emit('goals-saved', {
+          const eventData = {
             count: this.milestoneData.entries.length,
             period: this.milestoneData.period,
             hasDayGoals,
             items: [], // Individual mutations don't return structured data
-          });
+          };
+
+          // Emit global event for dashboard refetch
+          eventBus.$emit(EVENTS.GOALS_SAVED, eventData);
+
           this.resetForm();
           this.closeModal();
         } catch (fallbackError) {
@@ -1415,12 +1478,16 @@ export default {
 
         const hasDayGoals = getTimelineEntryPeriod(this.milestoneData.period) === 'day';
 
-        this.$emit('goals-saved', {
+        const eventData = {
           count: this.milestoneData.entries.length,
           period: this.milestoneData.period,
           hasDayGoals,
           items: [], // Simple save doesn't return structured data
-        });
+        };
+
+        // Emit global event for dashboard refetch
+        eventBus.$emit(EVENTS.GOALS_SAVED, eventData);
+
         this.resetForm();
         this.closeModal();
       } catch (error) {

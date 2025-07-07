@@ -12,6 +12,7 @@ import { graphQLUrl } from './blob/config';
 import './plugins/vuetify';
 import './plugins/notifications';
 import './plugins/curl-executor';
+import './styles/shadows.css';
 import VueApollo from './plugins/apollo';
 import './styles/ios-safe-area.css';
 import currentTaskPlugin from './plugins/currentTask';
