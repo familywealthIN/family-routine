@@ -695,7 +695,7 @@
           </v-btn>
         </v-toolbar>
         <v-card class="no-shadow">
-          <v-card-text>
+          <v-card-text class="pa-0">
             <goal-creation
               :newGoalItem="selectedGoalItem"
               v-on:add-update-goal-entry="toggleGoalDisplayDialog"

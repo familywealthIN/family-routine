@@ -78,7 +78,7 @@
         <v-spacer></v-spacer>
       </v-toolbar>
       <v-card class="modern-card">
-        <v-card-text>
+        <v-card-text class="pa-0">
           <goal-creation :newGoalItem="newGoalItem" v-on:add-update-goal-entry="addUpdateGoalEntry" />
         </v-card-text>
       </v-card>
