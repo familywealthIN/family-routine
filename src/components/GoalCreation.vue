@@ -174,7 +174,7 @@ import gql from 'graphql-tag';
 import moment from 'moment';
 import VueEasymde from 'vue-easymde';
 
-import { taskStatusMixin } from '@/composables/useTaskStatus';
+import taskStatusMixin from '@/composables/useTaskStatus';
 import {
   getDatesOfYear,
   getWeeksOfYear,

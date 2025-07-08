@@ -90,7 +90,26 @@
                           </v-btn-toggle>
                         </div>
                       </v-list-tile-sub-title>
-                      <div class="pt-2 pb-2 task-goals">
+                      <!-- Skeleton loading state for daily goals -->
+                      <template v-if="$apollo.queries.goals.loading && goalsFirstLoad">
+                        <div class="pt-2 pb-2" style="width: 100%;">
+                          <!-- Chip skeletons -->
+                          <v-layout class="mb-3" row wrap>
+                            <v-flex xs6>
+                              <div class="skeleton skeleton-chip mr-2" style="width: 120px; height: 28px;"></div>
+                            </v-flex>
+                            <v-flex xs6>
+                              <div class="skeleton skeleton-chip" style="width: 120px; height: 28px;"></div>
+                            </v-flex>
+                          </v-layout>
+                            <!-- Title skeleton -->
+                          <div class="skeleton skeleton-text mb-3" style="width: 60%; height: 20px;"></div>
+                          <!-- Subtitle skeleton -->
+                          <div class="skeleton skeleton-text mb-3" style="width: 40%; height: 16px;"></div>
+                        </div>
+                      </template>
+                      <!-- Actual content when loaded -->
+                      <div v-else class="pt-2 pb-2 task-goals">
                         <v-layout
                           class="mb-3"
                           row
@@ -164,8 +183,10 @@
                           >
                             <v-list two-line subheader>
                               <goal-item-list
+                                :key="`goal-${taskGoals.id}-${currentGoalPeriod}`"
                                 :goal="taskGoals"
                                 :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
+                                :passive="$apollo.queries.goals.loading && goalsFirstLoad"
                                 @delete-task-goal="deleteTaskGoal"
                                 @refresh-task-goal="refreshTaskGoal"
                                 @toggle-goal-display-dialog="toggleGoalDisplayDialog"
@@ -186,7 +207,7 @@
                     </v-list-tile-content>
                   </v-list-tile>
                 </v-list>
-                <div v-else>
+                <div v-else-if="!$apollo.queries.goals.loading">
                   <v-card-text class="text-xs-center">
                     <p>No current items to display. Please go to Routine Settings and add routine items.</p>
                   </v-card-text>
@@ -405,8 +426,10 @@
                           >
                             <v-list two-line subheader>
                               <goal-item-list
+                                :key="`goal-${taskGoals.id}-${currentGoalPeriod}-${task.id}`"
                                 :goal="taskGoals"
                                 :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
+                                :passive="$apollo.queries.goals.loading && goalsFirstLoad"
                                 @delete-task-goal="deleteTaskGoal"
                                 @refresh-task-goal="refreshTaskGoal"
                                 @toggle-goal-display-dialog="toggleGoalDisplayDialog"
@@ -903,6 +926,8 @@ export default {
         }
       `,
       update(data) {
+        // Mark first load as complete
+        this.goalsFirstLoad = false;
         return data.dailyGoals;
       },
       variables() {
@@ -943,6 +968,8 @@ export default {
       // Track executed events to prevent multiple executions
       executedStartEvents: new Set(),
       executedEndEvents: new Set(),
+      // Track first load for skeleton display
+      goalsFirstLoad: true,
     };
   },
   watch: {
@@ -2085,5 +2112,33 @@ export default {
 .action-box {
   display: flex;
   justify-content: flex-end;
+}
+
+/* Skeleton loading styles */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+.skeleton-text {
+  border-radius: 4px;
+}
+
+.skeleton-chip {
+  border-radius: 16px;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>

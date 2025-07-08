@@ -1,10 +1,12 @@
 <template>
-  <div>
-    <template v-for="(goalItem, i) in goal.goalItems">
-      <v-list-tile v-bind:key="goalItem.id">
+  <div :key="`goal-list-${goal.id}-${goal.period}`">
+    <div v-for="(goalItem, i) in goal.goalItems" :key="`goalitem-${goalItem.id}-${goal.id}-${goal.period}`">
+      <v-list-tile>
         <v-list-tile-action>
           <v-checkbox
+            :key="`checkbox-${goalItem.id}`"
             v-model="goalItem.isComplete"
+            :disabled="passive"
             @change="completeGoalItem(
               goalItem.id,
               goalItem.isComplete,
@@ -37,6 +39,7 @@
           <v-btn
             flat
             icon
+            :disabled="passive"
             @click="editGoalItem(goalItem, goal.period, goal.date)"
           >
             <v-icon>edit</v-icon>
@@ -51,6 +54,7 @@
           <v-btn
             flat
             icon
+            :disabled="passive"
             @click="deleteGoalItem(i, goal.period, goal.date)"
           >
             <v-icon>delete</v-icon>
@@ -63,11 +67,13 @@
            :key="`subtasks-${goalItem.id}`"
            class="subtasks-container">
         <v-list dense class="py-0">
-          <template v-for="subTask in goalItem.subTasks">
-            <v-list-tile :key="subTask.id" class="subtask-item">
+          <div v-for="subTask in goalItem.subTasks" :key="`subtask-${subTask.id}-${goalItem.id}`">
+            <v-list-tile class="subtask-item">
               <v-list-tile-action class="ml-4">
                 <v-checkbox
+                  :key="`checkbox-${subTask.id}`"
                   :input-value="subTask.isComplete"
+                  :disabled="passive"
                   @click.stop="handleSubTaskClick(subTask.id, goalItem)"
                   @change="() => console.log('Change event fired for subtask:', subTask.id)"
                   dense
@@ -79,20 +85,20 @@
                 </v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
-          </template>
+          </div>
         </v-list>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 <script>
 import gql from 'graphql-tag';
 
-import { taskStatusMixin } from '@/composables/useTaskStatus';
+import taskStatusMixin from '@/composables/useTaskStatus';
 import StreakChecks from './StreakChecks.vue';
 
 export default {
-  props: ['goal', 'editMode', 'newGoalItem', 'progress'],
+  props: ['goal', 'editMode', 'newGoalItem', 'progress', 'passive'],
   components: {
     StreakChecks,
   },
@@ -101,11 +107,19 @@ export default {
     return {
       show: true,
       newGoalItemBody: '',
-      goalItem: [],
       animateEntry: false,
       lastCompleteItemId: '',
       pendingSubTaskUpdates: new Set(), // Track pending subtask updates
     };
+  },
+  computed: {
+    goalItems() {
+      return this.goal && this.goal.goalItems ? this.goal.goalItems : [];
+    },
+    componentKey() {
+      // Create a stable key for this component instance
+      return `goal-list-${this.goal.id || 'new'}-${this.goal.period || 'unknown'}`;
+    },
   },
   methods: {
     getSubTasksProgress(subTasks) {
@@ -118,11 +132,23 @@ export default {
       return `${completed}/${total} subtasks completed`;
     },
     handleSubTaskClick(subTaskId, goalItem) {
+      // Don't proceed if component is in passive state
+      if (this.passive) {
+        console.log('Component is passive, ignoring subtask click');
+        return;
+      }
+
       console.log('handleSubTaskClick called:', { subTaskId });
 
       const subTask = goalItem.subTasks.find((st) => st.id === subTaskId);
       if (!subTask) {
         console.error('SubTask not found:', subTaskId);
+        return;
+      }
+
+      // Check if update is already pending
+      if (this.pendingSubTaskUpdates.has(subTaskId)) {
+        console.log('Update already pending for subtask:', subTaskId);
         return;
       }
 
@@ -301,6 +327,12 @@ export default {
       this.$emit('toggle-goal-display-dialog', goalItem, true);
     },
     completeGoalItem(id, isComplete, period, date, taskRef, isMilestone, goalRef) {
+      // Don't proceed if component is in passive state
+      if (this.passive) {
+        console.log('Component is passive, ignoring goal item completion');
+        return;
+      }
+
       this.lastCompleteItemId = id;
       this.$apollo.mutate({
         mutation: gql`
@@ -347,14 +379,68 @@ export default {
     editGoalItem(goalItem, period, date) {
       this.$emit('update-new-goal-item', goalItem, period, date);
     },
+    // Method to reset component state (can be called from parent)
+    resetState() {
+      this.lastCompleteItemId = '';
+      this.animateEntry = false;
+      this.pendingSubTaskUpdates.clear();
+      console.log('GoalItemList state reset');
+    },
   },
   watch: {
+    // Watch for goal changes and reset local state if needed
+    'goal.id': function watchGoalId(newId, oldId) {
+      if (newId !== oldId && newId && oldId) {
+        console.log('GoalItemList: Goal ID changed, resetting state', { newId, oldId });
+        this.resetState();
+      }
+    },
+    // Watch for goal period changes
+    'goal.period': function watchGoalPeriod(newPeriod, oldPeriod) {
+      if (newPeriod !== oldPeriod && newPeriod && oldPeriod) {
+        console.log('GoalItemList: Goal period changed, resetting state', { newPeriod, oldPeriod });
+        this.resetState();
+      }
+    },
+    // Watch for goal date changes
+    'goal.date': function watchGoalDate(newDate, oldDate) {
+      if (newDate !== oldDate && newDate && oldDate) {
+        console.log('GoalItemList: Goal date changed, resetting state', { newDate, oldDate });
+        this.resetState();
+      }
+    },
+    // Watch for passive state changes
+    passive(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        console.log('GoalItemList: Passive state changed', { newVal, oldVal });
+        // Clear any pending operations when passive state changes
+        if (newVal) {
+          this.pendingSubTaskUpdates.clear();
+        }
+      }
+    },
     progress(val, oldVal) {
       if (val !== oldVal) {
         this.animateEntry = true;
         setTimeout(() => { this.animateEntry = false; }, 2000);
       }
     },
+  },
+  created() {
+    console.log('GoalItemList created:', {
+      goalId: this.goal.id,
+      goalPeriod: this.goal.period,
+      goalDate: this.goal.date,
+      passive: this.passive,
+    });
+  },
+  beforeDestroy() {
+    console.log('GoalItemList being destroyed:', {
+      goalId: this.goal.id,
+      pendingUpdates: this.pendingSubTaskUpdates.size,
+    });
+    // Clear any pending updates when component is destroyed
+    this.pendingSubTaskUpdates.clear();
   },
 };
 </script>

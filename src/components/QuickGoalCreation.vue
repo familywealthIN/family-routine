@@ -86,7 +86,7 @@
 import gql from 'graphql-tag';
 import moment from 'moment';
 
-import { taskStatusMixin } from '@/composables/useTaskStatus';
+import taskStatusMixin from '@/composables/useTaskStatus';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 import getJSON from '../utils/getJSON';
 import GoalTagsInput from './GoalTagsInput.vue';
