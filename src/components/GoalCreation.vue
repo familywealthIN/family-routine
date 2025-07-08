@@ -107,6 +107,14 @@
             @update-new-tag-items="updateNewTagItems"
           ></goal-tags-input>
         </v-flex>
+        <v-flex xs12 v-if="shouldShowStatus(newGoalItem.period) && newGoalItem.body">
+          <div class="d-flex align-center status-container">
+            <task-status-tag
+              :status="getNewTaskStatus(newGoalItem.taskRef, newGoalItem.originalDate, newGoalItem)"
+              class="status-chip"
+            />
+          </div>
+        </v-flex>
         <v-layout row wrap>
         <v-flex sm8 d-flex>
           <v-tabs
@@ -166,6 +174,7 @@ import gql from 'graphql-tag';
 import moment from 'moment';
 import VueEasymde from 'vue-easymde';
 
+import { taskStatusMixin } from '@/composables/useTaskStatus';
 import {
   getDatesOfYear,
   getWeeksOfYear,
@@ -175,11 +184,18 @@ import {
 } from '../utils/getDates';
 import SubTaskItemList from './SubTaskItemList.vue';
 import GoalTagsInput from './GoalTagsInput.vue';
+import TaskStatusTag from './TaskStatusTag.vue';
 import getJSON from '../utils/getJSON';
 import { USER_TAGS } from '../constants/settings';
 
 export default {
-  components: { SubTaskItemList, GoalTagsInput, VueEasymde },
+  components: {
+    SubTaskItemList,
+    GoalTagsInput,
+    VueEasymde,
+    TaskStatusTag,
+  },
+  mixins: [taskStatusMixin],
   props: ['newGoalItem'],
   apollo: {
     tasklist: {
@@ -363,6 +379,7 @@ export default {
         taskRef = '',
         goalRef = '',
         tags = [],
+        originalDate = null,
       } = this.newGoalItem;
 
       if (!body) {
@@ -386,6 +403,7 @@ export default {
               $taskRef: String
               $goalRef: String
               $tags: [String]
+              $originalDate: String
             ) {
               addGoalItem(
                 body: $body
@@ -399,11 +417,15 @@ export default {
                 taskRef: $taskRef
                 goalRef: $goalRef
                 tags: $tags
+                originalDate: $originalDate
               ) {
                 id
                 body
                 isComplete
                 isMilestone
+                status
+                createdAt
+                originalDate
               }
             }
           `,
@@ -419,6 +441,7 @@ export default {
             taskRef: taskRef || '',
             goalRef: goalRef || '',
             tags,
+            originalDate: originalDate || null,
           },
           update: (scope, { data: { addGoalItem } }) => {
             const goalItem = {
@@ -595,4 +618,14 @@ export default {
     width: 100%;
   }
 
+  .status-chip {
+    max-width: fit-content;
+    margin-left: 0;
+  }
+
+  .status-container {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+  }
 </style>

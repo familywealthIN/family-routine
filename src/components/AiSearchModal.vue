@@ -324,6 +324,8 @@
 import gql from 'graphql-tag';
 import moment from 'moment';
 import VueEasymde from 'vue-easymde';
+
+import { taskStatusMixin } from '@/composables/useTaskStatus';
 import GoalTagsInput from './GoalTagsInput.vue';
 import { USER_TAGS } from '../constants/settings';
 import getJSON from '../utils/getJSON';
@@ -336,6 +338,7 @@ export default {
     VueEasymde,
     GoalTagsInput,
   },
+  mixins: [taskStatusMixin],
   apollo: {
     goalItemsRef: {
       query: gql`

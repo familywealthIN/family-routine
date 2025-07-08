@@ -88,6 +88,7 @@
 <script>
 import gql from 'graphql-tag';
 
+import { taskStatusMixin } from '@/composables/useTaskStatus';
 import StreakChecks from './StreakChecks.vue';
 
 export default {
@@ -95,6 +96,7 @@ export default {
   components: {
     StreakChecks,
   },
+  mixins: [taskStatusMixin],
   data() {
     return {
       show: true,

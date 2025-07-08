@@ -192,6 +192,9 @@ export default {
             reward,
             taskRef
             goalRef
+            status
+            createdAt
+            originalDate
             subTasks {
               id
               body

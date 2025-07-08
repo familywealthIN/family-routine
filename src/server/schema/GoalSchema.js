@@ -27,6 +27,17 @@ const GoalItemSchema = new mongoose.Schema({
     type: String,
   }],
   subTasks: [SubTaskItemSchema],
+  status: {
+    type: String,
+    enum: ['todo', 'progress', 'done', 'missed', 'rescheduled'],
+    default: 'todo',
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  completedAt: Date,
+  originalDate: String, // Track original date for rescheduled tasks
 });
 
 const GoalSchema = new mongoose.Schema({
@@ -51,6 +62,10 @@ const GoalItemTypeFields = {
   progress: { type: GraphQLInt },
   goalRef: { type: GraphQLString },
   tags: { type: new GraphQLList(GraphQLString) },
+  status: { type: GraphQLString },
+  createdAt: { type: GraphQLString },
+  completedAt: { type: GraphQLString },
+  originalDate: { type: GraphQLString },
 };
 
 const SubTaskItemType = new GraphQLObjectType({

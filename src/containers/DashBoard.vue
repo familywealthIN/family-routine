@@ -671,7 +671,7 @@
             <v-icon>close</v-icon>
           </v-btn>
         </v-toolbar>
-        <v-card>
+        <v-card class="no-shadow">
           <v-card-text>
             <goal-creation
               :newGoalItem="selectedGoalItem"
@@ -891,6 +891,8 @@ export default {
               contribution
               reward
               tags
+              status
+              completedAt
               subTasks {
                 id
                 body

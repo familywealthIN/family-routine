@@ -251,6 +251,7 @@ export default {
     margin-left: 16px;
     border-left: 1px solid #ccc !important;
     height: 100%;
+    border-radius: 0;
   }
 }
 
