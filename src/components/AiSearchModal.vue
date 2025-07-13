@@ -137,7 +137,11 @@
           </v-card>
 
           <!-- Related Tasks Timeline -->
-          <v-card outlined class="mb-4 modern-shadow-sm" v-if="relatedTasks && relatedTasks.length > 0 && taskData && taskData.goalRef">
+          <v-card
+            outlined
+            class="mb-4 modern-shadow-sm"
+            v-if="relatedTasks && relatedTasks.length > 0 && taskData && taskData.goalRef && taskData.isMilestone"
+          >
             <v-card-title class="pb-2">
               <v-icon left small>track_changes</v-icon>
               <span class="subtitle-2">Related Goals ({{ relatedTasks.length }})</span>
@@ -360,6 +364,20 @@ export default {
           }
         }
       `,
+      skip() {
+        // Skip query if user is not authenticated
+        if (!this.$root.$data.email) {
+          return true;
+        }
+
+        // For task mode: skip unless isMilestone is checked in taskData
+        if (this.isTaskMode) {
+          return !this.taskData || !this.taskData.isMilestone;
+        }
+
+        // For goals mode: skip unless we're in milestone mode and have milestone data
+        return !this.milestoneData || !this.milestoneData.isMilestone;
+      },
       update(data) {
         this.goalItems = data && data.goalDatePeriod && data.goalDatePeriod.goalItems;
         return data.goalDatePeriod && data.goalDatePeriod.date
@@ -370,15 +388,6 @@ export default {
         return {
           ...this.goalRefPeriodData,
         };
-      },
-      skip() {
-        // For task mode: skip unless isMilestone is checked in taskData
-        if (this.isTaskMode) {
-          return !this.taskData || !this.taskData.isMilestone;
-        }
-
-        // For goals mode: skip unless we're in milestone mode and have milestone data
-        return !this.milestoneData || !this.milestoneData.isMilestone;
       },
       error() {
         console.error('Failed to load goal items');
@@ -409,41 +418,11 @@ export default {
         };
       },
       skip() {
-        return !this.taskData || !this.taskData.goalRef;
+        // Skip query if user is not authenticated or no goalRef provided
+        return !this.$root.$data.email || !this.taskData || !this.taskData.goalRef;
       },
       update(data) {
         return data && data.goalsByGoalRef ? data.goalsByGoalRef : [];
-      },
-    },
-    routineTasksData: {
-      query: gql`
-        query routineDate($date: String!) {
-          routineDate(date: $date) {
-            tasklist {
-              id
-              name
-              time
-              description
-            }
-          }
-        }
-      `,
-      variables() {
-        return {
-          date: moment().format('DD-MM-YYYY'),
-        };
-      },
-      update(data) {
-        const tasks = data && data.routineDate && data.routineDate.tasklist ? data.routineDate.tasklist.map((task) => ({
-          name: task.name,
-          taskId: task.id,
-          time: task.time,
-          description: task.description,
-        })) : [];
-        return tasks;
-      },
-      error() {
-        console.error('Failed to load routine tasks');
       },
     },
   },
@@ -612,9 +591,20 @@ export default {
           return { period: 'day', date: currentDate };
       }
     },
+    routineTasksData() {
+      // Use global tasklist instead of separate GraphQL query
+      if (!this.$currentTaskList || !Array.isArray(this.$currentTaskList)) {
+        return [];
+      }
+      return this.$currentTaskList.map((task) => ({
+        name: task.name,
+        taskId: task.id,
+        time: task.time,
+        description: task.description,
+      }));
+    },
     routines() {
-      const tasks = this.routineTasksData || [];
-      return tasks;
+      return this.routineTasksData || [];
     },
     relatedTasks() {
       // Transform relatedGoalsData into a flat array of goal items

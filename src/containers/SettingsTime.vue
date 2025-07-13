@@ -382,8 +382,9 @@ export default {
           steps: item.steps.map((step) => ({ id: step.id, name: step.name })),
           tags: item.tags || [],
         },
-        update: (scope, { data: { addRoutineItem } }) => {
-          this.routineItems.push(addRoutineItem);
+        update: () => {
+          // Refetch the routineItems query to ensure data consistency
+          this.$apollo.queries.routineItems.refetch();
           this.buttonLoading = false;
           this.close(false);
           this.resetEditItem();

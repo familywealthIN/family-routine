@@ -216,6 +216,10 @@ export default {
           }
         }
       `,
+      skip() {
+        // Skip query if user is not authenticated
+        return !this.$root.$data.email;
+      },
       update(data) {
         this.loading = false;
         return data.routineDate && data.routineDate.date ? data.routineDate.tasklist : [];
@@ -243,12 +247,13 @@ export default {
           }
         }
       `,
+      skip() {
+        // Skip query if user is not authenticated or if skipQuery is true
+        return !this.$root.$data.email || this.skipQuery;
+      },
       update(data) {
         this.loading = false;
         return data.goalDatePeriod && data.goalDatePeriod.date ? data.goalDatePeriod.goalItems : [];
-      },
-      skip() {
-        return this.skipQuery;
       },
       variables() {
         return {
@@ -338,6 +343,20 @@ export default {
     triggerGoalItemsRef() {
       this.$apollo.queries.goalItemsRef.skip = false;
       this.$apollo.queries.goalItemsRef.refetch();
+    },
+    refreshApolloQueries() {
+      // Refresh all Apollo queries in this component when user logs in
+      try {
+        if (this.$apollo.queries.tasklist) {
+          this.$apollo.queries.tasklist.refetch();
+        }
+        if (this.$apollo.queries.goalItemsRef) {
+          this.$apollo.queries.goalItemsRef.refetch();
+        }
+        console.log('GoalCreation: Apollo queries refreshed successfully');
+      } catch (error) {
+        console.warn('GoalCreation: Error refreshing Apollo queries:', error);
+      }
     },
     updatePeriod() {
       if (this.newGoalItem.period === 'lifetime') {
@@ -576,6 +595,13 @@ export default {
         && (oldVal.date === '' || typeof oldVal.date === 'undefined')
       ) {
         this.triggerGoalItemsRef();
+      }
+    },
+    // Watch for user email changes (indicates login/logout)
+    '$root.$data.email': function watchUserEmail(newEmail, oldEmail) {
+      // If email changes from null/undefined to a value, or from one user to another
+      if ((!oldEmail && newEmail) || (oldEmail && newEmail && oldEmail !== newEmail)) {
+        this.refreshApolloQueries();
       }
     },
   },

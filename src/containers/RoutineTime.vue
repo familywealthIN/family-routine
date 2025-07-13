@@ -468,34 +468,16 @@ export default {
             mutation addRoutine($date: String!) {
               addRoutine(date: $date) {
                 id
-                date
-                skip
-                tasklist {
-                  id
-                  name
-                  time
-                  points
-                  ticked
-                  passed
-                  wait
-                  stimuli {
-                    name
-                    splitRate
-                    earned
-                  }
-                }
               }
             }
           `,
           variables: {
             date: this.date,
           },
-          update: (store, { data: { addRoutine } }) => {
-            this.tasklist = addRoutine && addRoutine.date ? addRoutine.tasklist : [];
-            this.did = addRoutine.id;
-            this.setPassedWait();
-            this.isLoading = false;
-          },
+        })
+        .then(() => this.$apollo.queries.tasklist.refetch())
+        .then(() => {
+          this.isLoading = false;
         })
         .catch(() => {
           clearInterval(this.timerId);
