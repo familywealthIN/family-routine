@@ -9,7 +9,8 @@
     "lint": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/@vue/cli-service/bin/vue-cli-service lint",
     "serve:server": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/nodemon/bin/nodemon.js --watch src/server ./server.js",
     "mcp:server": "set NODE_OPTIONS=--openssl-legacy-provider && node test-mcp-server.js",
-    "mcp:test": "set NODE_OPTIONS=--openssl-legacy-provider && node test-mcp-client.js"
+    "mcp:test": "set NODE_OPTIONS=--openssl-legacy-provider && node test-mcp-client.js",
+    "setup-encryption": "node scripts/setup-encryption.js"
   },
   "dependencies": {
     "@johmun/vue-tags-input": "^2.1.0",
