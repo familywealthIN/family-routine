@@ -16,6 +16,7 @@ export default {
   },
   methods: {
     handleChange() {
+      console.log('=== handleChange', this.wakeSwitch, this.noSleep);
       if (this.wakeSwitch) {
         this.noSleep.enable();
       }

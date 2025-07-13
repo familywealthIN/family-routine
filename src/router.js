@@ -1,6 +1,8 @@
 import Vue from 'vue';
 import Router from 'vue-router';
 import Login from './views/Login.vue';
+import Projects from './views/Projects.vue';
+import YearGoals from './views/YearGoals.vue';
 
 Vue.use(Router);
 
@@ -29,7 +31,7 @@ export default new Router({
     },
     {
       path: '/progress/:period',
-      name: 'progress',
+      name: 'progressPeriod',
       component: () => import(/* webpackChunkName: "progress" */'./views/Progress.vue'),
     },
     {
@@ -48,9 +50,9 @@ export default new Router({
       component: () => import(/* webpackChunkName: "wizard" */'./views/Wizard.vue'),
     },
     {
-      path: '/family',
-      name: 'family',
-      component: () => import(/* webpackChunkName: "family" */'./views/Family.vue'),
+      path: '/groups',
+      name: 'groups',
+      component: () => import(/* webpackChunkName: "groups" */'./views/Family.vue'),
     },
     {
       path: '/goals',
@@ -69,7 +71,7 @@ export default new Router({
     },
     {
       path: '/agenda/tree/:selectedTaskRef',
-      name: 'agendaTree',
+      name: 'agendaTreeWithTask',
       component: () => import(/* webpackChunkName: "agendaTree" */ './views/AgendaTree.vue'),
     },
     // {
@@ -91,6 +93,18 @@ export default new Router({
       path: '/stats',
       name: 'stats',
       component: () => import(/* webpackChunkName: "stats" */'./views/Stats.vue'),
+    },
+    {
+      path: '/projects/:tag',
+      name: 'projects',
+      component: Projects,
+      props: true,
+    },
+    {
+      path: '/year-goals/:tag?',
+      name: 'yearGoals',
+      component: YearGoals,
+      props: true,
     },
     {
       path: '/',

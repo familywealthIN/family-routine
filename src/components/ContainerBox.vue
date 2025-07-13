@@ -3,7 +3,7 @@
     <v-flex xs12 lg10 offset-lg1>
       <v-card
         max-width="800"
-        :class="transparent ? 'transparent mx-auto elevation-0' : 'mx-auto elevation-0'"
+        :class="transparent ? 'transparent mx-auto elevation-0' : 'mx-auto'"
       >
         <div
           v-if="isLoading"

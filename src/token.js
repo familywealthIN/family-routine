@@ -2,7 +2,7 @@ import {
   GC_AUTH_TOKEN, GC_PICTURE, GC_USER_EMAIL, GC_USER_NAME,
 } from './constants/settings';
 
-const CACHE_NAME = 'family-routine-precache-v2-https://routine.familywealth.in';
+const CACHE_NAME = 'routine-notes-precache-v2-https://routine.familywealth.in';
 const DATA_KEY = 'routine-token';
 
 // Function to save data to Cache Storage

@@ -75,7 +75,7 @@ function buildStimuliForRoutineItem(taskId, tasklist) {
   return [
     {
       name: 'D',
-      splitRate: timeDiff(time, nextTime),
+      splitRate: timeDiff(time, nextTime), // maximum time is rotation of the planet i.e. 24 hours
       earned: 0,
     },
     {

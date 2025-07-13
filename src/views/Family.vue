@@ -8,7 +8,7 @@
 import FamilyRoutine from '@/containers/FamilyRoutine.vue';
 
 export default {
-  name: 'family',
+  name: 'groups',
   components: {
     FamilyRoutine,
   },

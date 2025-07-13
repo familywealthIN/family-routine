@@ -1,26 +1,63 @@
 const jwt = require('jsonwebtoken');
-const passport = require('passport');
-const { Strategy: GoogleTokenStrategy } = require('passport-google-token');
+const { OAuth2Client } = require('google-auth-library');
 
-// GOOGLE STRATEGY
-const GoogleTokenStrategyCallback = (accessToken, refreshToken, profile, done) => done(null, {
-  accessToken,
-  profile,
-});
+const { GOOGLE_CLIENT_ID, JWT_SECRET } = process.env;
 
-const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_KEY, JWT_SECRET } = process.env;
+// Initialize Google OAuth2 client
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-passport.use(new GoogleTokenStrategy({
-  clientID: GOOGLE_CLIENT_ID,
-  clientSecret: GOOGLE_CLIENT_KEY,
-}, GoogleTokenStrategyCallback));
+// Function to verify Google ID token
+const verifyGoogleToken = async (token) => {
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    return ticket.getPayload();
+  } catch (error) {
+    throw new Error('Invalid Google token');
+  }
+};
 
-const authenticateGoogle = (req) => new Promise((resolve, reject) => {
-  passport.authenticate('google-token', { session: false }, (err, data, info) => {
-    if (err) reject(err);
-    resolve({ data, info });
-  })(req);
-});
+const authenticateGoogle = async (req) => {
+  const { credential } = req.body; // Get the credential from the request
+  if (!credential) {
+    throw new Error('No credential provided');
+  }
+
+  try {
+    // Check if credential is a JSON string (popup mode) or JWT token (one tap mode)
+    let payload;
+    if (credential.startsWith('{')) {
+      // Popup mode - credential contains access token and user info
+      const credentialData = JSON.parse(credential);
+      payload = {
+        sub: credentialData.user_info.id,
+        name: credentialData.user_info.name,
+        email: credentialData.user_info.email,
+        picture: credentialData.user_info.picture,
+      };
+    } else {
+      // One tap mode - credential is JWT token
+      payload = await verifyGoogleToken(credential);
+    }
+
+    return {
+      data: {
+        profile: {
+          id: payload.sub,
+          displayName: payload.name,
+          emails: [{ value: payload.email }],
+          _json: {
+            picture: payload.picture,
+          },
+        },
+      },
+    };
+  } catch (error) {
+    throw new Error(`Authentication failed: ${error.message}`);
+  }
+};
 
 function generateAccessToken() {
   const today = new Date();
@@ -35,7 +72,7 @@ function generateAccessToken() {
   }, JWT_SECRET);
 }
 
-async function upsertGoogleUser({ accessToken, profile }, notificationId) {
+async function upsertGoogleUser({ profile }, notificationId) {
   const User = this;
 
   const user = await User.findOne({ 'social.googleProvider.id': profile.id });
@@ -52,7 +89,6 @@ async function upsertGoogleUser({ accessToken, profile }, notificationId) {
       tags: [profile.emails[0].value],
       'social.googleProvider': {
         id: profile.id,
-        token: accessToken,
       },
     });
 

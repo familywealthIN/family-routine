@@ -1,0 +1,19 @@
+{
+    "query": "query TestGoalsSummary($goals: [GoalItemInput!]!) { getGoalsSummary(goals: $goals) { summary } }",
+    "variables": {
+        "goals": [
+            {
+                "id": "test1",
+                "title": "Learn GraphQL",
+                "description": "Master GraphQL queries and mutations",
+                "dueDate": "2025-07-01"
+            },
+            {
+                "id": "test2",
+                "title": "Implement AI Features",
+                "description": "Add AI-powered summaries and next steps",
+                "dueDate": "2025-07-15"
+            }
+        ]
+    }
+}

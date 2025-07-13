@@ -16,6 +16,7 @@ const {
   GoalItemType,
   GoalMilestoneType,
 } = require('../schema/GoalSchema');
+const { GoalItemInput } = require('../schema/AiSchema');
 const { UserModel } = require('../schema/UserSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
@@ -159,7 +160,7 @@ async function autoCheckTaskPeriod({
   currentPeriod, stepDownPeriod, cleanGoals, completionThreshold, date, email, gRoutineTasks = null,
 }) {
   const periodGoals = await GoalModel.find({ period: currentPeriod, date: periodGoalDates(currentPeriod, date), email }).exec();
-  console.log('periodGoals', currentPeriod, periodGoalDates(currentPeriod, date), periodGoals);
+  // console.log('periodGoals', currentPeriod, periodGoalDates(currentPeriod, date), periodGoals);
   const updatePromises = [];
   periodGoals.forEach((periodGoal) => {
     periodGoal.goalItems.forEach((periodGoalItem) => {
@@ -227,16 +228,43 @@ function weekOfMonth(d) {
 }
 
 async function setUserTag(email, tags) {
-  // eslint-disable-next-line guard-for-in, no-restricted-syntax
-  for (const tag of tags) {
-    // eslint-disable-next-line no-await-in-loop
-    const userTag = await UserModel.find({ email, tags: tag });
-    if (userTag && userTag.length === 0) {
-      // eslint-disable-next-line no-await-in-loop
+  // Filter out empty or null tags
+  const validTags = tags.filter((tag) => tag && tag.trim());
+
+  if (validTags.length > 0) {
+    try {
+      // Use $addToSet to add all tags at once, preventing duplicates
       await UserModel.updateOne(
         { email },
-        { $push: { tags: tag } },
+        { $addToSet: { tags: { $each: validTags } } },
       );
+    } catch (error) {
+      // Handle duplicate key error gracefully
+      if (error.code === 11000) {
+        console.warn(`Duplicate key error for user ${email} with tags:`, validTags);
+        console.warn('This might be due to a unique index on the tags field. Attempting individual tag insertion...');
+
+        // Fallback: try adding tags one by one using Promise.all to avoid for-of loop
+        const tagPromises = validTags.map(async (tag) => {
+          try {
+            await UserModel.updateOne(
+              { email },
+              { $addToSet: { tags: tag } },
+            );
+          } catch (individualError) {
+            if (individualError.code === 11000) {
+              console.warn(`Tag "${tag}" already exists for user ${email}, skipping...`);
+            } else {
+              console.error(`Error adding tag "${tag}" for user ${email}:`, individualError);
+            }
+          }
+        });
+
+        await Promise.all(tagPromises);
+      } else {
+        console.error('Error setting user tags:', error);
+        throw error;
+      }
     }
   }
 }
@@ -295,7 +323,7 @@ const query = {
       const email = getEmailfromSession(context);
       const month = moment(args.date, 'DD-MM-YYYY').month();
       const year = moment(args.date, 'DD-MM-YYYY').year();
-      const { result, threeFridays } = getDaysArray(year, month);
+      const { threeFridays } = getDaysArray(year, month);
       const goals = await GoalModel
         .find(
           { email, 'goalItems.taskRef': args.taskRef },
@@ -327,9 +355,9 @@ const query = {
         currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, date: args.date, email,
       }));
 
-      console.log('result', result);
-      console.log('week goals', cleanGoals.filter((gl) => gl.period === 'week'));
-      console.log('threeFridays', threeFridays);
+      // console.log('result', result);
+      // console.log('week goals', cleanGoals.filter((gl) => gl.period === 'week'));
+      // console.log('threeFridays', threeFridays);
 
       return [
         // ...cleanGoals,
@@ -407,6 +435,44 @@ const query = {
         .exec();
     },
   },
+  goalsByTag: {
+    type: new GraphQLList(GoalType),
+    args: {
+      tag: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      const goals = await GoalModel.find({
+        email,
+        'goalItems.tags': args.tag,
+      }).exec();
+
+      return goals;
+    },
+  },
+  goalsByGoalRef: {
+    type: new GraphQLList(GoalType),
+    args: {
+      goalRef: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      const goals = await GoalModel.find({
+        email,
+        'goalItems.goalRef': args.goalRef,
+      }).exec();
+
+      // Filter the goals to only include goalItems that match the goalRef
+      const filteredGoals = goals.map((goal) => ({
+        ...goal.toObject(),
+        goalItems: goal.goalItems.filter((item) => item.goalRef === args.goalRef),
+      })).filter((goal) => goal.goalItems.length > 0);
+
+      return filteredGoals;
+    },
+  },
   goal: {
     type: GoalType,
     args: {
@@ -453,9 +519,126 @@ const query = {
       return GoalModel.findOne({ date: args.date, period: args.period || 'day', email }).exec();
     },
   },
+  currentYearGoals: {
+    type: new GraphQLList(GoalType),
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const currentYear = moment().year();
+
+      const goals = await GoalModel.find({
+        email,
+        period: 'year',
+        date: {
+          $regex: new RegExp(`-${currentYear}$`),
+        },
+      }).exec();
+
+      return goals.filter((goal) => goal.goalItems && goal.goalItems.length);
+    },
+  },
 };
 
 const mutation = {
+  addBulkGoalItems: {
+    type: GraphQLList(GoalItemType),
+    args: {
+      goals: { type: GraphQLNonNull(GraphQLList(GoalItemInput)) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const { goals } = args;
+
+      try {
+        // Set user tags for all goals
+        const allTags = goals.reduce((acc, goal) => [...acc, ...(goal.tags || [])], []);
+        await setUserTag(email, allTags);
+
+        // Process each goal item
+        const goalPromises = goals.map(async (goalInput) => {
+          const {
+            date,
+            period,
+            body,
+            deadline,
+            contribution,
+            reward,
+            isComplete,
+            isMilestone,
+            taskRef,
+            goalRef,
+            tags = [],
+            status,
+            originalDate,
+          } = goalInput;
+
+          // Determine initial status if not provided
+          let finalStatus = status || 'todo';
+          if (period === 'day') {
+            if (originalDate && originalDate !== date) {
+              finalStatus = 'rescheduled';
+            } else if (!status) {
+              finalStatus = 'todo';
+            }
+          }
+
+          const goalItemToAdd = {
+            body,
+            deadline,
+            contribution,
+            reward,
+            isComplete,
+            isMilestone,
+            taskRef,
+            goalRef,
+            tags,
+            status: finalStatus,
+            createdAt: new Date(),
+            originalDate,
+          };
+
+          // Add completedAt if the task is being created as complete
+          if (isComplete) {
+            goalItemToAdd.completedAt = new Date();
+            goalItemToAdd.status = 'done';
+          }
+
+          const goalToAdd = {
+            date,
+            email,
+            period,
+            goalItems: [goalItemToAdd],
+          };
+
+          const goalEntry = await GoalModel.findOne({ date, period: period || 'day', email }).exec();
+
+          if (goalEntry && goalEntry.date) {
+            await GoalModel.findOneAndUpdate(
+              { email, date, period },
+              { $set: { goalItems: [...goalEntry.goalItems, goalToAdd.goalItems[0]] } },
+              { new: true },
+            ).exec();
+          } else {
+            const goal = new GoalModel(goalToAdd);
+            await goal.save();
+          }
+
+          const updatedGoal = await GoalModel.findOne({
+            date,
+            period,
+            email,
+          }).exec();
+
+          return updatedGoal.goalItems[updatedGoal.goalItems.length - 1];
+        });
+
+        const createdGoals = await Promise.all(goalPromises);
+        return createdGoals;
+      } catch (error) {
+        console.error('Bulk goal creation error:', error);
+        throw new Error('Failed to create bulk goals');
+      }
+    },
+  },
   addGoalItem: {
     type: GoalItemType,
     args: {
@@ -470,6 +653,7 @@ const mutation = {
       taskRef: { type: GraphQLString },
       goalRef: { type: GraphQLString },
       tags: { type: GraphQLList(GraphQLString) },
+      originalDate: { type: GraphQLString },
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
@@ -486,27 +670,56 @@ const mutation = {
         taskRef,
         goalRef,
         tags = [],
+        originalDate,
       } = args;
 
+      // Validation: if goalRef is passed, isMilestone must be true
+      if (goalRef && !isMilestone) {
+        throw new Error('When goalRef is provided, isMilestone must be true');
+      }
+
       await setUserTag(email, tags);
+
+      // Determine initial status based on task context
+      let status = 'todo'; // default status
+
+      if (period === 'day') {
+        // For day tasks, calculate status based on context
+        if (originalDate && originalDate !== date) {
+          status = 'rescheduled';
+        } else {
+          // For now, we'll set a basic status. The frontend will handle more complex logic
+          // with current task context. We can enhance this later with task timing logic.
+          status = 'todo';
+        }
+      }
+
+      const goalItemToAdd = {
+        body,
+        deadline,
+        contribution,
+        reward,
+        isComplete,
+        isMilestone,
+        taskRef,
+        goalRef,
+        tags,
+        status,
+        createdAt: new Date(),
+        originalDate,
+      };
+
+      // Add completedAt if the task is being created as complete
+      if (isComplete) {
+        goalItemToAdd.completedAt = new Date();
+        goalItemToAdd.status = 'done';
+      }
 
       const goalToAdd = {
         date,
         email,
         period,
-        goalItems: [
-          {
-            body,
-            deadline,
-            contribution,
-            reward,
-            isComplete,
-            isMilestone,
-            taskRef,
-            goalRef,
-            tags,
-          },
-        ],
+        goalItems: [goalItemToAdd],
       };
 
       const goalEntry = await GoalModel.findOne({ date: args.date, period: args.period || 'day', email }).exec();
@@ -531,6 +744,90 @@ const mutation = {
       ).exec();
 
       return goal.goalItems[goal.goalItems.length - 1];
+    },
+  },
+  bulkAddGoalItems: {
+    type: new GraphQLList(GoalItemType),
+    args: {
+      goalItems: {
+        type: new GraphQLNonNull(new GraphQLList(GoalItemInput)),
+      },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const { goalItems } = args;
+
+      // Process goal items in parallel using Promise.all
+      const addedGoalItems = await Promise.all(
+        goalItems.map(async (goalItemData) => {
+          const {
+            date,
+            period,
+            body,
+            deadline,
+            contribution,
+            reward,
+            isComplete,
+            isMilestone,
+            taskRef,
+            goalRef,
+            tags = [],
+          } = goalItemData;
+
+          // Validation: if goalRef is passed, isMilestone must be true
+          if (goalRef && !isMilestone) {
+            throw new Error(`When goalRef is provided, isMilestone must be true for item: ${body || 'Unknown'}`);
+          }
+
+          await setUserTag(email, tags);
+
+          const goalToAdd = {
+            date,
+            email,
+            period,
+            goalItems: [
+              {
+                body,
+                deadline,
+                contribution,
+                reward,
+                isComplete,
+                isMilestone,
+                taskRef,
+                goalRef,
+                tags,
+              },
+            ],
+          };
+
+          const goalEntry = await GoalModel.findOne({
+            date,
+            period: period || 'day',
+            email,
+          }).exec();
+
+          if (goalEntry && goalEntry.date) {
+            await GoalModel.findOneAndUpdate(
+              { email, date, period },
+              { $set: { goalItems: [...goalEntry.goalItems, goalToAdd.goalItems[0]] } },
+              { new: true },
+            ).exec();
+          } else {
+            const goal = new GoalModel(goalToAdd);
+            await goal.save();
+          }
+
+          const updatedGoal = await GoalModel.findOne({
+            date,
+            period,
+            email,
+          }).exec();
+
+          return updatedGoal.goalItems[updatedGoal.goalItems.length - 1];
+        }),
+      );
+
+      return addedGoalItems;
     },
   },
   updateGoalItem: {
@@ -665,6 +962,22 @@ const mutation = {
         ).exec();
       }
 
+      // Prepare the update object
+      const updateFields = {
+        'goalItems.$.isComplete': args.isComplete,
+      };
+
+      // Add status and timestamp updates for day period tasks
+      if (args.period === 'day') {
+        if (args.isComplete) {
+          updateFields['goalItems.$.completedAt'] = new Date();
+          updateFields['goalItems.$.status'] = 'done'; // Will be refined by frontend with task timing logic
+        } else {
+          updateFields['goalItems.$.completedAt'] = null;
+          updateFields['goalItems.$.status'] = 'todo'; // Reset to default when unchecked
+        }
+      }
+
       await GoalModel.findOneAndUpdate(
         {
           date: args.date,
@@ -672,7 +985,7 @@ const mutation = {
           email,
           'goalItems._id': args.id,
         },
-        { $set: { 'goalItems.$.isComplete': args.isComplete } },
+        { $set: updateFields },
         { new: true },
       ).exec();
 
@@ -688,7 +1001,7 @@ const mutation = {
           date: args.date,
           taskRef: args.taskRef,
         });
-        console.log('Work on my week', email);
+        // console.log('Work on my week', email);
 
         await autoCheckTaskPeriod({
           currentPeriod: 'week',
@@ -701,7 +1014,7 @@ const mutation = {
         });
 
         if (weekOfMonth(args.date) >= (threshold.monthWeeks - 1)) {
-          console.log('Work on my month', email);
+          // console.log('Work on my month', email);
           await autoCheckTaskPeriod({
             currentPeriod: 'month',
             stepDownPeriod: 'week',
@@ -712,7 +1025,7 @@ const mutation = {
             gRoutineTasks,
           });
           if (moment(args.date, 'DD-MM-YYYY').month() >= (threshold.yearMonths - 1)) {
-            console.log('Work on my year', email);
+            // console.log('Work on my year', email);
             await autoCheckTaskPeriod({
               currentPeriod: 'year',
               stepDownPeriod: 'month',
@@ -741,6 +1054,142 @@ const mutation = {
         }
       }
       return args;
+    },
+  },
+  autosaveGoalContribution: {
+    type: GoalItemType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+      date: { type: GraphQLNonNull(GraphQLString) },
+      period: { type: GraphQLNonNull(GraphQLString) },
+      contribution: { type: GraphQLString },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      const {
+        id,
+        date,
+        period,
+        contribution,
+      } = args;
+
+      // Update only the contribution field for performance
+      await GoalModel.findOneAndUpdate(
+        {
+          date,
+          period,
+          email,
+          'goalItems._id': id,
+        },
+        {
+          $set: {
+            'goalItems.$.contribution': contribution,
+          },
+        },
+        { new: true },
+      ).exec();
+
+      const goal = await GoalModel.findOne(
+        {
+          date: args.date,
+          period: args.period,
+          email,
+        },
+      ).exec();
+
+      return goal.goalItems.find((aGoalItem) => aGoalItem.id === id);
+    },
+  },
+  rescheduleGoalItem: {
+    type: GoalItemType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+      oldDate: { type: GraphQLNonNull(GraphQLString) },
+      newDate: { type: GraphQLNonNull(GraphQLString) },
+      period: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      const {
+        id,
+        oldDate,
+        newDate,
+        period,
+      } = args;
+
+      // First, get the goal item from the old date
+      const oldGoal = await GoalModel.findOne({
+        date: oldDate,
+        period,
+        email,
+        'goalItems._id': id,
+      }).exec();
+
+      if (!oldGoal) {
+        throw new Error('Goal item not found');
+      }
+
+      const goalItem = oldGoal.goalItems.find((item) => item._id.toString() === id.toString());
+
+      if (!goalItem) {
+        throw new Error('Goal item not found in old goal');
+      }
+
+      // Set the original date if not already set (for tracking first reschedule)
+      const originalDate = goalItem.originalDate || oldDate;
+
+      // Create a new goal item for the new date with rescheduled status
+      const rescheduledGoalItem = {
+        ...goalItem.toObject(),
+        status: 'rescheduled',
+        originalDate,
+      };
+
+      // Remove _id so MongoDB can generate a new one
+      delete rescheduledGoalItem._id;
+
+      // Check if goal exists for new date
+      const newGoal = await GoalModel.findOne({
+        date: newDate,
+        period,
+        email,
+      }).exec();
+
+      if (newGoal) {
+        // Add to existing goal
+        await GoalModel.findOneAndUpdate(
+          { date: newDate, period, email },
+          { $push: { goalItems: rescheduledGoalItem } },
+          { new: true },
+        ).exec();
+      } else {
+        // Create new goal
+        const newGoalDocument = new GoalModel({
+          date: newDate,
+          email,
+          period,
+          goalItems: [rescheduledGoalItem],
+        });
+        await newGoalDocument.save();
+      }
+
+      // Remove from old goal
+      await GoalModel.findOneAndUpdate(
+        { date: oldDate, period, email },
+        { $pull: { goalItems: { _id: id } } },
+        { new: true },
+      ).exec();
+
+      // Return the newly created goal item
+      const updatedNewGoal = await GoalModel.findOne({
+        date: newDate,
+        period,
+        email,
+      }).exec();
+
+      return updatedNewGoal.goalItems[updatedNewGoal.goalItems.length - 1];
     },
   },
 };

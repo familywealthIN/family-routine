@@ -38,7 +38,7 @@
       <div class="text-xs-center text-muted">
         <small>
           By using
-          Family Routine,
+          Routine Notes,
           you accept our
           <a href="https://familywealth.in/terms">Terms</a>
           and
@@ -86,8 +86,9 @@ export default {
       this.$gAuth
         .signIn()
         .then((user) => {
-          // On success do something, refer to https://developers.google.com/api-client-library/javascript/reference/referencedocs#googleusergetid
-          const accessToken = user.getAuthResponse().access_token;
+          // Using the new Google Identity Services API response format
+          // The credential property contains the JWT access token
+          const accessToken = user.credential;
           const notificationId = getSessionItem(GC_NOTIFICATION_TOKEN) || '';
           this.createSession(accessToken, notificationId);
         })

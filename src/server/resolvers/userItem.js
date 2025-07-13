@@ -5,6 +5,7 @@ const {
 } = require('graphql');
 
 const uniqid = require('uniqid');
+const { v4: uuidv4 } = require('uuid');
 
 const { UserItemType, UserModel } = require('../schema/UserSchema');
 const { authenticateGoogle } = require('../passport');
@@ -57,12 +58,11 @@ const mutation = {
     resolve: async (root, args) => {
       const req = {};
       req.body = {
-        refresh_token: '1//04d_9GYHHnr8qCgYIARAAGAQSNwF-L9IrOWpiBFvg_ok6Vvf6BtkySJg5Ezv7LDfdfXKfYE7aJa0A9lxMZMZq_4WvCPNy-tHjrgI',
-        access_token: args.accessToken,
+        credential: args.accessToken, // Use the JWT credential from Google Identity Services
       };
 
       try {
-        // data contains the accessToken, refreshToken and profile from passport
+        // data contains the profile from Google Identity Services
         const { data, info } = await authenticateGoogle(req);
         if (data) {
           const user = await UserModel.upsertGoogleUser(data, args.notificationId);
@@ -171,6 +171,25 @@ const mutation = {
       return UserModel.findOneAndUpdate(
         { email },
         { groupId: '' },
+        { new: true },
+      );
+    },
+  },
+  generateApiKey: {
+    type: UserItemType,
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      if (!email) {
+        throw new ApiError('Authentication required', 401);
+      }
+
+      // Generate a unique API key
+      const apiKey = `frt_${uuidv4()}`;
+
+      return UserModel.findOneAndUpdate(
+        { email },
+        { apiKey },
         { new: true },
       );
     },
