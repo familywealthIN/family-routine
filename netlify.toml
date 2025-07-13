@@ -1,3 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_OPTIONS = "--openssl-legacy-provider"
+  NODE_VERSION = "18"
+
 [[headers]]
   # Define which paths this specific [[headers]] block will cover.
   for = "/*"

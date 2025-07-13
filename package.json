@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/@vue/cli-service/bin/vue-cli-service serve",
-    "serve": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/@vue/cli-service/bin/vue-cli-service serve",
-    "build": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/@vue/cli-service/bin/vue-cli-service build",
-    "lint": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/@vue/cli-service/bin/vue-cli-service lint",
-    "serve:server": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/nodemon/bin/nodemon.js --watch src/server ./server.js",
-    "mcp:server": "set NODE_OPTIONS=--openssl-legacy-provider && node src/server/mcp-http-server.js",
+    "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
+    "serve": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
+    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
+    "lint": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service lint",
+    "serve:server": "cross-env NODE_OPTIONS=--openssl-legacy-provider nodemon --watch src/server ./server.js",
+    "mcp:server": "cross-env NODE_OPTIONS=--openssl-legacy-provider node src/server/mcp-http-server.js",
     "setup-encryption": "node scripts/setup-encryption.js"
   },
   "dependencies": {
@@ -66,6 +66,7 @@
     "@vue/cli-service": "^3.12.1",
     "@vue/eslint-config-airbnb": "^5.1.0",
     "babel-eslint": "^10.1.0",
+    "cross-env": "^7.0.3",
     "eslint": "^5.16.0",
     "eslint-config-airbnb-base": "^14.1.0",
     "eslint-config-vue": "^2.0.2",
