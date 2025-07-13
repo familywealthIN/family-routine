@@ -2,16 +2,15 @@
   <container-box transparent="true" :isLoading="isLoading">
     <v-card class="ma-3">
       <div class="weekdays pt-2 pb-2">
-        <template v-for="(weekDay, i) in weekDays">
-          <div
-            @click="setDate(i)"
-            :class="`day ${weekDay.isActive ? 'active' : ''}`"
-            :key="weekDay.day"
-          >
-            <div>{{ weekDay.day }}</div>
-            <div>{{ weekDay.dayNumber }}</div>
-          </div>
-        </template>
+        <div
+          v-for="(weekDay, i) in weekDays"
+          :key="weekDay.day"
+          @click="setDate(i)"
+          :class="`day ${weekDay.isActive ? 'active' : ''}`"
+        >
+          <div>{{ weekDay.day }}</div>
+          <div>{{ weekDay.dayNumber }}</div>
+        </div>
       </div>
     </v-card>
     <div v-if="isTodaySelected">
@@ -91,7 +90,26 @@
                           </v-btn-toggle>
                         </div>
                       </v-list-tile-sub-title>
-                      <div class="pt-2 pb-2 task-goals">
+                      <!-- Skeleton loading state for daily goals -->
+                      <template v-if="$apollo.queries.goals.loading && goalsFirstLoad">
+                        <div class="pt-2 pb-2" style="width: 100%;">
+                          <!-- Chip skeletons -->
+                          <v-layout class="mb-3" row wrap>
+                            <v-flex xs6>
+                              <div class="skeleton skeleton-chip mr-2" style="width: 120px; height: 28px;"></div>
+                            </v-flex>
+                            <v-flex xs6>
+                              <div class="skeleton skeleton-chip" style="width: 120px; height: 28px;"></div>
+                            </v-flex>
+                          </v-layout>
+                            <!-- Title skeleton -->
+                          <div class="skeleton skeleton-text mb-3" style="width: 60%; height: 20px;"></div>
+                          <!-- Subtitle skeleton -->
+                          <div class="skeleton skeleton-text mb-3" style="width: 40%; height: 16px;"></div>
+                        </div>
+                      </template>
+                      <!-- Actual content when loaded -->
+                      <div v-else class="pt-2 pb-2 task-goals">
                         <v-layout
                           class="mb-3"
                           row
@@ -136,6 +154,28 @@
                             </v-chip>
                           </v-flex>
                         </v-layout>
+                        <!-- Event execution timer alert -->
+                        <v-layout class="mb-3" row wrap v-if="eventExecutionInProgress">
+                          <v-flex xs12>
+                            <v-alert :value="true" color="info" icon="timer" outline>
+                              <div class="d-flex align-center">
+                                <div class="flex-grow-1">
+                                  <div class="caption">Refreshing goals in {{ eventExecutionTimeLeft }} seconds...</div>
+                                </div>
+                                <div>
+                                  <v-progress-circular
+                                    :value="((60 - eventExecutionTimeLeft) / 60) * 100"
+                                    size="32"
+                                    width="3"
+                                    color="info"
+                                  >
+                                    {{ eventExecutionTimeLeft }}
+                                  </v-progress-circular>
+                                </div>
+                              </div>
+                            </v-alert>
+                          </v-flex>
+                        </v-layout>
                         <div v-if="filterTaskGoalsPeriod(currentTask.id, goals, currentGoalPeriod).length">
                           <div
                             :key="taskGoals.id"
@@ -143,8 +183,10 @@
                           >
                             <v-list two-line subheader>
                               <goal-item-list
+                                :key="`goal-${taskGoals.id}-${currentGoalPeriod}`"
                                 :goal="taskGoals"
                                 :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
+                                :passive="$apollo.queries.goals.loading && goalsFirstLoad"
                                 @delete-task-goal="deleteTaskGoal"
                                 @refresh-task-goal="refreshTaskGoal"
                                 @toggle-goal-display-dialog="toggleGoalDisplayDialog"
@@ -165,7 +207,7 @@
                     </v-list-tile-content>
                   </v-list-tile>
                 </v-list>
-                <div v-else>
+                <div v-else-if="!$apollo.queries.goals.loading">
                   <v-card-text class="text-xs-center">
                     <p>No current items to display. Please go to Routine Settings and add routine items.</p>
                   </v-card-text>
@@ -218,18 +260,41 @@
           </v-flex>
           <!-- <v-flex xs6 d-flex>goal time left </v-flex> -->
           <!-- <v-flex xs6 d-flex>Routine time left</v-flex> -->
-          <v-flex xs12 class="pr-3 pl-3 mb-3" d-flex v-if="!!countTaskTotal(currentTask) && currentGoalPeriod === 'day'">
+          <v-flex
+            xs12
+            class="pr-3 pl-3 mb-3"
+            d-flex
+            v-if="!!countTaskTotal(currentTask) &&
+                  currentGoalPeriod === 'day' &&
+                  filterTaskGoalsPeriod(currentTask.id, goals, 'week').length > 0"
+          >
             <v-card>
               <v-card-title>
                 <b>Week Goal Streak</b>
               </v-card-title>
               <div
-                :key="taskGoals.id"
-                v-for="taskGoals in filterTaskGoalsPeriod(currentTask.id, goals, currentGoalPeriod)"
+                :key="weekGoal.id"
+                v-for="weekGoal in filterTaskGoalsPeriod(currentTask.id, goals, 'week')"
                 class="pb-3 pl-3 pr-3"
               >
-                {{ getWeekProgressName(currentGoalPeriod, taskGoals) }}
-                <streak-checks :progress="getWeekProgress(currentGoalPeriod, taskGoals) || 0"></streak-checks>
+                <!-- Show each goal item in the week goal -->
+                <div
+                  v-for="(goalItem, index) in weekGoal.goalItems"
+                  :key="goalItem.id"
+                  class="mb-2"
+                >
+                  <div class="caption text--secondary" v-if="weekGoal.goalItems.length > 1">
+                    Goal {{ index + 1 }} of {{ weekGoal.goalItems.length }}
+                  </div>
+                  <div class="body-1">{{ goalItem.body }}</div>
+                  <streak-checks :progress="goalItem.progress || 0"></streak-checks>
+                </div>
+
+                <!-- Fallback for when no goal items exist -->
+                <div v-if="!weekGoal.goalItems || weekGoal.goalItems.length === 0" class="mb-2">
+                  <div class="body-1 text--secondary">No week goal items</div>
+                  <streak-checks :progress="0"></streak-checks>
+                </div>
               </div>
             </v-card>
           </v-flex>
@@ -252,10 +317,10 @@
                 v-if="filterUpcomingPastTask(tabs, tasklist) && filterUpcomingPastTask(tabs, tasklist).length > 0"
                 class="concentrated-view elevation-0"
               >
-                <div v-for="(task, index) in filterUpcomingPastTask(tabs, tasklist)" :key="task">
-                  <v-divider v-if="index != 0" :key="task" :inset="task.inset"></v-divider>
+                <div v-for="(task, index) in filterUpcomingPastTask(tabs, tasklist)" :key="`task-${task.id}`">
+                  <v-divider v-if="index != 0" :key="`divider-${task.id}`" :inset="task.inset"></v-divider>
                   <v-list-tile
-                    :key="task"
+                    :key="`tile-${task.id}`"
                     @click="updateSelectedTaskRef(task.id)"
                     :class="task.id === selectedTaskRef ? 'active' : ''"
                     avatar
@@ -361,8 +426,10 @@
                           >
                             <v-list two-line subheader>
                               <goal-item-list
+                                :key="`goal-${taskGoals.id}-${currentGoalPeriod}-${task.id}`"
                                 :goal="taskGoals"
                                 :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
+                                :passive="$apollo.queries.goals.loading && goalsFirstLoad"
                                 @delete-task-goal="deleteTaskGoal"
                                 @refresh-task-goal="refreshTaskGoal"
                                 @toggle-goal-display-dialog="toggleGoalDisplayDialog"
@@ -458,8 +525,10 @@
       </div>
       <div v-if="tasklist && tasklist.length">
         <v-timeline dense clipped>
+          <!-- eslint-disable vue/valid-v-for -->
           <template v-for="task in tasklist">
-            <span :key="task.id">
+            <!-- eslint-disable-next-line vue/valid-v-for -->
+            <span :key="`task-${task.id}`">
               <v-timeline-item
                 fill-dot
                 :class="`pb-4 pt-4 routine-item ${getActiveClass(task)}`"
@@ -486,9 +555,10 @@
                 </v-layout>
               </v-timeline-item>
               <template v-for="period in periods">
+                <!-- eslint-disable-next-line vue/valid-v-for -->
                 <v-timeline-item
                   hide-dot
-                  :key="period + task.id"
+                  :key="`period-${task.id}-${period}`"
                   class="pb-0 pt-2"
                 >
                   <v-layout
@@ -541,20 +611,17 @@
                   </v-layout>
                 </v-timeline-item>
                 <template v-if="filterTaskGoalsPeriod(task.id, agendaGoals, period).length">
-                  <template
+                  <timeline-item-list
                     v-for="(taskGoals, i) in filterTaskGoalsPeriod(
                       task.id,
                       agendaGoals,
                       period
                     )"
-                  >
-                    <timeline-item-list
-                      :key="task.id + period + i"
-                      :goal="taskGoals"
-                      :period="period"
-                      @delete-task-goal="deleteTaskAgendaGoal"
-                    />
-                  </template>
+                    :key="`goal-${task.id}-${period}-${i}`"
+                    :goal="taskGoals"
+                    :period="period"
+                    @delete-task-goal="deleteTaskAgendaGoal"
+                  />
                 </template>
                 <template v-else>
                   <v-timeline-item
@@ -621,15 +688,14 @@
       transition="dialog-bottom-transition"
     >
       <v-card>
-        <v-toolbar dark color="primary">
-          <v-btn icon dark @click="toggleGoalDisplayDialog(null, false)">
+        <v-toolbar color="white">
+          <v-spacer></v-spacer>
+          <v-btn icon @click="toggleGoalDisplayDialog(null, false)">
             <v-icon>close</v-icon>
           </v-btn>
-          <v-toolbar-title>Goal Details</v-toolbar-title>
-          <v-spacer></v-spacer>
         </v-toolbar>
-        <v-card>
-          <v-card-text>
+        <v-card class="no-shadow">
+          <v-card-text class="pa-0">
             <goal-creation
               :newGoalItem="selectedGoalItem"
               v-on:add-update-goal-entry="toggleGoalDisplayDialog"
@@ -700,6 +766,7 @@ import gql from 'graphql-tag';
 
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 import { defaultGoalItem } from '../constants/goals';
+import eventBus, { EVENTS } from '../utils/eventBus';
 
 import GoalList from '../components/GoalList.vue';
 import TimelineItemList from '../components/TimelineItemList.vue';
@@ -754,6 +821,8 @@ export default {
               ticked
               passed
               wait
+              startEvent
+              endEvent
               steps {
                 name
               }
@@ -845,6 +914,8 @@ export default {
               contribution
               reward
               tags
+              status
+              completedAt
               subTasks {
                 id
                 body
@@ -855,6 +926,8 @@ export default {
         }
       `,
       update(data) {
+        // Mark first load as complete
+        this.goalsFirstLoad = false;
         return data.dailyGoals;
       },
       variables() {
@@ -888,6 +961,15 @@ export default {
       activeSelectionId: '',
       tabs: null,
       toggleStepModal: false,
+      // Event execution timer system
+      eventExecutionTimer: null,
+      eventExecutionTimeLeft: 0,
+      eventExecutionInProgress: false,
+      // Track executed events to prevent multiple executions
+      executedStartEvents: new Set(),
+      executedEndEvents: new Set(),
+      // Track first load for skeleton display
+      goalsFirstLoad: true,
     };
   },
   watch: {
@@ -897,10 +979,272 @@ export default {
         const date = moment(this.date, 'DD-MM-YYYY');
         const todayDate = moment(new Date(), 'DD-MM-YYYY');
         this.isEditable = moment(date).isSameOrAfter(todayDate, 'day');
+
+        // Reset executed events when date changes
+        this.executedStartEvents.clear();
+        this.executedEndEvents.clear();
+        console.log('DashBoard: Reset executed events for new date:', newVal);
       }
     },
+    // Watch for route changes to detect login/logout
+    $route(to, from) {
+      // If user navigates from login page to another page, refresh Apollo queries
+      if (from.name === 'login' && to.name !== 'login') {
+        this.refreshApolloQueries();
+      }
+    },
+
+    // Watch for user email changes (indicates login/logout)
+    '$root.$data.email': function watchUserEmail(newEmail, oldEmail) {
+      // If email changes from null/undefined to a value, or from one user to another
+      if ((!oldEmail && newEmail) || (oldEmail && newEmail && oldEmail !== newEmail)) {
+        this.refreshApolloQueries();
+      }
+    },
+
+    // Update global current task store when local currentTask changes
+    currentTask: {
+      handler(newTask, oldTask) {
+        // Update the global current task store with the current task
+        this.$currentTask.setCurrentTask(newTask || {});
+        if (newTask && oldTask && newTask.id && oldTask.id && newTask.endEvent) {
+          console.log('DashBoard: Current task changed:', newTask, oldTask);
+          const isComplete = this.countTaskCompleted(newTask) >= this.countTaskTotal(newTask);
+          const isOldComplete = this.countTaskCompleted(oldTask) >= this.countTaskTotal(oldTask);
+          const taskKey = `${this.date}-${newTask.id}`;
+
+          // Execute endEvent if task is complete and endEvent hasn't been executed yet
+          if (isComplete && !isOldComplete && !this.executedEndEvents.has(taskKey)) {
+            this.checkEventExecutionForTask(newTask.id, 'K');
+          }
+        }
+      },
+      immediate: true,
+    },
+    // Update global task list when tasklist changes
+    tasklist: {
+      handler(newTasklist) {
+        // Update the global current task store with the task list
+        this.$currentTask.setTasklist(newTasklist || []);
+      },
+      immediate: true,
+    },
+  },
+  mounted() {
+    // Set up global event listeners for refetching data
+    eventBus.$on(EVENTS.REFETCH_DAILY_GOALS, this.handleRefetchDailyGoals);
+    eventBus.$on(EVENTS.TASK_CREATED, this.handleTaskCreated);
+    eventBus.$on(EVENTS.GOALS_SAVED, this.handleGoalsSaved);
+
+    console.log('DashBoard: Event listeners registered');
+  },
+  beforeDestroy() {
+    // Clean up event listeners to prevent memory leaks
+    eventBus.$off(EVENTS.REFETCH_DAILY_GOALS, this.handleRefetchDailyGoals);
+    eventBus.$off(EVENTS.TASK_CREATED, this.handleTaskCreated);
+    eventBus.$off(EVENTS.GOALS_SAVED, this.handleGoalsSaved);
+
+    // Clean up timer
+    this.stopEventExecutionTimer();
   },
   methods: {
+    // Global event handlers
+    handleRefetchDailyGoals() {
+      console.log('DashBoard: Handling refetch daily goals event');
+      this.refetchDailyGoals();
+    },
+    handleTaskCreated(taskData) {
+      console.log('DashBoard: Handling task created event', taskData);
+      // Tasks are always day goals, so refetch daily goals
+      this.refetchDailyGoals();
+    },
+    handleGoalsSaved(eventData) {
+      console.log('DashBoard: Handling goals saved event', eventData);
+      // Only refetch if day goals were created
+      this.refetchDailyGoals();
+    },
+    refetchDailyGoals() {
+      try {
+        if (this.$apollo.queries.goals) {
+          this.$apollo.queries.goals.refetch()
+            .then(() => {
+              console.log('DashBoard: Daily goals refetched successfully');
+            })
+            .catch((error) => {
+              console.error('DashBoard: Error refetching daily goals:', error);
+            });
+        }
+      } catch (error) {
+        console.error('DashBoard: Error in refetchDailyGoals:', error);
+      }
+    },
+
+    // Event execution methods
+    async executeEvent(eventCommand, eventType = 'unknown') {
+      if (!eventCommand || typeof eventCommand !== 'string') {
+        console.log(`DashBoard: No ${eventType} event to execute`);
+        return;
+      }
+
+      console.log(`DashBoard: Executing ${eventType} event:`, eventCommand);
+
+      // Check if event starts with 'curl'
+      if (eventCommand.toLowerCase().startsWith('curl')) {
+        try {
+          // Execute curl command without waiting
+          console.log(`DashBoard: Executing curl command: ${eventCommand}`);
+          this.$curl.execute(eventCommand)
+            .then((result) => {
+              console.log(`DashBoard: Curl ${eventType} event executed successfully:`, result);
+            })
+            .catch((error) => {
+              console.error(`DashBoard: Error executing curl ${eventType} event:`, error);
+              this.$notify({
+                title: 'Event Execution Error',
+                text: `Failed to execute ${eventType} event: ${error.message}`,
+                group: 'notify',
+                type: 'error',
+                duration: 5000,
+              });
+            });
+
+          // Start 1-minute timer for goal refetch
+          this.startEventExecutionTimer();
+        } catch (error) {
+          console.error(`DashBoard: Error executing curl ${eventType} event:`, error);
+          this.$notify({
+            title: 'Event Execution Error',
+            text: `Failed to execute ${eventType} event: ${error.message}`,
+            group: 'notify',
+            type: 'error',
+            duration: 5000,
+          });
+        }
+      } else if (eventCommand.match(/^https?:\/\/.+/)) { // Check if it's a URL (starts with http:// or https://)
+        window.open(eventCommand, '_blank');
+      } else if (eventCommand.toLowerCase().startsWith('notify:')) {
+        const message = eventCommand.substring(7).trim();
+        this.$notify({
+          title: `${eventType}`,
+          text: message,
+          group: 'notify',
+          type: 'success',
+          duration: 5000,
+        });
+        console.log(`${eventType} executed`);
+      } else if (eventCommand.toLowerCase().startsWith('log:')) {
+        const message = eventCommand.substring(4).trim();
+        console.log(`${eventType} for ${message}`);
+      } else {
+        console.log(`DashBoard: Event command does not start with 'curl', skipping: ${eventCommand}`);
+      }
+    },
+
+    startEventExecutionTimer() {
+      // Clear any existing timer
+      if (this.eventExecutionTimer) {
+        clearInterval(this.eventExecutionTimer);
+      }
+
+      // Set initial state
+      this.eventExecutionInProgress = true;
+      this.eventExecutionTimeLeft = 60; // 1 minute
+
+      console.log('DashBoard: Starting 60-second countdown timer for goal refetch');
+
+      // Start countdown timer
+      this.eventExecutionTimer = setInterval(() => {
+        this.eventExecutionTimeLeft -= 1;
+
+        if (this.eventExecutionTimeLeft <= 0) {
+          // Timer finished - refetch goals and cleanup
+          console.log('DashBoard: Timer finished, refetching daily goals');
+          this.stopEventExecutionTimer();
+          this.refetchDailyGoals();
+        }
+      }, 1000);
+    },
+
+    stopEventExecutionTimer() {
+      if (this.eventExecutionTimer) {
+        clearInterval(this.eventExecutionTimer);
+        this.eventExecutionTimer = null;
+      }
+      this.eventExecutionInProgress = false;
+      this.eventExecutionTimeLeft = 0;
+      console.log('DashBoard: Event execution timer stopped');
+    },
+
+    // Check event execution for a specific task (used after user interactions)
+    checkEventExecutionForTask(taskId, stimulusName) {
+      // Find the task in the current tasklist
+      const task = this.tasklist.find((t) => t.id === taskId);
+
+      if (!task || !task.stimuli || !Array.isArray(task.stimuli)) {
+        console.log(`DashBoard: No task or stimuli found for taskId ${taskId}`);
+        return;
+      }
+
+      // Find D and K stimuli
+      const dStimulus = task.stimuli.find((s) => s.name === 'D');
+      const kStimulus = task.stimuli.find((s) => s.name === 'K');
+
+      if (!dStimulus || !kStimulus) {
+        console.log(`DashBoard: Missing stimuli for task ${task.name}. `
+          + `D stimulus: ${dStimulus ? 'found' : 'missing'}, K stimulus: ${kStimulus ? 'found' : 'missing'}`);
+        return;
+      }
+
+      console.log(`DashBoard: Checking events for task ${task.name}:`);
+      console.log(`  - Task points: ${task.points}`);
+      console.log(`  - Task ticked: ${task.ticked}`);
+      console.log(`  - D stimulus earned: ${dStimulus.earned}`);
+      console.log(`  - K stimulus earned: ${kStimulus.earned}`);
+      console.log(`  - D stimulus splitRate: ${dStimulus.splitRate}`);
+      console.log(`  - K stimulus splitRate: ${kStimulus.splitRate}`);
+      console.log(`  - StartEvent: ${task.startEvent || 'none'}`);
+      console.log(`  - EndEvent: ${task.endEvent || 'none'}`);
+      console.log(`  - StartEvent already executed: ${this.executedStartEvents.has(task.id)}`);
+      console.log(`  - EndEvent already executed: ${this.executedEndEvents.has(task.id)}`);
+
+      // Calculate correct target values for each stimulus
+      const dTarget = task.points; // D stimulus target is task.points
+      const kCount = Number((dStimulus.splitRate / kStimulus.splitRate).toFixed(0));
+      const kTarget = task.points / kCount; // K stimulus target is task.points/count
+
+      console.log(`  - D target value: ${dTarget}`);
+      console.log(`  - K target value: ${kTarget} (task.points ${task.points} / count ${kCount})`);
+      console.log(`  - D condition: ${dStimulus.earned} === ${dTarget} = ${dStimulus.earned === dTarget}`);
+      console.log(`  - K condition: ${kStimulus.earned} === ${kTarget} = ${kStimulus.earned === kTarget}`);
+
+      // Check startEvent condition: D stimulus earned = D target
+      if (task.startEvent
+          && dStimulus.earned === dTarget
+          && !this.executedStartEvents.has(task.id) && stimulusName === 'D') {
+        console.log(`DashBoard: ✅ StartEvent condition met for task ${task.name}: D earned (${dStimulus.earned}) = D target (${dTarget})`);
+        this.executeEvent(task.startEvent, 'startEvent');
+        this.executedStartEvents.add(task.id);
+      } else if (task.startEvent) {
+        console.log(`DashBoard: ❌ StartEvent condition NOT met for task ${task.name}:`);
+        console.log(`  - D earned (${dStimulus.earned}) === D target (${dTarget}): ${dStimulus.earned === dTarget}`);
+        console.log(`  - Already executed: ${this.executedStartEvents.has(task.id)}`);
+      }
+
+      // Check endEvent condition: K stimulus earned = K target
+      if (task.endEvent
+          && kStimulus.earned === kTarget
+          && !this.executedEndEvents.has(task.id) && stimulusName === 'K') {
+        console.log(`DashBoard: ✅ EndEvent condition met for task ${task.name}: K earned (${kStimulus.earned}) = K target (${kTarget})`);
+        this.executeEvent(task.endEvent, 'endEvent');
+        this.executedEndEvents.add(task.id);
+      } else if (task.endEvent) {
+        console.log(`DashBoard: ❌ EndEvent condition NOT met for task ${task.name}:`);
+        console.log(`  - K earned (${kStimulus.earned}) === K target (${kTarget}): ${kStimulus.earned === kTarget}`);
+        console.log(`  - Already executed: ${this.executedEndEvents.has(task.id)}`);
+      } else {
+        console.log(`DashBoard: No endEvent configured for task ${task.name}`);
+      }
+    },
     setActiveSelection(task) {
       this.activeSelectionId = task.id;
     },
@@ -1192,7 +1536,12 @@ export default {
             },
           })
           .then(() => this.$apollo.queries.tasklist.refetch())
-          .then(() => this.$apollo.queries.goals.refetch())
+          .then(() => {
+            // Check for event execution after task state changes and refetch completes
+            console.log('DashBoard: Tasklist refetch completed, checking events for task:', task.id);
+            this.checkEventExecutionForTask(task.id, 'D');
+            return this.$apollo.queries.goals.refetch();
+          })
           .catch(() => {
             task.ticked = false;
             clearInterval(this.timerId);
@@ -1763,5 +2112,33 @@ export default {
 .action-box {
   display: flex;
   justify-content: flex-end;
+}
+
+/* Skeleton loading styles */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+.skeleton-text {
+  border-radius: 4px;
+}
+
+.skeleton-chip {
+  border-radius: 16px;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>

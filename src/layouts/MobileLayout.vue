@@ -62,7 +62,7 @@
     <v-toolbar v-if="$route.name !== 'login'" class="elevation-0" color="white" app>
       <v-toolbar-title style="font-size: 24px">{{ pageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon @click="pendingDialog = true">
+      <v-btn icon @click="aiSearchModal = true">
         <v-icon size="28">search</v-icon>
       </v-btn>
       <v-btn icon @click="pendingDialog = true">
@@ -113,11 +113,17 @@
         <pending-list />
       </v-card>
     </v-dialog>
+
+    <!-- AI Search Modal -->
+    <ai-search-modal
+      v-model="aiSearchModal"
+    />
   </div>
 </template>
 
 <script>
 import PendingList from '../components/PendingList.vue';
+import AiSearchModal from '../components/AiSearchModal.vue';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
@@ -126,11 +132,13 @@ import { clearData, getSessionItem } from '../token';
 export default {
   components: {
     PendingList,
+    AiSearchModal,
   },
   data() {
     return {
       drawer: null,
       pendingDialog: false,
+      aiSearchModal: false,
       drawerItems: [
         {
           header: 'App',
@@ -205,10 +213,6 @@ export default {
 <style>
 #mobileLayout {
     padding-bottom: 64px;
-}
-
-#mobileLayout .v-card {
-    border-radius: 16px;
 }
 
 #mobileLayout .progress .v-card .headline {

@@ -1,161 +1,171 @@
 <template>
   <v-form ref="form" v-model="valid">
-    <v-layout wrap class="goal-creation">
-      <v-flex xs12 d-flex>
-        <v-text-field
-          v-model="newGoalItem.body"
-          id="newGoalItemBody"
-          name="newGoalItemBody"
-          label="Type your task"
-          class="inputGoal"
-          :rules="formRules.body"
-          @keyup.enter="addGoalItem"
-          required
-        >
-        </v-text-field>
-      </v-flex>
-      <v-flex xs12>
-        <v-card class="no-shadow">
-          <v-toolbar dense class="toolbar">
-            <v-btn-toggle
-              small
-              v-model="newGoalItem.period"
-              rounded="0"
-              group
-              label="Period"
-              @change="updatePeriod()"
-              :disabled="newItemLoaded"
-              required
-            >
-              <v-btn value="year" small :disabled="newItemLoaded">
-                Year
-              </v-btn>
-
-              <v-btn value="month" small :disabled="newItemLoaded">
-                Month
-              </v-btn>
-
-              <v-btn value="week" small :disabled="newItemLoaded">
-                Week
-              </v-btn>
-
-              <v-btn value="day" small :disabled="newItemLoaded">
-                Day
-              </v-btn>
-            </v-btn-toggle>
-            <!-- <v-select
-              :items="periodOptionList"
-              :disabled="newItemLoaded"
-              v-model="newGoalItem.period"
-              item-text="label"
-              item-value="value"
-              :rules="formRules.dropDown"
-              label="Period"
-              @change="updatePeriod()"
-              required
-            ></v-select> -->
-            <v-select
-              prepend-inner-icon="event"
-              small
-              class="ml-1 mr-1"
-              v-if="dateOptionList.length"
-              :items="dateOptionList"
-              :disabled="newItemLoaded"
-              v-model="newGoalItem.date"
-              item-text="label"
-              item-value="value"
-              :rules="formRules.dropDown"
-              label="Date"
-              @change="triggerGoalItemsRef()"
-              solo
-              required
-            ></v-select>
-            <v-select
-              small
-              prepend-inner-icon="history"
-              class="ml-1 mr-1"
-              :items="tasklist"
-              :disabled="newItemLoaded"
-              v-model="newGoalItem.taskRef"
-              item-text="name"
-              item-value="id"
-              label="Routine Task"
-              solo
-            ></v-select>
-            <template v-if="showMilestoneOption">
-              <v-checkbox :disabled="newItemLoaded" v-model="newGoalItem.isMilestone" label="Milestone?" class="pt-0 pr-2"></v-checkbox>
-            </template>
-            <template v-if="newGoalItem.isMilestone">
-              <v-select
-                prepend-inner-icon="assignment"
-                :items="goalItemsRef"
-                v-model="newGoalItem.goalRef"
+    <v-container  style="max-width: 900px;" fill-height>
+      <v-layout wrap class="goal-creation">
+        <v-flex xs12 d-flex>
+          <v-text-field
+            v-model="newGoalItem.body"
+            id="newGoalItemBody"
+            name="newGoalItemBody"
+            label="Type your task"
+            class="inputGoal"
+            :rules="formRules.body"
+            @keyup.enter="addGoalItem"
+            required
+          >
+          </v-text-field>
+        </v-flex>
+        <v-flex xs12>
+          <v-card class="no-shadow">
+            <v-toolbar dense class="toolbar">
+              <v-btn-toggle
+                small
+                v-model="newGoalItem.period"
+                rounded="0"
+                group
+                label="Period"
+                @change="updatePeriod()"
                 :disabled="newItemLoaded"
-                item-text="body"
+                required
+              >
+                <v-btn value="year" small :disabled="newItemLoaded">
+                  Year
+                </v-btn>
+
+                <v-btn value="month" small :disabled="newItemLoaded">
+                  Month
+                </v-btn>
+
+                <v-btn value="week" small :disabled="newItemLoaded">
+                  Week
+                </v-btn>
+
+                <v-btn value="day" small :disabled="newItemLoaded">
+                  Day
+                </v-btn>
+              </v-btn-toggle>
+              <!-- <v-select
+                :items="periodOptionList"
+                :disabled="newItemLoaded"
+                v-model="newGoalItem.period"
+                item-text="label"
+                item-value="value"
+                :rules="formRules.dropDown"
+                label="Period"
+                @change="updatePeriod()"
+                required
+              ></v-select> -->
+              <v-select
+                prepend-inner-icon="event"
+                small
+                class="ml-1 mr-1"
+                v-if="dateOptionList.length"
+                :items="dateOptionList"
+                :disabled="newItemLoaded"
+                v-model="newGoalItem.date"
+                item-text="label"
+                item-value="value"
+                :rules="formRules.dropDown"
+                label="Date"
+                @change="triggerGoalItemsRef()"
+                solo
+                required
+              ></v-select>
+              <v-select
+                small
+                prepend-inner-icon="history"
+                class="ml-1 mr-1"
+                :items="tasklist"
+                :disabled="newItemLoaded"
+                v-model="newGoalItem.taskRef"
+                item-text="name"
                 item-value="id"
-                label="Goal Task"
+                label="Routine Task"
                 solo
               ></v-select>
-            </template>
-          </v-toolbar>
-          <v-card-text class="pt-0">
-          <v-flex xs12 d-flex>
-        <goal-tags-input
-          :goalTags="newGoalItem.tags"
-          :userTags="userTags"
-          @update-new-tag-items="updateNewTagItems"
-        ></goal-tags-input>
-      </v-flex>
-      <v-layout row wrap>
-      <v-flex sm8 d-flex>
-        <v-tabs
-        v-model="active"
-      >
-        <v-tab>Description</v-tab>
-        <v-tab>Reward</v-tab>
-        <v-tab-item>
-          <v-card flat>
-            <v-card-text class="pt-2 pr-0 pb-0 pl-0">
-              <vue-easymde v-model="newGoalItem.contribution" ref="markdownEditor" />
-            </v-card-text>
+              <template v-if="showMilestoneOption">
+                <v-checkbox :disabled="newItemLoaded" v-model="newGoalItem.isMilestone" label="Milestone?" class="pt-0 pr-2"></v-checkbox>
+              </template>
+              <template v-if="newGoalItem.isMilestone">
+                <v-select
+                  prepend-inner-icon="assignment"
+                  :items="goalItemsRef"
+                  v-model="newGoalItem.goalRef"
+                  :disabled="newItemLoaded"
+                  item-text="body"
+                  item-value="id"
+                  label="Goal Task"
+                  solo
+                ></v-select>
+              </template>
+            </v-toolbar>
+            <v-card-text class="pt-0">
+            <v-flex xs12 d-flex>
+          <goal-tags-input
+            :goalTags="newGoalItem.tags"
+            :userTags="userTags"
+            @update-new-tag-items="updateNewTagItems"
+          ></goal-tags-input>
+        </v-flex>
+        <v-flex xs12 v-if="shouldShowStatus(newGoalItem.period) && newGoalItem.body">
+          <div class="d-flex align-center status-container">
+            <task-status-tag
+              :status="getNewTaskStatus(newGoalItem.taskRef, newGoalItem.originalDate, newGoalItem)"
+              class="status-chip"
+            />
+          </div>
+        </v-flex>
+        <v-layout row wrap>
+        <v-flex sm8 d-flex>
+          <v-tabs
+          v-model="active"
+        >
+          <v-tab>Description</v-tab>
+          <v-tab>Reward</v-tab>
+          <v-tab-item>
+            <v-card flat>
+              <v-card-text class="pt-2 pr-0 pb-0 pl-0">
+                <vue-easymde v-model="newGoalItem.contribution" ref="markdownEditor" />
+              </v-card-text>
+            </v-card>
+          </v-tab-item>
+          <v-tab-item>
+            <v-card flat>
+              <v-card-text>
+                <v-textarea v-model="newGoalItem.reward">
+                  <template v-slot:label>
+                    <div>
+                      Reward / Resolution
+                    </div>
+                  </template>
+                </v-textarea>
+              </v-card-text>
+            </v-card>
+          </v-tab-item>
+        </v-tabs>
+        </v-flex>
+        <v-flex sm4  d-flex v-if="newGoalItem.period === 'day' && newGoalItem.id">
+          <sub-task-item-list
+            :subTasks="newGoalItem.subTasks"
+            :taskId="newGoalItem.id"
+            :period="newGoalItem.period"
+            :date="newGoalItem.date"
+            @update-sub-task-items="updateSubTaskItems"
+          />
+        </v-flex>
+      </v-layout>
+    </v-card-text>
+        <v-flex xs12>
+          <div style="float: right;" class="mr-1">
+            <v-btn color="primary" :disabled="!valid" :loading="buttonLoading" @click="saveGoalItem" class="mr-3">
+              Save
+            </v-btn>
+          </div>
+        </v-flex>
           </v-card>
-        </v-tab-item>
-        <v-tab-item>
-          <v-card flat>
-            <v-card-text>
-              <v-textarea v-model="newGoalItem.reward">
-                <template v-slot:label>
-                  <div>
-                    Reward / Resolution
-                  </div>
-                </template>
-              </v-textarea>
-            </v-card-text>
-          </v-card>
-        </v-tab-item>
-      </v-tabs>
-      </v-flex>
-      <v-flex sm4  d-flex v-if="newGoalItem.period === 'day' && newGoalItem.id">
-        <sub-task-item-list
-          :subTasks="newGoalItem.subTasks"
-          :taskId="newGoalItem.id"
-          :period="newGoalItem.period"
-          :date="newGoalItem.date"
-          @update-sub-task-items="updateSubTaskItems"
-        />
-      </v-flex>
-    </v-layout>
-  </v-card-text>
-      <v-flex xs12>
-        <div style="float: right;" class="mr-1">
-          <v-btn color="primary" :disabled="!valid" :loading="buttonLoading" @click="saveGoalItem" class="mr-3">
-            Save
-          </v-btn>
-        </div>
-      </v-flex>
-        </v-card>
-      </v-flex>
-    </v-layout>
+        </v-flex>
+      </v-layout>
+    </v-container>
   </v-form>
 </template>
 
@@ -164,6 +174,7 @@ import gql from 'graphql-tag';
 import moment from 'moment';
 import VueEasymde from 'vue-easymde';
 
+import taskStatusMixin from '@/composables/useTaskStatus';
 import {
   getDatesOfYear,
   getWeeksOfYear,
@@ -173,11 +184,18 @@ import {
 } from '../utils/getDates';
 import SubTaskItemList from './SubTaskItemList.vue';
 import GoalTagsInput from './GoalTagsInput.vue';
+import TaskStatusTag from './TaskStatusTag.vue';
 import getJSON from '../utils/getJSON';
 import { USER_TAGS } from '../constants/settings';
 
 export default {
-  components: { SubTaskItemList, GoalTagsInput, VueEasymde },
+  components: {
+    SubTaskItemList,
+    GoalTagsInput,
+    VueEasymde,
+    TaskStatusTag,
+  },
+  mixins: [taskStatusMixin],
   props: ['newGoalItem'],
   apollo: {
     tasklist: {
@@ -361,6 +379,7 @@ export default {
         taskRef = '',
         goalRef = '',
         tags = [],
+        originalDate = null,
       } = this.newGoalItem;
 
       if (!body) {
@@ -384,6 +403,7 @@ export default {
               $taskRef: String
               $goalRef: String
               $tags: [String]
+              $originalDate: String
             ) {
               addGoalItem(
                 body: $body
@@ -397,11 +417,15 @@ export default {
                 taskRef: $taskRef
                 goalRef: $goalRef
                 tags: $tags
+                originalDate: $originalDate
               ) {
                 id
                 body
                 isComplete
                 isMilestone
+                status
+                createdAt
+                originalDate
               }
             }
           `,
@@ -417,6 +441,7 @@ export default {
             taskRef: taskRef || '',
             goalRef: goalRef || '',
             tags,
+            originalDate: originalDate || null,
           },
           update: (scope, { data: { addGoalItem } }) => {
             const goalItem = {
@@ -593,4 +618,14 @@ export default {
     width: 100%;
   }
 
+  .status-chip {
+    max-width: fit-content;
+    margin-left: 0;
+  }
+
+  .status-container {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+  }
 </style>

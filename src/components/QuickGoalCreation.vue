@@ -23,6 +23,45 @@
         label="Goal Task"
       >
       </v-select>
+    </v-flex>    <!-- Condensed timeline showing related goals based on selected goalRef -->
+    <v-flex xs12 d-flex v-if="relatedTasks.length > 0 && newGoalItem.goalRef">
+      <v-card flat class="condensed-timeline mb-3 modern-shadow-sm" style="width: 100%;">
+        <v-card-title class="pb-2">
+          <v-icon left small>track_changes</v-icon>
+          <span class="subtitle-2">Related Goals ({{ relatedTasks.length }})</span>
+        </v-card-title>
+        <v-card-text class="pt-0">
+          <v-timeline dense>
+            <v-timeline-item
+              v-for="task in relatedTasks"
+              :key="task.id"
+              :color="task.isComplete ? 'green' : 'orange'"
+              small
+              class="mb-1"
+            >              <v-layout align-center>
+                <v-flex>
+                  <div v-if="task.date" class="caption text--secondary">
+                    {{ formatDateToDayOfWeek(task.date) }}
+                  </div>
+                  <span class="caption text--secondary">{{ formatTime(task.time) }}</span>
+                  <div class="body-2">{{ task.body }}</div>
+                  <div v-if="task.tags && task.tags.length > 0" class="mt-1">
+                    <v-chip
+                      v-for="tag in task.tags"
+                      :key="tag"
+                      x-small
+                      outlined
+                      class="mr-1"
+                    >
+                      {{ tag }}
+                    </v-chip>
+                  </div>
+                </v-flex>
+              </v-layout>
+            </v-timeline-item>
+          </v-timeline>
+        </v-card-text>
+      </v-card>
     </v-flex>
     <v-flex xs12 d-flex>
       <goal-tags-input
@@ -45,7 +84,9 @@
 </template>
 <script>
 import gql from 'graphql-tag';
+import moment from 'moment';
 
+import taskStatusMixin from '@/composables/useTaskStatus';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 import getJSON from '../utils/getJSON';
 import GoalTagsInput from './GoalTagsInput.vue';
@@ -55,6 +96,7 @@ export default {
   components: {
     GoalTagsInput,
   },
+  mixins: [taskStatusMixin],
   props: [
     'goals',
     'selectedBody',
@@ -96,6 +138,37 @@ export default {
         this.loading = false;
       },
     },
+    relatedGoalsData: {
+      query: gql`
+        query goalsByGoalRef($goalRef: String!) {
+          goalsByGoalRef(goalRef: $goalRef) {
+            id
+            date
+            period
+            goalItems {
+              id
+              body
+              isComplete
+              goalRef
+              taskRef
+              tags
+              isMilestone
+            }
+          }
+        }
+      `,
+      variables() {
+        return {
+          goalRef: this.newGoalItem.goalRef,
+        };
+      },
+      skip() {
+        return !this.newGoalItem.goalRef;
+      },
+      update(data) {
+        return data && data.goalsByGoalRef ? data.goalsByGoalRef : [];
+      },
+    },
   },
   data() {
     return {
@@ -120,7 +193,79 @@ export default {
       userTags: getJSON(localStorage.getItem(USER_TAGS), []),
     };
   },
+  computed: {
+    relatedTasks() {
+      if (!this.newGoalItem.goalRef || !this.relatedGoalsData || !Array.isArray(this.relatedGoalsData)) {
+        return [];
+      }
+
+      // Since goalsByGoalRef already filters by goalRef on the server,
+      // we just need to flatten the goalItems and add time information
+      const relatedTasks = [];
+      this.relatedGoalsData.forEach((goal) => {
+        if (goal.goalItems && Array.isArray(goal.goalItems)) {
+          goal.goalItems.forEach((goalItem) => {
+            // Add time from tasklist if available
+            if (goalItem.goalRef === this.newGoalItem.goalRef) {
+              relatedTasks.push({
+                id: goalItem.id,
+                body: goalItem.body,
+                date: goal.date,
+                period: goal.period,
+                isComplete: goalItem.isComplete,
+                goalRef: goalItem.goalRef,
+                taskRef: goalItem.taskRef,
+                tags: goalItem.tags || [],
+              });
+            }
+          });
+        }
+      });
+
+      // Sort by time and limit to 10 for condensed view
+      return relatedTasks
+        .sort((a, b) => {
+          if (!a.time) return 1;
+          if (!b.time) return -1;
+          return a.time.localeCompare(b.time);
+        })
+        .slice(0, 10);
+    },
+  },
+  mounted() {
+    // Initialize tags from the selected task if available
+    this.initializeTagsFromSelectedTask();
+  },
   methods: {
+    initializeTagsFromSelectedTask() {
+      if (this.selectedTaskRef && this.tasklist && this.tasklist.length > 0) {
+        const selectedTask = this.tasklist.find((task) => task.id === this.selectedTaskRef);
+        const taskTags = selectedTask && selectedTask.tags ? [...selectedTask.tags] : [];
+
+        this.newGoalItem.tags = taskTags;
+        this.defaultGoalItem.tags = taskTags;
+      }
+    },
+    formatTime(time) {
+      if (!time) return '';
+      return time; // Time is already in HH:MM format
+    },
+    formatDateToDayOfWeek(date) {
+      if (!date) return '';
+      try {
+        // Use moment to parse the date - it handles multiple formats automatically
+        const momentDate = moment(date, ['DD-MM-YYYY', 'YYYY-MM-DD', 'MM/DD/YYYY', 'YYYY/MM/DD']);
+
+        if (!momentDate.isValid()) {
+          console.warn('Invalid date format:', date);
+          return date; // Return original if parsing fails
+        }
+        return momentDate.format('dddd'); // Returns full day name (e.g., 'Monday')
+      } catch (error) {
+        console.error('Error formatting date to day of week:', error);
+        return date; // Return original date if error occurs
+      }
+    },
     getGoal(period, date) {
       const goal = this.goals.find((aGoal) => aGoal.period === period && aGoal.date === date);
       if (!goal) {
@@ -161,6 +306,7 @@ export default {
               $goalRef: String
               $taskRef: String
               $tags: [String]
+              $originalDate: String
             ) {
               addGoalItem(
                 body: $body
@@ -171,6 +317,7 @@ export default {
                 goalRef: $goalRef
                 taskRef: $taskRef
                 tags: $tags
+                originalDate: $originalDate
               ) {
                 id
                 body
@@ -178,6 +325,9 @@ export default {
                 isMilestone
                 goalRef
                 taskRef
+                status
+                createdAt
+                originalDate
               }
             }
           `,
@@ -190,6 +340,7 @@ export default {
             goalRef: this.newGoalItem.goalRef,
             taskRef: this.newGoalItem.taskRef,
             tags: this.newGoalItem.tags,
+            originalDate: this.newGoalItem.originalDate || null,
           },
           update: (scope, { data: { addGoalItem } }) => {
             goal.goalItems.push({
@@ -285,6 +436,11 @@ export default {
       localStorage.setItem(USER_TAGS, JSON.stringify(userTags));
       this.userTags = [...userTags];
     },
+    getGoalRefBody(goalRefId) {
+      if (!this.goalItems || !goalRefId) return '';
+      const goalItem = this.goalItems.find((item) => item.id === goalRefId);
+      return goalItem ? goalItem.body : goalRefId;
+    },
   },
   watch: {
     selectedBody(newVal, oldVal) {
@@ -301,13 +457,19 @@ export default {
     },
     selectedTaskRef(newVal, oldVal) {
       if (newVal !== oldVal) {
+        // Find the selected task and get its tags
+        const selectedTask = this.tasklist.find((task) => task.id === newVal);
+        const taskTags = selectedTask && selectedTask.tags ? [...selectedTask.tags] : [];
+
         this.newGoalItem = {
           ...this.defaultGoalItem,
           taskRef: newVal,
+          tags: taskTags,
         };
         this.defaultGoalItem = {
           ...this.defaultGoalItem,
           taskRef: newVal,
+          tags: taskTags,
         };
         this.autoSelectGoalRef();
       }
@@ -320,6 +482,20 @@ export default {
         this.defaultGoalItem = {
           ...this.defaultGoalItem,
         };
+      }
+    },
+    'newGoalItem.goalRef': function newGoalItemGoalRef(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        // Refetch related goals when goalRef changes
+        if (this.$apollo.queries.relatedGoalsData) {
+          this.$apollo.queries.relatedGoalsData.refetch();
+        }
+      }
+    },
+    tasklist(newVal) {
+      // Initialize tags when tasklist is loaded or updated
+      if (newVal && newVal.length > 0) {
+        this.initializeTagsFromSelectedTask();
       }
     },
   },
@@ -343,5 +519,30 @@ export default {
   padding: 0 8px 0 8px;
   height: 30px;
   border-bottom: 1px solid #ccc;
+}
+
+.condensed-timeline {
+  background: rgba(255, 152, 0, 0.05);
+  border-left: 3px solid #FF9800;
+}
+
+.condensed-timeline .v-timeline {
+  padding-top: 0;
+}
+
+.condensed-timeline .v-timeline-item {
+  padding-bottom: 8px !important;
+}
+
+.condensed-timeline .v-timeline-item__body {
+  max-width: calc(100% - 32px);
+}
+
+.condensed-timeline .v-card-title {
+  padding-bottom: 8px;
+}
+
+.condensed-timeline .v-card-text {
+  padding-top: 0;
 }
 </style>

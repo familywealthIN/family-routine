@@ -128,7 +128,20 @@ export default {
       userTags: getJSON(localStorage.getItem(USER_TAGS), []),
     };
   },
+  mounted() {
+    // Initialize tags from the selected task if available
+    this.initializeTagsFromSelectedTask();
+  },
   methods: {
+    initializeTagsFromSelectedTask() {
+      if (this.selectedTaskRef && this.tasklist && this.tasklist.length > 0) {
+        const selectedTask = this.tasklist.find((task) => task.id === this.selectedTaskRef);
+        const taskTags = selectedTask && selectedTask.tags ? [...selectedTask.tags] : [];
+
+        this.newGoalItem.tags = taskTags;
+        this.defaultGoalItem.tags = taskTags;
+      }
+    },
     getGoal(period, date) {
       const goal = this.goals.find((aGoal) => aGoal && aGoal.period === period && aGoal.date === date);
       if (!goal) {
@@ -194,7 +207,7 @@ export default {
           date,
           isComplete: false,
           isMilestone: this.newGoalItem.isMilestone,
-          goalRef: this.newGoalItem.goalRef,
+          goalRef: this.newGoalItem.isMilestone ? this.newGoalItem.goalRef : null,
           taskRef: this.newGoalItem.taskRef,
           tags: this.newGoalItem.tags,
         },
@@ -303,13 +316,19 @@ export default {
     },
     selectedTaskRef(newVal, oldVal) {
       if (newVal !== oldVal) {
+        // Find the selected task and get its tags
+        const selectedTask = this.tasklist.find((task) => task.id === newVal);
+        const taskTags = selectedTask && selectedTask.tags ? [...selectedTask.tags] : [];
+
         this.newGoalItem = {
           ...this.defaultGoalItem,
           taskRef: newVal,
+          tags: taskTags,
         };
         this.defaultGoalItem = {
           ...this.defaultGoalItem,
           taskRef: newVal,
+          tags: taskTags,
         };
         this.autoSelectGoalRef();
       }
@@ -322,6 +341,12 @@ export default {
         this.defaultGoalItem = {
           ...this.defaultGoalItem,
         };
+      }
+    },
+    tasklist(newVal) {
+      // Initialize tags when tasklist is loaded or updated
+      if (newVal && newVal.length > 0) {
+        this.initializeTagsFromSelectedTask();
       }
     },
   },

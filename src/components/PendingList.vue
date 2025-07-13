@@ -1,7 +1,7 @@
 <template>
   <v-layout row wrap>
     <v-flex xs12>
-      <v-card class="pt-3">
+      <v-card class="pt-3 ma-3 modern-card">
         <v-list subheader>
           <v-spacer></v-spacer>
           <v-subheader
@@ -69,7 +69,7 @@
     hide-overlay
     transition="dialog-bottom-transition"
   >
-    <v-card>
+    <v-card class="modern-card-elevated">
       <v-toolbar dark color="primary">
         <v-btn icon dark @click="closeGoalItemDialog()">
           <v-icon>close</v-icon>
@@ -77,8 +77,8 @@
         <v-toolbar-title>Sort Goal</v-toolbar-title>
         <v-spacer></v-spacer>
       </v-toolbar>
-      <v-card>
-        <v-card-text>
+      <v-card class="modern-card">
+        <v-card-text class="pa-0">
           <goal-creation :newGoalItem="newGoalItem" v-on:add-update-goal-entry="addUpdateGoalEntry" />
         </v-card-text>
       </v-card>
@@ -121,6 +121,7 @@ export default {
     return {
       show: true,
       buttonLoading: false,
+      addGoalItemDialog: false,
       newPendingItem: {
         pendingItem: '',
       },

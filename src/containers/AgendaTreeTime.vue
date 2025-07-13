@@ -576,7 +576,7 @@ ul {
   display: block;
   background-color: #fff;
   border: 1px solid #ccc;
-  border-radius: 8px;
+  border-radius: 16px;
   position: relative;
   margin: 0 auto;
   font-size: 12px;
@@ -595,7 +595,7 @@ ul {
   display: block;
   background-color: #fff;
   border: 1px solid #ccc;
-  border-radius: 8px;
+  border-radius: 16px;
   position: relative;
   margin: 0 auto;
   font-size: 12px;
@@ -692,7 +692,7 @@ ul {
 
 .weekdays .day {
   padding: 16px;
-  border-radius: 4px;
+  border-radius: 16px;
   text-align: center;
 }
 

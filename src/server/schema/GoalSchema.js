@@ -8,6 +8,7 @@ const {
 } = require('graphql');
 
 const mongoose = require('mongoose');
+const { encryption, ENCRYPTION_FIELDS } = require('../utils/encryption');
 
 const SubTaskItemSchema = new mongoose.Schema({
   body: String,
@@ -27,6 +28,17 @@ const GoalItemSchema = new mongoose.Schema({
     type: String,
   }],
   subTasks: [SubTaskItemSchema],
+  status: {
+    type: String,
+    enum: ['todo', 'progress', 'done', 'missed', 'rescheduled'],
+    default: 'todo',
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  completedAt: Date,
+  originalDate: String, // Track original date for rescheduled tasks
 });
 
 const GoalSchema = new mongoose.Schema({
@@ -35,6 +47,74 @@ const GoalSchema = new mongoose.Schema({
   period: String,
   goalItems: [GoalItemSchema],
 });
+
+// Encryption middleware for SubTaskItemSchema
+SubTaskItemSchema.pre('save', function encryptSubTask(next) {
+  const encryptedData = encryption.encryptObject(this.toObject(), ENCRYPTION_FIELDS.subTask);
+  Object.assign(this, encryptedData);
+  next();
+});
+
+// Encryption middleware for GoalItemSchema
+GoalItemSchema.pre('save', function encryptGoalItem(next) {
+  const encryptedData = encryption.encryptObject(this.toObject(), ENCRYPTION_FIELDS.goalItem);
+  Object.assign(this, encryptedData);
+
+  // Encrypt subtasks
+  if (this.subTasks && this.subTasks.length > 0) {
+    this.subTasks = encryption.encryptArray(this.subTasks, ENCRYPTION_FIELDS.subTask);
+  }
+
+  next();
+});
+
+// Encryption middleware for GoalSchema
+GoalSchema.pre('save', function encryptGoal(next) {
+  // Encrypt goal items
+  if (this.goalItems && this.goalItems.length > 0) {
+    this.goalItems = this.goalItems.map((goalItem) => {
+      const encrypted = encryption.encryptObject(goalItem.toObject(), ENCRYPTION_FIELDS.goalItem);
+
+      // Encrypt subtasks within each goal item
+      if (encrypted.subTasks && encrypted.subTasks.length > 0) {
+        encrypted.subTasks = encryption.encryptArray(encrypted.subTasks, ENCRYPTION_FIELDS.subTask);
+      }
+
+      return encrypted;
+    });
+  }
+  next();
+});
+
+// Decryption middleware for GoalSchema
+const decryptGoalData = function decryptGoal(docs) {
+  if (!docs) return;
+
+  const decrypt = (doc) => {
+    if (doc.goalItems && doc.goalItems.length > 0) {
+      // eslint-disable-next-line no-param-reassign
+      doc.goalItems = doc.goalItems.map((goalItem) => {
+        const decrypted = encryption.decryptObject(goalItem.toObject ? goalItem.toObject() : goalItem, ENCRYPTION_FIELDS.goalItem);
+
+        // Decrypt subtasks within each goal item
+        if (decrypted.subTasks && decrypted.subTasks.length > 0) {
+          decrypted.subTasks = encryption.decryptArray(decrypted.subTasks, ENCRYPTION_FIELDS.subTask);
+        }
+
+        return decrypted;
+      });
+    }
+    return doc;
+  };
+
+  if (Array.isArray(docs)) {
+    docs.forEach(decrypt);
+  } else {
+    decrypt(docs);
+  }
+};
+
+GoalSchema.post(['find', 'findOne', 'findOneAndUpdate'], decryptGoalData);
 
 const GoalItemTypeFields = {
   id: { type: GraphQLID },
@@ -51,6 +131,10 @@ const GoalItemTypeFields = {
   progress: { type: GraphQLInt },
   goalRef: { type: GraphQLString },
   tags: { type: new GraphQLList(GraphQLString) },
+  status: { type: GraphQLString },
+  createdAt: { type: GraphQLString },
+  completedAt: { type: GraphQLString },
+  originalDate: { type: GraphQLString },
 };
 
 const SubTaskItemType = new GraphQLObjectType({

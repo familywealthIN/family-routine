@@ -20,7 +20,6 @@
           </v-list-tile-content>
         </v-list-tile>
       </v-list>
-
       <v-list class="pt-0" dense>
         <v-divider></v-divider>
 
@@ -33,6 +32,17 @@
             <v-list-tile-title>{{ item.title }}</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
+        <year-goal-sidebar />
+        <v-list-tile v-for="item in otherItems" :key="item.title" :to="item.route">
+          <v-list-tile-action>
+            <v-icon>{{ item.icon }}</v-icon>
+          </v-list-tile-action>
+
+          <v-list-tile-content>
+            <v-list-tile-title>{{ item.title }}</v-list-tile-title>
+          </v-list-tile-content>
+        </v-list-tile>
+        <project-sidebar />
         <v-list-tile @click="handleClickSignOut">
           <v-list-tile-action>
             <v-icon>logout</v-icon>
@@ -46,8 +56,7 @@
     </v-navigation-drawer>
     <v-toolbar v-if="$route.name !== 'login'" color="white" app style="border-bottom: 1px solid rgba(0,0,0,0.12) !important;">
       <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
-      <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>
-      <div class="ai-search-box">
+      <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>      <div class="ai-search-box" @click="aiSearchModal = true">
           <span>Build your routine goals with AI</span>
           <v-icon class="search-icon">search</v-icon>
         </div>
@@ -72,15 +81,22 @@
           </v-btn>
           <v-toolbar-title>Pending Items</v-toolbar-title>
           <v-spacer></v-spacer>
-        </v-toolbar>
-        <pending-list />
+        </v-toolbar>        <pending-list />
       </v-card>
     </v-dialog>
+
+    <!-- AI Search Modal -->
+    <ai-search-modal
+      v-model="aiSearchModal"
+    />
   </div>
 </template>
 
 <script>
+import ProjectSidebar from '@/components/ProjectSidebar.vue';
+import YearGoalSidebar from '@/components/YearGoalSidebar.vue';
 import PendingList from '../components/PendingList.vue';
+import AiSearchModal from '../components/AiSearchModal.vue';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
@@ -89,15 +105,19 @@ import { clearData, getSessionItem } from '../token';
 export default {
   components: {
     PendingList,
+    ProjectSidebar,
+    YearGoalSidebar,
+    AiSearchModal,
   },
   data() {
     return {
       drawer: null,
       pendingDialog: false,
+      aiSearchModal: false,
       items: [
         { title: 'Home', icon: 'home', route: '/home' },
-        // { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
-        { title: 'Goals', icon: 'assignment', route: '/goals' },
+      ],
+      otherItems: [
         { title: 'Progress', icon: 'pie_chart', route: '/progress' },
         { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
         { title: 'Routine Settings', icon: 'settings', route: '/settings' },
@@ -163,18 +183,25 @@ export default {
       padding-top: 64px;
     }
   }
+
   .ai-search-box * {
     vertical-align: middle;
-  }
-  .ai-search-box {
+  }  .ai-search-box {
     background-color: #ddd;
     color: #777;
-    border-radius: 4px;
+    border-radius: 16px;
     display: inline-block;
     margin: 8px 8px 8px calc(40% - 250px);
     padding: 8px 16px;
     min-width: 500px;
-    line-height: 1
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .ai-search-box:hover {
+    background-color: #ccc;
+    color: #555;
   }
   .search-icon {
     position: relative;
