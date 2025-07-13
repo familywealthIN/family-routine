@@ -384,38 +384,26 @@ export default {
           mutation addRoutine($date: String!) {
             addRoutine(date: $date) {
               id
-              date
-              skip
-              tasklist {
-                id
-                name
-                time
-                points
-                ticked
-                passed
-                wait
-              }
             }
           }
         `,
         variables: {
           date: this.date,
         },
-        update: (store, { data: { addRoutine } }) => {
-          this.tasklist = addRoutine && addRoutine.date ? addRoutine.tasklist : [];
-          this.did = addRoutine.id;
+      }).then(() => this.$apollo.queries.tasklist.refetch())
+        .then(() => {
           this.isLoading = false;
-        },
-      }).catch(() => {
-        this.isLoading = false;
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
+        })
+        .catch(() => {
+          this.isLoading = false;
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
         });
-      });
     },
     deleteTaskGoal(id) {
       this.goals.forEach((goal) => {

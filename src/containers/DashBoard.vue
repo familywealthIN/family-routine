@@ -835,6 +835,10 @@ export default {
           }
         }
       `,
+      skip() {
+        // Skip query if user is not authenticated
+        return !this.$root.$data.email;
+      },
       update(data) {
         this.isLoading = false;
         this.tasklist = data.routineDate && data.routineDate.date
@@ -884,6 +888,10 @@ export default {
           }
         }
       `,
+      skip() {
+        // Skip query if user is not authenticated
+        return !this.$root.$data.email;
+      },
       update(data) {
         return data.agendaGoals;
       },
@@ -925,6 +933,10 @@ export default {
           }
         }
       `,
+      skip() {
+        // Skip query if user is not authenticated
+        return !this.$root.$data.email;
+      },
       update(data) {
         // Mark first load as complete
         this.goalsFirstLoad = false;
@@ -1076,6 +1088,24 @@ export default {
         }
       } catch (error) {
         console.error('DashBoard: Error in refetchDailyGoals:', error);
+      }
+    },
+
+    refreshApolloQueries() {
+      // Refresh all Apollo queries in this component when user logs in
+      try {
+        if (this.$apollo.queries.tasklist) {
+          this.$apollo.queries.tasklist.refetch();
+        }
+        if (this.$apollo.queries.agendaGoals) {
+          this.$apollo.queries.agendaGoals.refetch();
+        }
+        if (this.$apollo.queries.goals) {
+          this.$apollo.queries.goals.refetch();
+        }
+        console.log('DashBoard: Apollo queries refreshed successfully');
+      } catch (error) {
+        console.warn('DashBoard: Error refreshing Apollo queries:', error);
       }
     },
 
@@ -1418,34 +1448,16 @@ export default {
             mutation addRoutine($date: String!) {
               addRoutine(date: $date) {
                 id
-                date
-                skip
-                tasklist {
-                  id
-                  name
-                  time
-                  points
-                  ticked
-                  passed
-                  wait
-                  stimuli {
-                    name
-                    splitRate
-                    earned
-                  }
-                }
               }
             }
           `,
           variables: {
             date: this.date,
           },
-          update: (store, { data: { addRoutine } }) => {
-            this.tasklist = addRoutine && addRoutine.date ? addRoutine.tasklist : [];
-            this.did = addRoutine.id;
-            if (this.isTodaySelected) this.setPassedWait();
-            this.isLoading = false;
-          },
+        })
+        .then(() => this.$apollo.queries.tasklist.refetch())
+        .then(() => {
+          this.isLoading = false;
         })
         .catch(() => {
           clearInterval(this.timerId);

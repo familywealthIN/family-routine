@@ -106,6 +106,10 @@ export default {
           }
         }
       `,
+      skip() {
+        // Skip query if user is not authenticated
+        return !this.$root.$data.email;
+      },
       update(data) {
         this.loading = false;
         return data.motto !== null
@@ -135,7 +139,27 @@ export default {
       defaultGoalItem,
     };
   },
+  watch: {
+    // Watch for user email changes (indicates login/logout)
+    '$root.$data.email': function watchUserEmail(newEmail, oldEmail) {
+      // If email changes from null/undefined to a value, or from one user to another
+      if ((!oldEmail && newEmail) || (oldEmail && newEmail && oldEmail !== newEmail)) {
+        this.refreshApolloQueries();
+      }
+    },
+  },
   methods: {
+    refreshApolloQueries() {
+      // Refresh all Apollo queries in this component when user logs in
+      try {
+        if (this.$apollo.queries.pending) {
+          this.$apollo.queries.pending.refetch();
+        }
+        console.log('PendingList: Apollo queries refreshed successfully');
+      } catch (error) {
+        console.warn('PendingList: Error refreshing Apollo queries:', error);
+      }
+    },
     addPendingItem() {
       const value = this.newPendingItem.mottoItem && this.newPendingItem.mottoItem.trim();
 
