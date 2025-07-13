@@ -2,10 +2,12 @@ service: familywealth-graphql-api
 
 custom:
   secrets: ${file(secrets.json)}
-
+package:
+  exclude:
+    - dist
 provider:
   name: aws
-  runtime: nodejs12.x
+  runtime: nodejs18.x
   stage: dev
   region: ap-south-1
   environment:
@@ -22,5 +24,29 @@ functions:
     events:
       - http:
           path: graphql
+          method: post
+          cors: true
+
+  mcp:
+    handler: serverless-mcp.handler
+    events:
+      - http:
+          path: mcp
+          method: get
+          cors: true
+      - http:
+          path: mcp/call
+          method: post
+          cors: true
+      - http:
+          path: mcp/resources
+          method: get
+          cors: true
+      - http:
+          path: mcp/tools
+          method: get
+          cors: true
+      - http:
+          path: mcp/graphql
           method: post
           cors: true

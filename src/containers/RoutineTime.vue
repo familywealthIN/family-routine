@@ -248,7 +248,7 @@
       transition="dialog-bottom-transition"
     >
       <v-card>
-        <v-toolbar dark color="primary">
+        <v-toolbar>
           <v-btn icon dark @click="toggleGoalDisplayDialog(false)">
             <v-icon>close</v-icon>
           </v-btn>
