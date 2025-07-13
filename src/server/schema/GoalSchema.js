@@ -48,31 +48,11 @@ const GoalSchema = new mongoose.Schema({
   goalItems: [GoalItemSchema],
 });
 
-// Encryption middleware for SubTaskItemSchema
-SubTaskItemSchema.pre('save', function encryptSubTask(next) {
-  const encryptedData = encryption.encryptObject(this.toObject(), ENCRYPTION_FIELDS.subTask);
-  Object.assign(this, encryptedData);
-  next();
-});
-
-// Encryption middleware for GoalItemSchema
-GoalItemSchema.pre('save', function encryptGoalItem(next) {
-  const encryptedData = encryption.encryptObject(this.toObject(), ENCRYPTION_FIELDS.goalItem);
-  Object.assign(this, encryptedData);
-
-  // Encrypt subtasks
-  if (this.subTasks && this.subTasks.length > 0) {
-    this.subTasks = encryption.encryptArray(this.subTasks, ENCRYPTION_FIELDS.subTask);
-  }
-
-  next();
-});
-
 // Encryption middleware for GoalSchema
 GoalSchema.pre('save', function encryptGoal(next) {
-  // Encrypt goal items
   if (this.goalItems && this.goalItems.length > 0) {
     this.goalItems = this.goalItems.map((goalItem) => {
+      // Encrypt the goal item
       const encrypted = encryption.encryptObject(goalItem.toObject(), ENCRYPTION_FIELDS.goalItem);
 
       // Encrypt subtasks within each goal item
@@ -86,6 +66,18 @@ GoalSchema.pre('save', function encryptGoal(next) {
   next();
 });
 
+// Decryption helper function
+const decryptGoalItem = (goalItem) => {
+  const decrypted = encryption.decryptObject(goalItem.toObject ? goalItem.toObject() : goalItem, ENCRYPTION_FIELDS.goalItem);
+  
+  // Decrypt subtasks within each goal item
+  if (decrypted.subTasks && decrypted.subTasks.length > 0) {
+    decrypted.subTasks = encryption.decryptArray(decrypted.subTasks, ENCRYPTION_FIELDS.subTask);
+  }
+  
+  return decrypted;
+};
+
 // Decryption middleware for GoalSchema
 const decryptGoalData = function decryptGoal(docs) {
   if (!docs) return;
@@ -93,16 +85,7 @@ const decryptGoalData = function decryptGoal(docs) {
   const decrypt = (doc) => {
     if (doc.goalItems && doc.goalItems.length > 0) {
       // eslint-disable-next-line no-param-reassign
-      doc.goalItems = doc.goalItems.map((goalItem) => {
-        const decrypted = encryption.decryptObject(goalItem.toObject ? goalItem.toObject() : goalItem, ENCRYPTION_FIELDS.goalItem);
-
-        // Decrypt subtasks within each goal item
-        if (decrypted.subTasks && decrypted.subTasks.length > 0) {
-          decrypted.subTasks = encryption.decryptArray(decrypted.subTasks, ENCRYPTION_FIELDS.subTask);
-        }
-
-        return decrypted;
-      });
+      doc.goalItems = doc.goalItems.map(decryptGoalItem);
     }
     return doc;
   };
