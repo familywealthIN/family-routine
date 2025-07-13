@@ -8,13 +8,11 @@
     "build": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/@vue/cli-service/bin/vue-cli-service build",
     "lint": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/@vue/cli-service/bin/vue-cli-service lint",
     "serve:server": "set NODE_OPTIONS=--openssl-legacy-provider && node ./node_modules/nodemon/bin/nodemon.js --watch src/server ./server.js",
-    "mcp:server": "set NODE_OPTIONS=--openssl-legacy-provider && node test-mcp-server.js",
-    "mcp:test": "set NODE_OPTIONS=--openssl-legacy-provider && node test-mcp-client.js",
+    "mcp:server": "set NODE_OPTIONS=--openssl-legacy-provider && node src/server/mcp-http-server.js",
     "setup-encryption": "node scripts/setup-encryption.js"
   },
   "dependencies": {
     "@johmun/vue-tags-input": "^2.1.0",
-    "@modelcontextprotocol/sdk": "^1.15.0",
     "@types/node": "^24.0.10",
     "apollo-cache-inmemory": "^1.6.5",
     "apollo-client": "^2.6.8",

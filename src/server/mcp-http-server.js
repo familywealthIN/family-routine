@@ -625,3 +625,32 @@ type MottoItem {
 }
 
 module.exports = { HttpMCPServer };
+
+// Start the server if this file is run directly
+if (require.main === module) {
+    async function startServer() {
+        try {
+            console.log('Initializing Routine Notes MCP HTTP Server...');
+            
+            // Connect to database
+            await connectDatabase();
+            console.log('Connected to MongoDB');
+            
+            // Create and start MCP server
+            const mcpServer = new HttpMCPServer();
+            await mcpServer.startServer(4000);
+            
+            console.log('MCP Server initialized with:');
+            console.log('- Date context support (dd-mm-yyyy format)');
+            console.log('- SSE real-time updates');
+            console.log('- Database encryption');
+            console.log('- GraphQL API integration');
+            
+        } catch (error) {
+            console.error('Failed to start MCP server:', error);
+            process.exit(1);
+        }
+    }
+    
+    startServer();
+}
