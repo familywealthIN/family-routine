@@ -68,14 +68,20 @@ GoalSchema.pre('save', function encryptGoal(next) {
 
 // Decryption helper function
 const decryptGoalItem = (goalItem) => {
-  const decrypted = encryption.decryptObject(goalItem.toObject ? goalItem.toObject() : goalItem, ENCRYPTION_FIELDS.goalItem);
-  
-  // Decrypt subtasks within each goal item
-  if (decrypted.subTasks && decrypted.subTasks.length > 0) {
-    decrypted.subTasks = encryption.decryptArray(decrypted.subTasks, ENCRYPTION_FIELDS.subTask);
+  try {
+    const decrypted = encryption.decryptObject(goalItem.toObject ? goalItem.toObject() : goalItem, ENCRYPTION_FIELDS.goalItem);
+
+    // Decrypt subtasks within each goal item
+    if (decrypted.subTasks && decrypted.subTasks.length > 0) {
+      decrypted.subTasks = encryption.decryptArray(decrypted.subTasks, ENCRYPTION_FIELDS.subTask);
+    }
+
+    return decrypted;
+  } catch (error) {
+    console.error('Decryption error for goal item:', error.message);
+    // Return the original item if decryption fails
+    return goalItem.toObject ? goalItem.toObject() : goalItem;
   }
-  
-  return decrypted;
 };
 
 // Decryption middleware for GoalSchema
@@ -83,17 +89,27 @@ const decryptGoalData = function decryptGoal(docs) {
   if (!docs) return;
 
   const decrypt = (doc) => {
-    if (doc.goalItems && doc.goalItems.length > 0) {
-      // eslint-disable-next-line no-param-reassign
-      doc.goalItems = doc.goalItems.map(decryptGoalItem);
+    try {
+      if (doc.goalItems && doc.goalItems.length > 0) {
+        // eslint-disable-next-line no-param-reassign
+        doc.goalItems = doc.goalItems.map(decryptGoalItem);
+      }
+      return doc;
+    } catch (error) {
+      console.error('Decryption error for goal:', error.message);
+      return doc; // Return original doc if decryption fails
     }
-    return doc;
   };
 
-  if (Array.isArray(docs)) {
-    docs.forEach(decrypt);
-  } else {
-    decrypt(docs);
+  try {
+    if (Array.isArray(docs)) {
+      docs.forEach(decrypt);
+    } else {
+      decrypt(docs);
+    }
+  } catch (error) {
+    console.error('Decryption middleware error:', error.message);
+    // Continue without throwing to prevent Lambda crash
   }
 };
 

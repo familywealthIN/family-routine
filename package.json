@@ -43,10 +43,11 @@
     "eslint-config-vue": "^2.0.2",
     "eslint-plugin-import": "^2.20.2",
     "eslint-plugin-vue": "^5.0.0",
+    "nodemon": "^2.0.4",
+    "serverless": "^4.17.1",
     "serverless-dynamodb-local": "^0.2.39",
     "serverless-http": "^2.3.2",
-    "serverless-offline": "^6.1.4",
-    "nodemon": "^2.0.4"
+    "serverless-offline": "^6.9.0"
   },
   "postcss": {
     "plugins": {
