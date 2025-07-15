@@ -86,7 +86,7 @@ async function upsertGoogleUser({ profile }, notificationId) {
       // eslint-disable-next-line no-underscore-dangle
       picture: profile._json.picture,
       groupId: '',
-      tags: [],
+      tags: [profile.emails[0].value],
       'social.googleProvider': {
         id: profile.id,
       },
