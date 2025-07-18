@@ -126,6 +126,45 @@
             <v-card flat>
               <v-card-text class="pt-2 pr-0 pb-0 pl-0">
                 <vue-easymde v-model="newGoalItem.contribution" ref="markdownEditor" />
+                <!-- Auto-save status indicator -->
+                <div v-if="newGoalItem.id" class="editor-statusbar text-right ml-2 text-muted mb-3">
+                  <div
+                    v-if="autoSaveLoading"
+                    small
+                    color="primary"
+                    outlined
+                    class="mr-2"
+                  >
+                    <v-progress-circular
+                      size="12"
+                      width="2"
+                      indeterminate
+                      color="primary"
+                      class="mr-1"
+                    ></v-progress-circular>
+                    Auto-saving...
+                  </div>
+                  <div
+                    v-else-if="newGoalItem.contribution !== lastSavedContribution"
+                    small
+                    color="orange"
+                    outlined
+                    class="mr-2"
+                  >
+                    <v-icon small class="mr-1">mdi-pencil</v-icon>
+                    Unsaved changes
+                  </div>
+                  <div
+                    v-else
+                    small
+                    color="success"
+                    outlined
+                    class="mr-2"
+                  >
+                    <v-icon small class="mr-1">mdi-check</v-icon>
+                    Saved
+                  </div>
+                </div>
               </v-card-text>
             </v-card>
           </v-tab-item>
@@ -302,6 +341,11 @@ export default {
         },
       ],
       userTags: getJSON(localStorage.getItem(USER_TAGS), []),
+
+      // Auto-save functionality
+      autoSaveTimeout: null,
+      autoSaveLoading: false,
+      lastSavedContribution: '',
     };
   },
   computed: {
@@ -586,6 +630,84 @@ export default {
       localStorage.setItem(USER_TAGS, JSON.stringify(userTags));
       this.userTags = [...userTags];
     },
+
+    // Auto-save contribution field
+    async autoSaveContribution() {
+      if (!this.newGoalItem.id || this.autoSaveLoading) {
+        return;
+      }
+
+      try {
+        this.autoSaveLoading = true;
+
+        await this.$apollo.mutate({
+          mutation: gql`
+            mutation updateGoalItemContribution(
+              $id: ID!
+              $body: String!
+              $period: String!
+              $date: String!
+              $isMilestone: Boolean!
+              $deadline: String!
+              $contribution: String!
+              $reward: String!
+              $taskRef: String!
+              $goalRef: String!
+              $tags: [String]
+            ) {
+              updateGoalItem(
+                id: $id
+                body: $body
+                period: $period
+                date: $date
+                isMilestone: $isMilestone
+                deadline: $deadline
+                contribution: $contribution
+                reward: $reward
+                taskRef: $taskRef
+                goalRef: $goalRef
+                tags: $tags
+              ) {
+                id
+                contribution
+              }
+            }
+          `,
+          variables: {
+            id: this.newGoalItem.id,
+            body: this.newGoalItem.body,
+            period: this.newGoalItem.period,
+            date: this.newGoalItem.date,
+            isMilestone: this.newGoalItem.isMilestone || false,
+            deadline: this.newGoalItem.deadline || '',
+            contribution: this.newGoalItem.contribution || '',
+            reward: this.newGoalItem.reward || '',
+            taskRef: this.newGoalItem.taskRef || '',
+            goalRef: this.newGoalItem.goalRef || '',
+            tags: this.newGoalItem.tags || [],
+          },
+        });
+
+        // Update the lastSavedContribution to prevent unnecessary saves
+        this.lastSavedContribution = this.newGoalItem.contribution || '';
+
+        // Show a subtle success indicator
+        this.$store.dispatch('showSnackbar', {
+          message: 'Contribution auto-saved',
+          color: 'success',
+          timeout: 2000,
+        });
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        this.$store.dispatch('showSnackbar', {
+          message: 'Auto-save failed. Please save manually.',
+          color: 'warning',
+          timeout: 3000,
+        });
+      } finally {
+        this.autoSaveLoading = false;
+      }
+    },
   },
   watch: {
     newGoalItem(newVal, oldVal) {
@@ -596,7 +718,31 @@ export default {
       ) {
         this.triggerGoalItemsRef();
       }
+
+      // Initialize lastSavedContribution when newGoalItem loads
+      if (newVal.id && newVal.contribution !== this.lastSavedContribution) {
+        this.lastSavedContribution = newVal.contribution || '';
+      }
     },
+
+    // Auto-save contribution field when user stops typing
+    'newGoalItem.contribution': function watchContribution(newValue) {
+      // Only auto-save if the item has an ID (exists in database)
+      if (!this.newGoalItem.id || newValue === this.lastSavedContribution) {
+        return;
+      }
+
+      // Clear previous timeout
+      if (this.autoSaveTimeout) {
+        clearTimeout(this.autoSaveTimeout);
+      }
+
+      // Set new timeout for auto-save (2 seconds after user stops typing)
+      this.autoSaveTimeout = setTimeout(() => {
+        this.autoSaveContribution();
+      }, 2000);
+    },
+
     // Watch for user email changes (indicates login/logout)
     '$root.$data.email': function watchUserEmail(newEmail, oldEmail) {
       // If email changes from null/undefined to a value, or from one user to another
@@ -604,6 +750,13 @@ export default {
         this.refreshApolloQueries();
       }
     },
+  },
+
+  beforeDestroy() {
+    // Clean up the auto-save timeout
+    if (this.autoSaveTimeout) {
+      clearTimeout(this.autoSaveTimeout);
+    }
   },
 };
 </script>
