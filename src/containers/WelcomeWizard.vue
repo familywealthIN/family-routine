@@ -54,7 +54,7 @@
                   <v-text-field
                     v-model="schedule.wakeTime"
                     label="Wake Time"
-                    prepend-icon="mdi-weather-sunny"
+                    prepend-icon="wb_sunny"
                     readonly
                     v-bind="attrs"
                     v-on="on"
@@ -85,7 +85,7 @@
                   <v-text-field
                     v-model="schedule.sleepTime"
                     label="Sleep Time"
-                    prepend-icon="mdi-sleep"
+                    prepend-icon="hotel"
                     readonly
                     v-bind="attrs"
                     v-on="on"
@@ -141,6 +141,9 @@
                 :value="activity.id"
                 filter
                 outlined
+                :color="selectedMorningActivities.includes(activity.id) ? 'primary' : ''"
+                :text-color="selectedMorningActivities.includes(activity.id) ? 'white' : ''"
+                @click="toggleSelection('morning', activity.id)"
               >
                 <v-icon left>{{ activity.icon }}</v-icon>
                 {{ activity.name }}
@@ -150,21 +153,25 @@
 
           <div v-if="selectedMorningActivities.length > 0" class="mb-4">
             <h3 class="mb-2">Your Morning Schedule:</h3>
-            <v-list dense>
-              <v-list-item
-                v-for="activity in getSelectedActivities('morning')"
-                :key="activity.id"
-                class="px-0"
-              >
-                <v-list-item-icon>
-                  <v-icon>{{ activity.icon }}</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ activity.name }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ activity.duration }} minutes • {{ activity.points }} points</v-list-item-subtitle>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list>
+            <table class="borderless-table">
+              <tbody>
+                <tr
+                  v-for="activity in getSelectedActivities('morning')"
+                  :key="activity.id"
+                >
+                  <td class="text-xs-left pa-2">
+                    <v-icon class="mr-2">{{ activity.icon }}</v-icon>
+                    {{ activity.name }}
+                  </td>
+                  <td class="text-xs-right pa-2">
+                    {{ activity.duration }} minutes
+                  </td>
+                  <td class="text-xs-right pa-2">
+                    {{ activity.points }} points
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
             <v-alert type="success" class="mt-3">
               Total: {{ getTotalDuration('morning') }} minutes • {{ getTotalPoints('morning') }} points
@@ -211,7 +218,7 @@
                   <v-text-field
                     v-model="schedule.workStart"
                     label="Work Start Time"
-                    prepend-icon="mdi-briefcase"
+                    prepend-icon="work"
                     readonly
                     v-bind="attrs"
                     v-on="on"
@@ -242,7 +249,7 @@
                   <v-text-field
                     v-model="schedule.workEnd"
                     label="Work End Time"
-                    prepend-icon="mdi-briefcase-off"
+                    prepend-icon="work_off"
                     readonly
                     v-bind="attrs"
                     v-on="on"
@@ -299,6 +306,9 @@
                 :value="activity.id"
                 filter
                 outlined
+                :color="selectedEveningActivities.includes(activity.id) ? 'primary' : ''"
+                :text-color="selectedEveningActivities.includes(activity.id) ? 'white' : ''"
+                @click="toggleSelection('evening', activity.id)"
               >
                 <v-icon left>{{ activity.icon }}</v-icon>
                 {{ activity.name }}
@@ -308,21 +318,25 @@
 
           <div v-if="selectedEveningActivities.length > 0" class="mb-4">
             <h3 class="mb-2">Your Evening Schedule:</h3>
-            <v-list dense>
-              <v-list-item
-                v-for="activity in getSelectedActivities('evening')"
-                :key="activity.id"
-                class="px-0"
-              >
-                <v-list-item-icon>
-                  <v-icon>{{ activity.icon }}</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ activity.name }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ activity.duration }} minutes • {{ activity.points }} points</v-list-item-subtitle>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list>
+            <table class="borderless-table">
+              <tbody>
+                <tr
+                  v-for="activity in getSelectedActivities('evening')"
+                  :key="activity.id"
+                >
+                  <td class="text-xs-left pa-2">
+                    <v-icon class="mr-2">{{ activity.icon }}</v-icon>
+                    {{ activity.name }}
+                  </td>
+                  <td class="text-xs-right pa-2">
+                    {{ activity.duration }} minutes
+                  </td>
+                  <td class="text-xs-right pa-2">
+                    {{ activity.points }} points
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
             <v-alert type="success" class="mt-3">
               Total: {{ getTotalDuration('evening') }} minutes • {{ getTotalPoints('evening') }} points
@@ -443,61 +457,61 @@ export default {
       // Activity options
       morningActivities: [
         {
-          id: 'wake-up', name: 'Wake Up', icon: 'mdi-weather-sunny', duration: 5, points: 10,
+          id: 'wake-up', name: 'Wake Up', icon: 'wb_sunny', duration: 5, points: 10,
         },
         {
-          id: 'meditation', name: 'Meditation', icon: 'mdi-meditation', duration: 15, points: 30,
+          id: 'meditation', name: 'Meditation', icon: 'self_improvement', duration: 15, points: 30,
         },
         {
-          id: 'exercise', name: 'Exercise', icon: 'mdi-dumbbell', duration: 30, points: 50,
+          id: 'exercise', name: 'Exercise', icon: 'fitness_center', duration: 30, points: 50,
         },
         {
-          id: 'yoga', name: 'Yoga', icon: 'mdi-yoga', duration: 20, points: 40,
+          id: 'yoga', name: 'Yoga', icon: 'self_improvement', duration: 20, points: 40,
         },
         {
-          id: 'shower', name: 'Shower', icon: 'mdi-shower-head', duration: 15, points: 20,
+          id: 'shower', name: 'Shower', icon: 'shower', duration: 15, points: 20,
         },
         {
-          id: 'breakfast', name: 'Breakfast', icon: 'mdi-food-apple', duration: 20, points: 25,
+          id: 'breakfast', name: 'Breakfast', icon: 'restaurant', duration: 20, points: 25,
         },
         {
-          id: 'journal', name: 'Journaling', icon: 'mdi-notebook', duration: 10, points: 20,
+          id: 'journal', name: 'Journaling', icon: 'book', duration: 10, points: 20,
         },
         {
-          id: 'reading', name: 'Reading', icon: 'mdi-book-open', duration: 20, points: 30,
+          id: 'reading', name: 'Reading', icon: 'menu_book', duration: 20, points: 30,
         },
         {
-          id: 'planning', name: 'Day Planning', icon: 'mdi-calendar-today', duration: 10, points: 25,
+          id: 'planning', name: 'Day Planning', icon: 'today', duration: 10, points: 25,
         },
       ],
 
       eveningActivities: [
         {
-          id: 'dinner', name: 'Dinner', icon: 'mdi-food', duration: 30, points: 25,
+          id: 'dinner', name: 'Dinner', icon: 'restaurant', duration: 30, points: 25,
         },
         {
-          id: 'family-time', name: 'Family Time', icon: 'mdi-account-group', duration: 45, points: 40,
+          id: 'family-time', name: 'Family Time', icon: 'group', duration: 45, points: 40,
         },
         {
-          id: 'reading-evening', name: 'Reading', icon: 'mdi-book-open', duration: 30, points: 35,
+          id: 'reading-evening', name: 'Reading', icon: 'menu_book', duration: 30, points: 35,
         },
         {
-          id: 'meditation-evening', name: 'Meditation', icon: 'mdi-meditation', duration: 15, points: 30,
+          id: 'meditation-evening', name: 'Meditation', icon: 'self_improvement', duration: 15, points: 30,
         },
         {
-          id: 'skincare', name: 'Skincare Routine', icon: 'mdi-face-woman', duration: 15, points: 20,
+          id: 'skincare', name: 'Skincare Routine', icon: 'face', duration: 15, points: 20,
         },
         {
-          id: 'prepare-tomorrow', name: 'Prepare for Tomorrow', icon: 'mdi-calendar-plus', duration: 15, points: 25,
+          id: 'prepare-tomorrow', name: 'Prepare for Tomorrow', icon: 'event', duration: 15, points: 25,
         },
         {
-          id: 'gratitude', name: 'Gratitude Practice', icon: 'mdi-heart', duration: 10, points: 20,
+          id: 'gratitude', name: 'Gratitude Practice', icon: 'favorite', duration: 10, points: 20,
         },
         {
-          id: 'light-stretch', name: 'Light Stretching', icon: 'mdi-yoga', duration: 15, points: 25,
+          id: 'light-stretch', name: 'Light Stretching', icon: 'self_improvement', duration: 15, points: 25,
         },
         {
-          id: 'tea-time', name: 'Herbal Tea', icon: 'mdi-tea', duration: 10, points: 15,
+          id: 'tea-time', name: 'Herbal Tea', icon: 'local_cafe', duration: 10, points: 15,
         },
       ],
     };
@@ -573,6 +587,19 @@ export default {
 
     getTotalPoints(type) {
       return this.getSelectedActivities(type).reduce((total, activity) => total + activity.points, 0);
+    },
+
+    toggleSelection(type, activityId) {
+      const selectedArray = type === 'morning' ? this.selectedMorningActivities : this.selectedEveningActivities;
+      const index = selectedArray.indexOf(activityId);
+
+      if (index > -1) {
+        // Remove if already selected
+        selectedArray.splice(index, 1);
+      } else {
+        // Add if not selected
+        selectedArray.push(activityId);
+      }
     },
 
     async completeOnboarding() {
@@ -695,3 +722,25 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.borderless-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: none !important;
+}
+
+.borderless-table tbody tr {
+  border: none !important;
+}
+
+.borderless-table td {
+  border: none !important;
+  border-bottom: none !important;
+  padding: 8px;
+}
+
+.borderless-table td.pa-2 {
+  padding: 8px;
+}
+</style>

@@ -448,7 +448,13 @@ const query = {
         'goalItems.tags': args.tag,
       }).exec();
 
-      return goals;
+      // Filter the goals to only include goalItems that match the tag
+      const filteredGoals = goals.map((goal) => ({
+        ...goal.toObject(),
+        goalItems: goal.goalItems.filter((item) => item.tags && item.tags.includes(args.tag)),
+      })).filter((goal) => goal.goalItems.length > 0); // Only return goals that have matching items
+
+      return filteredGoals;
     },
   },
   goalsByGoalRef: {
