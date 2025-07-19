@@ -86,6 +86,7 @@
 import gql from 'graphql-tag';
 import moment from 'moment';
 
+import taskStatusMixin from '@/composables/useTaskStatus';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 import getJSON from '../utils/getJSON';
 import GoalTagsInput from './GoalTagsInput.vue';
@@ -95,6 +96,7 @@ export default {
   components: {
     GoalTagsInput,
   },
+  mixins: [taskStatusMixin],
   props: [
     'goals',
     'selectedBody',
@@ -304,6 +306,7 @@ export default {
               $goalRef: String
               $taskRef: String
               $tags: [String]
+              $originalDate: String
             ) {
               addGoalItem(
                 body: $body
@@ -314,6 +317,7 @@ export default {
                 goalRef: $goalRef
                 taskRef: $taskRef
                 tags: $tags
+                originalDate: $originalDate
               ) {
                 id
                 body
@@ -321,6 +325,9 @@ export default {
                 isMilestone
                 goalRef
                 taskRef
+                status
+                createdAt
+                originalDate
               }
             }
           `,
@@ -333,6 +340,7 @@ export default {
             goalRef: this.newGoalItem.goalRef,
             taskRef: this.newGoalItem.taskRef,
             tags: this.newGoalItem.tags,
+            originalDate: this.newGoalItem.originalDate || null,
           },
           update: (scope, { data: { addGoalItem } }) => {
             goal.goalItems.push({

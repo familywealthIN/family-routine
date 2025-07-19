@@ -567,25 +567,46 @@ const mutation = {
             taskRef,
             goalRef,
             tags = [],
+            status,
+            originalDate,
           } = goalInput;
+
+          // Determine initial status if not provided
+          let finalStatus = status || 'todo';
+          if (period === 'day') {
+            if (originalDate && originalDate !== date) {
+              finalStatus = 'rescheduled';
+            } else if (!status) {
+              finalStatus = 'todo';
+            }
+          }
+
+          const goalItemToAdd = {
+            body,
+            deadline,
+            contribution,
+            reward,
+            isComplete,
+            isMilestone,
+            taskRef,
+            goalRef,
+            tags,
+            status: finalStatus,
+            createdAt: new Date(),
+            originalDate,
+          };
+
+          // Add completedAt if the task is being created as complete
+          if (isComplete) {
+            goalItemToAdd.completedAt = new Date();
+            goalItemToAdd.status = 'done';
+          }
 
           const goalToAdd = {
             date,
             email,
             period,
-            goalItems: [
-              {
-                body,
-                deadline,
-                contribution,
-                reward,
-                isComplete,
-                isMilestone,
-                taskRef,
-                goalRef,
-                tags,
-              },
-            ],
+            goalItems: [goalItemToAdd],
           };
 
           const goalEntry = await GoalModel.findOne({ date, period: period || 'day', email }).exec();
@@ -632,6 +653,7 @@ const mutation = {
       taskRef: { type: GraphQLString },
       goalRef: { type: GraphQLString },
       tags: { type: GraphQLList(GraphQLString) },
+      originalDate: { type: GraphQLString },
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
@@ -648,6 +670,7 @@ const mutation = {
         taskRef,
         goalRef,
         tags = [],
+        originalDate,
       } = args;
 
       // Validation: if goalRef is passed, isMilestone must be true
@@ -657,23 +680,46 @@ const mutation = {
 
       await setUserTag(email, tags);
 
+      // Determine initial status based on task context
+      let status = 'todo'; // default status
+
+      if (period === 'day') {
+        // For day tasks, calculate status based on context
+        if (originalDate && originalDate !== date) {
+          status = 'rescheduled';
+        } else {
+          // For now, we'll set a basic status. The frontend will handle more complex logic
+          // with current task context. We can enhance this later with task timing logic.
+          status = 'todo';
+        }
+      }
+
+      const goalItemToAdd = {
+        body,
+        deadline,
+        contribution,
+        reward,
+        isComplete,
+        isMilestone,
+        taskRef,
+        goalRef,
+        tags,
+        status,
+        createdAt: new Date(),
+        originalDate,
+      };
+
+      // Add completedAt if the task is being created as complete
+      if (isComplete) {
+        goalItemToAdd.completedAt = new Date();
+        goalItemToAdd.status = 'done';
+      }
+
       const goalToAdd = {
         date,
         email,
         period,
-        goalItems: [
-          {
-            body,
-            deadline,
-            contribution,
-            reward,
-            isComplete,
-            isMilestone,
-            taskRef,
-            goalRef,
-            tags,
-          },
-        ],
+        goalItems: [goalItemToAdd],
       };
 
       const goalEntry = await GoalModel.findOne({ date: args.date, period: args.period || 'day', email }).exec();
@@ -916,6 +962,22 @@ const mutation = {
         ).exec();
       }
 
+      // Prepare the update object
+      const updateFields = {
+        'goalItems.$.isComplete': args.isComplete,
+      };
+
+      // Add status and timestamp updates for day period tasks
+      if (args.period === 'day') {
+        if (args.isComplete) {
+          updateFields['goalItems.$.completedAt'] = new Date();
+          updateFields['goalItems.$.status'] = 'done'; // Will be refined by frontend with task timing logic
+        } else {
+          updateFields['goalItems.$.completedAt'] = null;
+          updateFields['goalItems.$.status'] = 'todo'; // Reset to default when unchecked
+        }
+      }
+
       await GoalModel.findOneAndUpdate(
         {
           date: args.date,
@@ -923,7 +985,7 @@ const mutation = {
           email,
           'goalItems._id': args.id,
         },
-        { $set: { 'goalItems.$.isComplete': args.isComplete } },
+        { $set: updateFields },
         { new: true },
       ).exec();
 
@@ -1037,6 +1099,97 @@ const mutation = {
       ).exec();
 
       return goal.goalItems.find((aGoalItem) => aGoalItem.id === id);
+    },
+  },
+  rescheduleGoalItem: {
+    type: GoalItemType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+      oldDate: { type: GraphQLNonNull(GraphQLString) },
+      newDate: { type: GraphQLNonNull(GraphQLString) },
+      period: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      const {
+        id,
+        oldDate,
+        newDate,
+        period,
+      } = args;
+
+      // First, get the goal item from the old date
+      const oldGoal = await GoalModel.findOne({
+        date: oldDate,
+        period,
+        email,
+        'goalItems._id': id,
+      }).exec();
+
+      if (!oldGoal) {
+        throw new Error('Goal item not found');
+      }
+
+      const goalItem = oldGoal.goalItems.find((item) => item._id.toString() === id.toString());
+
+      if (!goalItem) {
+        throw new Error('Goal item not found in old goal');
+      }
+
+      // Set the original date if not already set (for tracking first reschedule)
+      const originalDate = goalItem.originalDate || oldDate;
+
+      // Create a new goal item for the new date with rescheduled status
+      const rescheduledGoalItem = {
+        ...goalItem.toObject(),
+        status: 'rescheduled',
+        originalDate,
+      };
+
+      // Remove _id so MongoDB can generate a new one
+      delete rescheduledGoalItem._id;
+
+      // Check if goal exists for new date
+      const newGoal = await GoalModel.findOne({
+        date: newDate,
+        period,
+        email,
+      }).exec();
+
+      if (newGoal) {
+        // Add to existing goal
+        await GoalModel.findOneAndUpdate(
+          { date: newDate, period, email },
+          { $push: { goalItems: rescheduledGoalItem } },
+          { new: true },
+        ).exec();
+      } else {
+        // Create new goal
+        const newGoalDocument = new GoalModel({
+          date: newDate,
+          email,
+          period,
+          goalItems: [rescheduledGoalItem],
+        });
+        await newGoalDocument.save();
+      }
+
+      // Remove from old goal
+      await GoalModel.findOneAndUpdate(
+        { date: oldDate, period, email },
+        { $pull: { goalItems: { _id: id } } },
+        { new: true },
+      ).exec();
+
+      // Return the newly created goal item
+      const updatedNewGoal = await GoalModel.findOne({
+        date: newDate,
+        period,
+        email,
+      }).exec();
+
+      return updatedNewGoal.goalItems[updatedNewGoal.goalItems.length - 1];
     },
   },
 };

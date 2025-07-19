@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="dialog" max-width="800px" persistent>
     <v-card class="modern-card-elevated ai-modal">
-      <v-card-title class="headline">
+      <v-card-title class="headline sticky-header">
         <v-icon left>{{ isTaskMode ? 'task_alt' : 'timeline' }}</v-icon>
         {{ dynamicTitle }}
         <v-spacer></v-spacer>
@@ -10,7 +10,11 @@
         </v-btn>
       </v-card-title>
 
-      <v-card-text>
+      <v-card-text class="scrollable-content" ref="scrollableContent" @scroll="handleScroll">
+        <div class="content-wrapper">
+          <!-- Scroll shadow indicators -->
+          <div class="scroll-shadow scroll-shadow-top" v-show="showTopShadow"></div>
+          <div class="scroll-shadow scroll-shadow-bottom" v-show="showBottomShadow"></div>
         <!-- Search Form -->
         <v-form @submit.prevent="handleSubmit">
           <v-text-field
@@ -302,9 +306,10 @@
             </v-card-text>
           </v-card>
         </div>
+        </div>
       </v-card-text>
 
-      <v-card-actions>
+      <v-card-actions class="sticky-footer">
         <v-spacer></v-spacer>
         <v-btn
           v-if="(isTaskMode && taskData) || (!isTaskMode && milestoneData)"
@@ -324,6 +329,8 @@
 import gql from 'graphql-tag';
 import moment from 'moment';
 import VueEasymde from 'vue-easymde';
+
+import taskStatusMixin from '@/composables/useTaskStatus';
 import GoalTagsInput from './GoalTagsInput.vue';
 import { USER_TAGS } from '../constants/settings';
 import getJSON from '../utils/getJSON';
@@ -336,6 +343,7 @@ export default {
     VueEasymde,
     GoalTagsInput,
   },
+  mixins: [taskStatusMixin],
   apollo: {
     goalItemsRef: {
       query: gql`
@@ -466,6 +474,9 @@ export default {
       userTags: getJSON(localStorage.getItem(USER_TAGS), []),
       goalItems: [],
       relatedGoalsData: [],
+      // Scroll shadow indicators
+      showTopShadow: false,
+      showBottomShadow: false,
       editorConfig: {
         toolbar: false, // Hide toolbar
         status: false, // Hide status bar
@@ -649,6 +660,11 @@ export default {
         this.loadRoutines();
         this.resetForm();
 
+        // Initialize scroll shadows after modal opens
+        this.$nextTick(() => {
+          this.checkScrollShadows();
+        });
+
         // Auto-select routine task from current task if available (for both modes)
         // Use $nextTick to ensure this runs after resetForm()
         this.$nextTick(() => {
@@ -787,6 +803,20 @@ export default {
     },
   },
   methods: {
+    handleScroll() {
+      const el = this.$refs.scrollableContent;
+      if (!el) return;
+
+      this.showTopShadow = el.scrollTop > 10;
+      this.showBottomShadow = el.scrollTop < (el.scrollHeight - el.clientHeight - 10);
+    },
+
+    checkScrollShadows() {
+      this.$nextTick(() => {
+        this.handleScroll();
+      });
+    },
+
     handleSaveClick() {
       if (this.isTaskMode) {
         this.saveTask();
@@ -1579,6 +1609,9 @@ export default {
 .modern-card-elevated {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
   border-radius: 16px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .modern-shadow-sm {
@@ -1588,6 +1621,109 @@ export default {
 
 .ai-modal {
   border-radius: 16px;
+}
+
+.sticky-header {
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  background: white;
+  z-index: 1;
+}
+
+.scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+  max-height: calc(90vh - 140px); /* Account for header and footer */
+  position: relative;
+}
+
+.content-wrapper {
+  width: 100%;
+  position: relative;
+}
+
+/* Scroll shadow indicators */
+.scroll-shadow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 8px;
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 0.3s ease;
+}
+
+.scroll-shadow-top {
+  top: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), transparent);
+}
+
+.scroll-shadow-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.1), transparent);
+}
+
+.sticky-footer {
+  flex-shrink: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  background: white;
+  z-index: 1;
+}
+
+/* Custom Scrollbar Styles */
+.scrollable-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollable-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.scrollable-content::-webkit-scrollbar-thumb:active {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* Firefox scrollbar */
+.scrollable-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+}
+
+/* Smooth scrolling */
+.scrollable-content {
+  scroll-behavior: smooth;
+}
+
+/* Better spacing for timeline items in scrollable area */
+.scrollable-content .v-timeline {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Ensure timeline items don't get cut off */
+.scrollable-content .v-timeline-item {
+  margin-bottom: 12px;
+}
+
+/* Better spacing for cards within scrollable area */
+.scrollable-content .v-card {
+  margin-bottom: 16px;
+}
+
+.scrollable-content .v-card:last-child {
+  margin-bottom: 8px;
 }
 
 .search-btn {
@@ -1603,5 +1739,18 @@ export default {
   color: rgba(0, 0, 0, 0.6);
   margin-bottom: 4px;
   display: block;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-height: 600px) {
+  .scrollable-content {
+    max-height: calc(90vh - 120px);
+  }
+}
+
+@media (max-height: 500px) {
+  .scrollable-content {
+    max-height: calc(90vh - 100px);
+  }
 }
 </style>

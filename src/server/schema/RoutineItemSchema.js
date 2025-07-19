@@ -9,6 +9,7 @@ const {
 } = require('graphql');
 
 const mongoose = require('mongoose');
+const { encryption, ENCRYPTION_FIELDS } = require('../utils/encryption');
 
 const StepItemSchema = new mongoose.Schema({
   id: String,
@@ -56,6 +57,53 @@ const RoutineItemSchema = new mongoose.Schema({
   passed: Boolean,
   wait: Boolean,
 });
+
+// Encryption middleware for StepItemSchema
+const encryptStepData = function encryptStep(next) {
+  const encryptedData = encryption.encryptObject(this.toObject(), ['name']);
+  Object.assign(this, encryptedData);
+  next();
+};
+
+StepItemSchema.pre('save', encryptStepData);
+
+// Encryption middleware for RoutineItemSchema
+const encryptRoutineItemData = function encryptRoutineItem(next) {
+  const encryptedData = encryption.encryptObject(this.toObject(), ENCRYPTION_FIELDS.routineItem);
+  Object.assign(this, encryptedData);
+
+  // Encrypt steps
+  if (this.steps && this.steps.length > 0) {
+    this.steps = this.steps.map((step) => encryption.encryptObject(step.toObject ? step.toObject() : step, ['name']));
+  }
+
+  next();
+};
+
+const decryptRoutineItemData = function decryptRoutineItem(docs) {
+  if (!docs) return;
+
+  const decrypt = (doc) => {
+    const decrypted = encryption.decryptObject(doc.toObject ? doc.toObject() : doc, ENCRYPTION_FIELDS.routineItem);
+
+    // Decrypt steps
+    if (decrypted.steps && decrypted.steps.length > 0) {
+      decrypted.steps = decrypted.steps.map((step) => encryption.decryptObject(step, ['name']));
+    }
+
+    Object.assign(doc, decrypted);
+    return doc;
+  };
+
+  if (Array.isArray(docs)) {
+    docs.forEach(decrypt);
+  } else {
+    decrypt(docs);
+  }
+};
+
+RoutineItemSchema.pre('save', encryptRoutineItemData);
+RoutineItemSchema.post(['find', 'findOne', 'findOneAndUpdate'], decryptRoutineItemData);
 
 const RoutineItemType = new GraphQLObjectType({
   name: 'RoutineItem',

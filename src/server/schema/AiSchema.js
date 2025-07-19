@@ -29,6 +29,8 @@ const GoalItemInput = new GraphQLInputObjectType({
     taskRef: { type: GraphQLString },
     goalRef: { type: GraphQLString },
     tags: { type: new GraphQLList(GraphQLString) },
+    status: { type: GraphQLString },
+    originalDate: { type: GraphQLString },
   },
 });
 
