@@ -13,7 +13,7 @@ const {
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: 'https://groutine-21c1b.firebaseio.com',
+  //databaseURL: 'https://groutine-21c1b.firebaseio.com',
 });
 
 function sendNotification(token, name, description, url) {

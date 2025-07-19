@@ -7,15 +7,23 @@ import { onError } from 'apollo-link-error';
 import { createHttpLink } from 'apollo-link-http';
 import { InMemoryCache } from 'apollo-cache-inmemory';
 import 'firebase/messaging';
-
+import { Capacitor } from '@capacitor/core';
 import { graphQLUrl } from './blob/config';
 import './plugins/vuetify';
 import './plugins/notifications';
 import './plugins/curl-executor';
 import './styles/shadows.css';
 import VueApollo from './plugins/apollo';
+import './styles/ios-safe-area.css';
 import currentTaskPlugin from './plugins/currentTask';
 import App from './App.vue';
+// Load Google Identity Services script
+const script = document.createElement('script');
+script.src = 'https://accounts.google.com/gsi/client';
+script.async = true;
+script.defer = true;
+document.head.appendChild(script);
+// Import Google OAuth plugin
 import './plugins/vue-google-oauth2';
 import router from './router';
 import {
@@ -24,8 +32,32 @@ import {
 import redirectOnError from './utils/redirectOnError';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
-
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 Vue.config.productionTip = false;
+// if (window && window.location && window.location.protocol && window.location.protocol.startsWith('http')) {
+//   console.log('http')
+//   GoogleAuth.init();
+// }else{
+//   console.log('https')
+// }
+
+if (Capacitor.isNativePlatform()) {
+  try {
+    GoogleAuth.init();
+    GoogleAuth.initialize({
+      clientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+      scopes: ['profile', 'email'],
+      grantOfflineAccess: true,
+      androidClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+      iosClientId: '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com',
+      webClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+    });
+    console.log('GoogleAuth initialized in main.js');
+  } catch (error) {
+    console.error('Failed to initialize GoogleAuth in main.js:', error);
+  }
+}
+
 
 // localStorage.__proto__ = Object.create(Storage.prototype);
 // localStorage.__proto__.setItem = function () {
@@ -52,9 +84,12 @@ loadData().then(() => {
   });
 
   // HTTP connection to the API
+  console.log('Graph url:',graphQLUrl)
+  console.log('is native platform', Capacitor.isNativePlatform())
   const httpLink = createHttpLink({
     // You should use an absolute URL here
-    uri: graphQLUrl,
+    uri: graphQLUrl || 'https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com/dev/graphql',
+    fetch:Capacitor.isNativePlatform() ?  undefined : fetch
   });
 
   // Cache implementation
@@ -76,10 +111,12 @@ loadData().then(() => {
   const apolloClient = new ApolloClient({
     link: errorLink.concat(normalLink),
     cache,
+    ...(Capacitor.isNativePlatform()?{} :{
     fetchOptions: {
       fetch,
       mode: 'no-cors',
-    },
+    }
+  }),
     defaultOptions: {
       watchQuery: {
         fetchPolicy: 'no-cache',

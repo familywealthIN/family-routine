@@ -63,6 +63,8 @@
         </v-btn>
       </div>
     </v-flex>
+    <!-- <v-dialog v-model="addGoalItemDialog" fullscreen hide-overlay transition="dialog-bottom-transition"> -->
+   <!-- <v-card> -->
     <v-dialog
     v-model="addGoalItemDialog"
     fullscreen
@@ -137,6 +139,7 @@ export default {
         index: undefined,
       },
       defaultGoalItem,
+      addGoalItemDialog: false, 
     };
   },
   watch: {

@@ -54,6 +54,8 @@
 
 import gql from 'graphql-tag';
 import { saveData, clearData, getSessionItem, isRunningStandalone } from '../token';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 
 import {
   GC_USER_NAME,
@@ -77,12 +79,55 @@ export default {
       isAuthenticatedSignIn: false,
       isLoading: true,
       redirectCount: 0,
+      isNative: false,
     };
   },
 
   methods: {
-    handleClickSignIn() {
+    async handleClickSignIn() {
       this.isLoading = true;
+
+      if (this.isNative) {
+        console.log('native function called')
+        // Native Google login
+        try {
+          // Re-initialize GoogleAuth to ensure it's properly configured
+          await GoogleAuth.initialize({
+            //clientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+            scopes: ['profile', 'email'],
+            grantOfflineAccess: true,
+            androidClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+            iosClientId: '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com',
+            webClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+            forceCodeForRefreshToken: true
+          });
+          
+          console.log('Attempting to sign in with GoogleAuth');
+          const result = await GoogleAuth.signIn();
+          console.log('GoogleAuth sign in result:', result);
+          
+          if (!result || !result.authentication) {
+            throw new Error('Authentication data missing from sign in result');
+          }
+          
+          const accessToken = result.authentication.accessToken;
+          const notificationId = getSessionItem(GC_NOTIFICATION_TOKEN) || '';
+          console.log('Access Token:', accessToken);
+          //console.log('Notification ID:', notificationId);
+          this.createSession(accessToken, notificationId);
+        } catch (err) {
+          console.error('Native Google login failed:', err);
+          this.$notify({
+            title: 'Login Error',
+            text: 'Google sign in failed. Please try again.',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+          this.isLoading = false;
+        }
+      } else {
+        console.log('web function called')
       this.$gAuth
         .signIn()
         .then((user) => {
@@ -90,6 +135,9 @@ export default {
           // The credential property contains the JWT access token
           const accessToken = user.credential;
           const notificationId = getSessionItem(GC_NOTIFICATION_TOKEN) || '';
+          console.log('Access Token:', accessToken);  
+          console.log('Notification ID:', notificationId);
+
           this.createSession(accessToken, notificationId);
         })
         .catch((error) => {
@@ -97,9 +145,24 @@ export default {
           this.isLoading = false;
           window.location.reload();
         });
+      }
     },
 
+
     handleClickSignOut() {
+      if (this.isNative) {
+        GoogleAuth.signOut().then(async () => {
+          this.isSignIn = false;
+          this.isAuthenticatedSignIn = false;
+          await clearData();
+          localStorage.removeItem(USER_TAGS);
+          this.$root.$data.userName = '';
+          this.$root.$data.userEmail = '';
+          this.$root.$data.picture = '';
+        }).catch((error) => {
+          console.log(error);
+        });
+      } else {
       this.$gAuth
         .signOut()
         .then(async () => {
@@ -122,9 +185,22 @@ export default {
           });
           window.location.reload();
         });
+      }
     },
 
     createSession(accessToken, notificationId = '') {
+      console.log('Creating session with access token:', {accessToken, notificationId});
+      if(!this.$apollo){
+        this.isLoading=false;
+        this.$notify({
+          title:'Login Error',
+          text:'GraphQL client not initialized',
+          group:'notify',
+          type:'error',
+          duration:3000
+        });
+        return;
+      }
       this.$apollo.mutate({
         mutation: gql`
           mutation authGoogle($accessToken: String!, $notificationId: String!) {
@@ -149,14 +225,30 @@ export default {
           const {
             name, email, picture, token, isNew, tags = []
           } = authGoogle;
-
-          this.isSignIn = this.$gAuth.isAuthorized;
-          this.isAuthenticatedSignIn = this.$gAuth.isAuthorized;
+          
+          if(this.isNative){
+            this.isSignIn=true;
+            this.isAuthenticatedSignIn=true;
+          }else{
+            this.isSignIn = this.$gAuth.isAuthorized;
+            this.isAuthenticatedSignIn = this.$gAuth.isAuthorized;
+          }
+          
           const userData = { token, email, name, picture };
-          await saveData(userData);
+          try {
+            await saveData(userData);
+            console.log('saveData completed successfully');
+          } catch (saveError) {
+            console.error('saveData failed:', saveError);
+            // Continue execution even if saveData fails
+          }
+          
           localStorage.setItem(USER_TAGS, JSON.stringify(tags));
+          
           this.$root.$data.name = getSessionItem(GC_USER_NAME);
+          
           this.$root.$data.email = getSessionItem(GC_USER_EMAIL);
+          
           this.$root.$data.picture = getSessionItem(GC_PICTURE);
 
           if (isNew) {
@@ -165,9 +257,11 @@ export default {
             this.$router.push('home');
           }
 
-          setTimeout(() => { this.isLoading = false; }, 500);
+          setTimeout(() => { 
+            this.isLoading = false;
+          }, 500);
         },
-      }).catch(() => {
+      }).catch((error) => {
           this.isLoading = false;
           this.$notify({
             title: 'Login',
@@ -179,11 +273,32 @@ export default {
         });
     },
   },
-  mounted() {
+  mounted() { 
+    console.log('Capacitor platform:', Capacitor.getPlatform());
+    this.isNative = Capacitor.isNativePlatform();
+    console.log('Is native platform:', this.isNative);
+    
+    // Initialize Google Auth for native platforms
+    if (this.isNative) {
+      try {
+        // No need to initialize here as it's already done in main.js
+        // and will be re-initialized in handleClickSignIn
+        console.log('GoogleAuth will be initialized when signing in');
+      } catch (error) {
+        console.error('Failed to initialize GoogleAuth:', error);
+      }
+    }
+    // this.isNative = window?.Capacitor?.isNativePlatform?.() || !window.location.href.startsWith('http');
+    // this.isNative = window && window.location && window.location.protocol && window.location.protocol.startsWith('http')
     const checkGauthLoad = setInterval(() => {
       const token = getSessionItem(GC_AUTH_TOKEN);
-      this.isInit = this.$gAuth.isInit;
-      this.isSignIn = this.$gAuth.isAuthorized && !window.appSignedOut;
+      // this.isInit = this.$gAuth.isInit;
+      // this.isSignIn = this.$gAuth.isAuthorized && !window.appSignedOut;
+
+      this.isInit = this.isNative ? true : this.$gAuth.isInit;
+      //this.$gAuth.isInit;
+      this.isSignIn = this.isNative ? !!token : (this.$gAuth.isAuthorized && !window.appSignedOut)
+
       this.isStandalone = isRunningStandalone() && token;
       this.isAuthenticatedSignIn = this.isSignIn || this.isStandalone;
       if (this.isAuthenticatedSignIn) {
@@ -284,13 +399,26 @@ export default {
 .login .layout,
 .login .v-card {
   height: 100%;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .login footer {
   position: absolute;
-  bottom: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom));
   margin: 0 auto;
   display: block;
   width: 100%;
+  padding: 0 16px;
+}
+
+/* Add top spacing for status bar */
+.login h2:first-of-type {
+  margin-top: 20px;
+}
+
+/* Ensure content doesn't overlap with footer */
+.login-box {
+  margin-bottom: 80px;
 }
 </style>

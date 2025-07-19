@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "350952942983",
+    "firebase_url": "https://groutine-21c1b.firebaseio.com",
+    "project_id": "groutine-21c1b",
+    "storage_bucket": "groutine-21c1b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:350952942983:android:42efa3dcb836cbda977722",
+        "android_client_info": {
+          "package_name": "com.routine.note"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "350952942983-6h4a30scu81ra204ndpe1md2sccukrhv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.routine.note",
+            "certificate_hash": "a2b604926aaa007a33192d3ea6ffb3636d9ab3e4"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAG_zFgkoiYi4aa2rYpuAB8IoGrb9KI3nY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.routine.note"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
