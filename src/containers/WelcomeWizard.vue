@@ -5,11 +5,11 @@
 
       <v-divider></v-divider>
 
-      <v-stepper-step :complete="currentStep > 2" step="2">Morning Routine</v-stepper-step>
+      <v-stepper-step :complete="currentStep > 2" step="2">Work Hours</v-stepper-step>
 
       <v-divider></v-divider>
 
-      <v-stepper-step :complete="currentStep > 3" step="3">Work Hours</v-stepper-step>
+      <v-stepper-step :complete="currentStep > 3" step="3">Morning Routine</v-stepper-step>
 
       <v-divider></v-divider>
 
@@ -37,8 +37,8 @@
 
           <p class="text-center mb-4">Let's start by setting your ideal sleep and wake times to build a healthy routine around them.</p>
 
-          <v-row>
-            <v-col cols="6">
+          <v-layout row wrap>
+            <v-flex xs6>
               <v-menu
                 ref="wakeMenu"
                 v-model="wakeMenu"
@@ -67,9 +67,9 @@
                   @click:minute="$refs.wakeMenu.save(schedule.wakeTime)"
                 ></v-time-picker>
               </v-menu>
-            </v-col>
+            </v-flex>
 
-            <v-col cols="6">
+            <v-flex xs6>
               <v-menu
                 ref="sleepMenu"
                 v-model="sleepMenu"
@@ -98,8 +98,8 @@
                   @click:minute="$refs.sleepMenu.save(schedule.sleepTime)"
                 ></v-time-picker>
               </v-menu>
-            </v-col>
-          </v-row>
+            </v-flex>
+          </v-layout>
 
           <v-alert v-if="schedule.sleepTime && schedule.wakeTime" type="info" class="mt-3">
             You'll get approximately {{ calculateSleepHours() }} hours of sleep.
@@ -111,8 +111,8 @@
         </div>
       </v-stepper-content>
 
-      <!-- Step 2: Morning Routine -->
-      <v-stepper-content step="2">
+      <!-- Step 3: Morning Routine -->
+      <v-stepper-content step="3">
         <div style="max-width: 600px; margin: 0 auto;">
           <h2 class="text-xs-center mt-4 mb-3">Design Your Morning Routine</h2>
           <div class="mb-3" style="max-width: 192px; margin: 0 auto;">
@@ -156,7 +156,7 @@
             <table class="borderless-table">
               <tbody>
                 <tr
-                  v-for="activity in getSelectedActivities('morning')"
+                  v-for="activity in getSelectedActivitiesWithTimes('morning')"
                   :key="activity.id"
                 >
                   <td class="text-xs-left pa-2">
@@ -167,14 +167,21 @@
                     {{ activity.duration }} minutes
                   </td>
                   <td class="text-xs-right pa-2">
-                    {{ activity.points }} points
+                    {{ activity.startTime }}
                   </td>
                 </tr>
               </tbody>
             </table>
 
-            <v-alert type="success" class="mt-3">
-              Total: {{ getTotalDuration('morning') }} minutes • {{ getTotalPoints('morning') }} points
+            <v-alert :type="isMorningRoutineOvertime() ? 'warning' : 'success'" class="mt-3">
+              <div v-if="isMorningRoutineOvertime()">
+                ⚠️ Routine takes {{ getTotalDuration('morning') }} minutes but you only have
+                {{ getAvailableMorningTime() }} minutes available ({{ getMorningStartTime() }} - {{ schedule.workStart }})
+              </div>
+              <div v-else>
+                ✅ Total: {{ getTotalDuration('morning') }} minutes • Available: {{ getAvailableMorningTime() }} minutes
+                ({{ getMorningStartTime() }} - {{ schedule.workStart }})
+              </div>
             </v-alert>
           </div>
         </div>
@@ -185,8 +192,8 @@
         </div>
       </v-stepper-content>
 
-      <!-- Step 3: Work Hours -->
-      <v-stepper-content step="3">
+      <!-- Step 2: Work Hours -->
+      <v-stepper-content step="2">
         <div style="max-width: 500px; margin: 0 auto;">
           <h2 class="text-xs-center mt-4 mb-3">Set Your Work Hours</h2>
           <div class="mb-3" style="max-width: 192px; margin: 0 auto;">
@@ -201,8 +208,8 @@
 
           <p class="text-center mb-4">Define your work schedule to help structure your day effectively.</p>
 
-          <v-row>
-            <v-col cols="6">
+          <v-layout row wrap>
+            <v-flex xs6>
               <v-menu
                 ref="workStartMenu"
                 v-model="workStartMenu"
@@ -231,9 +238,9 @@
                   @click:minute="$refs.workStartMenu.save(schedule.workStart)"
                 ></v-time-picker>
               </v-menu>
-            </v-col>
+            </v-flex>
 
-            <v-col cols="6">
+            <v-flex xs6>
               <v-menu
                 ref="workEndMenu"
                 v-model="workEndMenu"
@@ -262,8 +269,8 @@
                   @click:minute="$refs.workEndMenu.save(schedule.workEnd)"
                 ></v-time-picker>
               </v-menu>
-            </v-col>
-          </v-row>
+            </v-flex>
+          </v-layout>
 
           <v-alert v-if="schedule.workStart && schedule.workEnd" type="info" class="mt-3">
             Work duration: {{ calculateWorkHours() }} hours
@@ -321,7 +328,7 @@
             <table class="borderless-table">
               <tbody>
                 <tr
-                  v-for="activity in getSelectedActivities('evening')"
+                  v-for="activity in getSelectedActivitiesWithTimes('evening')"
                   :key="activity.id"
                 >
                   <td class="text-xs-left pa-2">
@@ -332,14 +339,21 @@
                     {{ activity.duration }} minutes
                   </td>
                   <td class="text-xs-right pa-2">
-                    {{ activity.points }} points
+                    {{ activity.startTime }}
                   </td>
                 </tr>
               </tbody>
             </table>
 
-            <v-alert type="success" class="mt-3">
-              Total: {{ getTotalDuration('evening') }} minutes • {{ getTotalPoints('evening') }} points
+            <v-alert :type="isEveningRoutineOvertime() ? 'warning' : 'success'" class="mt-3">
+              <div v-if="isEveningRoutineOvertime()">
+                ⚠️ Routine takes {{ getTotalDuration('evening') }} minutes but you only have
+                {{ getAvailableEveningTime() }} minutes available ({{ getEveningStartTime() }} - {{ schedule.sleepTime }})
+              </div>
+              <div v-else>
+                ✅ Total: {{ getTotalDuration('evening') }} minutes • Available: {{ getAvailableEveningTime() }} minutes
+                ({{ getEveningStartTime() }} - {{ schedule.sleepTime }})
+              </div>
             </v-alert>
           </div>
         </div>
@@ -365,46 +379,229 @@
           </div>
 
           <v-card class="mb-4">
-            <v-card-title>Your Daily Schedule Summary</v-card-title>
+            <v-card-title>
+              <v-icon class="mr-2">schedule</v-icon>
+              Your Daily Schedule Summary
+            </v-card-title>
             <v-card-text>
-              <v-row>
-                <v-col cols="6">
-                  <h4>Sleep Schedule</h4>
-                  <p>Sleep: {{ schedule.sleepTime }}</p>
-                  <p>Wake: {{ schedule.wakeTime }}</p>
-                  <p>Sleep Duration: {{ calculateSleepHours() }} hours</p>
-                </v-col>
-                <v-col cols="6">
-                  <h4>Work Hours</h4>
-                  <p>Start: {{ schedule.workStart }}</p>
-                  <p>End: {{ schedule.workEnd }}</p>
-                  <p>Work Duration: {{ calculateWorkHours() }} hours</p>
-                </v-col>
-              </v-row>
+              <!-- Clock Visual Row -->
+              <v-layout row wrap class="mb-4">
+                <v-flex xs12 sm6 class="clock-section">
+                  <h4 class="mb-3 clock-title">
+                    <v-icon class="mr-2" small>hotel</v-icon>
+                    Sleep Schedule
+                  </h4>
+                  <div class="clock-container">
+                    <svg width="150" height="150" viewBox="0 0 150 150" class="clock-svg">
+                      <!-- Clock face -->
+                      <circle cx="75" cy="75" r="70" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+
+                      <!-- Hour markers -->
+                      <g v-for="hour in 12" :key="hour" class="hour-marker">
+                        <line
+                          :x1="75 + 60 * Math.cos((hour - 3) * Math.PI / 6)"
+                          :y1="75 + 60 * Math.sin((hour - 3) * Math.PI / 6)"
+                          :x2="75 + 65 * Math.cos((hour - 3) * Math.PI / 6)"
+                          :y2="75 + 65 * Math.sin((hour - 3) * Math.PI / 6)"
+                          stroke="#bdbdbd"
+                          stroke-width="2"
+                        />
+                        <text
+                          :x="75 + 55 * Math.cos((hour - 3) * Math.PI / 6)"
+                          :y="75 + 55 * Math.sin((hour - 3) * Math.PI / 6) + 4"
+                          text-anchor="middle"
+                          font-size="12"
+                          fill="#757575"
+                        >
+                          {{ hour === 12 ? 12 : hour }}
+                        </text>
+                      </g>
+
+                      <!-- Sleep arc -->
+                      <path
+                        :d="getSleepArcPath()"
+                        fill="none"
+                        stroke="#3f51b5"
+                        stroke-width="8"
+                        stroke-linecap="round"
+                      />
+
+                      <!-- Sleep start marker -->
+                      <circle
+                        :cx="75 + 70 * Math.cos(getSleepStartAngle())"
+                        :cy="75 + 70 * Math.sin(getSleepStartAngle())"
+                        r="6"
+                        fill="#3f51b5"
+                      />
+
+                      <!-- Wake end marker -->
+                      <circle
+                        :cx="75 + 70 * Math.cos(getWakeEndAngle())"
+                        :cy="75 + 70 * Math.sin(getWakeEndAngle())"
+                        r="6"
+                        fill="#4caf50"
+                      />
+
+                      <!-- Center icon -->
+                      <circle cx="75" cy="75" r="20" fill="#f5f5f5" stroke="#e0e0e0" stroke-width="1"/>
+                      <text x="75" y="82" text-anchor="middle" font-family="Material Icons" font-size="20" fill="#757575">hotel</text>
+                    </svg>
+                    <div class="clock-details mt-2">
+                      <p class="mb-1">
+                        <v-icon class="mr-1" small color="primary">bedtime</v-icon>
+                        Sleep: {{ schedule.sleepTime }}
+                      </p>
+                      <p class="mb-1">
+                        <v-icon class="mr-1" small color="success">wb_sunny</v-icon>
+                        Wake: {{ schedule.wakeTime }}
+                      </p>
+                      <p class="mb-0">
+                        <v-icon class="mr-1" small>timer</v-icon>
+                        {{ calculateSleepHours() }} hours
+                      </p>
+                    </div>
+                  </div>
+                </v-flex>
+
+                <v-flex xs12 sm6 class="clock-section">
+                  <h4 class="mb-3 clock-title">
+                    <v-icon class="mr-2" small>work</v-icon>
+                    Work Hours
+                  </h4>
+                  <div class="clock-container">
+                    <svg width="150" height="150" viewBox="0 0 150 150" class="clock-svg">
+                      <!-- Clock face -->
+                      <circle cx="75" cy="75" r="70" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+
+                      <!-- Hour markers -->
+                      <g v-for="hour in 12" :key="hour" class="hour-marker">
+                        <line
+                          :x1="75 + 60 * Math.cos((hour - 3) * Math.PI / 6)"
+                          :y1="75 + 60 * Math.sin((hour - 3) * Math.PI / 6)"
+                          :x2="75 + 65 * Math.cos((hour - 3) * Math.PI / 6)"
+                          :y2="75 + 65 * Math.sin((hour - 3) * Math.PI / 6)"
+                          stroke="#bdbdbd"
+                          stroke-width="2"
+                        />
+                        <text
+                          :x="75 + 55 * Math.cos((hour - 3) * Math.PI / 6)"
+                          :y="75 + 55 * Math.sin((hour - 3) * Math.PI / 6) + 4"
+                          text-anchor="middle"
+                          font-size="12"
+                          fill="#757575"
+                        >
+                          {{ hour === 12 ? 12 : hour }}
+                        </text>
+                      </g>
+
+                      <!-- Work arc -->
+                      <path
+                        :d="getWorkArcPath()"
+                        fill="none"
+                        stroke="#ff9800"
+                        stroke-width="8"
+                        stroke-linecap="round"
+                      />
+
+                      <!-- Work start marker -->
+                      <circle
+                        :cx="75 + 70 * Math.cos(getWorkStartAngle())"
+                        :cy="75 + 70 * Math.sin(getWorkStartAngle())"
+                        r="6"
+                        fill="#4caf50"
+                      />
+
+                      <!-- Work end marker -->
+                      <circle
+                        :cx="75 + 70 * Math.cos(getWorkEndAngle())"
+                        :cy="75 + 70 * Math.sin(getWorkEndAngle())"
+                        r="6"
+                        fill="#f44336"
+                      />
+
+                      <!-- Center icon -->
+                      <circle cx="75" cy="75" r="20" fill="#f5f5f5" stroke="#e0e0e0" stroke-width="1"/>
+                      <text x="75" y="82" text-anchor="middle" font-family="Material Icons" font-size="20" fill="#757575">work</text>
+                    </svg>
+                    <div class="clock-details mt-2">
+                      <p class="mb-1">
+                        <v-icon class="mr-1" small color="success">play_arrow</v-icon>
+                        Start: {{ schedule.workStart }}
+                      </p>
+                      <p class="mb-1">
+                        <v-icon class="mr-1" small color="error">stop</v-icon>
+                        End: {{ schedule.workEnd }}
+                      </p>
+                      <p class="mb-0">
+                        <v-icon class="mr-1" small>timer</v-icon>
+                        {{ calculateWorkHours() }} hours
+                      </p>
+                    </div>
+                  </div>
+                </v-flex>
+              </v-layout>
 
               <v-divider class="my-3"></v-divider>
 
-              <v-row>
-                <v-col cols="6">
-                  <h4>Morning Routine ({{ getTotalDuration('morning') }} min)</h4>
-                  <ul>
-                    <li v-for="activity in getSelectedActivities('morning')" :key="activity.id">
-                      {{ activity.name }} ({{ activity.duration }}min)
-                    </li>
-                  </ul>
-                </v-col>
-                <v-col cols="6">
-                  <h4>Evening Routine ({{ getTotalDuration('evening') }} min)</h4>
-                  <ul>
-                    <li v-for="activity in getSelectedActivities('evening')" :key="activity.id">
-                      {{ activity.name }} ({{ activity.duration }}min)
-                    </li>
-                  </ul>
-                </v-col>
-              </v-row>
+              <v-layout row wrap>
+                <v-flex xs12 sm6 class="pl-2 pr-2">
+                  <h4>
+                    <v-icon class="mr-2" small>wb_sunny</v-icon>
+                    Morning Routine ({{ getTotalDuration('morning') }} min)
+                  </h4>
+                  <table v-if="getSelectedActivities('morning').length > 0" class="borderless-table">
+                    <tbody>
+                      <tr
+                        v-for="activity in getSelectedActivitiesWithTimes('morning')"
+                        :key="activity.id"
+                      >
+                        <td class="text-xs-left pa-2">
+                          <v-icon class="mr-2" small>{{ activity.icon }}</v-icon>
+                          {{ activity.name }}
+                        </td>
+                        <td class="text-xs-right pa-2">
+                          {{ activity.duration }}min
+                        </td>
+                        <td class="text-xs-right pa-2">
+                          {{ activity.startTime }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p v-else class="text-xs-center grey--text">No morning activities selected</p>
+                </v-flex>
+                <v-flex xs12 sm6 class="pl-2 pr-2">
+                  <h4>
+                    <v-icon class="mr-2" small>nights_stay</v-icon>
+                    Evening Routine ({{ getTotalDuration('evening') }} min)
+                  </h4>
+                  <table v-if="getSelectedActivities('evening').length > 0" class="borderless-table">
+                    <tbody>
+                      <tr
+                        v-for="activity in getSelectedActivitiesWithTimes('evening')"
+                        :key="activity.id"
+                      >
+                        <td class="text-xs-left pa-2">
+                          <v-icon class="mr-2" small>{{ activity.icon }}</v-icon>
+                          {{ activity.name }}
+                        </td>
+                        <td class="text-xs-right pa-2">
+                          {{ activity.duration }}min
+                        </td>
+                        <td class="text-xs-right pa-2">
+                          {{ activity.startTime }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p v-else class="text-xs-center grey--text">No evening activities selected</p>
+                </v-flex>
+              </v-layout>
 
               <v-alert type="success" class="mt-3">
-                Total Daily Points Available: {{ getTotalPoints('morning') + getTotalPoints('evening') }} points
+                <v-icon class="mr-2">star</v-icon>
+                Total Daily Points: {{ getTotalPoints('morning') + getTotalPoints('evening') }} points
+                <span class="text-caption">(will be normalized to 100 points when created)</span>
               </v-alert>
             </v-card-text>
           </v-card>
@@ -457,7 +654,7 @@ export default {
       // Activity options
       morningActivities: [
         {
-          id: 'wake-up', name: 'Wake Up', icon: 'wb_sunny', duration: 5, points: 10,
+          id: 'jogging', name: 'Jogging', icon: 'directions_run', duration: 25, points: 45,
         },
         {
           id: 'meditation', name: 'Meditation', icon: 'self_improvement', duration: 15, points: 30,
@@ -487,10 +684,16 @@ export default {
 
       eveningActivities: [
         {
+          id: 'workout', name: 'Workout', icon: 'fitness_center', duration: 40, points: 50,
+        },
+        {
           id: 'dinner', name: 'Dinner', icon: 'restaurant', duration: 30, points: 25,
         },
         {
           id: 'family-time', name: 'Family Time', icon: 'group', duration: 45, points: 40,
+        },
+        {
+          id: 'tea-time', name: 'Herbal Tea', icon: 'local_cafe', duration: 10, points: 15,
         },
         {
           id: 'reading-evening', name: 'Reading', icon: 'menu_book', duration: 30, points: 35,
@@ -499,19 +702,16 @@ export default {
           id: 'meditation-evening', name: 'Meditation', icon: 'self_improvement', duration: 15, points: 30,
         },
         {
-          id: 'skincare', name: 'Skincare Routine', icon: 'face', duration: 15, points: 20,
+          id: 'light-stretch', name: 'Light Stretching', icon: 'self_improvement', duration: 15, points: 25,
         },
         {
-          id: 'prepare-tomorrow', name: 'Prepare for Tomorrow', icon: 'event', duration: 15, points: 25,
+          id: 'skincare', name: 'Skincare Routine', icon: 'face', duration: 15, points: 20,
         },
         {
           id: 'gratitude', name: 'Gratitude Practice', icon: 'favorite', duration: 10, points: 20,
         },
         {
-          id: 'light-stretch', name: 'Light Stretching', icon: 'self_improvement', duration: 15, points: 25,
-        },
-        {
-          id: 'tea-time', name: 'Herbal Tea', icon: 'local_cafe', duration: 10, points: 15,
+          id: 'prepare-tomorrow', name: 'Prepare for Tomorrow', icon: 'event', duration: 15, points: 25,
         },
       ],
     };
@@ -579,6 +779,67 @@ export default {
       const selected = type === 'morning' ? this.selectedMorningActivities : this.selectedEveningActivities;
 
       return activities.filter((activity) => selected.includes(activity.id));
+    },
+
+    getSelectedActivitiesWithTimes(type) {
+      const selectedActivities = this.getSelectedActivities(type);
+      if (type === 'morning') {
+        let currentTime = this.timeToMinutes(this.schedule.wakeTime) + 15; // Start 15 min after wake up
+        return selectedActivities.map((activity) => {
+          const startTime = this.minutesToTime(currentTime);
+          currentTime += activity.duration;
+          return {
+            ...activity,
+            startTime,
+          };
+        });
+      }
+      if (type === 'evening') {
+        let currentTime = this.timeToMinutes(this.schedule.workEnd) + 60; // 1 hour after work
+        return selectedActivities.map((activity) => {
+          const startTime = this.minutesToTime(currentTime);
+          currentTime += activity.duration;
+          return {
+            ...activity,
+            startTime,
+          };
+        });
+      }
+      return selectedActivities;
+    },
+
+    getAvailableMorningTime() {
+      if (!this.schedule.wakeTime || !this.schedule.workStart) return 0;
+      const wake = this.timeToMinutes(this.schedule.wakeTime) + 15; // Start 15 min after wake up
+      const work = this.timeToMinutes(this.schedule.workStart);
+      return work - wake;
+    },
+
+    getMorningStartTime() {
+      if (!this.schedule.wakeTime) return '';
+      const wakeTime = this.timeToMinutes(this.schedule.wakeTime) + 15;
+      return this.minutesToTime(wakeTime);
+    },
+
+    getAvailableEveningTime() {
+      if (!this.schedule.workEnd || !this.schedule.sleepTime) return 0;
+      const workEnd = this.timeToMinutes(this.schedule.workEnd) + 60; // 1 hour after work
+      const sleep = this.timeToMinutes(this.schedule.sleepTime);
+      return sleep - workEnd;
+    },
+
+    isMorningRoutineOvertime() {
+      return this.getTotalDuration('morning') > this.getAvailableMorningTime();
+    },
+
+    isEveningRoutineOvertime() {
+      return this.getTotalDuration('evening') > this.getAvailableEveningTime();
+    },
+
+    getEveningStartTime() {
+      if (!this.schedule.workEnd) return '';
+      const workEnd = this.timeToMinutes(this.schedule.workEnd) + 60;
+      return this.minutesToTime(workEnd);
     },
 
     getTotalDuration(type) {
@@ -652,7 +913,7 @@ export default {
 
       // Create morning routine items
       const morningActivities = this.getSelectedActivities('morning');
-      let currentTime = this.timeToMinutes(this.schedule.wakeTime);
+      let currentTime = this.timeToMinutes(this.schedule.wakeTime) + 15; // Start 15 min after wake up
 
       morningActivities.forEach((activity) => {
         const timeStr = this.minutesToTime(currentTime);
@@ -683,6 +944,9 @@ export default {
         });
         eveningTime += activity.duration;
       });
+
+      // Normalize points to sum up to 100
+      this.normalizePointsTo100(routineItems);
 
       // Use GraphQL mutation to create all routine items with AI enhancement
       const result = await this.$apollo.mutate({
@@ -719,6 +983,148 @@ export default {
     redirectToSettings() {
       this.$router.push('/settings');
     },
+
+    // Normalize points to sum up to exactly 100
+    normalizePointsTo100(routineItems) {
+      if (routineItems.length === 0) return;
+
+      // Calculate current total points
+      const currentTotal = routineItems.reduce((sum, item) => sum + item.points, 0);
+
+      if (currentTotal === 0) {
+        // If no points assigned, distribute evenly
+        const evenPoints = Math.floor(100 / routineItems.length);
+        const remainder = 100 % routineItems.length;
+
+        routineItems.forEach((item, index) => {
+          // eslint-disable-next-line no-param-reassign
+          item.points = evenPoints + (index < remainder ? 1 : 0);
+        });
+      } else {
+        // Scale existing points proportionally to sum to 100
+        const scaleFactor = 100 / currentTotal;
+        let totalAssigned = 0;
+
+        // Apply scaling and round down, keeping track of total
+        routineItems.forEach((item, index) => {
+          if (index === routineItems.length - 1) {
+            // Last item gets remainder to ensure exact total of 100
+            // eslint-disable-next-line no-param-reassign
+            item.points = 100 - totalAssigned;
+          } else {
+            // eslint-disable-next-line no-param-reassign
+            item.points = Math.floor(item.points * scaleFactor);
+            totalAssigned += item.points;
+          }
+
+          // Ensure minimum of 1 point per item
+          if (item.points < 1) {
+            // eslint-disable-next-line no-param-reassign
+            item.points = 1;
+          }
+        });
+
+        // If we exceeded 100 due to minimum point requirements, redistribute
+        const finalTotal = routineItems.reduce((sum, item) => sum + item.points, 0);
+        if (finalTotal > 100) {
+          const excess = finalTotal - 100;
+          // Remove excess from items with highest points first
+          const sortedIndices = routineItems
+            .map((item, index) => ({ points: item.points, index }))
+            .sort((a, b) => b.points - a.points)
+            .map(({ index }) => index);
+
+          let remainingExcess = excess;
+
+          sortedIndices.forEach((itemIndex) => {
+            if (remainingExcess <= 0) return;
+            const item = routineItems[itemIndex];
+            if (item.points > 1) {
+              const reduction = Math.min(remainingExcess, item.points - 1);
+              // eslint-disable-next-line no-param-reassign
+              item.points -= reduction;
+              remainingExcess -= reduction;
+            }
+          });
+        }
+      }
+    },
+
+    // Clock visualization methods
+    getSleepStartAngle() {
+      const hours = parseInt(this.schedule.sleepTime.split(':')[0], 10);
+      const minutes = parseInt(this.schedule.sleepTime.split(':')[1], 10);
+      return ((hours % 12) + (minutes / 60) - 3) * (Math.PI / 6);
+    },
+
+    getWakeEndAngle() {
+      const hours = parseInt(this.schedule.wakeTime.split(':')[0], 10);
+      const minutes = parseInt(this.schedule.wakeTime.split(':')[1], 10);
+      return ((hours % 12) + (minutes / 60) - 3) * (Math.PI / 6);
+    },
+
+    getSleepArcPath() {
+      const startAngle = this.getSleepStartAngle();
+      const endAngle = this.getWakeEndAngle();
+      const radius = 70;
+      const centerX = 75;
+      const centerY = 75;
+
+      const startX = centerX + (radius * Math.cos(startAngle));
+      const startY = centerY + (radius * Math.sin(startAngle));
+      const endX = centerX + (radius * Math.cos(endAngle));
+      const endY = centerY + (radius * Math.sin(endAngle));
+
+      // Calculate angle difference considering sleep spans across midnight
+      let angleDiff = endAngle - startAngle;
+      if (angleDiff <= 0) {
+        angleDiff += 2 * Math.PI; // Sleep spans across midnight
+      }
+
+      const largeArcFlag = angleDiff > Math.PI ? 1 : 0;
+
+      return `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
+    },
+
+    getWorkStartAngle() {
+      const hours = parseInt(this.schedule.workStart.split(':')[0], 10);
+      const minutes = parseInt(this.schedule.workStart.split(':')[1], 10);
+      return ((hours % 12) + (minutes / 60) - 3) * (Math.PI / 6);
+    },
+
+    getWorkEndAngle() {
+      const hours = parseInt(this.schedule.workEnd.split(':')[0], 10);
+      const minutes = parseInt(this.schedule.workEnd.split(':')[1], 10);
+      return ((hours % 12) + (minutes / 60) - 3) * (Math.PI / 6);
+    },
+
+    getWorkArcPath() {
+      const startAngle = this.getWorkStartAngle();
+      const endAngle = this.getWorkEndAngle();
+      const radius = 70;
+      const centerX = 75;
+      const centerY = 75;
+
+      // Ensure we have a valid arc (minimum 15 minutes)
+      let adjustedEndAngle = endAngle;
+      if (Math.abs(endAngle - startAngle) < (15 / 60) * (Math.PI / 6)) {
+        adjustedEndAngle = startAngle + (15 / 60) * (Math.PI / 6);
+      }
+
+      const startX = centerX + (radius * Math.cos(startAngle));
+      const startY = centerY + (radius * Math.sin(startAngle));
+      const endX = centerX + (radius * Math.cos(adjustedEndAngle));
+      const endY = centerY + (radius * Math.sin(adjustedEndAngle));
+
+      // Calculate if we need a large arc flag
+      let angleDiff = adjustedEndAngle - startAngle;
+      if (angleDiff < 0) {
+        angleDiff += 2 * Math.PI;
+      }
+      const largeArcFlag = angleDiff > Math.PI ? 1 : 0;
+
+      return `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
+    },
   },
 };
 </script>
@@ -742,5 +1148,53 @@ export default {
 
 .borderless-table td.pa-2 {
   padding: 8px;
+}
+
+.clock-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+}
+
+.clock-title {
+  text-align: center;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clock-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  max-width: 250px;
+  margin: 0 auto;
+}
+
+.clock-svg {
+  display: block;
+  margin: 0 auto 16px auto;
+}
+
+.clock-details {
+  font-size: 14px;
+  line-height: 1.4;
+  width: 100%;
+  text-align: left;
+}
+
+.clock-details p {
+  margin: 4px 0;
+  display: flex;
+  align-items: center;
+}
+
+.hour-marker text {
+  font-family: Arial, sans-serif;
+  font-weight: 500;
 }
 </style>
