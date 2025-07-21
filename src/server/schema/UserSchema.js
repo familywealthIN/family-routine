@@ -28,6 +28,10 @@ const UserSchema = new mongoose.Schema({
     unique: true,
     sparse: true, // allows multiple null values
   },
+  needsOnboarding: {
+    type: Boolean,
+    default: true,
+  },
   social: {
     googleProvider: {
       id: String,
@@ -95,7 +99,7 @@ const UserItemType = new GraphQLObjectType({
     holidays: { type: GraphQLInt },
     inviterEmail: { type: GraphQLString },
     invitedEmail: { type: GraphQLString },
-    isNew: { type: GraphQLBoolean },
+    needsOnboarding: { type: GraphQLBoolean },
     apiKey: { type: GraphQLString },
     motto: {
       type: new GraphQLList(MottoItemType),

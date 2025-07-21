@@ -20,7 +20,7 @@
         <v-divider></v-divider>
         <v-list-tile avatar>
           <v-list-tile-avatar>
-            <img :src="picture" />
+            <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src='/img/default-user.png'" />
           </v-list-tile-avatar>
 
           <v-list-tile-content>
@@ -70,7 +70,7 @@
       </v-btn>
       <v-btn icon @click.stop="drawer = !drawer">
         <v-avatar size="32">
-          <img :src="picture" />
+          <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src='/img/default-user.png'" />
         </v-avatar>
       </v-btn>
     </v-toolbar>
@@ -181,6 +181,9 @@ export default {
     },
     picture() {
       return this.$root.$data.picture;
+    },
+    profileImage() {
+      return this.$root.$data.picture || '/img/default-user.png';
     },
     pageTitle() {
       return (this.$route.name && this.$route.name[0].toUpperCase() + this.$route.name.substr(1))

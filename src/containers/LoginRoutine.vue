@@ -135,7 +135,7 @@ export default {
               name
               email
               picture
-              isNew
+              needsOnboarding
               token
               tags
             }
@@ -147,7 +147,7 @@ export default {
         },
         update: async (store, { data: { authGoogle } }) => {
           const {
-            name, email, picture, token, isNew, tags = []
+            name, email, picture, token, needsOnboarding, tags = []
           } = authGoogle;
 
           this.isSignIn = this.$gAuth.isAuthorized;
@@ -159,7 +159,7 @@ export default {
           this.$root.$data.email = getSessionItem(GC_USER_EMAIL);
           this.$root.$data.picture = getSessionItem(GC_PICTURE);
 
-          if (isNew) {
+          if (needsOnboarding) {
             this.$router.push('wizard');
           } else {
             this.$router.push('home');
