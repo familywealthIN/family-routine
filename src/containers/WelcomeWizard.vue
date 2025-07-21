@@ -870,6 +870,17 @@ export default {
         // Create routine items with AI enhancement
         const createdItems = await this.createRoutineItems();
 
+        // Mark user as no longer new
+        await this.$apollo.mutate({
+          mutation: gql`
+            mutation completeOnboarding {
+              completeOnboarding {
+                needsOnboarding
+              }
+            }
+          `,
+        });
+
         // Redirect to home page
         this.$router.push('/home');
 
@@ -926,6 +937,16 @@ export default {
           tags: ['onboarding', 'morning'],
         });
         currentTime += activity.duration;
+      });
+
+      // Create work start routine item
+      routineItems.push({
+        name: 'Start Work',
+        time: this.schedule.workStart,
+        type: 'work',
+        points: 25,
+        duration: 0,
+        tags: ['onboarding', 'work'],
       });
 
       // Create evening routine items

@@ -87,12 +87,11 @@ async function upsertGoogleUser({ profile }, notificationId) {
       picture: profile._json.picture,
       groupId: '',
       tags: [profile.emails[0].value],
+      needsOnboarding: true,
       'social.googleProvider': {
         id: profile.id,
       },
     });
-
-    newUser.isNew = true;
 
     return newUser;
   }

@@ -75,7 +75,7 @@ const mutation = {
               // eslint-disable-next-line no-underscore-dangle
               picture: data.profile._json.picture,
               token: user.generateJWT(),
-              isNew: user.isNew || false,
+              needsOnboarding: user.needsOnboarding || false,
               motto: [],
               tags: user.tags || [],
             });
@@ -190,6 +190,22 @@ const mutation = {
       return UserModel.findOneAndUpdate(
         { email },
         { apiKey },
+        { new: true },
+      );
+    },
+  },
+  completeOnboarding: {
+    type: UserItemType,
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      if (!email) {
+        throw new ApiError('Authentication required', 401);
+      }
+
+      return UserModel.findOneAndUpdate(
+        { email },
+        { needsOnboarding: false },
         { new: true },
       );
     },

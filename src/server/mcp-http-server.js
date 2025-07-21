@@ -588,7 +588,7 @@ type UserItem {
   holidays: Int
   inviterEmail: String
   invitedEmail: String
-  isNew: Boolean
+  needsOnboarding: Boolean
   motto: [MottoItem]
   tags: [String]
 }
