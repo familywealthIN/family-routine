@@ -448,7 +448,13 @@ const query = {
         'goalItems.tags': args.tag,
       }).exec();
 
-      return goals;
+      // Filter the goals to only include goalItems that match the tag
+      const filteredGoals = goals.map((goal) => ({
+        ...goal.toObject(),
+        goalItems: goal.goalItems.filter((item) => item.tags && item.tags.includes(args.tag)),
+      })).filter((goal) => goal.goalItems.length > 0); // Only return goals that have matching items
+
+      return filteredGoals;
     },
   },
   goalsByGoalRef: {
@@ -503,6 +509,29 @@ const query = {
         },
         { 'goalItems.$': 1 },
       ).exec();
+
+      return goal.goalItems[0];
+    },
+  },
+  goalItemById: {
+    type: GoalItemType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      const goal = await GoalModel.findOne(
+        {
+          email,
+          'goalItems._id': args.id,
+        },
+        { 'goalItems.$': 1 },
+      ).exec();
+
+      if (!goal || !goal.goalItems || goal.goalItems.length === 0) {
+        throw new Error('Goal item not found');
+      }
 
       return goal.goalItems[0];
     },
@@ -893,6 +922,37 @@ const mutation = {
           email,
         },
       ).exec();
+
+      return goal.goalItems.find((aGoalItem) => aGoalItem.id === id);
+    },
+  },
+  updateGoalItemContribution: {
+    type: GoalItemType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+      contribution: { type: GraphQLString },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const { id, contribution } = args;
+
+      await GoalModel.findOneAndUpdate(
+        {
+          email,
+          'goalItems._id': id,
+        },
+        {
+          $set: {
+            'goalItems.$.contribution': contribution,
+          },
+        },
+        { new: true },
+      ).exec();
+
+      const goal = await GoalModel.findOne({
+        email,
+        'goalItems._id': id,
+      }).exec();
 
       return goal.goalItems.find((aGoalItem) => aGoalItem.id === id);
     },

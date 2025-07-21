@@ -22,7 +22,11 @@
               </v-list-tile-content>
             </v-list-tile>
           </template>
-          <goal-item-list @update-new-goal-item="updateNewGoalItem" :goal="goal" :editMode="isItBeforeToday(goal.period, date)" />
+          <goal-item-list
+            @update-new-goal-item="updateNewGoalItem"
+            :goal="goal"
+            :editMode="shouldAllowEdit(goal.period, goal.date)"
+          />
         </v-list-group>
       </template>
     </div>
@@ -50,6 +54,24 @@ export default {
   },
   methods: {
     isItBeforeToday,
+    shouldAllowEdit(period, date) {
+      // For week and month goals, allow editing if they are current or future periods
+      if (period === 'week' || period === 'month') {
+        const goalDate = moment(date, 'DD-MM-YYYY');
+        const today = moment();
+
+        if (period === 'week') {
+          // Allow editing current week and future weeks
+          return goalDate.isSameOrAfter(today.startOf('week'), 'day');
+        } else if (period === 'month') {
+          // Allow editing current month and future months
+          return goalDate.isSameOrAfter(today.startOf('month'), 'day');
+        }
+      }
+
+      // For other periods, use the original logic
+      return isItBeforeToday(period, date);
+    },
     getPeriodDate: (period, date) => {
       const periodDate = getPeriodDate(period, date, '');
       switch (period) {

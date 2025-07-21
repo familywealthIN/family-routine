@@ -982,6 +982,10 @@ export default {
       executedEndEvents: new Set(),
       // Track first load for skeleton display
       goalsFirstLoad: true,
+      // Queue for events waiting for goal IDs per routine item
+      pendingEvents: [],
+      // Track created goal IDs per routine item for placeholder replacement
+      routineGoalIds: {}, // { routineItemId: goalId }
     };
   },
   watch: {
@@ -995,7 +999,10 @@ export default {
         // Reset executed events when date changes
         this.executedStartEvents.clear();
         this.executedEndEvents.clear();
-        console.log('DashBoard: Reset executed events for new date:', newVal);
+        // Reset goal IDs and pending events for new date
+        this.routineGoalIds = {};
+        this.pendingEvents = [];
+        console.log('DashBoard: Reset executed events, routine goal IDs, and pending events for new date:', newVal);
       }
     },
     // Watch for route changes to detect login/logout
@@ -1047,6 +1054,7 @@ export default {
     eventBus.$on(EVENTS.REFETCH_DAILY_GOALS, this.handleRefetchDailyGoals);
     eventBus.$on(EVENTS.TASK_CREATED, this.handleTaskCreated);
     eventBus.$on(EVENTS.GOALS_SAVED, this.handleGoalsSaved);
+    eventBus.$on(EVENTS.GOAL_ITEM_CREATED, this.handleGoalItemCreated);
 
     console.log('DashBoard: Event listeners registered');
   },
@@ -1055,6 +1063,7 @@ export default {
     eventBus.$off(EVENTS.REFETCH_DAILY_GOALS, this.handleRefetchDailyGoals);
     eventBus.$off(EVENTS.TASK_CREATED, this.handleTaskCreated);
     eventBus.$off(EVENTS.GOALS_SAVED, this.handleGoalsSaved);
+    eventBus.$off(EVENTS.GOAL_ITEM_CREATED, this.handleGoalItemCreated);
 
     // Clean up timer
     this.stopEventExecutionTimer();
@@ -1074,6 +1083,51 @@ export default {
       console.log('DashBoard: Handling goals saved event', eventData);
       // Only refetch if day goals were created
       this.refetchDailyGoals();
+    },
+    handleGoalItemCreated(eventData) {
+      console.log('DashBoard: Handling goal item created event', eventData);
+
+      if (eventData && eventData.goalId && eventData.taskRef) {
+        // Store the goal ID for the specific routine item
+        this.routineGoalIds[eventData.taskRef] = eventData.goalId;
+        console.log('DashBoard: Stored goal ID for routine item:', eventData.taskRef, '→', eventData.goalId);
+
+        // Clean up old routine goal IDs to prevent memory buildup
+        this.cleanupOldRoutineGoalIds();
+
+        // Process any pending events that were waiting for this routine's goal ID
+        this.processPendingEvents(eventData.taskRef);
+      }
+
+      // Refetch daily goals to reflect the new goal item
+      this.refetchDailyGoals();
+    },
+    processPendingEvents(routineItemId = null) {
+      if (this.pendingEvents.length === 0) {
+        console.log('DashBoard: No pending events to process');
+        return;
+      }
+
+      // Filter events to process - either for specific routine item or all if no ID provided
+      const eventsToProcess = routineItemId
+        ? this.pendingEvents.filter((event) => event.routineItemId === routineItemId)
+        : this.pendingEvents.filter((event) => !event.routineItemId || this.routineGoalIds[event.routineItemId]);
+
+      if (eventsToProcess.length === 0) {
+        console.log(`DashBoard: No matching pending events to process for routine ${routineItemId || 'any'}`);
+        return;
+      }
+
+      console.log(`DashBoard: Processing ${eventsToProcess.length} pending events for routine ${routineItemId || 'any'}`);
+
+      // Remove processed events from pending array
+      this.pendingEvents = this.pendingEvents.filter((event) => !eventsToProcess.includes(event));
+
+      // Execute each pending event
+      eventsToProcess.forEach((event) => {
+        console.log(`DashBoard: Executing queued ${event.eventType} event for routine ${event.routineItemId}`);
+        this.executeEvent(event.eventCommand, event.eventType, event.routineItemId);
+      });
     },
     refetchDailyGoals() {
       try {
@@ -1109,14 +1163,55 @@ export default {
       }
     },
 
+    // Routine goal ID management methods
+    cleanupOldRoutineGoalIds() {
+      // Keep only the last 20 routine goal IDs to prevent memory buildup
+      const goalIdEntries = Object.entries(this.routineGoalIds);
+      if (goalIdEntries.length > 20) {
+        // Sort by goal ID (assuming newer goal IDs are higher) and keep the latest 20
+        const sortedEntries = goalIdEntries.sort((a, b) => b[1].localeCompare(a[1]));
+        this.routineGoalIds = Object.fromEntries(sortedEntries.slice(0, 20));
+        console.log('DashBoard: Cleaned up old routine goal IDs, keeping latest 20');
+      }
+    },
+
     // Event execution methods
-    async executeEvent(eventCommand, eventType = 'unknown') {
+    async executeEvent(eventCommand, eventType = 'unknown', routineItemId = null) {
       if (!eventCommand || typeof eventCommand !== 'string') {
         console.log(`DashBoard: No ${eventType} event to execute`);
         return;
       }
 
-      console.log(`DashBoard: Executing ${eventType} event:`, eventCommand);
+      console.log(`DashBoard: Executing ${eventType} event for routine ${routineItemId}:`, eventCommand);
+
+      // Check if event contains {{goal_id}} placeholder
+      if (eventCommand.includes('{{goal_id}}')) {
+        console.log('DashBoard: Event contains {{goal_id}} placeholder, checking for available goal ID');
+
+        // If routine item ID is provided and we have a goal ID for it, replace the placeholder
+        if (routineItemId && this.routineGoalIds[routineItemId]) {
+          const goalId = this.routineGoalIds[routineItemId];
+          const updatedCommand = eventCommand.replace(/\{\{goal_id\}\}/g, goalId);
+          console.log(`DashBoard: Replacing {{goal_id}} with ${goalId} for routine ${routineItemId}:`, updatedCommand);
+
+          // Execute the updated command
+          this.executeEvent(updatedCommand, eventType, routineItemId);
+          return;
+        }
+
+        // Queue the event for later execution when goal ID becomes available
+        console.log(`DashBoard: No goal ID available for routine ${routineItemId}, queuing event for later execution`);
+        this.pendingEvents.push({ eventCommand, eventType, routineItemId });
+
+        this.$notify({
+          title: 'Event Queued',
+          text: `${eventType} event queued until goal is created for routine`,
+          group: 'notify',
+          type: 'info',
+          duration: 3000,
+        });
+        return;
+      }
 
       // Check if event starts with 'curl'
       if (eventCommand.toLowerCase().startsWith('curl')) {
@@ -1252,7 +1347,7 @@ export default {
           && dStimulus.earned === dTarget
           && !this.executedStartEvents.has(task.id) && stimulusName === 'D') {
         console.log(`DashBoard: ✅ StartEvent condition met for task ${task.name}: D earned (${dStimulus.earned}) = D target (${dTarget})`);
-        this.executeEvent(task.startEvent, 'startEvent');
+        this.executeEvent(task.startEvent, 'startEvent', task.id);
         this.executedStartEvents.add(task.id);
       } else if (task.startEvent) {
         console.log(`DashBoard: ❌ StartEvent condition NOT met for task ${task.name}:`);
@@ -1265,7 +1360,7 @@ export default {
           && kStimulus.earned === kTarget
           && !this.executedEndEvents.has(task.id) && stimulusName === 'K') {
         console.log(`DashBoard: ✅ EndEvent condition met for task ${task.name}: K earned (${kStimulus.earned}) = K target (${kTarget})`);
-        this.executeEvent(task.endEvent, 'endEvent');
+        this.executeEvent(task.endEvent, 'endEvent', task.id);
         this.executedEndEvents.add(task.id);
       } else if (task.endEvent) {
         console.log(`DashBoard: ❌ EndEvent condition NOT met for task ${task.name}:`);

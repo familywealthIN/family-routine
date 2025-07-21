@@ -3,6 +3,7 @@ const { Server } = require('@modelcontextprotocol/sdk/dist/cjs/server/index.js')
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/dist/cjs/server/stdio.js');
 const { graphql } = require('graphql');
 const { schema } = require('./resolvers');
+const { getSchemaSDL } = require('./schema/mcpSchema');
 
 class GraphQLMCPServer {
     constructor() {
@@ -53,7 +54,7 @@ class GraphQLMCPServer {
                         {
                             uri,
                             mimeType: 'application/graphql',
-                            text: this.getSchemaSDL(),
+                            text: getSchemaSDL(),
                         },
                     ],
                 };
@@ -175,57 +176,6 @@ class GraphQLMCPServer {
                 ],
             };
         });
-    }
-
-    getSchemaSDL() {
-        return `
-# Routine Notes GraphQL Schema
-# This schema provides access to user routines, goals, and related data
-
-type Query {
-  getUserTags: UserItem
-  showInvite: UserItem
-  getUsersByGroupId(groupId: String!): [UserItem]
-  getRoutines: [RoutineItem]
-  getRoutinesByGroupId(groupId: String!): [RoutineItem]
-  getGoals: [GoalItem]
-  getGoalsByGroupId(groupId: String!): [GoalItem]
-  getProgress: [ProgressItem]
-  getProgressByGroupId(groupId: String!): [ProgressItem]
-}
-
-type Mutation {
-  updateUser(input: UserInput!): UserItem
-  generateApiKey: UserItem
-  createRoutine(input: RoutineInput!): RoutineItem
-  updateRoutine(id: String!, input: RoutineInput!): RoutineItem
-  deleteRoutine(id: String!): Boolean
-  createGoal(input: GoalInput!): GoalItem
-  updateGoal(id: String!, input: GoalInput!): GoalItem
-  deleteGoal(id: String!): Boolean
-}
-
-type UserItem {
-  name: String
-  email: String
-  picture: String
-  groupId: String
-  apiKey: String
-  token: String
-}
-
-type RoutineItem {
-  id: String
-  title: String
-  description: String
-}
-
-type GoalItem {
-  id: String
-  title: String
-  description: String
-}
-`;
     }
 
     async run() {

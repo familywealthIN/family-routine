@@ -371,15 +371,20 @@ export default {
               description
               time
               points
+              startEvent
+              endEvent
               tags
             }
           }
         `,
-        variables: {          name: item.name,
+        variables: {
+          name: item.name,
           description: item.description,
           time: item.time,
           points: Number(item.points),
           steps: item.steps.map((step) => ({ id: step.id, name: step.name })),
+          startEvent: item.startEvent,
+          endEvent: item.endEvent,
           tags: item.tags || [],
         },
         update: () => {
@@ -457,7 +462,8 @@ export default {
             }
           }
         `,
-        variables: {          id: item.id,
+        variables: {
+          id: item.id,
           name: item.name,
           steps: item.steps.map((step) => ({ id: step.id, name: step.name })),
           description: item.description,
