@@ -6,6 +6,7 @@ const { createServer, proxy } = require('@vendia/serverless-express');
 const { graphql } = require('graphql');
 const { schema } = require('./resolvers');
 const { UserModel } = require('./schema/UserSchema');
+const { getSchemaSDL } = require('./schema/mcpSchema');
 const connectDatabase = require('./db');
 
 // MCP Protocol types
@@ -339,7 +340,7 @@ class HttpMCPServer {
           {
             uri,
             mimeType: 'application/graphql',
-            text: this.getSchemaSDL(),
+            text: getSchemaSDL(),
           },
         ],
       };
@@ -553,53 +554,6 @@ class HttpMCPServer {
       format: format,
       all_formats: format === 'dd-mm-yyyy' ? undefined : dateFormats,
     };
-  }
-
-  getSchemaSDL() {
-    return `
-# Routine Notes GraphQL Schema
-# This schema provides access to user routines, goals, and related data
-
-type Query {
-  # User queries
-  getUserTags: UserItem
-  showInvite: UserItem
-  getUsersByGroupId(groupId: String!): [UserItem]
-  
-  # Add other queries based on your actual resolvers...
-}
-
-type Mutation {
-  # User mutations
-  generateApiKey: UserItem
-  authGoogle(accessToken: String!, notificationId: String!): UserItem
-  
-  # Add other mutations based on your actual resolvers...
-}
-
-type UserItem {
-  name: String
-  email: String
-  picture: String
-  groupId: String
-  apiKey: String
-  token: String
-  notificationId: String
-  holidays: Int
-  inviterEmail: String
-  invitedEmail: String
-  needsOnboarding: Boolean
-  motto: [MottoItem]
-  tags: [String]
-}
-
-type MottoItem {
-  text: String
-  category: String
-}
-
-# Add other types based on your actual schema...
-`;
   }
 
   // Express server methods

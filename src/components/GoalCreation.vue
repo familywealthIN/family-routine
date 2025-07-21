@@ -226,6 +226,7 @@ import GoalTagsInput from './GoalTagsInput.vue';
 import TaskStatusTag from './TaskStatusTag.vue';
 import getJSON from '../utils/getJSON';
 import { USER_TAGS } from '../constants/settings';
+import eventBus, { EVENTS } from '../utils/eventBus';
 
 export default {
   components: {
@@ -513,6 +514,15 @@ export default {
             };
             this.$emit('add-update-goal-entry', goalItem, false);
             this.resetForm();
+
+            // Emit event to notify Dashboard about the new goal item
+            eventBus.$emit(EVENTS.GOAL_ITEM_CREATED, {
+              goalId: addGoalItem.id,
+              goalRef: this.newGoalItem.goalRef,
+              taskRef: this.newGoalItem.taskRef,
+              body: this.newGoalItem.body,
+            });
+            console.log('GoalCreation: Emitted GOAL_ITEM_CREATED event with ID:', addGoalItem.id);
           },
         })
         .catch(() => {
@@ -644,29 +654,11 @@ export default {
           mutation: gql`
             mutation updateGoalItemContribution(
               $id: ID!
-              $body: String!
-              $period: String!
-              $date: String!
-              $isMilestone: Boolean!
-              $deadline: String!
               $contribution: String!
-              $reward: String!
-              $taskRef: String!
-              $goalRef: String!
-              $tags: [String]
             ) {
-              updateGoalItem(
+              updateGoalItemContribution(
                 id: $id
-                body: $body
-                period: $period
-                date: $date
-                isMilestone: $isMilestone
-                deadline: $deadline
                 contribution: $contribution
-                reward: $reward
-                taskRef: $taskRef
-                goalRef: $goalRef
-                tags: $tags
               ) {
                 id
                 contribution
@@ -675,16 +667,7 @@ export default {
           `,
           variables: {
             id: this.newGoalItem.id,
-            body: this.newGoalItem.body,
-            period: this.newGoalItem.period,
-            date: this.newGoalItem.date,
-            isMilestone: this.newGoalItem.isMilestone || false,
-            deadline: this.newGoalItem.deadline || '',
             contribution: this.newGoalItem.contribution || '',
-            reward: this.newGoalItem.reward || '',
-            taskRef: this.newGoalItem.taskRef || '',
-            goalRef: this.newGoalItem.goalRef || '',
-            tags: this.newGoalItem.tags || [],
           },
         });
 
