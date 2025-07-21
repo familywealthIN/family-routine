@@ -22,6 +22,8 @@ type Query {
   dailyGoals(date: String!): [Goal]
   agendaGoals(date: String!): [Goal]
   goalDatePeriod(period: String!, date: String!): Goal
+  goalItem(id: ID!, date: String!, period: String!): GoalItem
+  goalItemById(id: ID!): GoalItem
   
   # Progress and analytics
   weeklyProgress(startDate: String!, endDate: String!): [Progress]
