@@ -823,6 +823,7 @@ export default {
               wait
               startEvent
               endEvent
+              tags
               steps {
                 name
               }

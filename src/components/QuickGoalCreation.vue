@@ -494,6 +494,18 @@ export default {
         };
       }
     },
+    'newGoalItem.taskRef': function watchNewGoalItemTaskRef(newTaskRef, oldTaskRef) {
+      if (newTaskRef !== oldTaskRef && newTaskRef && this.tasklist && this.tasklist.length > 0) {
+        const selectedTask = this.tasklist.find((task) => task.id === newTaskRef);
+        if (selectedTask && selectedTask.tags && selectedTask.tags.length > 0) {
+          // Merge existing tags with routine item tags, avoiding duplicates
+          const existingTags = this.newGoalItem.tags || [];
+          const routineTags = selectedTask.tags || [];
+          const mergedTags = [...new Set([...existingTags, ...routineTags])];
+          this.newGoalItem.tags = mergedTags;
+        }
+      }
+    },
     'newGoalItem.goalRef': function newGoalItemGoalRef(newVal, oldVal) {
       if (newVal !== oldVal) {
         // Refetch related goals when goalRef changes

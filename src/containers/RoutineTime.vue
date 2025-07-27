@@ -342,6 +342,7 @@ export default {
               ticked
               passed
               wait
+              tags
               stimuli {
                 name
                 splitRate
