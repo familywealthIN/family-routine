@@ -1,7 +1,12 @@
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 
-const { GOOGLE_CLIENT_ID, JWT_SECRET } = process.env;
+const {
+  GOOGLE_CLIENT_ID,
+  GA_CLIENT_ID,
+  GA_IOS_CLIENT_ID,
+  JWT_SECRET,
+} = process.env;
 
 // Initialize Google OAuth2 client
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
@@ -11,7 +16,11 @@ const verifyGoogleToken = async (token) => {
   try {
     const ticket = await googleClient.verifyIdToken({
       idToken: token,
-      audience: GOOGLE_CLIENT_ID,
+      audience: [
+        GOOGLE_CLIENT_ID,
+        GA_CLIENT_ID,
+        GA_IOS_CLIENT_ID,
+      ], // Support both Google and GA client IDs
     });
     return ticket.getPayload();
   } catch (error) {
