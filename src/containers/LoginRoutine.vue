@@ -110,7 +110,7 @@ export default {
             throw new Error('Authentication data missing from sign in result');
           }
           
-          const accessToken = result.authentication.accessToken;
+          const accessToken = result.authentication.idToken;
           const notificationId = getSessionItem(GC_NOTIFICATION_TOKEN) || '';
           console.log('Access Token:', accessToken);
           //console.log('Notification ID:', notificationId);
