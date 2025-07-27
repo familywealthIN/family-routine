@@ -38,14 +38,15 @@ export default {
   data() {
     return {
       tag: '',
+      addGoalItemDialog: false, 
     };
   },
   computed: {
     tags() {
-      return mapTagItems(this.goalTags);
+      return mapTagItems(this.goalTags || []);
     },
     filteredItems() {
-      return mapTagItems(this.userTags).filter(
+      return mapTagItems(this.userTags || []).filter(
         (i) => i.text.toLowerCase().indexOf(this.tag.toLowerCase()) !== -1,
       );
     },

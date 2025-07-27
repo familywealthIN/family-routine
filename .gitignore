@@ -1,6 +1,7 @@
 .DS_Store
 node_modules
 /dist
+android/
 
 # local env files
 .env.local
@@ -26,3 +27,6 @@ serviceAccountKey.json
 .env
 .serverless
 secrets.json
+
+ios
+android
