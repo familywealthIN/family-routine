@@ -96,6 +96,22 @@ loadData().then(() => {
   const cache = new InMemoryCache();
 
   const errorLink = onError(({ graphQLErrors, networkError }) => {
+    // Check for GraphQL errors with 401: prefix
+    if (graphQLErrors) {
+      graphQLErrors.forEach((error) => {
+        if (error.message && error.message.startsWith('401:')) {
+          console.log('Authentication error detected, redirecting to login...');
+          // Clear any stored tokens
+          localStorage.removeItem(GC_AUTH_TOKEN);
+          localStorage.removeItem(GC_USER_NAME);
+          localStorage.removeItem(GC_USER_EMAIL);
+          localStorage.removeItem(GC_PICTURE);
+          // Redirect to login page
+          router.push('/');
+        }
+      });
+    }
+
     if (networkError) {
       redirectOnError(router, networkError.statusCode);
       // Add something like this to set the error message to the one from the server response

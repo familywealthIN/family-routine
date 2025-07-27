@@ -211,7 +211,7 @@ export default {
               name
               email
               picture
-              isNew
+              needsOnboarding
               token
               tags
             }
@@ -223,7 +223,7 @@ export default {
         },
         update: async (store, { data: { authGoogle } }) => {
           const {
-            name, email, picture, token, isNew, tags = []
+            name, email, picture, token, needsOnboarding, tags = []
           } = authGoogle;
           
           if(this.isNative){
@@ -251,7 +251,7 @@ export default {
           
           this.$root.$data.picture = getSessionItem(GC_PICTURE);
 
-          if (isNew) {
+          if (needsOnboarding) {
             this.$router.push('wizard');
           } else {
             this.$router.push('home');

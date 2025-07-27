@@ -32,7 +32,10 @@ class MCPHttpBridge {
       try {
         const message = JSON.parse(line);
         const response = await this.handleMessage(message);
-        console.log(JSON.stringify(response));
+        // Only send response if it's not null (notifications return null)
+        if (response !== null) {
+          console.log(JSON.stringify(response));
+        }
       } catch (error) {
         console.error(JSON.stringify({
           jsonrpc: '2.0',
@@ -108,9 +111,30 @@ class MCPHttpBridge {
         };
       }
 
-      // Handle notifications
-      if (method === 'notifications/initialized') {
-        return null; // No response for notifications
+      // Handle notifications (can come with or without id)
+      if (method.startsWith('notifications/')) {
+        // Notifications don't require a response in JSON-RPC
+        return null;
+      }
+
+      // Handle tools/list request
+      if (method === 'tools/list') {
+        const result = await this.forwardToHttpServer(method, params);
+        return {
+          jsonrpc: '2.0',
+          result: result || { tools: [] },
+          id,
+        };
+      }
+
+      // Handle resources/list request
+      if (method === 'resources/list') {
+        const result = await this.forwardToHttpServer(method, params);
+        return {
+          jsonrpc: '2.0',
+          result: result || { resources: [] },
+          id,
+        };
       }
 
       // Forward other requests to HTTP server
@@ -146,7 +170,7 @@ class MCPHttpBridge {
       const options = {
         hostname: url.hostname,
         port: url.port || 80,
-        path: `${url.pathname}/call`,
+        path: url.pathname === '/mcp' ? '/mcp/call' : `${url.pathname}/call`,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

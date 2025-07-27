@@ -10,4 +10,5 @@ export const EVENTS = {
   GOALS_SAVED: 'goals-saved',
   GOAL_UPDATED: 'goal-updated',
   GOAL_DELETED: 'goal-deleted',
+  GOAL_ITEM_CREATED: 'goal-item-created',
 };

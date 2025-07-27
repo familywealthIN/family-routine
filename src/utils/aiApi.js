@@ -565,9 +565,91 @@ Respond ONLY with valid JSON in this exact format:
   }
 }
 
+async function enhanceRoutineItemWithAI(routineItem) {
+  if (!process.env.GEMINI_API_KEY) {
+    console.warn('GEMINI_API_KEY not found, returning routine item without AI enhancement');
+    return routineItem;
+  }
+
+  const prompt = `Enhance this routine item with a helpful description and specific steps.
+
+Routine Item: ${JSON.stringify(routineItem)}
+
+Please respond with ONLY a JSON object in this exact format:
+{
+  "description": "A motivating 1-2 sentence description of this routine and its benefits",
+  "steps": [
+    {"name": "Step 1 description"},
+    {"name": "Step 2 description"},
+    {"name": "Step 3 description"}
+  ]
+}
+
+Guidelines:
+- Description should be motivating and highlight benefits
+- Include 3-5 practical steps that break down the routine
+- Keep steps concise but actionable
+- Consider the time of day and routine type
+- Focus on practical execution`;
+
+  try {
+    const response = await fetch(GEMINI_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': process.env.GEMINI_API_KEY,
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt,
+          }],
+        }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API Error Response:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    const data = await response.json();
+    let responseText = data.candidates[0].content.parts[0].text.trim();
+
+    // Extract JSON from response
+    if (responseText.includes('```json')) {
+      responseText = responseText.split('```json')[1].split('```')[0].trim();
+    } else if (responseText.includes('```')) {
+      responseText = responseText.split('```')[1].split('```')[0].trim();
+    }
+
+    const enhancement = JSON.parse(responseText);
+
+    return {
+      ...routineItem,
+      description: enhancement.description,
+      steps: enhancement.steps || [],
+    };
+  } catch (error) {
+    console.error('Error enhancing routine item with AI:', error);
+    // Return original item with fallback content
+    return {
+      ...routineItem,
+      description: `A ${routineItem.name.toLowerCase()} routine to help you build healthy habits.`,
+      steps: [
+        { name: 'Prepare your space and materials' },
+        { name: `Complete your ${routineItem.name.toLowerCase()} activity` },
+        { name: 'Reflect on your progress' },
+      ],
+    };
+  }
+}
+
 module.exports = {
   getSummaryFromGoalItems,
   getNextStepsFromGoalItems,
   generateMilestonePlan,
   extractTaskFromNaturalLanguage,
+  enhanceRoutineItemWithAI,
 };

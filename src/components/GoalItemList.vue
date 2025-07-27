@@ -35,7 +35,22 @@
             {{ getSubTasksProgress(goalItem.subTasks) }}
           </div>
         </v-list-tile-action>
-        <v-list-tile-action v-if="editMode">
+
+        <!-- Edit button for week and month goals -->
+        <v-list-tile-action v-if="editMode && (goal.period === 'week' || goal.period === 'month')">
+          <v-btn
+            flat
+            icon
+            :disabled="passive"
+            @click="editGoalItem(goalItem, goal.period, goal.date)"
+            :title="`Edit ${goal.period} goal`"
+          >
+            <v-icon>edit</v-icon>
+          </v-btn>
+        </v-list-tile-action>
+
+        <!-- Edit button for other periods (original behavior) -->
+        <v-list-tile-action v-else-if="editMode">
           <v-btn
             flat
             icon
@@ -45,11 +60,26 @@
             <v-icon>edit</v-icon>
           </v-btn>
         </v-list-tile-action>
+
         <v-list-tile-action v-if="lastCompleteItemId === goalItem.id && animateEntry">
           <div style="width: 150px">
             <streak-checks :progress="progress || 0" :animate="true"></streak-checks>
           </div>
         </v-list-tile-action>
+
+        <!-- Delete button - always show for week and month when not animating -->
+        <v-list-tile-action v-else-if="goal.period === 'week' || goal.period === 'month'">
+          <v-btn
+            flat
+            icon
+            :disabled="passive"
+            @click="deleteGoalItem(i, goal.period, goal.date)"
+          >
+            <v-icon>delete</v-icon>
+          </v-btn>
+        </v-list-tile-action>
+
+        <!-- Delete button for other periods (original behavior) -->
         <v-list-tile-action v-else>
           <v-btn
             flat
@@ -484,5 +514,14 @@ export default {
 
   .subtask-title.completed {
     color: #90a4ae !important;
+  }
+
+  /* Week and month goal action buttons styling */
+  .v-list__tile .v-btn--icon.primary--text {
+    background-color: rgba(33, 150, 243, 0.1);
+  }
+
+  .v-list__tile .v-btn--icon.primary--text:hover {
+    background-color: rgba(33, 150, 243, 0.2);
   }
 </style>

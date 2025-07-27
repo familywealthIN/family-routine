@@ -91,6 +91,7 @@ import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 import getJSON from '../utils/getJSON';
 import GoalTagsInput from './GoalTagsInput.vue';
 import { USER_TAGS } from '../constants/settings';
+import eventBus, { EVENTS } from '../utils/eventBus';
 
 export default {
   components: {
@@ -356,6 +357,15 @@ export default {
             this.newGoalItem = { ...this.defaultGoalItem };
             this.$emit('start-quick-goal-task', task);
             this.buttonLoading = false;
+
+            // Emit event to notify Dashboard about the new goal item
+            eventBus.$emit(EVENTS.GOAL_ITEM_CREATED, {
+              goalId: addGoalItem.id,
+              goalRef: addGoalItem.goalRef,
+              taskRef: addGoalItem.taskRef,
+              body: addGoalItem.body,
+            });
+            console.log('QuickGoalCreation: Emitted GOAL_ITEM_CREATED event with ID:', addGoalItem.id);
           },
         })
         .catch(() => {
