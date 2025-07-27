@@ -27,3 +27,6 @@ serviceAccountKey.json
 .env
 .serverless
 secrets.json
+
+ios
+android
