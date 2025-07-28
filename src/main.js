@@ -24,8 +24,12 @@ import {
 import redirectOnError from './utils/redirectOnError';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
+import analytics, { AnalyticsPlugin } from './utils/analytics';
 
 Vue.config.productionTip = false;
+
+// Install Analytics plugin
+Vue.use(AnalyticsPlugin);
 
 // localStorage.__proto__ = Object.create(Storage.prototype);
 // localStorage.__proto__.setItem = function () {
@@ -60,10 +64,18 @@ loadData().then(() => {
   // Cache implementation
   const cache = new InMemoryCache();
 
-  const errorLink = onError(({ graphQLErrors, networkError }) => {
-    // Check for GraphQL errors with 401: prefix
+  const errorLink = onError(({
+    graphQLErrors, networkError, operation,
+  }) => {
+    // Track GraphQL errors with analytics
     if (graphQLErrors) {
       graphQLErrors.forEach((error) => {
+        analytics.trackError(error, {
+          error_type: 'graphql_error',
+          operation_name: operation.operationName,
+          operation_type: operation.query.definitions[0].operation,
+        });
+
         if (error.message && error.message.startsWith('401:')) {
           console.log('Authentication error detected, redirecting to login...');
           // Clear any stored tokens
@@ -78,6 +90,12 @@ loadData().then(() => {
     }
 
     if (networkError) {
+      analytics.trackError(networkError, {
+        error_type: 'network_error',
+        operation_name: operation.operationName,
+        status_code: networkError.statusCode,
+      });
+
       redirectOnError(router, networkError.statusCode);
       // Add something like this to set the error message to the one from the server response
       if (Array.isArray(graphQLErrors) && graphQLErrors[0]) {
