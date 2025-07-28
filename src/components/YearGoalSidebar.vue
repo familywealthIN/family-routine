@@ -24,7 +24,7 @@
           </v-list-tile-title>
         </v-list-tile-content>
       </v-list-tile>
-      
+
       <!-- Show message when no goals exist -->
       <v-list-tile v-if="!yearGoals.length">
         <v-list-tile-content>
@@ -33,7 +33,7 @@
           </v-list-tile-title>
         </v-list-tile-content>
       </v-list-tile>
-      
+
       <v-list-tile to="/goals">
           <v-list-tile-action>
             <v-icon>list</v-icon>

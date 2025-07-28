@@ -245,7 +245,7 @@ export default {
           if (!a.time && !b.time) return 0;
           if (!a.time) return 1; // Move items without time to the end
           if (!b.time) return -1; // Move items without time to the end
-          
+
           const [aHours, aMinutes] = a.time.split(':');
           const [bHours, bMinutes] = b.time.split(':');
 
@@ -270,7 +270,7 @@ export default {
       try {
         const groupedGoalItems = [];
         let currentTaskRef = '';
-        
+
         // Validate input
         if (!goalItems || !Array.isArray(goalItems)) {
           this.trackError('group_goal_items_invalid_input', new Error('Invalid goalItems input'), {
@@ -314,7 +314,7 @@ export default {
           if (goalItem.taskRef !== currentTaskRef) {
             currentTaskRef = goalItem.taskRef;
             const selectedTask = this.tasklist.find((task) => task.id === currentTaskRef);
-            
+
             if (selectedTask && selectedTask.name) {
               groupedGoalItems.push({ header: selectedTask.name });
             } else {
@@ -385,7 +385,7 @@ export default {
       if (newVal !== oldVal) {
         // Find the selected task and get its tags
         const selectedTask = this.tasklist ? this.tasklist.find((task) => task.id === newVal) : null;
-        
+
         if (newVal && !selectedTask) {
           // Track when selected task reference doesn't exist in tasklist
           this.trackBusinessEvent('selected_task_not_found', {
@@ -394,7 +394,7 @@ export default {
             component: 'GoalList',
           });
         }
-        
+
         const taskTags = selectedTask && selectedTask.tags ? [...selectedTask.tags] : [];
 
         this.newGoalItem = {

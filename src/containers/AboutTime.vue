@@ -6,15 +6,15 @@
     <v-card-text>
       <h2>About Family Routine</h2>
       <p>
-        Family Routine is a comprehensive productivity and habit-tracking application designed to help individuals and families 
-        build sustainable daily routines, achieve meaningful goals, and track their progress over time. Our platform combines 
+        Family Routine is a comprehensive productivity and habit-tracking application designed to help individuals and families
+        build sustainable daily routines, achieve meaningful goals, and track their progress over time. Our platform combines
         time-based routine management with goal-setting capabilities to create a holistic approach to personal development.
       </p>
-      
+
       <h2>Daily Routines</h2>
       <p>
-        Our routine system is built around time-sensitive activities that encourage punctuality and consistency. Each routine 
-        item becomes available for completion when you're close to its scheduled time, promoting timely execution of your daily 
+        Our routine system is built around time-sensitive activities that encourage punctuality and consistency. Each routine
+        item becomes available for completion when you're close to its scheduled time, promoting timely execution of your daily
         tasks. This innovative approach helps you build better time management habits by:
       </p>
       <ul>
@@ -23,10 +23,10 @@
         <li>Automatically disabling missed routines after 30 minutes to maintain accountability</li>
         <li>Tracking punctuality and providing performance insights</li>
       </ul>
-      
+
       <h2>Goal Management</h2>
       <p>
-        Set and track goals across multiple time horizons - daily, weekly, monthly, yearly, and lifetime objectives. 
+        Set and track goals across multiple time horizons - daily, weekly, monthly, yearly, and lifetime objectives.
         Our intelligent goal system allows you to:
       </p>
       <ul>
@@ -36,7 +36,7 @@
         <li><strong>Track progress analytics:</strong> Monitor your efficiency and success rates over time</li>
         <li><strong>Build sustainable habits:</strong> Create lasting change through structured, measurable actions</li>
       </ul>
-      
+
       <h2>Key Features</h2>
       <ul>
         <li><strong>Smart Time Management:</strong> Time-based routine activation for optimal scheduling</li>
@@ -46,11 +46,11 @@
         <li><strong>Data Security:</strong> Advanced encryption to protect your personal information</li>
         <li><strong>Cross-Platform:</strong> Accessible on desktop and mobile devices</li>
       </ul>
-      
+
       <h2>Getting Started</h2>
       <p>
-        Begin by setting up your daily routines with specific times, then create goals that align with your personal or family 
-        objectives. Link your routines to your goals where applicable, and start building the habits that will lead to lasting 
+        Begin by setting up your daily routines with specific times, then create goals that align with your personal or family
+        objectives. Link your routines to your goals where applicable, and start building the habits that will lead to lasting
         success. Monitor your progress through our analytics dashboard and adjust your approach as needed.
       </p>
     </v-card-text>

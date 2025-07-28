@@ -355,7 +355,7 @@ export default {
               tags: [...this.newGoalItem.tags],
             });
             const task = this.tasklist ? this.tasklist.find((taskItem) => taskItem.id === this.newGoalItem.taskRef) : null;
-            
+
             if (!task && this.newGoalItem.taskRef) {
               // Track when task reference doesn't exist
               this.trackBusinessEvent('add_goal_item_missing_task', {
@@ -363,7 +363,7 @@ export default {
                 component: 'QuickGoalCreation',
               });
             }
-            
+
             this.newGoalItem = { ...this.defaultGoalItem };
             this.$emit('start-quick-goal-task', task);
             this.buttonLoading = false;
@@ -395,7 +395,7 @@ export default {
           if (!a.time && !b.time) return 0;
           if (!a.time) return 1; // Move items without time to the end
           if (!b.time) return -1; // Move items without time to the end
-          
+
           const [aHours, aMinutes] = a.time.split(':');
           const [bHours, bMinutes] = b.time.split(':');
 
@@ -420,7 +420,7 @@ export default {
       try {
         const groupedGoalItems = [];
         let currentTaskRef = '';
-        
+
         // Validate input
         if (!goalItems || !Array.isArray(goalItems)) {
           this.trackError('group_goal_items_invalid_input', new Error('Invalid goalItems input'), {
@@ -468,7 +468,7 @@ export default {
           if (goalItem.taskRef !== currentTaskRef) {
             currentTaskRef = goalItem.taskRef;
             const selectedTask = this.tasklist ? this.tasklist.find((task) => task.id === currentTaskRef) : null;
-            
+
             if (selectedTask && selectedTask.name) {
               groupedGoalItems.push({ header: selectedTask.name });
             } else {
@@ -544,7 +544,7 @@ export default {
       if (newVal !== oldVal) {
         // Find the selected task and get its tags
         const selectedTask = this.tasklist ? this.tasklist.find((task) => task.id === newVal) : null;
-        
+
         if (newVal && !selectedTask) {
           // Track when selected task reference doesn't exist in tasklist
           this.trackBusinessEvent('selected_task_not_found', {
@@ -553,7 +553,7 @@ export default {
             component: 'QuickGoalCreation',
           });
         }
-        
+
         const taskTags = selectedTask && selectedTask.tags ? [...selectedTask.tags] : [];
 
         this.newGoalItem = {
@@ -582,7 +582,7 @@ export default {
     'newGoalItem.taskRef': function watchNewGoalItemTaskRef(newTaskRef, oldTaskRef) {
       if (newTaskRef !== oldTaskRef && newTaskRef && this.tasklist && this.tasklist.length > 0) {
         const selectedTask = this.tasklist.find((task) => task.id === newTaskRef);
-        
+
         if (!selectedTask) {
           // Track when task reference doesn't exist
           this.trackBusinessEvent('watch_task_ref_not_found', {
@@ -590,7 +590,7 @@ export default {
             component: 'QuickGoalCreation',
           });
         }
-        
+
         if (selectedTask && selectedTask.tags && selectedTask.tags.length > 0) {
           // Merge existing tags with routine item tags, avoiding duplicates
           const existingTags = this.newGoalItem.tags || [];
