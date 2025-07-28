@@ -1,7 +1,6 @@
 <template>
   <div>
     <v-list-group
-      v-if="yearGoals.length"
       prepend-icon="assignment"
       :value="false"
     >
@@ -25,14 +24,24 @@
           </v-list-tile-title>
         </v-list-tile-content>
       </v-list-tile>
-        <v-list-tile to="/goals">
-            <v-list-tile-action>
-              <v-icon>list</v-icon>
-            </v-list-tile-action>
-            <v-list-tile-content>
-              <v-list-tile-title>All Goals</v-list-tile-title>
-            </v-list-tile-content>
-        </v-list-tile>
+      
+      <!-- Show message when no goals exist -->
+      <v-list-tile v-if="!yearGoals.length">
+        <v-list-tile-content>
+          <v-list-tile-title class="no-goals-message">
+            No goals created yet
+          </v-list-tile-title>
+        </v-list-tile-content>
+      </v-list-tile>
+      
+      <v-list-tile to="/goals">
+          <v-list-tile-action>
+            <v-icon>list</v-icon>
+          </v-list-tile-action>
+          <v-list-tile-content>
+            <v-list-tile-title>All Goals</v-list-tile-title>
+          </v-list-tile-content>
+      </v-list-tile>
     </v-list-group>
   </div>
 </template>
@@ -116,5 +125,10 @@ export default {
   font-size: 0.85em;
   color: rgba(0, 0, 0, 0.6);
   margin-left: 8px;
+}
+.no-goals-message {
+  font-size: 0.9em;
+  color: rgba(0, 0, 0, 0.5) !important;
+  font-style: italic;
 }
 </style>

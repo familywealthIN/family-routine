@@ -629,7 +629,7 @@ Guidelines:
     return {
       ...routineItem,
       description: enhancement.description,
-      steps: enhancement.steps || [],
+      // steps: enhancement.steps || [],
     };
   } catch (error) {
     console.error('Error enhancing routine item with AI:', error);
@@ -637,11 +637,11 @@ Guidelines:
     return {
       ...routineItem,
       description: `A ${routineItem.name.toLowerCase()} routine to help you build healthy habits.`,
-      steps: [
-        { name: 'Prepare your space and materials' },
-        { name: `Complete your ${routineItem.name.toLowerCase()} activity` },
-        { name: 'Reflect on your progress' },
-      ],
+      // steps: [
+      //   { name: 'Prepare your space and materials' },
+      //   { name: `Complete your ${routineItem.name.toLowerCase()} activity` },
+      //   { name: 'Reflect on your progress' },
+      // ],
     };
   }
 }
