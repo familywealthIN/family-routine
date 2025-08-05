@@ -174,7 +174,20 @@ export default {
   },
   methods: {
     getCard(cardId) {
-      return this.progress ? this.progress.cards.find((card) => card && card.id === cardId) : [];
+      if (!this.progress || !this.progress.cards) {
+        return {
+          id: cardId,
+          name: 'Loading...',
+          value: 0,
+        };
+      }
+
+      const foundCard = this.progress.cards.find((card) => card && card.id === cardId);
+      return foundCard || {
+        id: cardId,
+        name: 'No Data',
+        value: 0,
+      };
     },
     getStartOf(p) {
       return moment(this.date, 'DD-MM-YYYY').startOf(p).format('DD-MM-YYYY');

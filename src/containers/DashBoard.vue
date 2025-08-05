@@ -767,6 +767,7 @@ import gql from 'graphql-tag';
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 import { defaultGoalItem } from '../constants/goals';
 import eventBus, { EVENTS } from '../utils/eventBus';
+import { MeasurementMixin } from '../utils/measurementMixins';
 
 import GoalList from '../components/GoalList.vue';
 import TimelineItemList from '../components/TimelineItemList.vue';
@@ -794,6 +795,8 @@ function weekOfMonth(d) {
 }
 
 export default {
+  name: 'DashBoard',
+  mixins: [MeasurementMixin],
   components: {
     GoalList,
     GoalItemList,
@@ -823,6 +826,7 @@ export default {
               wait
               startEvent
               endEvent
+              tags
               steps {
                 name
               }
@@ -986,6 +990,8 @@ export default {
       pendingEvents: [],
       // Track created goal IDs per routine item for placeholder replacement
       routineGoalIds: {}, // { routineItemId: goalId }
+      // Analytics: Track component mount time for session duration
+      mountTime: Date.now(),
     };
   },
   watch: {
@@ -1021,6 +1027,17 @@ export default {
       }
     },
 
+    // Track goal period changes
+    currentGoalPeriod(newPeriod, oldPeriod) {
+      if (newPeriod !== oldPeriod && oldPeriod) {
+        this.trackUserInteraction('goal_period_change', 'button_toggle', {
+          from_period: oldPeriod,
+          to_period: newPeriod,
+          selected_task_ref: this.selectedTaskRef,
+        });
+      }
+    },
+
     // Update global current task store when local currentTask changes
     currentTask: {
       handler(newTask, oldTask) {
@@ -1050,6 +1067,14 @@ export default {
     },
   },
   mounted() {
+    // Track component mount for analytics
+    this.trackPageView('dashboard');
+    this.trackUserInteraction('component_mounted', 'lifecycle', {
+      component: 'DashBoard',
+      user_email: this.$root.$data.email || 'anonymous',
+      goal_period: this.currentGoalPeriod,
+    });
+
     // Set up global event listeners for refetching data
     eventBus.$on(EVENTS.REFETCH_DAILY_GOALS, this.handleRefetchDailyGoals);
     eventBus.$on(EVENTS.TASK_CREATED, this.handleTaskCreated);
@@ -1059,6 +1084,12 @@ export default {
     console.log('DashBoard: Event listeners registered');
   },
   beforeDestroy() {
+    // Track component destruction for analytics
+    this.trackUserInteraction('component_destroyed', 'lifecycle', {
+      component: 'DashBoard',
+      session_duration: Date.now() - (this.mountTime || Date.now()),
+    });
+
     // Clean up event listeners to prevent memory leaks
     eventBus.$off(EVENTS.REFETCH_DAILY_GOALS, this.handleRefetchDailyGoals);
     eventBus.$off(EVENTS.TASK_CREATED, this.handleTaskCreated);
@@ -1534,6 +1565,20 @@ export default {
     },
     toggleGoalDetailsDialog(bool) {
       this.goalDetailsDialog = bool;
+
+      // Track goal dialog interactions
+      this.trackModalInteraction('goal_details_dialog', bool ? 'open' : 'close', {
+        current_goal_period: this.currentGoalPeriod,
+        selected_task_ref: this.selectedTaskRef,
+      });
+    },
+
+    // Helper method to get task status
+    getTaskStatus(task) {
+      if (task.ticked) return 'completed';
+      if (task.passed) return 'passed';
+      if (task.wait) return 'waiting';
+      return 'pending';
     },
     addNewDayRoutine() {
       this.isLoading = true;
@@ -1608,6 +1653,15 @@ export default {
     },
     checkDialogClick(e, task) {
       e.stopPropagation();
+
+      // Track user interaction
+      this.trackButtonClick('task_action_button', {
+        task_id: task.id,
+        task_name: task.name,
+        task_status: this.getTaskStatus(task),
+        has_goals: this.filterTaskGoalsPeriod(task.id, this.goals, 'day').length > 0,
+      });
+
       if (!task.passed && !task.wait && !task.ticked) {
         if (this.filterTaskGoalsPeriod(task.id, this.goals, 'day').length) {
           this.checkClick(task);
@@ -1616,13 +1670,30 @@ export default {
           this.quickTaskTitle = task.name;
           this.quickTaskDescription = task.description;
           this.quickTaskDialog = true;
+
+          // Track quick task dialog opening
+          this.trackModalInteraction('quick_task_dialog', 'open', {
+            task_id: task.id,
+            task_name: task.name,
+          });
         }
       }
     },
     checkClick(task) {
+      // Track task completion
+      this.trackTaskEvent('complete', {
+        id: task.id,
+        name: task.name,
+        time: task.time,
+        points: task.points,
+        ticked: true,
+      });
+
       this.quickTaskDialog = false;
       if (!task.passed && !task.wait && !task.ticked) {
         task.ticked = true;
+
+        const mutationStartTime = Date.now();
         this.$apollo
           .mutate({
             mutation: gql`
@@ -1642,7 +1713,16 @@ export default {
               ticked: task.ticked,
             },
           })
-          .then(() => this.$apollo.queries.tasklist.refetch())
+          .then(() => {
+            // Track mutation performance
+            this.trackMutationPerformance('tickRoutineItem', {
+              id: this.did,
+              taskId: task.id,
+              ticked: task.ticked,
+            }, mutationStartTime);
+
+            return this.$apollo.queries.tasklist.refetch();
+          })
           .then(() => {
             // Check for event execution after task state changes and refetch completes
             console.log('DashBoard: Tasklist refetch completed, checking events for task:', task.id);

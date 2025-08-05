@@ -8,6 +8,7 @@ const {
 } = require('../schema/AiSchema');
 const { GoalItemType } = require('../schema/GoalSchema');
 const { mutation: goalMutations } = require('./goal');
+const getEmailfromSession = require('../utils/getEmailfromSession');
 const {
   getSummaryFromGoalItems,
   getNextStepsFromGoalItems,
@@ -23,7 +24,10 @@ const query = {
         type: new GraphQLList(AiItemInput),
       },
     },
-    resolve: async (root, { items }) => {
+    resolve: async (root, { items }, context) => {
+      // Require authentication even for AI operations
+      getEmailfromSession(context);
+
       try {
         const description = await getSummaryFromGoalItems(items);
         return { description, nextSteps: null };
@@ -40,7 +44,10 @@ const query = {
         type: new GraphQLList(AiItemInput),
       },
     },
-    resolve: async (root, { items }) => {
+    resolve: async (root, { items }, context) => {
+      // Require authentication even for AI operations
+      getEmailfromSession(context);
+
       try {
         const nextSteps = await getNextStepsFromGoalItems(items);
         return { description: null, nextSteps };
@@ -60,7 +67,10 @@ const mutation = {
         type: new GraphQLNonNull(GraphQLString),
       },
     },
-    resolve: async (root, { query: userQuery }) => {
+    resolve: async (root, { query: userQuery }, context) => {
+      // Require authentication even for AI operations
+      getEmailfromSession(context);
+
       try {
         const plan = await generateMilestonePlan(userQuery);
         return plan;
@@ -82,7 +92,10 @@ const mutation = {
         type: new GraphQLNonNull(GraphQLString),
       },
     },
-    resolve: async (root, { query: text }) => {
+    resolve: async (root, { query: text }, context) => {
+      // Require authentication even for AI operations
+      getEmailfromSession(context);
+
       try {
         const extractedTask = await extractTaskFromNaturalLanguage(text);
         return extractedTask;

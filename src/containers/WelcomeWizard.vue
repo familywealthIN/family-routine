@@ -626,8 +626,10 @@
 
 <script>
 import gql from 'graphql-tag';
+import { MeasurementMixin } from '@/utils/measurementMixins';
 
 export default {
+  mixins: [MeasurementMixin],
   data() {
     return {
       currentStep: 1,
@@ -719,14 +721,37 @@ export default {
   methods: {
     nextStep() {
       if (this.currentStep < 5) {
+        // Track step progression
+        this.trackUserInteraction('onboarding_step_next', 'button_click', {
+          from_step: this.currentStep,
+          to_step: this.currentStep + 1,
+          step_name: this.getStepName(this.currentStep + 1),
+        });
         this.currentStep += 1;
       }
     },
 
     previousStep() {
       if (this.currentStep > 1) {
+        // Track step backward navigation
+        this.trackUserInteraction('onboarding_step_back', 'button_click', {
+          from_step: this.currentStep,
+          to_step: this.currentStep - 1,
+          step_name: this.getStepName(this.currentStep - 1),
+        });
         this.currentStep -= 1;
       }
+    },
+
+    getStepName(stepNumber) {
+      const stepNames = {
+        1: 'sleep_schedule',
+        2: 'work_hours',
+        3: 'morning_routine',
+        4: 'evening_activities',
+        5: 'complete_setup',
+      };
+      return stepNames[stepNumber] || 'unknown';
     },
 
     calculateSleepHours() {
@@ -857,14 +882,37 @@ export default {
       if (index > -1) {
         // Remove if already selected
         selectedArray.splice(index, 1);
+        this.trackUserInteraction('activity_deselected', 'checkbox_toggle', {
+          activity_type: type,
+          activity_id: activityId,
+          current_selections: selectedArray.length,
+          step: this.currentStep,
+        });
       } else {
         // Add if not selected
         selectedArray.push(activityId);
+        this.trackUserInteraction('activity_selected', 'checkbox_toggle', {
+          activity_type: type,
+          activity_id: activityId,
+          current_selections: selectedArray.length,
+          step: this.currentStep,
+        });
       }
     },
 
     async completeOnboarding() {
       this.creating = true;
+
+      // Track onboarding completion attempt
+      this.trackBusinessEvent('onboarding_completion_attempted', {
+        sleep_time: this.schedule.sleepTime,
+        wake_time: this.schedule.wakeTime,
+        work_start: this.schedule.workStart,
+        work_end: this.schedule.workEnd,
+        morning_activities_count: this.selectedMorningActivities.length,
+        evening_activities_count: this.selectedEveningActivities.length,
+        sleep_hours: this.calculateSleepHours(),
+      });
 
       try {
         // Create routine items with AI enhancement
@@ -881,6 +929,21 @@ export default {
           `,
         });
 
+        // Track successful onboarding completion
+        this.trackBusinessEvent('onboarding_completed', {
+          created_items_count: createdItems.length,
+          total_steps_completed: 5,
+          sleep_hours: this.calculateSleepHours(),
+          work_hours: this.calculateWorkHours(),
+        });
+
+        // Track navigation to dashboard
+        this.trackUserInteraction('onboarding_complete_redirect', 'navigation', {
+          from_page: 'wizard',
+          to_page: 'home',
+          items_created: createdItems.length,
+        });
+
         // Redirect to home page
         this.$router.push('/home');
 
@@ -891,6 +954,14 @@ export default {
         });
       } catch (error) {
         console.error('Error creating routine:', error);
+
+        // Track onboarding failure
+        this.trackError('onboarding_completion_error', error, {
+          step: 'complete_setup',
+          has_morning_activities: this.selectedMorningActivities.length > 0,
+          has_evening_activities: this.selectedEveningActivities.length > 0,
+        });
+
         this.$store.dispatch('showSnackbar', {
           message: 'Error creating routine. Please try again.',
           color: 'error',
@@ -910,7 +981,7 @@ export default {
         type: 'sleep',
         points: 20,
         duration: 0,
-        tags: ['onboarding', 'sleep'],
+        tags: ['time:sleep'],
       });
 
       routineItems.push({
@@ -919,7 +990,7 @@ export default {
         type: 'wake',
         points: 30,
         duration: 5,
-        tags: ['onboarding', 'morning'],
+        tags: ['time:morning'],
       });
 
       // Create morning routine items
@@ -934,7 +1005,7 @@ export default {
           type: 'morning',
           points: activity.points,
           duration: activity.duration,
-          tags: ['onboarding', 'morning'],
+          tags: ['time:morning'],
         });
         currentTime += activity.duration;
       });
@@ -946,7 +1017,7 @@ export default {
         type: 'work',
         points: 25,
         duration: 0,
-        tags: ['onboarding', 'work'],
+        tags: ['time:work'],
       });
 
       // Create evening routine items
@@ -961,7 +1032,7 @@ export default {
           type: 'evening',
           points: activity.points,
           duration: activity.duration,
-          tags: ['onboarding', 'evening'],
+          tags: ['time:evening'],
         });
         eveningTime += activity.duration;
       });
@@ -1146,6 +1217,17 @@ export default {
 
       return `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
     },
+  },
+  mounted() {
+    // Track wizard page view
+    this.trackPageView('onboarding_wizard');
+
+    // Track onboarding start
+    this.trackBusinessEvent('onboarding_started', {
+      user_type: 'new_user',
+      entry_step: this.currentStep,
+      source: 'login_redirect',
+    });
   },
 };
 </script>

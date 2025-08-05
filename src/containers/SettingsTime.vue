@@ -4,7 +4,12 @@
 <template>
   <container-box :isLoading="$apollo.queries.routineItems.loading">
     <v-card dark flat class="image-card">
-      <v-btn absolute bottom color="info" right fab @click="dialog = true">
+      <v-btn absolute bottom color="info" right fab @click="() => {
+        trackUserInteraction('add_routine_item_dialog_open', 'button_click', {
+          current_items_count: routineItems.length,
+        });
+        dialog = true;
+      }">
         <v-icon>add</v-icon>
       </v-btn>
       <v-container class="py-4">
@@ -129,6 +134,7 @@
 <script>
 /* eslint-disable max-len */
 import gql from 'graphql-tag';
+import { MeasurementMixin } from '@/utils/measurementMixins';
 
 import ContainerBox from '../components/ContainerBox.vue';
 import draggable from 'vuedraggable';
@@ -137,6 +143,7 @@ import GoalTagsInput from '../components/GoalTagsInput.vue';
 import getJSON from '../utils/getJSON';
 
 export default {
+  mixins: [MeasurementMixin],
   components: { ContainerBox, draggable, CircadianCycle, GoalTagsInput },
   apollo: {
     routineItems: {
@@ -181,7 +188,6 @@ export default {
         startEvent: '',
         endEvent: '',
         tags: [],
-        userTags: getJSON(localStorage.getItem('userTags'), []),
       },
       defaultItem: {
         id: '',
@@ -235,6 +241,7 @@ export default {
           sortable: false,
         },
       ],
+      userTags: getJSON(localStorage.getItem('userTags'), []),
     };
   },
   computed: {
@@ -274,12 +281,32 @@ export default {
       this.editedIndex = this.routineItems.indexOf(item);
       this.editedItem = { ...item };
       this.dialog = true;
+
+      // Track routine item edit
+      this.trackUserInteraction('routine_item_edit_opened', 'button_click', {
+        item_id: item.id,
+        item_name: item.name,
+        has_steps: item.steps && item.steps.length > 0,
+        steps_count: item.steps ? item.steps.length : 0,
+      });
     },
 
     deleteItem(item) {
       const index = this.routineItems.indexOf(item);
       if (confirm('Are you sure you want to delete this item?')) {
+        // Track routine item deletion
+        this.trackUserInteraction('routine_item_delete_confirmed', 'button_click', {
+          item_id: item.id,
+          item_name: item.name,
+          has_steps: item.steps && item.steps.length > 0,
+          steps_count: item.steps ? item.steps.length : 0,
+        });
         this.deleteRoutineItem(item, index);
+      } else {
+        // Track deletion cancellation
+        this.trackUserInteraction('routine_item_delete_cancelled', 'dialog_cancel', {
+          item_id: item.id,
+        });
       }
     },
 
@@ -340,6 +367,19 @@ export default {
 
     addRoutineItem() {
       const item = this.editedItem;
+
+      // Track routine item creation
+      this.trackBusinessEvent('routine_item_created', {
+        item_name: item.name,
+        has_description: !!item.description,
+        time: item.time,
+        points: Number(item.points),
+        steps_count: item.steps ? item.steps.length : 0,
+        has_start_event: !!item.startEvent,
+        has_end_event: !!item.endEvent,
+        tags_count: item.tags ? item.tags.length : 0,
+      });
+
       this.$apollo.mutate({
         mutation: gql`
           mutation addRoutineItem(
@@ -388,6 +428,12 @@ export default {
           tags: item.tags || [],
         },
         update: () => {
+          // Track successful routine item creation
+          this.trackBusinessEvent('routine_item_creation_success', {
+            item_name: item.name,
+            total_items: this.routineItems.length + 1,
+          });
+
           // Refetch the routineItems query to ensure data consistency
           this.$apollo.queries.routineItems.refetch();
           this.buttonLoading = false;
@@ -395,6 +441,12 @@ export default {
           this.resetEditItem();
         },
       }).catch((error) => {
+          // Track routine item creation error
+          this.trackError('routine_item_creation_error', error, {
+            item_name: item.name,
+            steps_count: item.steps ? item.steps.length : 0,
+          });
+
           this.resetEditItem();
           this.buttonLoading = false;
           this.close(false);
@@ -493,6 +545,15 @@ export default {
           });
         });
     },
+  },
+  mounted() {
+    // Track settings page view
+    this.trackPageView('routine_settings');
+
+    // Track settings page access
+    this.trackUserInteraction('settings_page_accessed', 'navigation', {
+      routine_items_count: this.routineItems ? this.routineItems.length : 0,
+    });
   },
 };
 </script>

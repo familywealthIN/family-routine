@@ -102,6 +102,7 @@ export default {
               ticked
               passed
               wait
+              tags
             }
           }
         }
