@@ -1,15 +1,23 @@
 <template>
   <v-card>
     <div>
-      <h1 class="text-xs-center" style="font-size: 48px; line-height: 1;">{{ details.value }}</h1>
-      <div class="text-xs-center" style="color: #777">{{ details && details.name || 'dummy' }}</div>
+      <h1 class="text-xs-center" style="font-size: 48px; line-height: 1;">{{ details && details.value || '0' }}</h1>
+      <div class="text-xs-center" style="color: #777">{{ details && details.name || 'Loading...' }}</div>
     </div>
   </v-card>
 </template>
 
 <script>
 export default {
-  props: ['details'],
+  props: {
+    details: {
+      type: Object,
+      default: () => ({
+        value: 0,
+        name: 'Loading...',
+      }),
+    },
+  },
 };
 </script>
 

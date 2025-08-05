@@ -252,6 +252,7 @@ export default {
               ticked
               passed
               wait
+              tags
             }
           }
         }
@@ -724,6 +725,20 @@ export default {
       this.autoSaveTimeout = setTimeout(() => {
         this.autoSaveContribution();
       }, 2000);
+    },
+
+    // Watch for taskRef changes to auto-fill tags
+    'newGoalItem.taskRef': function watchTaskRef(newTaskRef, oldTaskRef) {
+      if (newTaskRef !== oldTaskRef && newTaskRef && this.tasklist && this.tasklist.length > 0) {
+        const selectedTask = this.tasklist.find((task) => task.id === newTaskRef);
+        if (selectedTask && selectedTask.tags && selectedTask.tags.length > 0) {
+          // Merge existing tags with routine item tags, avoiding duplicates
+          const existingTags = this.newGoalItem.tags || [];
+          const routineTags = selectedTask.tags || [];
+          const mergedTags = [...new Set([...existingTags, ...routineTags])];
+          this.newGoalItem.tags = mergedTags;
+        }
+      }
     },
 
     // Watch for user email changes (indicates login/logout)
