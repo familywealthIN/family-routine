@@ -1,7 +1,17 @@
 {
   "name": "Routine Notes",
   "short_name": "Routine Notes",
-  "theme_color": "#FFFFFF",
+  "description": "A family routine management app to help organize daily tasks and goals",
+  "theme_color": "#1976d2",
+  "background_color": "#FFFFFF",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "start_url": "/?source=pwa",
+  "categories": [
+    "productivity",
+    "lifestyle"
+  ],
   "icons": [
     {
       "src": "./img/icons/android-chrome-192x192.png",
@@ -26,8 +36,5 @@
       "purpose": "maskable"
     }
   ],
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#FFFFFF",
   "gcm_sender_id": "350952942983"
 }

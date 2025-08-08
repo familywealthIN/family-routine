@@ -3,6 +3,18 @@
 </script>
 <template>
   <container-box :isLoading="isLoading || isAuthenticatedSignIn">
+    <!-- PWA Install Banner -->
+    <div v-if="showPWAInstallBanner" class="pwa-install-banner" @click="triggerPWAInstall">
+      <div class="pwa-banner-content">
+        <v-icon left color="white">get_app</v-icon>
+        <div class="pwa-banner-text">
+          <div class="pwa-banner-title">Install Routine Notes</div>
+          <div class="pwa-banner-subtitle">Get the app for a better experience</div>
+        </div>
+        <v-icon right color="white" size="16" @click.stop="dismissPWABanner">close</v-icon>
+      </div>
+    </div>
+
     <h2 class="text-xs-center pt-5">Build Your Routine</h2>
     <div class="banner-box">
       <img src="/img/login-banner.png" alt="Login Banner">
@@ -55,6 +67,8 @@
 import gql from 'graphql-tag';
 import { saveData, clearData, getSessionItem, isRunningStandalone } from '../token';
 import { MeasurementMixin } from '@/utils/measurementMixins.js';
+import { canInstallPWA, installPWADirect, getInstallStatus } from '../utils/pwaInstaller';
+import { isStandalone, trackPWAEvent } from '../utils/pwaUtils';
 
 import {
   GC_USER_NAME,
@@ -79,10 +93,77 @@ export default {
       isAuthenticatedSignIn: false,
       isLoading: true,
       redirectCount: 0,
+      pwaInstallBannerDismissed: false,
     };
   },
 
+  computed: {
+    showPWAInstallBanner() {
+      // Show PWA install banner if:
+      // 1. PWA installation is available
+      // 2. App is not already installed
+      // 3. Banner hasn't been dismissed
+      // 4. User is not loading/signing in
+      return canInstallPWA()
+        && !isStandalone()
+        && !this.pwaInstallBannerDismissed
+        && !this.isLoading
+        && !this.isAuthenticatedSignIn;
+    },
+  },
+
   methods: {
+    async triggerPWAInstall() {
+      trackPWAEvent('login_page_install_clicked');
+
+      try {
+        const result = await installPWADirect();
+
+        if (result.success) {
+          console.log('PWA installation successful:', result.message);
+          this.pwaInstallBannerDismissed = true;
+
+          // Track successful installation
+          this.trackUserInteraction('pwa_install_success', 'banner_click', {
+            page: 'login',
+            platform: getInstallStatus().platform,
+          });
+        } else {
+          console.log('PWA installation failed:', result.message);
+
+          // Show user-friendly message when install isn't available
+          if (result.action === 'not_available') {
+            // Create a helpful message for the user
+            const helpMessage = result.message + '\n\nTip: Try refreshing the page, or the app might already be installed!';
+            
+            // You could also show a toast/snackbar here instead of alert
+            alert(helpMessage);
+          }
+
+          // Track installation failure
+          this.trackUserInteraction('pwa_install_failed', 'banner_click', {
+            page: 'login',
+            reason: result.action,
+            message: result.message,
+          });
+        }
+      } catch (error) {
+        console.error('Error during PWA installation:', error);
+        this.trackError('pwa_install_error', error, {
+          page: 'login',
+        });
+      }
+    },
+
+    dismissPWABanner() {
+      this.pwaInstallBannerDismissed = true;
+      trackPWAEvent('login_page_banner_dismissed');
+
+      this.trackUserInteraction('pwa_banner_dismissed', 'close_click', {
+        page: 'login',
+      });
+    },
+
     handleClickSignIn() {
       this.trackUserInteraction('login_attempt', 'button_click', {
         provider: 'google',
@@ -343,5 +424,66 @@ export default {
   margin: 0 auto;
   display: block;
   width: 100%;
+}
+
+/* PWA Install Banner Styles */
+.pwa-install-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.pwa-install-banner:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.pwa-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pwa-banner-text {
+  flex: 1;
+  margin-left: 12px;
+  text-align: left;
+}
+
+.pwa-banner-title {
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.pwa-banner-subtitle {
+  font-size: 13px;
+  opacity: 0.9;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+/* Close button hover effect */
+.pwa-install-banner .v-icon:last-child {
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.pwa-install-banner .v-icon:last-child:hover {
+  opacity: 1;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .pwa-banner-title {
+    font-size: 14px;
+  }
+
+  .pwa-banner-subtitle {
+    font-size: 12px;
+  }
 }
 </style>
