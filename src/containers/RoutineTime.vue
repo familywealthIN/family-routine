@@ -106,7 +106,7 @@
               </v-list-tile-title>
               <v-list-tile-sub-title v-if="task.id === selectedTaskRef">
                 <div class="time-text">
-                  {{ task.time }} - {{ countTaskCompleted(task) }}/{{ countTaskTotal(task) }}
+                  {{ displayTime(task.time) }} - {{ countTaskCompleted(task) }}/{{ countTaskTotal(task) }}
                 </div>
                 <div>
                   <v-btn-toggle v-model="currentGoalPeriod">
@@ -126,7 +126,7 @@
                 </div>
               </v-list-tile-sub-title>
               <v-list-tile-sub-title v-else>
-                {{ task.time }}
+                {{ displayTime(task.time) }}
               </v-list-tile-sub-title>
               <div v-if="task.id === selectedTaskRef" class="pt-2 pb-2 task-goals">
                 <v-layout
@@ -300,6 +300,8 @@ import GoalItemList from '../components/GoalItemList.vue';
 import ContainerBox from '../components/ContainerBox.vue';
 import GoalDisplay from '../components/GoalDisplay.vue';
 import QuickGoalCreation from '../components/QuickGoalCreation.vue';
+import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
+import { TimeFormatMixin } from '../utils/timeFormat';
 import { threshold } from '../utils/getDates';
 
 function weekOfMonth(d) {
@@ -318,6 +320,7 @@ function weekOfMonth(d) {
 }
 
 export default {
+  mixins: [intelligentRefreshMixin, TimeFormatMixin],
   components: {
     GoalList,
     GoalItemList,
@@ -833,14 +836,47 @@ export default {
       const count = Number((dStimulus.splitRate / stimulus.splitRate).toFixed(0));
       return count;
     },
+
+    /**
+     * Handle day change event
+     * @param {string} newDate - New date in DD-MM-YYYY format
+     */
+    handleDayChange(newDate) {
+      console.log('RoutineTime: Day changed to', newDate);
+      this.date = newDate;
+
+      // Add new routine if needed
+      this.addNewDayRoutine();
+    },
+
+    /**
+     * Handle routine item check for intelligent refresh
+     */
+    handleRoutineItemCheck() {
+      // Update passed/wait status for routine items
+      this.setPassedWait();
+
+      // Get next routine item status
+      const nextItem = this.getNextRoutineItem();
+      if (nextItem && nextItem.isStartingSoon) {
+        console.log(`Next routine item "${nextItem.name}" starts in ${nextItem.minutesToStart} minutes`);
+      }
+    },
   },
   mounted() {
-    this.timerId = setInterval(() => {
-      if (this.date !== moment().format('DD-MM-YYYY')) {
-        this.date = moment().format('DD-MM-YYYY');
-      }
-      this.setPassedWait();
-    }, 60 * 1000);
+    // Start intelligent refresh system
+    this.startIntelligentRefresh({
+      interval: 30 * 1000, // 30 seconds
+      onDayChange: this.handleDayChange,
+      onRoutineCheck: this.handleRoutineItemCheck,
+    });
+  },
+  beforeDestroy() {
+    // Clean up timers
+    this.stopIntelligentRefresh();
+    if (this.timerId) {
+      clearInterval(this.timerId);
+    }
   },
 };
 </script>

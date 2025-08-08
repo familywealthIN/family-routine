@@ -60,6 +60,30 @@
             </select>
         </v-list-tile-action>
         </v-list-tile>
+        <v-list-tile>
+        <v-list-tile-content>
+            <v-list-tile-title>Time Format</v-list-tile-title>
+            <v-list-tile-sub-title>
+                Choose between 12-hour (AM/PM) or 24-hour time format for dashboard display.
+            </v-list-tile-sub-title>
+        </v-list-tile-content>
+        <v-list-tile-action>
+            <v-btn-toggle v-model="timeFormat" @change="saveTimeFormat">
+              <v-btn
+                flat
+                value="12"
+              >
+                12
+              </v-btn>
+              <v-btn
+                flat
+                value="24"
+              >
+                24
+              </v-btn>
+            </v-btn-toggle>
+        </v-list-tile-action>
+        </v-list-tile>
     </v-list>
     <v-divider></v-divider>
     <v-list
@@ -275,6 +299,7 @@ export default {
       userApiKey: null,
       showApiKey: false,
       generatingApiKey: false,
+      timeFormat: localStorage.getItem('timeFormat') || '24', // Default to 24-hour format
       mcpServerUrl: process.env.NODE_ENV === 'production'
         ? 'https://your-api-domain.com/dev/mcp'
         : 'http://localhost:4000/mcp',
@@ -348,6 +373,23 @@ export default {
         document.body.removeChild(textArea);
         alert('Copied to clipboard!');
       }
+    },
+
+    saveTimeFormat() {
+      // Save time format preference to localStorage
+      localStorage.setItem('timeFormat', this.timeFormat);
+
+      // Notify user of the change
+      this.$notify({
+        title: 'Time Format Updated',
+        text: `Time format set to ${this.timeFormat}-hour format`,
+        group: 'notify',
+        type: 'success',
+        duration: 3000,
+      });
+
+      // Trigger a global event to update time display across the app
+      this.$root.$emit('timeFormatChanged', this.timeFormat);
     },
   },
 };

@@ -71,7 +71,7 @@
                       </v-list-tile-title>
                       <v-list-tile-sub-title class="pt-2">
                         <div class="time-text">
-                          {{ currentTask.time }} - {{ countTaskCompleted(currentTask) }}/{{ countTaskTotal(currentTask) }}
+                          {{ displayTime(currentTask.time) }} - {{ countTaskCompleted(currentTask) }}/{{ countTaskTotal(currentTask) }}
                         </div>
                         <div>
                           <v-btn-toggle v-model="currentGoalPeriod">
@@ -352,7 +352,7 @@
                       </v-list-tile-title>
                       <v-list-tile-sub-title v-if="task.id === selectedTaskRef">
                         <div class="time-text">
-                          {{ task.time }} - {{ countTaskCompleted(task) }}/{{ countTaskTotal(task) }}
+                          {{ displayTime(task.time) }} - {{ countTaskCompleted(task) }}/{{ countTaskTotal(task) }}
                         </div>
                         <div>
                           <v-btn-toggle v-model="currentGoalPeriod">
@@ -372,7 +372,7 @@
                         </div>
                       </v-list-tile-sub-title>
                       <v-list-tile-sub-title v-else>
-                        {{ task.time }}
+                        {{ displayTime(task.time) }}
                       </v-list-tile-sub-title>
                       <div v-if="task.id === selectedTaskRef" class="pt-2 pb-2 task-goals">
                         <v-layout
@@ -540,7 +540,7 @@
                 </template>
                 <v-layout>
                   <v-flex xs2>
-                    <strong>{{ task.time }}</strong>
+                    <strong>{{ displayTime(task.time) }}</strong>
                   </v-flex>
                   <v-flex>
                     <strong>{{ task.name }}</strong>
@@ -778,6 +778,8 @@ import QuickGoalCreation from '../components/QuickGoalCreation.vue';
 import StreakChecks from '../components/StreakChecks.vue';
 import GoalCreation from '../components/GoalCreation.vue';
 import WakeCheck from '../components/WakeCheck.vue';
+import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
+import { TimeFormatMixin } from '../utils/timeFormat';
 
 function weekOfMonth(d) {
   const addFirstWeek = moment(d, 'DD-MM-YYYY')
@@ -796,7 +798,7 @@ function weekOfMonth(d) {
 
 export default {
   name: 'DashBoard',
-  mixins: [MeasurementMixin],
+  mixins: [MeasurementMixin, intelligentRefreshMixin, TimeFormatMixin],
   components: {
     GoalList,
     GoalItemList,
@@ -1082,6 +1084,13 @@ export default {
     eventBus.$on(EVENTS.GOAL_ITEM_CREATED, this.handleGoalItemCreated);
 
     console.log('DashBoard: Event listeners registered');
+
+    // Start intelligent refresh system
+    this.startIntelligentRefresh({
+      interval: 30 * 1000, // 30 seconds
+      onDayChange: this.handleDayChange,
+      onRoutineCheck: this.handleRoutineItemCheck,
+    });
   },
   beforeDestroy() {
     // Track component destruction for analytics
@@ -1098,6 +1107,9 @@ export default {
 
     // Clean up timer
     this.stopEventExecutionTimer();
+
+    // Clean up intelligent refresh timer
+    this.stopIntelligentRefresh();
   },
   methods: {
     // Global event handlers
@@ -1962,6 +1974,37 @@ export default {
         return count;
       }
       return 0;
+    },
+
+    /**
+     * Handle day change event
+     * @param {string} newDate - New date in DD-MM-YYYY format
+     */
+    handleDayChange(newDate) {
+      console.log('DashBoard: Day changed to', newDate);
+      this.date = newDate;
+
+      // Update weekdays display for new date
+      this.weekDays = this.buildWeekdays();
+
+      // Add new routine if needed
+      this.addNewDayRoutine();
+    },
+
+    /**
+     * Handle routine item check for intelligent refresh
+     */
+    handleRoutineItemCheck() {
+      // Only update passed/wait status if today is selected
+      if (this.isTodaySelected) {
+        this.setPassedWait();
+      }
+
+      // Get next routine item status
+      const nextItem = this.getNextRoutineItem();
+      if (nextItem && nextItem.isStartingSoon) {
+        console.log(`Next routine item "${nextItem.name}" starts in ${nextItem.minutesToStart} minutes`);
+      }
     },
   },
   computed: {
