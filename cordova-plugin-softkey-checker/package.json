@@ -1,0 +1,12 @@
+{
+  "name": "cordova-plugin-softkey-checker",
+  "version": "1.0.0",
+  "description": "Check for soft navigation keys on Android",
+  "cordova": {
+    "id": "cordova-plugin-softkey-checker",
+    "platforms": ["android"]
+  },
+  "keywords": ["cordova", "navigation", "softkeys"],
+  "author": "Your Name",
+  "license": "MIT"
+}

@@ -23,6 +23,7 @@ import MobileLayout from './layouts/MobileLayout.vue';
 import DesktopLayout from './layouts/DesktopLayout.vue';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 export default {
   components: {
     MobileLayout,
@@ -56,13 +57,12 @@ export default {
     if (Capacitor.isNativePlatform()) {
       // Native logic using Capacitor Push Notifications
       this.initNativeFCM();
+      // Check for soft keys on Android
+      this.checkSoftKeys();
     } else {
       // PWA logic
       this.initPwaFCM();
     }
-
-
-
   },
   methods: {
     initPwaFCM() {
@@ -144,6 +144,30 @@ export default {
         console.log('Push action performed', notification);
         // handle navigation if needed
       });
+    },
+
+    checkSoftKeys() {
+      if (window.SoftKeyChecker) {
+        window.SoftKeyChecker.hasSoftKeys((result) => {
+          console.log('hasSoftKeys', result);
+          const hasSoftKeys = result === 1;
+
+          if (hasSoftKeys) {
+            document.body.classList.add('android15-soft-keys');
+            document.body.classList.remove('android15-no-soft-keys');
+          } else {
+            document.body.classList.add('android15-no-soft-keys');
+            document.body.classList.remove('android15-soft-keys');
+          }
+        }, (err) => {
+          console.error('Failed to check soft keys', err);
+          // Fallback for Android 15
+          document.body.classList.add('android15-no-soft-keys');
+        });
+      } else {
+        console.warn('SoftKeyChecker plugin not available');
+        document.body.classList.add('android15-no-soft-keys');
+      }
     }
   },
 };
@@ -153,7 +177,26 @@ export default {
 .v-toolbar--fixed {
   z-index: 5;
 }
-  .v-toolbar--fixed {
-    z-index: 5;
+
+/* Toolbar positioning below safe area */
+.v-toolbar {
+  margin-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top)) !important;
+  padding-top: 0 !important;
+  height: 64px !important;
+}
+
+/* Android 15 soft keys handling */
+.android15-soft-keys {
+  padding-bottom: 48px;
+}
+
+.android15-no-soft-keys {
+  padding-bottom: 0;
+}
+
+@media (max-height: 600px) {
+  .android15-soft-keys {
+    padding-bottom: 40px;
   }
+}
 </style>

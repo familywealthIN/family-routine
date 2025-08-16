@@ -15,6 +15,7 @@ import './plugins/curl-executor';
 import './styles/shadows.css';
 import VueApollo from './plugins/apollo';
 import './styles/ios-safe-area.css';
+import './styles/android-safe-area.css';
 import currentTaskPlugin from './plugins/currentTask';
 import App from './App.vue';
 // Load Google Identity Services script

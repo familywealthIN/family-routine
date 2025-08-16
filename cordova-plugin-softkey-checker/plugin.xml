@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin id="cordova-plugin-softkey-checker" version="1.0.0" xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>SoftKeyChecker</name>
+    <description>Cordova Plugin to check soft navigation keys presence</description>
+    <license>MIT</license>
+    <keywords>cordova,softkey,android</keywords>
+    <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="SoftKeyChecker">
+                <param name="android-package" value="com.example.softkeychecker.SoftKeyChecker"/>
+            </feature>
+        </config-file>
+        <source-file src="src/android/SoftKeyChecker.java" target-dir="src/com/example/softkeychecker" />
+    </platform>
+    <js-module src="www/SoftKeyChecker.js" name="SoftKeyChecker">
+        <clobbers target="SoftKeyChecker" />
+    </js-module>
+</plugin>

@@ -1,0 +1,86 @@
+/* Android Safe Area Global Styles */
+
+/* Header styles - show toolbar below safe area */
+.v-toolbar {
+  margin-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top)) !important;
+  padding-top: 0 !important;
+  height: 64px !important;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+.android15-soft-keys .v-toolbar,
+.android15-no-soft-keys .v-toolbar {
+  margin-top: var(--status-bar-height, 0px) !important;
+}
+
+.android15-soft-keys .toolbar,
+.v-toolbar__content,
+.android15-no-soft-keys .toolbar,
+.v-toolbar__content {
+  padding-top: max(var(--system-bottom-inset, 30px), env(safe-area-inset-bottom)) !important;
+
+
+}
+
+/* Footer styles - soft keys handling */
+.v-bottom-nav {
+  padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom)) !important;
+  height: calc(64px + max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom))) !important;
+}
+
+.android15-soft-keys .v-bottom-nav {
+  padding-bottom: max(var(--system-bottom-inset, 48px), env(safe-area-inset-bottom)) !important;
+}
+
+.android15-no-soft-keys .v-bottom-nav {
+  padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom)) !important;
+}
+
+/* Content area adjustments */
+.v-content {
+  padding-top: calc(64px + max(var(--system-top-inset, 0px), env(safe-area-inset-top))) !important;
+  padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom)) !important;
+}
+
+.android15-soft-keys .v-content {
+  padding-bottom: max(var(--system-bottom-inset, 48px), env(safe-area-inset-bottom)) !important;
+}
+
+/* Body and app container */
+body {
+  padding-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top));
+  padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom));
+}
+
+.android15-soft-keys body {
+  padding-bottom: max(var(--system-bottom-inset, 48px), env(safe-area-inset-bottom));
+}
+
+.v-app {
+  padding-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top)) !important;
+  padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom)) !important;
+}
+
+.android15-soft-keys .v-app {
+  padding-bottom: max(var(--system-bottom-inset, 48px), env(safe-area-inset-bottom)) !important;
+}
+
+/* Header specific */
+.header {
+  padding-top: max(var(--status-bar-height, 40px), env(safe-area-inset-top)) !important;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+
+  .v-toolbar,
+  .v-item-group {
+    padding-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top));
+  }
+
+  .android15-soft-keys .v-item-group {
+    padding-bottom: max(var(--system-bottom-inset, 30px), env(safe-area-inset-bottom)) !important;
+    height: calc(64px + max(var(--system-bottom-inset, 30px), env(safe-area-inset-bottom))) !important;
+  }
+}
