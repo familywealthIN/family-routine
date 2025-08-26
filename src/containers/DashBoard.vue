@@ -1,6 +1,27 @@
 <template>
-  <container-box transparent="true" :isLoading="isLoading">
-    <v-card class="ma-3">
+  <div class="pull-to-refresh-container" 
+       @touchstart="handleTouchStart" 
+       @touchmove="handleTouchMove" 
+       @touchend="handleTouchEnd"
+       @scroll="handleScroll">
+    <!-- Pull to refresh indicator -->
+    <div class="pull-to-refresh-indicator" 
+         :class="{ 'visible': pullDistance > 0, 'refreshing': isRefreshing }"
+         :style="{ transform: `translateY(${Math.min(pullDistance, 80)}px)` }">
+      <v-progress-circular 
+        v-if="isRefreshing" 
+        indeterminate 
+        color="primary" 
+        size="24">
+      </v-progress-circular>
+      <v-icon v-else color="primary" size="24">refresh</v-icon>
+      <span class="refresh-text">
+        {{ isRefreshing ? 'Refreshing...' : (pullDistance > 60 ? 'Release to refresh' : 'Pull to refresh') }}
+      </span>
+    </div>
+    
+    <container-box transparent="true" :isLoading="isLoading">
+      <v-card class="ma-3">
       <div class="weekdays pt-2 pb-2">
         <div
           v-for="(weekDay, i) in weekDays"
@@ -756,7 +777,8 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </container-box>
+    </container-box>
+  </div>
 </template>
 
 <script>
@@ -994,6 +1016,12 @@ export default {
       routineGoalIds: {}, // { routineItemId: goalId }
       // Analytics: Track component mount time for session duration
       mountTime: Date.now(),
+      // Pull to refresh functionality
+      pullDistance: 0,
+      startY: 0,
+      isPulling: false,
+      isRefreshing: false,
+      scrollTop: 0,
     };
   },
   watch: {
@@ -1112,6 +1140,84 @@ export default {
     this.stopIntelligentRefresh();
   },
   methods: {
+    // Pull to refresh methods
+    handleTouchStart(event) {
+      if (this.scrollTop <= 0) {
+        this.startY = event.touches[0].clientY;
+        this.isPulling = true;
+      }
+    },
+    handleTouchMove(event) {
+      if (!this.isPulling || this.isRefreshing) return;
+
+      const currentY = event.touches[0].clientY;
+      const deltaY = currentY - this.startY;
+
+      if (deltaY > 0 && this.scrollTop <= 0) {
+        event.preventDefault();
+        this.pullDistance = Math.min(deltaY * 0.5, 100); // Dampen the pull effect
+      }
+    },
+    handleTouchEnd() {
+      if (!this.isPulling || this.isRefreshing) return;
+
+      this.isPulling = false;
+
+      if (this.pullDistance > 60) {
+        this.triggerRefresh();
+      } else {
+        this.resetPull();
+      }
+    },
+    handleScroll(event) {
+      this.scrollTop = event.target.scrollTop;
+      if (this.scrollTop > 0) {
+        this.resetPull();
+      }
+    },
+    triggerRefresh() {
+      this.isRefreshing = true;
+      this.pullDistance = 60; // Set to final position
+
+      // Track pull to refresh action
+      this.trackUserInteraction('pull_to_refresh', 'gesture', {
+        date: this.date,
+        is_today: this.isTodaySelected,
+      });
+
+      // Refresh all data
+      Promise.all([
+        this.refreshApolloQueries(),
+        new Promise((resolve) => setTimeout(resolve, 1000)), // Minimum refresh time for UX
+      ]).then(() => {
+        this.resetPull();
+        this.isRefreshing = false;
+        
+        this.$notify({
+          title: 'Refreshed',
+          text: 'Dashboard data has been updated',
+          group: 'notify',
+          type: 'success',
+          duration: 2000,
+        });
+      }).catch((error) => {
+        console.error('Pull to refresh error:', error);
+        this.resetPull();
+        this.isRefreshing = false;
+        
+        this.$notify({
+          title: 'Refresh Failed',
+          text: 'Could not refresh data. Please try again.',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+      });
+    },
+    resetPull() {
+      this.pullDistance = 0;
+      this.isPulling = false;
+    },
     // Global event handlers
     handleRefetchDailyGoals() {
       console.log('DashBoard: Handling refetch daily goals event');
@@ -1190,19 +1296,24 @@ export default {
 
     refreshApolloQueries() {
       // Refresh all Apollo queries in this component when user logs in
+      const refreshPromises = [];
+      
       try {
         if (this.$apollo.queries.tasklist) {
-          this.$apollo.queries.tasklist.refetch();
+          refreshPromises.push(this.$apollo.queries.tasklist.refetch());
         }
         if (this.$apollo.queries.agendaGoals) {
-          this.$apollo.queries.agendaGoals.refetch();
+          refreshPromises.push(this.$apollo.queries.agendaGoals.refetch());
         }
         if (this.$apollo.queries.goals) {
-          this.$apollo.queries.goals.refetch();
+          refreshPromises.push(this.$apollo.queries.goals.refetch());
         }
+        
         console.log('DashBoard: Apollo queries refreshed successfully');
+        return Promise.all(refreshPromises);
       } catch (error) {
         console.warn('DashBoard: Error refreshing Apollo queries:', error);
+        return Promise.reject(error);
       }
     },
 
@@ -2046,6 +2157,54 @@ export default {
   // },
 };
 </script>
+
+<style scoped>
+.pull-to-refresh-container {
+  position: relative;
+  height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pull-to-refresh-indicator {
+  position: absolute;
+  top: -80px;
+  left: 0;
+  right: 0;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  opacity: 0;
+}
+
+.pull-to-refresh-indicator.visible {
+  opacity: 1;
+}
+
+.pull-to-refresh-indicator.refreshing {
+  transform: translateY(80px) !important;
+}
+
+.refresh-text {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Ensure proper touch handling on mobile */
+@media (max-width: 768px) {
+  .pull-to-refresh-container {
+    touch-action: pan-y;
+  }
+}
+</style>
 
 <style>
 .current-task .active .v-list__tile--avatar:hover {
