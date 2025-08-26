@@ -33,6 +33,7 @@
           </v-list-tile-content>
         </v-list-tile>
         <year-goal-sidebar />
+        <area-sidebar />
         <v-list-tile v-for="item in otherItems" :key="item.title" :to="item.route">
           <v-list-tile-action>
             <v-icon>{{ item.icon }}</v-icon>
@@ -94,6 +95,7 @@
 
 <script>
 import ProjectSidebar from '@/components/ProjectSidebar.vue';
+import AreaSidebar from '@/components/AreaSidebar.vue';
 import YearGoalSidebar from '@/components/YearGoalSidebar.vue';
 import PendingList from '../components/PendingList.vue';
 import AiSearchModal from '../components/AiSearchModal.vue';
@@ -106,6 +108,7 @@ export default {
   components: {
     PendingList,
     ProjectSidebar,
+    AreaSidebar,
     YearGoalSidebar,
     AiSearchModal,
   },

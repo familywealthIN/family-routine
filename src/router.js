@@ -2,6 +2,7 @@ import Vue from 'vue';
 import Router from 'vue-router';
 import Login from './views/Login.vue';
 import Projects from './views/Projects.vue';
+import Areas from './views/Areas.vue';
 import YearGoals from './views/YearGoals.vue';
 
 Vue.use(Router);
@@ -98,6 +99,12 @@ export default new Router({
       path: '/projects/:tag',
       name: 'projects',
       component: Projects,
+      props: true,
+    },
+    {
+      path: '/areas/:tag',
+      name: 'areas',
+      component: Areas,
       props: true,
     },
     {

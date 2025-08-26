@@ -1,6 +1,27 @@
 <template>
-  <container-box transparent="true" :isLoading="isLoading">
-    <v-card class="ma-3">
+  <div class="pull-to-refresh-container" 
+       @touchstart="handleTouchStart" 
+       @touchmove="handleTouchMove" 
+       @touchend="handleTouchEnd"
+       @scroll="handleScroll">
+    <!-- Pull to refresh indicator -->
+    <div class="pull-to-refresh-indicator" 
+         :class="{ 'visible': pullDistance > 0, 'refreshing': isRefreshing }"
+         :style="{ transform: `translateY(${Math.min(pullDistance, 80)}px)` }">
+      <v-progress-circular 
+        v-if="isRefreshing" 
+        indeterminate 
+        color="primary" 
+        size="24">
+      </v-progress-circular>
+      <v-icon v-else color="primary" size="24">refresh</v-icon>
+      <span class="refresh-text">
+        {{ isRefreshing ? 'Refreshing...' : (pullDistance > 60 ? 'Release to refresh' : 'Pull to refresh') }}
+      </span>
+    </div>
+    
+    <container-box transparent="true" :isLoading="isLoading">
+      <v-card class="ma-3">
       <div class="weekdays pt-2 pb-2">
         <div
           v-for="(weekDay, i) in weekDays"
@@ -71,7 +92,7 @@
                       </v-list-tile-title>
                       <v-list-tile-sub-title class="pt-2">
                         <div class="time-text">
-                          {{ currentTask.time }} - {{ countTaskCompleted(currentTask) }}/{{ countTaskTotal(currentTask) }}
+                          {{ displayTime(currentTask.time) }} - {{ countTaskCompleted(currentTask) }}/{{ countTaskTotal(currentTask) }}
                         </div>
                         <div>
                           <v-btn-toggle v-model="currentGoalPeriod">
@@ -352,7 +373,7 @@
                       </v-list-tile-title>
                       <v-list-tile-sub-title v-if="task.id === selectedTaskRef">
                         <div class="time-text">
-                          {{ task.time }} - {{ countTaskCompleted(task) }}/{{ countTaskTotal(task) }}
+                          {{ displayTime(task.time) }} - {{ countTaskCompleted(task) }}/{{ countTaskTotal(task) }}
                         </div>
                         <div>
                           <v-btn-toggle v-model="currentGoalPeriod">
@@ -372,7 +393,7 @@
                         </div>
                       </v-list-tile-sub-title>
                       <v-list-tile-sub-title v-else>
-                        {{ task.time }}
+                        {{ displayTime(task.time) }}
                       </v-list-tile-sub-title>
                       <div v-if="task.id === selectedTaskRef" class="pt-2 pb-2 task-goals">
                         <v-layout
@@ -540,7 +561,7 @@
                 </template>
                 <v-layout>
                   <v-flex xs2>
-                    <strong>{{ task.time }}</strong>
+                    <strong>{{ displayTime(task.time) }}</strong>
                   </v-flex>
                   <v-flex>
                     <strong>{{ task.name }}</strong>
@@ -756,7 +777,8 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </container-box>
+    </container-box>
+  </div>
 </template>
 
 <script>
@@ -778,6 +800,8 @@ import QuickGoalCreation from '../components/QuickGoalCreation.vue';
 import StreakChecks from '../components/StreakChecks.vue';
 import GoalCreation from '../components/GoalCreation.vue';
 import WakeCheck from '../components/WakeCheck.vue';
+import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
+import { TimeFormatMixin } from '../utils/timeFormat';
 
 function weekOfMonth(d) {
   const addFirstWeek = moment(d, 'DD-MM-YYYY')
@@ -796,7 +820,7 @@ function weekOfMonth(d) {
 
 export default {
   name: 'DashBoard',
-  mixins: [MeasurementMixin],
+  mixins: [MeasurementMixin, intelligentRefreshMixin, TimeFormatMixin],
   components: {
     GoalList,
     GoalItemList,
@@ -992,6 +1016,12 @@ export default {
       routineGoalIds: {}, // { routineItemId: goalId }
       // Analytics: Track component mount time for session duration
       mountTime: Date.now(),
+      // Pull to refresh functionality
+      pullDistance: 0,
+      startY: 0,
+      isPulling: false,
+      isRefreshing: false,
+      scrollTop: 0,
     };
   },
   watch: {
@@ -1082,6 +1112,13 @@ export default {
     eventBus.$on(EVENTS.GOAL_ITEM_CREATED, this.handleGoalItemCreated);
 
     console.log('DashBoard: Event listeners registered');
+
+    // Start intelligent refresh system
+    this.startIntelligentRefresh({
+      interval: 30 * 1000, // 30 seconds
+      onDayChange: this.handleDayChange,
+      onRoutineCheck: this.handleRoutineItemCheck,
+    });
   },
   beforeDestroy() {
     // Track component destruction for analytics
@@ -1098,8 +1135,89 @@ export default {
 
     // Clean up timer
     this.stopEventExecutionTimer();
+
+    // Clean up intelligent refresh timer
+    this.stopIntelligentRefresh();
   },
   methods: {
+    // Pull to refresh methods
+    handleTouchStart(event) {
+      if (this.scrollTop <= 0) {
+        this.startY = event.touches[0].clientY;
+        this.isPulling = true;
+      }
+    },
+    handleTouchMove(event) {
+      if (!this.isPulling || this.isRefreshing) return;
+
+      const currentY = event.touches[0].clientY;
+      const deltaY = currentY - this.startY;
+
+      if (deltaY > 0 && this.scrollTop <= 0) {
+        event.preventDefault();
+        this.pullDistance = Math.min(deltaY * 0.5, 100); // Dampen the pull effect
+      }
+    },
+    handleTouchEnd() {
+      if (!this.isPulling || this.isRefreshing) return;
+
+      this.isPulling = false;
+
+      if (this.pullDistance > 60) {
+        this.triggerRefresh();
+      } else {
+        this.resetPull();
+      }
+    },
+    handleScroll(event) {
+      this.scrollTop = event.target.scrollTop;
+      if (this.scrollTop > 0) {
+        this.resetPull();
+      }
+    },
+    triggerRefresh() {
+      this.isRefreshing = true;
+      this.pullDistance = 60; // Set to final position
+
+      // Track pull to refresh action
+      this.trackUserInteraction('pull_to_refresh', 'gesture', {
+        date: this.date,
+        is_today: this.isTodaySelected,
+      });
+
+      // Refresh all data
+      Promise.all([
+        this.refreshApolloQueries(),
+        new Promise((resolve) => setTimeout(resolve, 1000)), // Minimum refresh time for UX
+      ]).then(() => {
+        this.resetPull();
+        this.isRefreshing = false;
+        
+        this.$notify({
+          title: 'Refreshed',
+          text: 'Dashboard data has been updated',
+          group: 'notify',
+          type: 'success',
+          duration: 2000,
+        });
+      }).catch((error) => {
+        console.error('Pull to refresh error:', error);
+        this.resetPull();
+        this.isRefreshing = false;
+        
+        this.$notify({
+          title: 'Refresh Failed',
+          text: 'Could not refresh data. Please try again.',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+      });
+    },
+    resetPull() {
+      this.pullDistance = 0;
+      this.isPulling = false;
+    },
     // Global event handlers
     handleRefetchDailyGoals() {
       console.log('DashBoard: Handling refetch daily goals event');
@@ -1178,19 +1296,24 @@ export default {
 
     refreshApolloQueries() {
       // Refresh all Apollo queries in this component when user logs in
+      const refreshPromises = [];
+      
       try {
         if (this.$apollo.queries.tasklist) {
-          this.$apollo.queries.tasklist.refetch();
+          refreshPromises.push(this.$apollo.queries.tasklist.refetch());
         }
         if (this.$apollo.queries.agendaGoals) {
-          this.$apollo.queries.agendaGoals.refetch();
+          refreshPromises.push(this.$apollo.queries.agendaGoals.refetch());
         }
         if (this.$apollo.queries.goals) {
-          this.$apollo.queries.goals.refetch();
+          refreshPromises.push(this.$apollo.queries.goals.refetch());
         }
+        
         console.log('DashBoard: Apollo queries refreshed successfully');
+        return Promise.all(refreshPromises);
       } catch (error) {
         console.warn('DashBoard: Error refreshing Apollo queries:', error);
+        return Promise.reject(error);
       }
     },
 
@@ -1963,6 +2086,37 @@ export default {
       }
       return 0;
     },
+
+    /**
+     * Handle day change event
+     * @param {string} newDate - New date in DD-MM-YYYY format
+     */
+    handleDayChange(newDate) {
+      console.log('DashBoard: Day changed to', newDate);
+      this.date = newDate;
+
+      // Update weekdays display for new date
+      this.weekDays = this.buildWeekdays();
+
+      // Add new routine if needed
+      this.addNewDayRoutine();
+    },
+
+    /**
+     * Handle routine item check for intelligent refresh
+     */
+    handleRoutineItemCheck() {
+      // Only update passed/wait status if today is selected
+      if (this.isTodaySelected) {
+        this.setPassedWait();
+      }
+
+      // Get next routine item status
+      const nextItem = this.getNextRoutineItem();
+      if (nextItem && nextItem.isStartingSoon) {
+        console.log(`Next routine item "${nextItem.name}" starts in ${nextItem.minutesToStart} minutes`);
+      }
+    },
   },
   computed: {
     today() {
@@ -2003,6 +2157,54 @@ export default {
   // },
 };
 </script>
+
+<style scoped>
+.pull-to-refresh-container {
+  position: relative;
+  height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pull-to-refresh-indicator {
+  position: absolute;
+  top: -80px;
+  left: 0;
+  right: 0;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  opacity: 0;
+}
+
+.pull-to-refresh-indicator.visible {
+  opacity: 1;
+}
+
+.pull-to-refresh-indicator.refreshing {
+  transform: translateY(80px) !important;
+}
+
+.refresh-text {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Ensure proper touch handling on mobile */
+@media (max-width: 768px) {
+  .pull-to-refresh-container {
+    touch-action: pan-y;
+  }
+}
+</style>
 
 <style>
 .current-task .active .v-list__tile--avatar:hover {
