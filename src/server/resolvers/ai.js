@@ -119,7 +119,12 @@ const mutation = {
         type: new GraphQLNonNull(new GraphQLList(GoalItemInput)),
       },
     },
-    resolve: async (root, { goalItems }, context) => goalMutations.bulkAddGoalItems.resolve(root, { goalItems }, context),
+    resolve: async (root, { goalItems }, context) => {
+      // Require authentication even for AI operations
+      getEmailfromSession(context);
+
+      return goalMutations.bulkAddGoalItems.resolve(root, { goalItems }, context);
+    },
   },
 };
 
