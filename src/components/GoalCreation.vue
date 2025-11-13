@@ -348,6 +348,7 @@ export default {
       autoSaveTimeout: null,
       autoSaveLoading: false,
       lastSavedContribution: '',
+      isInitialLoad: true, // Flag to track initial component load
     };
   },
   computed: {
@@ -707,12 +708,19 @@ export default {
       if (newVal.id && newVal.contribution !== this.lastSavedContribution) {
         this.lastSavedContribution = newVal.contribution || '';
       }
+
+      // Reset the initial load flag after the first change
+      if (this.isInitialLoad && (newVal.id !== oldVal.id || newVal.contribution !== oldVal.contribution)) {
+        this.$nextTick(() => {
+          this.isInitialLoad = false;
+        });
+      }
     },
 
     // Auto-save contribution field when user stops typing
     'newGoalItem.contribution': function watchContribution(newValue) {
-      // Only auto-save if the item has an ID (exists in database)
-      if (!this.newGoalItem.id || newValue === this.lastSavedContribution) {
+      // Only auto-save if the item has an ID (exists in database) and it's not the initial load
+      if (!this.newGoalItem.id || newValue === this.lastSavedContribution || this.isInitialLoad) {
         return;
       }
 

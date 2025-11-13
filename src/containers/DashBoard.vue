@@ -1,17 +1,17 @@
 <template>
-  <div class="pull-to-refresh-container" 
-       @touchstart="handleTouchStart" 
-       @touchmove="handleTouchMove" 
+  <div class="pull-to-refresh-container"
+       @touchstart="handleTouchStart"
+       @touchmove="handleTouchMove"
        @touchend="handleTouchEnd"
        @scroll="handleScroll">
     <!-- Pull to refresh indicator -->
-    <div class="pull-to-refresh-indicator" 
+    <div class="pull-to-refresh-indicator"
          :class="{ 'visible': pullDistance > 0, 'refreshing': isRefreshing }"
          :style="{ transform: `translateY(${Math.min(pullDistance, 80)}px)` }">
-      <v-progress-circular 
-        v-if="isRefreshing" 
-        indeterminate 
-        color="primary" 
+      <v-progress-circular
+        v-if="isRefreshing"
+        indeterminate
+        color="primary"
         size="24">
       </v-progress-circular>
       <v-icon v-else color="primary" size="24">refresh</v-icon>
@@ -19,7 +19,7 @@
         {{ isRefreshing ? 'Refreshing...' : (pullDistance > 60 ? 'Release to refresh' : 'Pull to refresh') }}
       </span>
     </div>
-    
+
     <container-box transparent="true" :isLoading="isLoading">
       <v-card class="ma-3">
       <div class="weekdays pt-2 pb-2">
@@ -1192,7 +1192,7 @@ export default {
       ]).then(() => {
         this.resetPull();
         this.isRefreshing = false;
-        
+
         this.$notify({
           title: 'Refreshed',
           text: 'Dashboard data has been updated',
@@ -1204,7 +1204,7 @@ export default {
         console.error('Pull to refresh error:', error);
         this.resetPull();
         this.isRefreshing = false;
-        
+
         this.$notify({
           title: 'Refresh Failed',
           text: 'Could not refresh data. Please try again.',
@@ -1297,7 +1297,7 @@ export default {
     refreshApolloQueries() {
       // Refresh all Apollo queries in this component when user logs in
       const refreshPromises = [];
-      
+
       try {
         if (this.$apollo.queries.tasklist) {
           refreshPromises.push(this.$apollo.queries.tasklist.refetch());
@@ -1308,7 +1308,7 @@ export default {
         if (this.$apollo.queries.goals) {
           refreshPromises.push(this.$apollo.queries.goals.refetch());
         }
-        
+
         console.log('DashBoard: Apollo queries refreshed successfully');
         return Promise.all(refreshPromises);
       } catch (error) {
