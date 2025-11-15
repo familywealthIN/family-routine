@@ -92,6 +92,19 @@ export default {
         // Native Google login
         try {
           // Re-initialize GoogleAuth to ensure it's properly configured
+          const platform = Capacitor.getPlatform();
+          console.log(platform)
+      // const clientId = platform === 'ios' 
+      //   ? '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com'
+      //   : '350952942983-6h4a30scu81ra204ndpe1md2sccukrhv.apps.googleusercontent.com';
+
+      //     await GoogleAuth.initialize({
+      //       clientId: clientId,
+      //       scopes: ['profile', 'email'],
+      //       grantOfflineAccess: true,
+      //       forceCodeForRefreshToken: true
+      //     });
+
           await GoogleAuth.initialize({
             clientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
             scopes: ['profile', 'email'],
