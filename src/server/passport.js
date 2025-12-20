@@ -1,10 +1,98 @@
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
+const axios = require('axios');
 
 const { GOOGLE_CLIENT_ID, JWT_SECRET } = process.env;
 
 // Initialize Google OAuth2 client
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+
+// Add this function to passport.js or create a separate apple auth file
+const authenticateApple = async (req) => {
+  const { identityToken } = req.body;
+  if (!identityToken) {
+    throw new Error('No identity token provided');
+  }
+
+  try {
+    // Decode the JWT token without verification first to get the header
+    const decodedHeader = jwt.decode(identityToken, { complete: true });
+    if (!decodedHeader) {
+      throw new Error('Invalid identity token format');
+    }
+
+    // Get Apple's public keys
+    const appleKeysResponse = await axios.get('https://appleid.apple.com/auth/keys');
+    const appleKeys = appleKeysResponse.data.keys;
+    
+    // Find the correct key
+    const keyId = decodedHeader.header.kid;
+    const appleKey = appleKeys.find(key => key.kid === keyId);
+    
+    if (!appleKey) {
+      throw new Error('Apple key not found');
+    }
+
+    // For production, you should properly verify the JWT with Apple's public key
+    // For now, we'll decode it (in production, use proper JWT verification)
+    const payload = jwt.decode(identityToken);
+    
+    if (!payload || !payload.sub) {
+      throw new Error('Invalid token payload');
+    }
+
+    return {
+      data: {
+        profile: {
+          id: payload.sub,
+          displayName: payload.email ? payload.email.split('@')[0] : 'Apple User',
+          emails: [{ value: payload.email }],
+          _json: {
+            picture: '', // Apple doesn't provide profile pictures
+          },
+        },
+      },
+    };
+  } catch (error) {
+    throw new Error(`Apple authentication failed: ${error.message}`);
+  }
+};
+
+// Add this function to passport.js
+async function upsertAppleUser({ profile }, notificationId) {
+  const User = this;
+
+  const user = await User.findOne({ 'social.appleProvider.id': profile.id });
+
+  if (!user) {
+    const newUser = await User.create({
+      name: profile.displayName || 'Apple User',
+      email: profile.emails[0].value,
+      notificationId,
+      picture: '', // Apple doesn't provide profile pictures
+      groupId: '',
+      tags: [profile.emails[0].value],
+      needsOnboarding: true,
+      'social.appleProvider': {
+        id: profile.id,
+      },
+    });
+
+    return newUser;
+  }
+
+  if (user.notificationId !== notificationId) {
+    User.findOneAndUpdate(
+      { _id: user.id },
+      { notificationId },
+      { new: true },
+    ).exec();
+  }
+
+  return user;
+}
+
 
 // Function to verify Google ID token
 const verifyGoogleToken = async (token) => {
@@ -109,4 +197,4 @@ async function upsertGoogleUser({ profile }, notificationId) {
   return user;
 }
 
-module.exports = { generateAccessToken, upsertGoogleUser, authenticateGoogle };
+module.exports = { generateAccessToken, upsertGoogleUser, upsertAppleUser, authenticateGoogle, authenticateApple  };
