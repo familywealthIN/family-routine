@@ -1,53 +1,84 @@
 const jwt = require('jsonwebtoken');
+
 const { OAuth2Client } = require('google-auth-library');
+const axios = require('axios');
 
-const {
-  GOOGLE_CLIENT_ID,
-  GA_CLIENT_ID,
-  GA_IOS_CLIENT_ID,
-  JWT_SECRET,
-} = process.env;
+const { GOOGLE_CLIENT_ID, JWT_SECRET } = process.env;
 
-// Initialize multiple Google OAuth2 clients
-const googleClients = {
-  web: new OAuth2Client(GOOGLE_CLIENT_ID),
-  android: new OAuth2Client(GA_CLIENT_ID),
-  ios: new OAuth2Client(GA_IOS_CLIENT_ID),
-};
+// Initialize Google OAuth2 client
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-// Get all client IDs for audience verification
-const getAllClientIds = () => [GOOGLE_CLIENT_ID, GA_CLIENT_ID, GA_IOS_CLIENT_ID].filter(Boolean);
 
-// Function to verify Google ID token with multiple clients
-const verifyGoogleToken = async (token) => {
-  const clientIds = getAllClientIds();
-
-  // Try verification with each client using Promise.allSettled
-  const verificationPromises = Object.values(googleClients).map(async (client) => {
-    try {
-      const ticket = await client.verifyIdToken({
-        idToken: token,
-        audience: clientIds, // Support all client IDs as audience
-      });
-      return { success: true, payload: ticket.getPayload() };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  const results = await Promise.allSettled(verificationPromises);
-
-  // Find the first successful verification
-  const successfulResult = results
-    .filter((result) => result.status === 'fulfilled')
-    .map((result) => result.value)
-    .find((value) => value.success);
-
-  if (successfulResult) {
-    return successfulResult.payload;
+const authenticateApple = async (req) => {
+  const { identityToken } = req.body;
+  if (!identityToken) {
+    throw new Error('No identity token provided');
   }
 
-  throw new Error('Invalid Google token - failed verification with all clients');
+  try {
+    // Simple decode without verification for now
+    const payload = jwt.decode(identityToken);
+    
+    if (!payload || !payload.sub) {
+      throw new Error('Invalid token payload');
+    }
+
+    return {
+      data: {
+        profile: {
+          id: payload.sub,
+          displayName: payload.email ? payload.email.split('@')[0] : 'Apple User',
+          emails: [{ value: payload.email }],
+          _json: {
+            picture: '',
+          },
+        },
+      },
+    };
+  } catch (error) {
+    throw new Error(`Apple authentication failed: ${error.message}`);
+  }
+};
+
+async function upsertAppleUser({ profile }, notificationId) {
+  const User = this;
+  const user = await User.findOne({ 'social.appleProvider.id': profile.id });
+
+  if (!user) {
+    return await User.create({
+      name: profile.displayName || 'Apple User',
+      email: profile.emails[0].value,
+      notificationId,
+      picture: '',
+      groupId: '',
+      tags: [profile.emails[0].value],
+      needsOnboarding: true,
+      'social.appleProvider': { id: profile.id },
+    });
+  }
+
+  if (user.notificationId !== notificationId) {
+    await User.findOneAndUpdate(
+      { _id: user.id },
+      { notificationId },
+      { new: true }
+    );
+  }
+
+  return user;
+}
+
+// Function to verify Google ID token
+const verifyGoogleToken = async (token) => {
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    return ticket.getPayload();
+  } catch (error) {
+    throw new Error('Invalid Google token');
+  }
 };
 
 const authenticateGoogle = async (req) => {
@@ -140,4 +171,4 @@ async function upsertGoogleUser({ profile }, notificationId) {
   return user;
 }
 
-module.exports = { generateAccessToken, upsertGoogleUser, authenticateGoogle };
+module.exports = { generateAccessToken, upsertGoogleUser, upsertAppleUser, authenticateGoogle, authenticateApple  };

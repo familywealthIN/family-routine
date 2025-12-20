@@ -5,7 +5,7 @@
 
 function getSchemaSDL() {
   return `
-# Routine Notes GraphQL Schema
+# Family Routine GraphQL Schema
 # This schema provides access to user routines, goals, tasks, and related data
 
 type Query {

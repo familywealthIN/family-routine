@@ -38,24 +38,6 @@ const query = {
       return Array.from(tags).sort();
     },
   },
-  areaTags: {
-    type: new GraphQLList(GraphQLString),
-    resolve: async (root, args, context) => {
-      const email = getEmailfromSession(context);
-      const items = await RoutineItemModel.find({ email }).exec();
-
-      const tags = new Set();
-      items.forEach((item) => {
-        if (item.tags) {
-          item.tags
-            .filter((tag) => tag.startsWith('area:'))
-            .forEach((tag) => tags.add(tag));
-        }
-      });
-
-      return Array.from(tags).sort();
-    },
-  },
 };
 
 const StepInputItemType = new GraphQLInputObjectType({
