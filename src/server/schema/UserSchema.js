@@ -37,9 +37,9 @@ const UserSchema = new mongoose.Schema({
       id: String,
       token: String,
     },
-     appleProvider: {
-    id: String,
-  },
+    appleProvider: {
+      id: String,
+    },
   },
   motto: [MottoItemSchema],
   tags: [{

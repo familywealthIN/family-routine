@@ -2,6 +2,7 @@ const {
   GraphQLString,
   GraphQLNonNull,
   GraphQLList,
+  GraphQLObjectType,
 } = require('graphql');
 
 const uniqid = require('uniqid');
@@ -12,7 +13,6 @@ const { authenticateGoogle, authenticateApple } = require('../passport');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
 const ApiError = require('../utils/ApiError');
-
 
 const query = {
   getUserTags: {
@@ -98,7 +98,7 @@ const mutation = {
     },
   },
 
-   authApple: {
+  authApple: {
     type: UserItemType,
     args: {
       identityToken: { type: GraphQLNonNull(GraphQLString) },
@@ -256,6 +256,54 @@ const mutation = {
         { needsOnboarding: false },
         { new: true },
       );
+    },
+  },
+  deleteAccount: {
+    type: new GraphQLObjectType({
+      name: 'DeleteAccountResponse',
+      fields: {
+        success: { type: GraphQLString },
+        message: { type: GraphQLString },
+      },
+    }),
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      if (!email) {
+        throw new ApiError('Authentication required', 401);
+      }
+
+      try {
+        // Import required models
+        const { RoutineModel } = require('../schema/RoutineSchema');
+        const { RoutineItemModel } = require('../schema/RoutineItemSchema');
+        const { GoalModel } = require('../schema/GoalSchema');
+        const { ProgressModel } = require('../schema/ProgressSchema');
+
+        // Delete all user data in parallel
+        await Promise.all([
+          // Delete user routines
+          RoutineModel.deleteMany({ email }),
+          // Delete user routine items
+          RoutineItemModel.deleteMany({ email }),
+          // Delete user goals
+          GoalModel.deleteMany({ email }),
+          // Delete user progress
+          ProgressModel.deleteMany({ email }),
+          // Finally, delete the user account
+          UserModel.deleteOne({ email }),
+        ]);
+
+        console.log(`Account deleted successfully for user: ${email}`);
+
+        return {
+          success: 'true',
+          message: 'Your account and all associated data have been permanently deleted.',
+        };
+      } catch (error) {
+        console.error('Error deleting account:', error);
+        throw new ApiError('Failed to delete account', 500);
+      }
     },
   },
 };
