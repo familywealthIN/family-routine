@@ -198,37 +198,38 @@ export default {
     },
   },
   methods: {
-    handleClickSignOut() {
-      if (Capacitor.isNativePlatform()) {
-        GoogleAuth.signOut().then(async () => {
-          this.drawer = false;
-          await clearData();
-          localStorage.removeItem(USER_TAGS);
-          this.$root.$data.userName = '';
-          this.$root.$data.userEmail = '';
-          this.$root.$data.picture = '';
-          this.$router.push('/').catch(() => {});
-        }).catch((error) => {
-          console.log(error);
-          window.location.reload();
-        });
-      } else {
-        this.$gAuth
-          .signOut()
-          .then(async () => {
-            this.drawer = false;
-            this.isSignIn = this.$gAuth.isAuthorized;
-            await clearData();
-            localStorage.removeItem(USER_TAGS);
-            this.$root.$data.userName = getSessionItem(GC_USER_NAME);
-            this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
-            this.$root.$data.userEmail = getSessionItem(GC_PICTURE);
-            this.$router.push('/').catch(() => {});
-          })
-          .catch((error) => {
-            window.location.reload();
-            console.log(error);
+   async handleClickSignOut() {
+      try {
+        if (Capacitor.isNativePlatform()) {
+          // Initialize before signOut to prevent nil error
+          const platform = Capacitor.getPlatform();
+          const clientId = platform === 'ios' 
+            ? '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com'
+            : '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com';
+
+          await GoogleAuth.initialize({
+            clientId: clientId,
+            scopes: ['profile', 'email']
           });
+          
+          await GoogleAuth.signOut();
+        } else {
+          await this.$gAuth.signOut();
+        }
+        
+        this.drawer = false;
+        await clearData();
+        localStorage.removeItem(USER_TAGS);
+        this.$root.$data.userName = getSessionItem(GC_USER_NAME);
+        this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
+        this.$root.$data.picture = getSessionItem(GC_PICTURE);
+        this.$router.push('/').catch(() => {});
+      } catch (error) {
+        console.log(error);
+        // Just clear local data and redirect on error
+        await clearData();
+        localStorage.removeItem(USER_TAGS);
+        this.$router.push('/').catch(() => {});
       }
     },
   },
@@ -371,7 +372,7 @@ body.android15 .safe-area-content {
   width: 100% !important;
 }
 .v-bottom-nav {
-  height: 64px !important;
+  height: 75px !important;
 }
 
 .login-content-wrapper {
