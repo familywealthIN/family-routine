@@ -18,10 +18,16 @@
 .v-toolbar__content,
 .android15-no-soft-keys .toolbar,
 .v-toolbar__content {
-  padding-top: max(var(--system-bottom-inset, 30px), env(safe-area-inset-bottom)) !important;
+  &.ios{
+      padding-top: max(var(--system-bottom-inset, 30px), env(safe-area-inset-bottom)) !important;
+
+  }
+  
 
 
 }
+
+
 
 /* Footer styles - soft keys handling */
 .v-bottom-nav {
