@@ -11,4 +11,5 @@ export const EVENTS = {
   GOAL_UPDATED: 'goal-updated',
   GOAL_DELETED: 'goal-deleted',
   GOAL_ITEM_CREATED: 'goal-item-created',
+  TIME_FORMAT_CHANGED: 'time-format-changed', // Added for time format preference changes
 };

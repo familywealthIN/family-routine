@@ -1,22 +1,130 @@
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 
-const { GOOGLE_CLIENT_ID, JWT_SECRET } = process.env;
+const {
+  GOOGLE_CLIENT_ID,
+  GA_CLIENT_ID,
+  GA_IOS_CLIENT_ID,
+  JWT_SECRET,
+} = process.env;
 
-// Initialize Google OAuth2 client
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+// Initialize multiple Google OAuth2 clients
+const googleClients = {
+  web: new OAuth2Client(GOOGLE_CLIENT_ID),
+  android: new OAuth2Client(GA_CLIENT_ID),
+  ios: new OAuth2Client(GA_IOS_CLIENT_ID),
+};
 
-// Function to verify Google ID token
-const verifyGoogleToken = async (token) => {
-  try {
-    const ticket = await googleClient.verifyIdToken({
-      idToken: token,
-      audience: GOOGLE_CLIENT_ID,
-    });
-    return ticket.getPayload();
-  } catch (error) {
-    throw new Error('Invalid Google token');
+
+
+const authenticateApple = async (req) => {
+  const { identityToken } = req.body;
+  if (!identityToken) {
+    throw new Error('No identity token provided');
   }
+
+  try {
+    const payload = jwt.decode(identityToken);
+
+    if (!payload || !payload.sub) {
+      throw new Error('Invalid token payload');
+    }
+
+    // Apple may not provide email on subsequent logins
+    const email = payload.email || `${payload.sub}@privaterelay.appleid.com`;
+    const name = payload.email ? payload.email.split('@')[0] : 'Apple User';
+
+    return {
+      data: {
+        profile: {
+          id: payload.sub,
+          displayName: name,
+          emails: [{ value: email }],
+          _json: {
+            picture: '',
+          },
+        },
+      },
+    };
+  } catch (error) {
+    throw new Error(`Apple authentication failed: ${error.message}`);
+  }
+};
+
+// Get all client IDs for audience verification
+const getAllClientIds = () => [GOOGLE_CLIENT_ID, GA_CLIENT_ID, GA_IOS_CLIENT_ID].filter(Boolean);
+async function upsertAppleUser({ profile }, notificationId) {
+  const User = this;
+  
+  // Try to find user by Apple ID first, then by email
+  let user = await User.findOne({ 'social.appleProvider.id': profile.id });
+  
+  if (!user && profile.emails[0].value) {
+    user = await User.findOne({ email: profile.emails[0].value });
+    
+    // If found by email, update with Apple provider info
+    if (user) {
+      user.social = user.social || {};
+      user.social.appleProvider = { id: profile.id };
+      await user.save();
+    }
+  }
+
+  if (!user) {
+    return await User.create({
+      name: profile.displayName || 'Apple User',
+      email: profile.emails[0].value,
+      notificationId,
+      picture: '',
+      groupId: '',
+      tags: [profile.emails[0].value],
+      needsOnboarding: true,
+      'social.appleProvider': { id: profile.id },
+    });
+  }
+
+  if (user.notificationId !== notificationId) {
+    await User.findOneAndUpdate(
+      { _id: user.id },
+      { notificationId },
+      { new: true }
+    );
+  }
+
+  return user;
+}
+
+
+// Function to verify Google ID token with multiple clients
+const verifyGoogleToken = async (token) => {
+  const clientIds = getAllClientIds();
+
+  // Try verification with each client using Promise.allSettled
+  const verificationPromises = Object.values(googleClients).map(async (client) => {
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: clientIds, // Support all client IDs as audience
+      });
+      return { success: true, payload: ticket.getPayload() };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  const results = await Promise.allSettled(verificationPromises);
+
+  // Find the first successful verification
+  const successfulResult = results
+    .filter((result) => result.status === 'fulfilled')
+    .map((result) => result.value)
+    .find((value) => value.success);
+
+  if (successfulResult) {
+    return successfulResult.payload;
+  }
+
+  throw new Error('Invalid Google token - failed verification with all clients');
 };
 
 const authenticateGoogle = async (req) => {
@@ -109,4 +217,6 @@ async function upsertGoogleUser({ profile }, notificationId) {
   return user;
 }
 
-module.exports = { generateAccessToken, upsertGoogleUser, authenticateGoogle };
+module.exports = {
+  generateAccessToken, upsertGoogleUser, upsertAppleUser, authenticateGoogle, authenticateApple,
+};

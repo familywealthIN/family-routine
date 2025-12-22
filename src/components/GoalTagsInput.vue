@@ -9,15 +9,15 @@
       @tags-changed="tagsChanged"
     >
       <div slot="tag-center" slot-scope="props" @click="props.performOpenEdit(props.index)">
-        <template v-if="props.tag && props.tag.text.includes(':')">
-          <span v-for="text in props.tag.text.split(':')" :key="text">
-            <span :key="text" style="padding: 5px; border-right: 1px solid #ccc;">
+        <template v-if="props.tag && props.tag.text && props.tag.text.includes(':')">
+          <span v-for="(text, index) in props.tag.text.split(':')" :key="`${props.index}-${index}`">
+            <span style="padding: 5px; border-right: 1px solid #ccc;">
               {{ text }}
             </span>
           </span>
         </template>
         <template v-else>
-          {{ props.tag.text }}
+          {{ props.tag && props.tag.text ? props.tag.text : '' }}
         </template>
       </div>
     </vue-tags-input>
@@ -27,8 +27,14 @@
 <script>
 import VueTagsInput from '@johmun/vue-tags-input';
 
-const mapTagItems = (tagItems = []) => tagItems.map((tagItem) => ({ text: tagItem }));
-const mapTagStringItems = (tagItems = []) => tagItems.map((tagItem) => tagItem.text);
+const mapTagItems = (tagItems = []) => {
+  if (!tagItems || !Array.isArray(tagItems)) return [];
+  return tagItems.map((tagItem) => ({ text: tagItem }));
+};
+const mapTagStringItems = (tagItems = []) => {
+  if (!tagItems || !Array.isArray(tagItems)) return [];
+  return tagItems.map((tagItem) => tagItem.text);
+};
 
 export default {
   components: {
@@ -46,15 +52,27 @@ export default {
       return mapTagItems(this.goalTags || []);
     },
     filteredItems() {
+<<<<<<< HEAD
       return mapTagItems(this.userTags || []).filter(
         (i) => i.text.toLowerCase().indexOf(this.tag.toLowerCase()) !== -1,
+=======
+      if (!this.userTags || !Array.isArray(this.userTags)) {
+        return [];
+      }
+      return mapTagItems(this.userTags).filter(
+        (i) => i.text && i.text.toLowerCase().indexOf(this.tag.toLowerCase()) !== -1,
+>>>>>>> develop
       );
     },
   },
   methods: {
     tagsChanged(newTags) {
-      this.goalTags = mapTagStringItems(newTags);
-      this.$emit('update-new-tag-items', this.goalTags);
+      if (!newTags || !Array.isArray(newTags)) {
+        this.$emit('update-new-tag-items', []);
+        return;
+      }
+      const tagStrings = mapTagStringItems(newTags);
+      this.$emit('update-new-tag-items', tagStrings);
     },
   },
 };

@@ -252,6 +252,7 @@ export default {
               ticked
               passed
               wait
+              tags
             }
           }
         }
@@ -347,6 +348,7 @@ export default {
       autoSaveTimeout: null,
       autoSaveLoading: false,
       lastSavedContribution: '',
+      isInitialLoad: true, // Flag to track initial component load
     };
   },
   computed: {
@@ -706,12 +708,19 @@ export default {
       if (newVal.id && newVal.contribution !== this.lastSavedContribution) {
         this.lastSavedContribution = newVal.contribution || '';
       }
+
+      // Reset the initial load flag after the first change
+      if (this.isInitialLoad && (newVal.id !== oldVal.id || newVal.contribution !== oldVal.contribution)) {
+        this.$nextTick(() => {
+          this.isInitialLoad = false;
+        });
+      }
     },
 
     // Auto-save contribution field when user stops typing
     'newGoalItem.contribution': function watchContribution(newValue) {
-      // Only auto-save if the item has an ID (exists in database)
-      if (!this.newGoalItem.id || newValue === this.lastSavedContribution) {
+      // Only auto-save if the item has an ID (exists in database) and it's not the initial load
+      if (!this.newGoalItem.id || newValue === this.lastSavedContribution || this.isInitialLoad) {
         return;
       }
 
@@ -724,6 +733,20 @@ export default {
       this.autoSaveTimeout = setTimeout(() => {
         this.autoSaveContribution();
       }, 2000);
+    },
+
+    // Watch for taskRef changes to auto-fill tags
+    'newGoalItem.taskRef': function watchTaskRef(newTaskRef, oldTaskRef) {
+      if (newTaskRef !== oldTaskRef && newTaskRef && this.tasklist && this.tasklist.length > 0) {
+        const selectedTask = this.tasklist.find((task) => task.id === newTaskRef);
+        if (selectedTask && selectedTask.tags && selectedTask.tags.length > 0) {
+          // Merge existing tags with routine item tags, avoiding duplicates
+          const existingTags = this.newGoalItem.tags || [];
+          const routineTags = selectedTask.tags || [];
+          const mergedTags = [...new Set([...existingTags, ...routineTags])];
+          this.newGoalItem.tags = mergedTags;
+        }
+      }
     },
 
     // Watch for user email changes (indicates login/logout)

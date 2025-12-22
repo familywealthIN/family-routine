@@ -1,6 +1,6 @@
 const moment = require('moment');
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 async function getSummaryFromGoalItems(goalItems) {
   console.log('Fetching summary from Gemini API for items:', goalItems);
@@ -357,7 +357,7 @@ async function generateMilestonePlan(userQuery) {
     Keep descriptions detailed but concise. Format numbers consistently.`;
 
     // Use Google Gemini API (assuming we have access to it)
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
+    const response = await fetch(GEMINI_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -629,7 +629,7 @@ Guidelines:
     return {
       ...routineItem,
       description: enhancement.description,
-      steps: enhancement.steps || [],
+      // steps: enhancement.steps || [],
     };
   } catch (error) {
     console.error('Error enhancing routine item with AI:', error);
@@ -637,11 +637,11 @@ Guidelines:
     return {
       ...routineItem,
       description: `A ${routineItem.name.toLowerCase()} routine to help you build healthy habits.`,
-      steps: [
-        { name: 'Prepare your space and materials' },
-        { name: `Complete your ${routineItem.name.toLowerCase()} activity` },
-        { name: 'Reflect on your progress' },
-      ],
+      // steps: [
+      //   { name: 'Prepare your space and materials' },
+      //   { name: `Complete your ${routineItem.name.toLowerCase()} activity` },
+      //   { name: 'Reflect on your progress' },
+      // ],
     };
   }
 }

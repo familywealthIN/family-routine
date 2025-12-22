@@ -33,6 +33,7 @@
           </v-list-tile-content>
         </v-list-tile>
         <year-goal-sidebar />
+        <area-sidebar />
         <v-list-tile v-for="item in otherItems" :key="item.title" :to="item.route">
           <v-list-tile-action>
             <v-icon>{{ item.icon }}</v-icon>
@@ -42,6 +43,33 @@
             <v-list-tile-title>{{ item.title }}</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
+
+        <!-- Settings Group with Submenu -->
+        <v-list>
+          <v-list-group prepend-icon="settings" no-action>
+            <template v-slot:activator>
+              <v-list-tile-title class="subheader">Settings</v-list-tile-title>
+            </template>
+
+            <v-list-tile :to="'/settings'">
+              <v-list-tile-avatar>
+                <v-icon>tune</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>Routine Settings</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+
+            <v-list-tile :to="'/settings/profile'">
+              <v-list-tile-avatar>
+                <v-icon>account_circle</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>Profile Settings</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list-group>
+        </v-list>
         <project-sidebar />
         <v-list-tile @click="handleClickSignOut">
           <v-list-tile-action>
@@ -94,6 +122,7 @@
 
 <script>
 import ProjectSidebar from '@/components/ProjectSidebar.vue';
+import AreaSidebar from '@/components/AreaSidebar.vue';
 import YearGoalSidebar from '@/components/YearGoalSidebar.vue';
 import PendingList from '../components/PendingList.vue';
 import AiSearchModal from '../components/AiSearchModal.vue';
@@ -106,6 +135,7 @@ export default {
   components: {
     PendingList,
     ProjectSidebar,
+    AreaSidebar,
     YearGoalSidebar,
     AiSearchModal,
   },
@@ -120,7 +150,6 @@ export default {
       otherItems: [
         { title: 'Progress', icon: 'pie_chart', route: '/progress' },
         { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
-        { title: 'Routine Settings', icon: 'settings', route: '/settings' },
         { title: 'About', icon: 'info', route: '/about' },
       ],
     };
@@ -212,4 +241,15 @@ export default {
     margin: 0;
     padding: 0;
   }
+
+.v-list__group__header  {
+  min-height: 40px;
+}
+.v-list__group__header .v-list__group__header__prepend-icon {
+  color: var(--v-primary-base);
+  min-width: 70px;
+}
+.v-list__group__items--no-action .v-list__tile {
+    padding-left: 12px;
+}
 </style>

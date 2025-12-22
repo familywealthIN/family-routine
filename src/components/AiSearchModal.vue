@@ -791,6 +791,21 @@ export default {
         this.selectedGoalPeriod = this.autoSelectGoalPeriod(newVal);
       }
     },
+
+    // Watch taskData.taskRef to auto-fill tags when routine task is selected
+    'taskData.taskRef': function watchTaskDataTaskRef(newTaskRef, oldTaskRef) {
+      if (newTaskRef !== oldTaskRef && newTaskRef && this.routines && this.routines.length > 0) {
+        // Find the selected routine from global task list
+        const selectedRoutine = this.$currentTaskList && this.$currentTaskList.find((task) => task.id === newTaskRef);
+        if (selectedRoutine && selectedRoutine.tags && selectedRoutine.tags.length > 0) {
+          // Merge existing tags with routine item tags, avoiding duplicates
+          const existingTags = this.taskData.tags || [];
+          const routineTags = selectedRoutine.tags || [];
+          const mergedTags = [...new Set([...existingTags, ...routineTags])];
+          this.$set(this.taskData, 'tags', mergedTags);
+        }
+      }
+    },
   },
   methods: {
     handleScroll() {

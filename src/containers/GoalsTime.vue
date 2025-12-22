@@ -15,7 +15,13 @@
         bottom
         class="second-right-btn"
         color="info"
-        @click="$router.push('/goals/milestones')"
+        @click="() => {
+          trackUserInteraction('milestones_navigation', 'button_click', {
+            from_page: 'goals',
+            to_page: 'milestones',
+          });
+          $router.push('/goals/milestones');
+        }"
       >
         <v-icon>widgets</v-icon>
       </v-btn>
@@ -26,7 +32,13 @@
         bottom
         right
         color="info"
-        @click="addGoalItemDialog = true"
+        @click="() => {
+          trackUserInteraction('add_goal_dialog_open', 'button_click', {
+            from_page: 'goals',
+            goals_count: goals ? goals.length : 0,
+          });
+          addGoalItemDialog = true;
+        }"
       >
         <v-icon>add</v-icon>
       </v-btn>
@@ -160,6 +172,7 @@
 <script>
 import gql from 'graphql-tag';
 import moment from 'moment';
+import { MeasurementMixin } from '@/utils/measurementMixins.js';
 
 import { defaultGoalItem, periodsArray } from '../constants/goals';
 
@@ -169,6 +182,7 @@ import GoalCreation from '../components/GoalCreation.vue';
 import ContainerBox from '../components/ContainerBox.vue';
 
 export default {
+  mixins: [MeasurementMixin],
   components: {
     GoalItemList,
     GoalCreation,
@@ -299,9 +313,25 @@ export default {
         .goalItems
         .find((aGoalItem) => aGoalItem.id === newGoalItem.id);
       if(goalItem && goalItem.id) {
+        // Track goal update
+        this.trackBusinessEvent('goal_updated', {
+          goal_id: goalItem.id,
+          period: newGoalItem.period,
+          is_milestone: newGoalItem.isMilestone,
+          has_deadline: !!newGoalItem.deadline,
+          tags_count: newGoalItem.tags ? newGoalItem.tags.length : 0,
+        });
         const goalItemIndex = goal.goalItems.indexOf(goalItem);
         Object.assign(goal.goalItems[goalItemIndex], newGoalItem);
       } else {
+        // Track new goal creation
+        this.trackBusinessEvent('goal_created', {
+          period: newGoalItem.period,
+          is_milestone: newGoalItem.isMilestone,
+          has_deadline: !!newGoalItem.deadline,
+          tags_count: newGoalItem.tags ? newGoalItem.tags.length : 0,
+          goal_length: newGoalItem.body ? newGoalItem.body.length : 0,
+        });
         goal.goalItems.push({
           ...newGoalItem,
         });
@@ -317,6 +347,14 @@ export default {
         this.goalDialog = true;
       }
     },
+  },
+  mounted() {
+    // Track goals page view
+    this.trackPageView('goals');
+    this.trackUserInteraction('goals_page_mounted', 'lifecycle', {
+      component: 'GoalsTime',
+      goals_count: this.goals ? this.goals.length : 0,
+    });
   },
 };
 </script>

@@ -19,6 +19,8 @@ export const PROFILE_SETTINGS = {
     day: 5, // Number of days to be completed to auto check week goal
   },
   defaultTimezone: '+05:50', // GMT +5:30 (India Standard Time)
+  // Added user preference for time display (12h or 24h)
+  timeFormat: '24h',
 };
 
 // Week start options

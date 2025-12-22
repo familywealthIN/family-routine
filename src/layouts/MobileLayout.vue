@@ -31,10 +31,10 @@
         <v-divider></v-divider>
       </v-list>
 
-      <template v-for="drawerItem in drawerItems">
-        <v-subheader :key="drawerItem.header">{{ drawerItem.header }}</v-subheader>
-        <!-- <v-divider :key="drawerItem.header"></v-divider> -->
-        <v-list class="pt-0" dense :key="drawerItem.header">
+      <template v-for="(drawerItem, index) in drawerItems">
+        <v-subheader :key="`header-${index}`">{{ drawerItem.header }}</v-subheader>
+        <!-- <v-divider :key="`divider-${index}`"></v-divider> -->
+        <v-list class="pt-0" dense :key="`list-${index}`">
           <v-list-tile v-for="item in drawerItem.items" :key="item.title" :to="item.route">
             <v-list-tile-action>
               <v-icon>{{ item.icon }}</v-icon>
