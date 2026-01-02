@@ -372,7 +372,7 @@
 
 <script>
 import gql from 'graphql-tag';
-import ContainerBox from '../components/ContainerBox.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 import { PROFILE_SETTINGS, WEEK_START_OPTIONS, TIMEZONE_OPTIONS } from '../constants/settings';
 
 export default {

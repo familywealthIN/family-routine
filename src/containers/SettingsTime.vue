@@ -136,10 +136,10 @@
 import gql from 'graphql-tag';
 import { MeasurementMixin } from '@/utils/measurementMixins';
 
-import ContainerBox from '../components/ContainerBox.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 import draggable from 'vuedraggable';
-import CircadianCycle from '../components/CircadianCycle.vue';
-import GoalTagsInput from '../components/GoalTagsInput.vue';
+import CircadianCycle from '../components/organisms/CircadianCycle/CircadianCycle.vue';
+import GoalTagsInput from '../components/molecules/GoalTagsInput/GoalTagsInput.vue';
 import getJSON from '../utils/getJSON';
 
 export default {

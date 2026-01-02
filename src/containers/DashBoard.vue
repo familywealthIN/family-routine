@@ -791,15 +791,15 @@ import { defaultGoalItem } from '../constants/goals';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import { MeasurementMixin } from '../utils/measurementMixins';
 
-import GoalList from '../components/GoalList.vue';
-import TimelineItemList from '../components/TimelineItemList.vue';
-import GoalItemList from '../components/GoalItemList.vue';
-import ContainerBox from '../components/ContainerBox.vue';
+import GoalList from '../components/organisms/GoalList/GoalList.vue';
+import TimelineItemList from '../components/molecules/TimelineItemList/TimelineItemList.vue';
+import GoalItemList from '../components/organisms/GoalItemList/GoalItemList.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
-import QuickGoalCreation from '../components/QuickGoalCreation.vue';
-import StreakChecks from '../components/StreakChecks.vue';
-import GoalCreation from '../components/GoalCreation.vue';
-import WakeCheck from '../components/WakeCheck.vue';
+import QuickGoalCreation from '../components/molecules/QuickGoalCreation/QuickGoalCreation.vue';
+import StreakChecks from '../components/molecules/StreakChecks/StreakChecks.vue';
+import GoalCreation from '../components/organisms/GoalCreation/GoalCreation.vue';
+import WakeCheck from '../components/atoms/WakeCheck/WakeCheck.vue';
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
 import { TimeFormatMixin } from '../utils/timeFormat';
 

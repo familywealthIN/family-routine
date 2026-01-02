@@ -122,8 +122,8 @@
 </template>
 
 <script>
-import PendingList from '../components/PendingList.vue';
-import AiSearchModal from '../components/AiSearchModal.vue';
+import PendingList from '../components/organisms/PendingList/PendingList.vue';
+import AiSearchModal from '../components/organisms/AiSearchModal/AiSearchModal.vue';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';

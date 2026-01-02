@@ -121,11 +121,11 @@
 </template>
 
 <script>
-import ProjectSidebar from '@/components/ProjectSidebar.vue';
-import AreaSidebar from '@/components/AreaSidebar.vue';
-import YearGoalSidebar from '@/components/YearGoalSidebar.vue';
-import PendingList from '../components/PendingList.vue';
-import AiSearchModal from '../components/AiSearchModal.vue';
+import ProjectSidebar from '@/components/molecules/ProjectSidebar/ProjectSidebar.vue';
+import AreaSidebar from '@/components/molecules/AreaSidebar/AreaSidebar.vue';
+import YearGoalSidebar from '@/components/molecules/YearGoalSidebar/YearGoalSidebar.vue';
+import PendingList from '../components/organisms/PendingList/PendingList.vue';
+import AiSearchModal from '../components/organisms/AiSearchModal/AiSearchModal.vue';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';

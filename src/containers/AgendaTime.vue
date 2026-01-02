@@ -242,9 +242,9 @@
 import moment from 'moment';
 import gql from 'graphql-tag';
 
-import GoalList from '../components/GoalList.vue';
-import TimelineItemList from '../components/TimelineItemList.vue';
-import ContainerBox from '../components/ContainerBox.vue';
+import GoalList from '../components/organisms/GoalList/GoalList.vue';
+import TimelineItemList from '../components/molecules/TimelineItemList/TimelineItemList.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 import { stepupMilestonePeriodDate } from '../utils/getDates';
 
 export default {

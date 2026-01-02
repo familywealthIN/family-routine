@@ -49,9 +49,9 @@ import moment from 'moment';
 
 import { defaultGoalItem, periodsArray } from '../constants/goals';
 
-import GoalItemMilestoneList from '../components/GoalItemMilestoneList.vue';
-import GoalCreation from '../components/GoalCreation.vue';
-import ContainerBox from '../components/ContainerBox.vue';
+import GoalItemMilestoneList from '../components/molecules/GoalItemMilestoneList/GoalItemMilestoneList.vue';
+import GoalCreation from '../components/organisms/GoalCreation/GoalCreation.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 
 export default {
   components: {
