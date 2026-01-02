@@ -32,29 +32,45 @@ A molecule component for selecting routine tasks and goal periods in AI-powered 
 
 ## Features
 
-- **Two-column layout**: Routine and period selectors side-by-side
-- **Dependent disable**: Period selector disabled until routine selected
-- **Sync modifiers**: Supports `.sync` for two-way binding
-- **Custom period options**: Override default week/month/year
-- **Icons**: Schedule icon for routine, calendar for period
+* **Two-column layout**: Routine and period selectors side-by-side
+* **Dependent disable**: Period selector disabled until routine selected
+* **Sync modifiers**: Supports `.sync` for two-way binding
+* **Custom period options**: Override default week/month/year
+* **Icons**: Schedule icon for routine, calendar for period
 
 ## Routine Items Format
 
 ```javascript
-routines: [
-  { taskId: '1', name: 'Morning Routine' },
-  { taskId: '2', name: 'Work Focus' },
-  { taskId: '3', name: 'Exercise' },
+routines: [{
+        taskId: '1',
+        name: 'Morning Routine'
+    },
+    {
+        taskId: '2',
+        name: 'Work Focus'
+    },
+    {
+        taskId: '3',
+        name: 'Exercise'
+    },
 ]
 ```
 
 ## Period Options Format
 
 ```javascript
-periodOptions: [
-  { text: 'Week Goals', value: 'week' },
-  { text: 'Month Goals', value: 'month' },
-  { text: 'Year Goals', value: 'year' },
+periodOptions: [{
+        text: 'Week Goals',
+        value: 'week'
+    },
+    {
+        text: 'Month Goals',
+        value: 'month'
+    },
+    {
+        text: 'Year Goals',
+        value: 'year'
+    },
 ]
 ```
 
@@ -74,10 +90,10 @@ This component is extracted from the AiSearchModal's routine and period selectio
 ```
 
 The parent component provides:
-- `routines` from `routineTasksData` computed property
-- `selectedRoutine` for auto-selection logic
-- `selectedPeriod` for goal period management
-- `goalPeriodOptions` from data
+* `routines` from `routineTasksData` computed property
+* `selectedRoutine` for auto-selection logic
+* `selectedPeriod` for goal period management
+* `goalPeriodOptions` from data
 
 ## Auto-selection Pattern
 
@@ -85,24 +101,24 @@ Parent components typically auto-select the current task when the modal opens:
 
 ```javascript
 watch: {
-  dialog(isOpen) {
-    if (isOpen && this.$currentTaskData && this.$currentTaskData.id) {
-      this.selectedRoutine = this.$currentTaskData.id;
-    }
-  },
+    dialog(isOpen) {
+        if (isOpen && this.$currentTaskData && this.$currentTaskData.id) {
+            this.selectedRoutine = this.$currentTaskData.id;
+        }
+    },
 }
 ```
 
 ## Use Cases
 
-- AI goal planning interfaces
-- Milestone configuration forms
-- Period-based task scheduling
-- Routine-linked goal creation
+* AI goal planning interfaces
+* Milestone configuration forms
+* Period-based task scheduling
+* Routine-linked goal creation
 
 ## Accessibility
 
-- Semantic labels for screen readers
-- Keyboard navigation support
-- Disabled state prevents interaction
-- Clear visual hierarchy
+* Semantic labels for screen readers
+* Keyboard navigation support
+* Disabled state prevents interaction
+* Clear visual hierarchy

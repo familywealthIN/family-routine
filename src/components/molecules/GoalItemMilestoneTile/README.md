@@ -16,23 +16,23 @@ A molecule component that displays a single goal milestone item with completion 
 
 ## Features
 
-- Displays goal with period/date prefix
-- Shows check icon for completed goals
-- Shows close icon for incomplete goals
-- Strike-through styling for completed items
+* Displays goal with period/date prefix
+* Shows check icon for completed goals
+* Shows close icon for incomplete goals
+* Strike-through styling for completed items
 
 ## Goal Item Structure
 
 ```javascript
 {
-  id: String,
-  body: String,
-  period: String, // 'day', 'week', 'month', 'year'
-  date: String,   // Format depends on period
-  isComplete: Boolean
+    id: String,
+    body: String,
+    period: String, // 'day', 'week', 'month', 'year'
+    date: String, // Format depends on period
+    isComplete: Boolean
 }
 ```
 
 ## Dependencies
 
-- `@/utils/getDates` - For period date formatting
+* `@/utils/getDates` - For period date formatting

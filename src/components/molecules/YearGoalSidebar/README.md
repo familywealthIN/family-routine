@@ -30,25 +30,25 @@ query currentYearGoals {
 
 ## Features
 
-- Fetches current year goals from the API
-- Groups goals by category (goal body)
-- Displays completion count (completed/total)
-- Shows "No goals created yet" message when empty
-- Link to "All Goals" page
-- Collapsible list group with "Goals" header
+* Fetches current year goals from the API
+* Groups goals by category (goal body)
+* Displays completion count (completed/total)
+* Shows "No goals created yet" message when empty
+* Link to "All Goals" page
+* Collapsible list group with "Goals" header
 
 ## Navigation
 
-- Category click navigates to: `{ name: 'yearGoals', params: { category } }`
-- "All Goals" navigates to: `/goals`
+* Category click navigates to: `{ name: 'yearGoals', params: { category } }`
+* "All Goals" navigates to: `/goals`
 
 ## Computed Properties
 
-- `groupedYearGoals`: Aggregates goals by category with completion statistics
+* `groupedYearGoals`: Aggregates goals by category with completion statistics
 
 ## Styling
 
-- Custom subheader styling
-- Goal count badge styling
-- Empty state message styling
-- Calendar icons for goal categories
+* Custom subheader styling
+* Goal count badge styling
+* Empty state message styling
+* Calendar icons for goal categories

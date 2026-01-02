@@ -27,12 +27,12 @@ A molecule component that provides a tag input interface with autocomplete funct
 
 ## Features
 
-- Tag autocomplete from user's existing tags
-- Support for hierarchical tags (area:work, project:name)
-- Visual display of hierarchical tags with separators
-- Tag editing on click
-- Tag removal functionality
+* Tag autocomplete from user's existing tags
+* Support for hierarchical tags (area:work, project:name)
+* Visual display of hierarchical tags with separators
+* Tag editing on click
+* Tag removal functionality
 
 ## Dependencies
 
-- `@johmun/vue-tags-input` - Tag input component library
+* `@johmun/vue-tags-input` - Tag input component library

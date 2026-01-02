@@ -22,22 +22,23 @@ query projectTags {
 
 ## Features
 
-- Fetches project tags from the API
-- Collapsible list group with "Projects" header
-- Displays projects with folder icons
-- Navigation to project detail pages
-- Formats project names (removes "project:" prefix and capitalizes)
+* Fetches project tags from the API
+* Collapsible list group with "Projects" header
+* Displays projects with folder icons
+* Navigation to project detail pages
+* Formats project names (removes "project:" prefix and capitalizes)
 
 ## Navigation
 
 Clicking a project navigates to:
+
 ```
 { name: 'projects', params: { tag: 'project:website' } }
 ```
 
 ## Styling
 
-- Custom subheader styling
-- Primary color for prepend icon
-- Folder icons for visual clarity
-- Minimum header height of 40px
+* Custom subheader styling
+* Primary color for prepend icon
+* Folder icons for visual clarity
+* Minimum header height of 40px

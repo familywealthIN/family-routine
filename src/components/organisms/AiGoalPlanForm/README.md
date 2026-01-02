@@ -43,42 +43,48 @@ An organism component for AI-powered milestone planning with timeline editing an
 ## Features
 
 ### AI-Powered Planning
-- **Intelligent query modification**: Adjusts periods based on time remaining
-  - Week: 5+ days left = use remaining, else next week
-  - Month: 3+ weeks left = use remaining, else next month
-  - Year: 6+ months left = use remaining, else next year
-- **Auto-period detection**: Extracts week/month/year from query
-- **GraphQL mutation**: `generateMilestonePlan`
+
+* **Intelligent query modification**: Adjusts periods based on time remaining
+  + Week: 5+ days left = use remaining, else next week
+  + Month: 3+ weeks left = use remaining, else next month
+  + Year: 6+ months left = use remaining, else next year
+* **Auto-period detection**: Extracts week/month/year from query
+* **GraphQL mutation**: `generateMilestonePlan`
 
 ### Milestone Linking
-- **Optional parent linking**: Link plan to higher-level goal
-- **Two-level hierarchy**: Plan title → Timeline entries
-- **Automatic relationships**: Entries always reference plan title
-- **Goal reference selector**: Choose parent goal from dropdown
+
+* **Optional parent linking**: Link plan to higher-level goal
+* **Two-level hierarchy**: Plan title → Timeline entries
+* **Automatic relationships**: Entries always reference plan title
+* **Goal reference selector**: Choose parent goal from dropdown
 
 ### Timeline Editing
-- **Inline markdown editor**: VueEasymde for rich descriptions
-- **Editable titles**: Click to edit each milestone
-- **Period display**: Shows period name and date
-- **Color-coded dots**: Visual period differentiation
+
+* **Inline markdown editor**: VueEasymde for rich descriptions
+* **Editable titles**: Click to edit each milestone
+* **Period display**: Shows period name and date
+* **Color-coded dots**: Visual period differentiation
 
 ### Bulk Save with Fallback
-- **Primary**: `bulkAddGoalItems` mutation for all entries
-- **Fallback**: Individual `addGoalItem` mutations if bulk fails
-- **Two-step save**:
+
+* **Primary**: `bulkAddGoalItems` mutation for all entries
+* **Fallback**: Individual `addGoalItem` mutations if bulk fails
+* **Two-step save**:
   1. Save plan title as goal item
   2. Save all timeline entries with goalRef to plan
 
 ### Auto-Selection Logic
-- **Current task**: Auto-selects from `$currentTaskData`
-- **Goal period**: Detects from query keywords
-- **Routine task**: Pre-selects after AI generation
+
+* **Current task**: Auto-selects from `$currentTaskData`
+* **Goal period**: Detects from query keywords
+* **Routine task**: Pre-selects after AI generation
 
 ## GraphQL Operations
 
 ### Mutations
 
 **generateMilestonePlan**:
+
 ```graphql
 mutation generateMilestonePlan($query: String!) {
   generateMilestonePlan(query: $query) {
@@ -96,6 +102,7 @@ mutation generateMilestonePlan($query: String!) {
 ```
 
 **bulkAddGoalItems**:
+
 ```graphql
 mutation bulkAddGoalItems($goalItems: [GoalItemInput!]!) {
   bulkAddGoalItems(goalItems: $goalItems) {
@@ -111,6 +118,7 @@ mutation bulkAddGoalItems($goalItems: [GoalItemInput!]!) {
 ```
 
 **addGoalItem** (fallback):
+
 ```graphql
 mutation addGoalItem($date: String!, $period: String!, ...) {
   addGoalItem(...) {
@@ -126,6 +134,7 @@ mutation addGoalItem($date: String!, $period: String!, ...) {
 ## Data Flow
 
 ### 1. Query Submission
+
 ```
 User query → modifyQueryPeriod() → generateMilestonePlan mutation
   ↓
@@ -135,6 +144,7 @@ Auto-select routine task
 ```
 
 ### 2. Save Process
+
 ```
 Validate inputs
   ↓
@@ -158,36 +168,39 @@ Emit @success to parent
 ### Query Modification Examples
 
 **Week Plan (2 days left in week)**:
+
 ```javascript
-Input:  "Learn React this week"
+Input: "Learn React this week"
 Output: "Learn React next week starting Sunday"
 ```
 
 **Month Plan (1 week left)**:
+
 ```javascript
-Input:  "Build app this month"
+Input: "Build app this month"
 Output: "Build app next month (January 2026)"
 ```
 
 **Year Plan (4 months left)**:
+
 ```javascript
-Input:  "Career growth this year"
+Input: "Career growth this year"
 Output: "Career growth next year (2026)"
 ```
 
 ### Entry Period Calculation
 
 Parent period → Child period:
-- `week` → `day` (7 daily entries)
-- `month` → `week` (4 weekly entries)
-- `year` → `month` (12 monthly entries)
+* `week` → `day` (7 daily entries)
+* `month` → `week` (4 weekly entries)
+* `year` → `month` (12 monthly entries)
 
 ### Date Conversion
 
 Uses `getTimelineEntryDate()` utility:
-- Week plans: Converts to Friday of each week
-- Month plans: Converts to end of month
-- Year plans: Uses month-end dates
+* Week plans: Converts to Friday of each week
+* Month plans: Converts to end of month
+* Year plans: Uses month-end dates
 
 ## Component Integration
 
@@ -200,23 +213,25 @@ Uses `getTimelineEntryDate()` utility:
 
 ```javascript
 import {
-  stepupMilestonePeriodDate,  // Get parent period/date
-  getTimelineEntryPeriod,     // Get child period
-  getTimelineEntryDate,       // Convert date format
+    stepupMilestonePeriodDate, // Get parent period/date
+    getTimelineEntryPeriod, // Get child period
+    getTimelineEntryDate, // Convert date format
 } from '../../../utils/getDates';
 ```
 
 ### EventBus Integration
 
 ```javascript
-import eventBus, { EVENTS } from '../../../utils/eventBus';
+import eventBus, {
+    EVENTS
+} from '../../../utils/eventBus';
 
 // Emit after successful save
 eventBus.$emit(EVENTS.GOALS_SAVED, {
-  count: savedItems.length,
-  period: 'week',
-  hasDayGoals: true,
-  items: savedItems,
+    count: savedItems.length,
+    period: 'week',
+    hasDayGoals: true,
+    items: savedItems,
 });
 ```
 
@@ -229,30 +244,30 @@ eventBus.$emit(EVENTS.GOALS_SAVED, {
 
 ## Error Handling
 
-- Validates required fields before save
-- Validates date formats (DD-MM-YYYY)
-- Catches bulk mutation errors → Falls back to individual
-- Emits user-friendly error messages via `@error` event
+* Validates required fields before save
+* Validates date formats (DD-MM-YYYY)
+* Catches bulk mutation errors → Falls back to individual
+* Emits user-friendly error messages via `@error` event
 
 ## Use Cases
 
-- Weekly workout plans
-- Monthly learning curricula
-- Quarterly project roadmaps
-- Annual career development plans
-- Multi-step goal breakdowns
+* Weekly workout plans
+* Monthly learning curricula
+* Quarterly project roadmaps
+* Annual career development plans
+* Multi-step goal breakdowns
 
 ## Dependencies
 
-- `vue-easymde` - Markdown editor
-- `moment` - Date manipulation
-- `graphql-tag` - GraphQL queries
-- `vuetify` - UI components
+* `vue-easymde` - Markdown editor
+* `moment` - Date manipulation
+* `graphql-tag` - GraphQL queries
+* `vuetify` - UI components
 
 ## Accessibility
 
-- Semantic form structure
-- Keyboard navigation
-- Clear labels and instructions
-- Alert explanations for milestone linking
-- Screen reader friendly
+* Semantic form structure
+* Keyboard navigation
+* Clear labels and instructions
+* Alert explanations for milestone linking
+* Screen reader friendly

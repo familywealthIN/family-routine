@@ -18,29 +18,31 @@ An atom component that displays the current AI search mode (task or goals) with 
 
 ## Features
 
-- Mode-specific icons (task: check_circle, goals: timeline)
-- Color-coded by mode (task: success green, goals: primary blue)
-- Optional text label display
-- Configurable icon size
+* Mode-specific icons (task: check_circle, goals: timeline)
+* Color-coded by mode (task: success green, goals: primary blue)
+* Optional text label display
+* Configurable icon size
 
 ## Visual States
 
 ### Task Mode
-- Icon: check_circle (✓)
-- Color: Green (success)
-- Label: "Task Mode"
+
+* Icon: check_circle (✓)
+* Color: Green (success)
+* Label: "Task Mode"
 
 ### Goals Mode
-- Icon: timeline (timeline)
-- Color: Blue (primary)
-- Label: "Goals Mode"
+
+* Icon: timeline (timeline)
+* Color: Blue (primary)
+* Label: "Goals Mode"
 
 ## Use Cases
 
-- AI search modal mode indicator
-- Multi-mode form headers
-- Workflow step indicators
-- Status displays
+* AI search modal mode indicator
+* Multi-mode form headers
+* Workflow step indicators
+* Status displays
 
 ## Example
 

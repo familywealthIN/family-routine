@@ -60,7 +60,7 @@ const Template = (args, { argTypes }) => ({
       this.$root.$data = {};
     }
     this.$root.$data.email = 'user@example.com';
-    
+
     // Mock currentTask plugin data
     this.$currentTaskData = mockCurrentTask;
     this.$currentTaskList = mockRoutines.map(r => ({

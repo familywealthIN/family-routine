@@ -19,32 +19,35 @@ An atom component that displays a circular progress indicator with an optional m
 
 ## Features
 
-- Conditional rendering (only shows when loading=true)
-- Indeterminate circular progress (continuous animation)
-- Optional message text
-- Customizable size and stroke width
-- Centered layout with flexbox
-- Primary color theme (Vuetify)
+* Conditional rendering (only shows when loading=true)
+* Indeterminate circular progress (continuous animation)
+* Optional message text
+* Customizable size and stroke width
+* Centered layout with flexbox
+* Primary color theme (Vuetify)
 
 ## Visual Design
 
 ### Spinner
-- Type: Indeterminate circular progress
-- Color: Primary (blue)
-- Default size: 40px diameter
-- Default stroke: 4px width
-- Animation: Continuous rotation
+
+* Type: Indeterminate circular progress
+* Color: Primary (blue)
+* Default size: 40px diameter
+* Default stroke: 4px width
+* Animation: Continuous rotation
 
 ### Message
-- Position: Below spinner (16px gap)
-- Font size: 14px
-- Color: rgba(0, 0, 0, 0.6) (subtle gray)
-- Alignment: Center
+
+* Position: Below spinner (16px gap)
+* Font size: 14px
+* Color: rgba(0, 0, 0, 0.6) (subtle gray)
+* Alignment: Center
 
 ### Layout
-- Padding: 24px all sides
-- Gap: 16px between spinner and message
-- Alignment: Center (horizontal and vertical)
+
+* Padding: 24px all sides
+* Gap: 16px between spinner and message
+* Alignment: Center (horizontal and vertical)
 
 ## Size Variants
 
@@ -61,16 +64,17 @@ An atom component that displays a circular progress indicator with an optional m
 
 ## Use Cases
 
-- **API Calls**: Display while fetching data from GraphQL
-- **AI Processing**: Show during AI model inference
-- **Form Submission**: Indicate form processing
-- **Page Loading**: Show during initial data load
-- **Modal Content**: Display in dialogs while loading
-- **Card Content**: Show in data cards during refresh
+* **API Calls**: Display while fetching data from GraphQL
+* **AI Processing**: Show during AI model inference
+* **Form Submission**: Indicate form processing
+* **Page Loading**: Show during initial data load
+* **Modal Content**: Display in dialogs while loading
+* **Card Content**: Show in data cards during refresh
 
 ## Common Patterns
 
 ### With Apollo Query
+
 ```vue
 <template>
   <div>
@@ -83,6 +87,7 @@ An atom component that displays a circular progress indicator with an optional m
 ```
 
 ### With Async Action
+
 ```vue
 <template>
   <div>
@@ -112,6 +117,7 @@ export default {
 ```
 
 ### In Modal
+
 ```vue
 <v-dialog v-model="dialog">
   <v-card>
@@ -128,7 +134,7 @@ export default {
 
 ## Accessibility
 
-- Uses Vuetify's accessible progress component
-- Message provides context for screen readers
-- Respects prefers-reduced-motion (through Vuetify)
-- Semantic HTML structure
+* Uses Vuetify's accessible progress component
+* Message provides context for screen readers
+* Respects prefers-reduced-motion (through Vuetify)
+* Semantic HTML structure

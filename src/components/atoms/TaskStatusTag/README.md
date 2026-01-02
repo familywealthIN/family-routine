@@ -17,12 +17,12 @@ A simple atom component that displays a task status as a chip with an icon and l
 
 ## Status Types
 
-- **todo**: Grey chip with help icon
-- **progress**: Orange chip with in-progress icon
-- **done**: Green chip with check icon
-- **missed**: Red chip with warning icon
-- **rescheduled**: Blue chip with calendar icon
+* **todo**: Grey chip with help icon
+* **progress**: Orange chip with in-progress icon
+* **done**: Green chip with check icon
+* **missed**: Red chip with warning icon
+* **rescheduled**: Blue chip with calendar icon
 
 ## Dependencies
 
-- `@/utils/taskStatus` - Contains TASK_STATUS_CONFIG constant
+* `@/utils/taskStatus` - Contains TASK_STATUS_CONFIG constant

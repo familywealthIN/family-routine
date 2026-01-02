@@ -17,25 +17,27 @@ An atom component that displays gradient shadows to indicate scrollable content 
 
 ## Features
 
-- Smooth fade transitions (300ms)
-- Fixed positioning for scroll containers
-- Gradient shadows with subtle opacity
-- Non-interactive (pointer-events: none)
-- Responsive to scroll state changes
+* Smooth fade transitions (300ms)
+* Fixed positioning for scroll containers
+* Gradient shadows with subtle opacity
+* Non-interactive (pointer-events: none)
+* Responsive to scroll state changes
 
 ## Visual Design
 
 ### Top Shadow
-- Position: Fixed at top (64px from top to avoid toolbar)
-- Gradient: Dark to transparent (top to bottom)
-- Height: 20px
-- Opacity: 0.1
+
+* Position: Fixed at top (64px from top to avoid toolbar)
+* Gradient: Dark to transparent (top to bottom)
+* Height: 20px
+* Opacity: 0.1
 
 ### Bottom Shadow
-- Position: Fixed at bottom
-- Gradient: Dark to transparent (bottom to top)
-- Height: 20px
-- Opacity: 0.1
+
+* Position: Fixed at bottom
+* Gradient: Dark to transparent (bottom to top)
+* Height: 20px
+* Opacity: 0.1
 
 ## Implementation Pattern
 
@@ -72,14 +74,14 @@ export default {
 
 ## Use Cases
 
-- Modal dialogs with long content
-- Full-screen forms
-- Chat interfaces
-- Article readers
-- Any scrollable container where visual feedback improves UX
+* Modal dialogs with long content
+* Full-screen forms
+* Chat interfaces
+* Article readers
+* Any scrollable container where visual feedback improves UX
 
 ## Accessibility
 
-- Purely decorative (no semantic meaning)
-- Does not interfere with keyboard navigation
-- Does not capture pointer events
+* Purely decorative (no semantic meaning)
+* Does not interfere with keyboard navigation
+* Does not capture pointer events

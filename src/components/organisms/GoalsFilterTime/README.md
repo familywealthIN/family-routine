@@ -24,28 +24,28 @@ An organism component that filters and displays goals by time period and date ra
 
 ## Features
 
-- Filters goals by period and date range
-- Supports day, week, month, and year periods
-- Identifies overdue/missed goals (before today)
-- Allows editing based on date and range type
-- Groups goals by date within period
+* Filters goals by period and date range
+* Supports day, week, month, and year periods
+* Identifies overdue/missed goals (before today)
+* Allows editing based on date and range type
+* Groups goals by date within period
 
 ## Utility Methods
 
-- `isItBeforeToday(date)` - Checks if date is in the past
-- `shouldAllowEdit(date, rangeType)` - Determines if goal can be edited
-- `getPeriodDate(period, date)` - Formats date for display
-- `inRangeType(goalDate, rangeType)` - Filters goals by range
+* `isItBeforeToday(date)` - Checks if date is in the past
+* `shouldAllowEdit(date, rangeType)` - Determines if goal can be edited
+* `getPeriodDate(period, date)` - Formats date for display
+* `inRangeType(goalDate, rangeType)` - Filters goals by range
 
 ## Dependencies
 
-- moment.js - Date manipulation
-- GoalItemList component - Displays filtered goals
-- getDates utility - Date formatting and validation
+* moment.js - Date manipulation
+* GoalItemList component - Displays filtered goals
+* getDates utility - Date formatting and validation
 
 ## Use Cases
 
-- Dashboard goal filtering
-- Timeline view of goals
-- Historical goal review
-- Future goal planning
+* Dashboard goal filtering
+* Timeline view of goals
+* Historical goal review
+* Future goal planning

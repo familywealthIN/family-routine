@@ -40,11 +40,11 @@ A molecule component for editing timeline entries with title, description (Markd
 
 ## Features
 
-- **Inline editing**: Title and description editable in place
-- **Markdown support**: VueEasymde for rich text descriptions
-- **Compact design**: Minimal toolbar, optimized for timeline view
-- **Color-coded dots**: Visual period differentiation
-- **Sync modifiers**: Two-way binding with `.sync`
+* **Inline editing**: Title and description editable in place
+* **Markdown support**: VueEasymde for rich text descriptions
+* **Compact design**: Minimal toolbar, optimized for timeline view
+* **Color-coded dots**: Visual period differentiation
+* **Sync modifiers**: Two-way binding with `.sync`
 
 ## Editor Configuration
 
@@ -52,20 +52,20 @@ Default EasyMDE config optimized for timeline entries:
 
 ```javascript
 {
-  toolbar: false,              // Hide toolbar for compact view
-  status: false,               // Hide status bar
-  spellChecker: false,         // Disable spell checker
-  hideIcons: ['side-by-side', 'fullscreen'],
-  minHeight: '72px',           // Match v-textarea (3 rows)
-  maxHeight: '120px',          // Prevent excessive height
-  placeholder: 'Enter goal description...',
-  renderingConfig: {
-    singleLineBreaks: true,
-    markedOptions: {
-      breaks: true,
-      gfm: true,               // GitHub Flavored Markdown
+    toolbar: false, // Hide toolbar for compact view
+    status: false, // Hide status bar
+    spellChecker: false, // Disable spell checker
+    hideIcons: ['side-by-side', 'fullscreen'],
+    minHeight: '72px', // Match v-textarea (3 rows)
+    maxHeight: '120px', // Prevent excessive height
+    placeholder: 'Enter goal description...',
+    renderingConfig: {
+        singleLineBreaks: true,
+        markedOptions: {
+            breaks: true,
+            gfm: true, // GitHub Flavored Markdown
+        },
     },
-  },
 }
 ```
 
@@ -75,13 +75,18 @@ Period-based color coding:
 
 ```javascript
 getTimelineColor(period) {
-  switch (period) {
-    case 'day': return 'success';
-    case 'week': return 'primary';
-    case 'month': return 'warning';
-    case 'year': return 'info';
-    default: return 'primary';
-  }
+    switch (period) {
+        case 'day':
+            return 'success';
+        case 'week':
+            return 'primary';
+        case 'month':
+            return 'warning';
+        case 'year':
+            return 'info';
+        default:
+            return 'primary';
+    }
 }
 ```
 
@@ -117,29 +122,29 @@ Extracted from AiSearchModal template lines 272-313:
 
 The component supports GitHub Flavored Markdown:
 
-- **Headers**: `# H1`, `## H2`
-- **Lists**: Ordered and unordered
-- **Bold/Italic**: `**bold**`, `*italic*`
-- **Line breaks**: Preserved with `singleLineBreaks: true`
-- **Code blocks**: Inline and fenced
+* **Headers**: `# H1`,  `## H2`
+* **Lists**: Ordered and unordered
+* **Bold/Italic**: `**bold**`,  `*italic*`
+* **Line breaks**: Preserved with `singleLineBreaks: true`
+* **Code blocks**: Inline and fenced
 
 ## Use Cases
 
-- Milestone plan editing (week/month/year entries)
-- Goal timeline visualization
-- Multi-step project planning
-- Curriculum/course breakdown
-- Quarterly goal planning
+* Milestone plan editing (week/month/year entries)
+* Goal timeline visualization
+* Multi-step project planning
+* Curriculum/course breakdown
+* Quarterly goal planning
 
 ## Accessibility
 
-- Semantic timeline structure (Vuetify)
-- Label for description editor
-- Keyboard navigation in text fields
-- Contrast-compliant colors
-- Screen reader friendly
+* Semantic timeline structure (Vuetify)
+* Label for description editor
+* Keyboard navigation in text fields
+* Contrast-compliant colors
+* Screen reader friendly
 
 ## Dependencies
 
-- `vue-easymde` - Markdown editor component
-- `vuetify` - Timeline components and text fields
+* `vue-easymde` - Markdown editor component
+* `vuetify` - Timeline components and text fields

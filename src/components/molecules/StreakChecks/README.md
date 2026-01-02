@@ -17,11 +17,11 @@ A molecule component that displays a visual streak indicator with 5 checkmarks s
 
 ## Features
 
-- Visual representation of streak progress (1-5)
-- Filled check circles for completed steps
-- Outlined check circles for incomplete steps
-- Optional animation for the current progress step
-- Connecting dividers between checks
+* Visual representation of streak progress (1-5)
+* Filled check circles for completed steps
+* Outlined check circles for incomplete steps
+* Optional animation for the current progress step
+* Connecting dividers between checks
 
 ## Animation Behavior
 
@@ -29,6 +29,6 @@ When `animate` is true, the current progress check will animate from outlined to
 
 ## Styling
 
-- Uses green color theme for checks and dividers
-- 24px icon size
-- Responsive flex layout
+* Uses green color theme for checks and dividers
+* 24px icon size
+* Responsive flex layout
