@@ -1,6 +1,6 @@
 // Load environment variables for local development
 if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config();
+  require('dotenv').config(); // eslint-disable-line global-require
 }
 
 const connectDatabase = require('./src/server/db');
@@ -10,7 +10,7 @@ const { HttpMCPServer } = require('./src/server/mcp-http-server');
 const mcpServer = new HttpMCPServer();
 
 module.exports.handler = async (event, context) => {
-  context.callbackWaitsForEmptyEventLoop = false;
+  context.callbackWaitsForEmptyEventLoop = false; // eslint-disable-line no-param-reassign
 
   try {
     console.log('Lambda handler started', {

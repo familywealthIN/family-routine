@@ -89,7 +89,7 @@ import moment from 'moment';
 import taskStatusMixin from '@/composables/useTaskStatus';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 import getJSON from '../utils/getJSON';
-import GoalTagsInput from './GoalTagsInput.vue';
+import GoalTagsInput from './molecules/GoalTagsInput/GoalTagsInput.vue';
 import { USER_TAGS } from '../constants/settings';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import measurementMixins from '../utils/measurementMixins';
@@ -135,6 +135,9 @@ export default {
         return {
           ...stepupMilestonePeriodDate(this.period, this.date),
         };
+      },
+      skip() {
+        return !this.period || !this.date;
       },
       error() {
         this.loading = false;

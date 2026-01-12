@@ -176,10 +176,10 @@ import { MeasurementMixin } from '@/utils/measurementMixins.js';
 
 import { defaultGoalItem, periodsArray } from '../constants/goals';
 
-import GoalItemList from '../components/GoalItemList.vue';
-import GoalsFilterTime from '../components/GoalsFilterTime.vue';
-import GoalCreation from '../components/GoalCreation.vue';
-import ContainerBox from '../components/ContainerBox.vue';
+import GoalItemList from '../components/organisms/GoalItemList/GoalItemList.vue';
+import GoalsFilterTime from '../components/organisms/GoalsFilterTime/GoalsFilterTime.vue';
+import GoalCreation from '../components/organisms/GoalCreation/GoalCreation.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 
 export default {
   mixins: [MeasurementMixin],

@@ -15,8 +15,6 @@ const googleClients = {
   ios: new OAuth2Client(GA_IOS_CLIENT_ID),
 };
 
-
-
 const authenticateApple = async (req) => {
   const { identityToken } = req.body;
   if (!identityToken) {
@@ -55,13 +53,13 @@ const authenticateApple = async (req) => {
 const getAllClientIds = () => [GOOGLE_CLIENT_ID, GA_CLIENT_ID, GA_IOS_CLIENT_ID].filter(Boolean);
 async function upsertAppleUser({ profile }, notificationId) {
   const User = this;
-  
+
   // Try to find user by Apple ID first, then by email
   let user = await User.findOne({ 'social.appleProvider.id': profile.id });
-  
+
   if (!user && profile.emails[0].value) {
     user = await User.findOne({ email: profile.emails[0].value });
-    
+
     // If found by email, update with Apple provider info
     if (user) {
       user.social = user.social || {};
@@ -71,7 +69,7 @@ async function upsertAppleUser({ profile }, notificationId) {
   }
 
   if (!user) {
-    return await User.create({
+    return User.create({
       name: profile.displayName || 'Apple User',
       email: profile.emails[0].value,
       notificationId,
@@ -87,13 +85,12 @@ async function upsertAppleUser({ profile }, notificationId) {
     await User.findOneAndUpdate(
       { _id: user.id },
       { notificationId },
-      { new: true }
+      { new: true },
     );
   }
 
   return user;
 }
-
 
 // Function to verify Google ID token with multiple clients
 const verifyGoogleToken = async (token) => {

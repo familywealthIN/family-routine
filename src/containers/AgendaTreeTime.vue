@@ -75,8 +75,8 @@
 import moment from 'moment';
 import gql from 'graphql-tag';
 
-import GoalList from '../components/GoalList.vue';
-import ContainerBox from '../components/ContainerBox.vue';
+import GoalList from '../components/organisms/GoalList/GoalList.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 import { stepupMilestonePeriodDate } from '../utils/getDates';
 
 export default {

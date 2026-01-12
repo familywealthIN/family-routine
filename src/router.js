@@ -114,6 +114,11 @@ export default new Router({
       props: true,
     },
     {
+      path: '/priority',
+      name: 'priority',
+      component: () => import(/* webpackChunkName: "priority" */ './views/Priority.vue'),
+    },
+    {
       path: '/',
       name: 'login',
       component: Login,

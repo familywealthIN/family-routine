@@ -6,6 +6,7 @@ export const GC_NOTIFICATION_TOKEN = 'notification-token';
 export const USER_TAGS = 'USER_TAGS';
 export const TIMES_UP_TIME = 30;
 export const PROACTIVE_START_TIME = 60;
+export const ONBOARDING_COMPLETE = 'ONBOARDING_COMPLETE';
 
 // Profile Settings Constants
 export const PROFILE_SETTINGS = {
