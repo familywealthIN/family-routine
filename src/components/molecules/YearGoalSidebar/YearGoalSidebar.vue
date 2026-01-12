@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <v-list class="pa-0">
     <v-list-group
       prepend-icon="assignment"
       :value="false"
@@ -12,7 +12,7 @@
       <v-list-tile
         v-for="goal in groupedYearGoals"
         :key="goal.category"
-        :to="{ name: 'yearGoals', params: { category: goal.category }}"
+        :to="{ name: 'yearGoals', params: { tag: goal.category }}"
       >
         <v-list-tile-action>
           <v-icon>calendar_today</v-icon>
@@ -43,7 +43,7 @@
           </v-list-tile-content>
       </v-list-tile>
     </v-list-group>
-  </div>
+  </v-list>
 </template>
 
 <script>

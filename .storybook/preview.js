@@ -1,6 +1,7 @@
 import Vue from 'vue';
 import Vuetify from 'vuetify/lib';
 import 'vuetify/src/stylus/app.styl';
+import '../src/styles/shadows.css';
 
 // Vuetify 1.x setup - match the main app configuration
 Vue.use(Vuetify, {

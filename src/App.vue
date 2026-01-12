@@ -8,6 +8,9 @@
     </template>
     <notifications group="notify" position="bottom center" />
     <!-- <v-footer app></v-footer> -->
+
+    <!-- Global AI Search Modal -->
+    <ai-search-modal v-model="aiSearchModal" />
   </v-app>
 </template>
 
@@ -21,16 +24,20 @@ import {
 } from './constants/settings';
 import MobileLayout from './layouts/MobileLayout.vue';
 import DesktopLayout from './layouts/DesktopLayout.vue';
+import AiSearchModal from './components/organisms/AiSearchModal/AiSearchModal.vue';
+import eventBus, { EVENTS } from './utils/eventBus';
 
 export default {
   components: {
     MobileLayout,
     DesktopLayout,
+    AiSearchModal,
   },
   data() {
     return {
       drawer: null,
       mottoDialog: false,
+      aiSearchModal: false,
     };
   },
   computed: {
@@ -52,6 +59,11 @@ export default {
     },
   },
   created() {
+    // Listen for AI search open event
+    eventBus.$on(EVENTS.OPEN_AI_SEARCH, () => {
+      this.aiSearchModal = true;
+    });
+
     if (!isDevelopment || netlify) {
       firebase.initializeApp(config);
 

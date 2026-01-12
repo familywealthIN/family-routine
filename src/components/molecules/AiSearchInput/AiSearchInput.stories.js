@@ -94,7 +94,8 @@ NoHint.args = {
 
 export const LongQuery = Template.bind({});
 LongQuery.args = {
-  value: 'I want to create a comprehensive 3-month plan to learn Python programming, including data structures, algorithms, web development with Flask, and building at least 3 portfolio projects',
+  value: 'I want to create a comprehensive 3-month plan to learn Python programming, including data structures, '
+    + 'algorithms, web development with Flask, and building at least 3 portfolio projects',
   placeholder: 'Describe what you want to accomplish',
   loading: false,
   mode: 'goals',

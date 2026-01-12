@@ -34,10 +34,10 @@
           class="mb-3"
         ></v-textarea>
 
-        <!-- Due Date -->
+        <!-- Task Date -->
         <v-text-field
           v-model="taskData.dueDate"
-          label="Due Date"
+          label="Task Date"
           prepend-icon="event"
           filled
           type="date"
@@ -160,8 +160,17 @@ export default {
         }))
       ));
     },
+    isValid() {
+      return !!(this.taskData && this.taskData.title && this.taskData.description);
+    },
   },
   watch: {
+    isValid: {
+      handler(newVal) {
+        this.$emit('update:valid', newVal);
+      },
+      immediate: true,
+    },
     searchQuery: {
       handler(newVal) {
         if (newVal && !this.taskData && !this.loading) {
@@ -237,6 +246,9 @@ export default {
       }
     },
     getTaskDate() {
+      if (this.taskData && this.taskData.dueDate) {
+        return moment(this.taskData.dueDate).format('DD-MM-YYYY');
+      }
       return moment().format('DD-MM-YYYY');
     },
     async createTask() {
@@ -386,10 +398,6 @@ export default {
 </script>
 
 <style scoped>
-.task-creation-form {
-  /* Component styles */
-}
-
 .modern-shadow-sm {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }

@@ -12,10 +12,14 @@ export default {
       control: 'text',
     },
     size: {
-      control: { type: 'number', min: 20, max: 100, step: 10 },
+      control: {
+        type: 'number', min: 20, max: 100, step: 10,
+      },
     },
     width: {
-      control: { type: 'number', min: 2, max: 10, step: 1 },
+      control: {
+        type: 'number', min: 2, max: 10, step: 1,
+      },
     },
   },
   parameters: {

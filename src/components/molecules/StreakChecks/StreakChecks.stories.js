@@ -6,7 +6,9 @@ export default {
   component: StreakChecks,
   argTypes: {
     progress: {
-      control: { type: 'number', min: 0, max: 5, step: 1 },
+      control: {
+        type: 'number', min: 0, max: 5, step: 1,
+      },
     },
     animate: {
       control: { type: 'boolean' },

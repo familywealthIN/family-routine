@@ -102,6 +102,9 @@ export default {
           ...stepupMilestonePeriodDate(this.period, this.date),
         };
       },
+      skip() {
+        return !this.period || !this.date;
+      },
       error() {
         this.loading = false;
       },

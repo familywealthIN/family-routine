@@ -62,7 +62,7 @@
     <v-toolbar v-if="$route.name !== 'login'" class="elevation-0" color="white" app>
       <v-toolbar-title style="font-size: 24px">{{ pageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon @click="aiSearchModal = true">
+      <v-btn icon @click="openAiSearch">
         <v-icon size="28">search</v-icon>
       </v-btn>
       <v-btn icon @click="pendingDialog = true">
@@ -113,17 +113,12 @@
         <pending-list />
       </v-card>
     </v-dialog>
-
-    <!-- AI Search Modal -->
-    <ai-search-modal
-      v-model="aiSearchModal"
-    />
   </div>
 </template>
 
 <script>
 import PendingList from '../components/organisms/PendingList/PendingList.vue';
-import AiSearchModal from '../components/organisms/AiSearchModal/AiSearchModal.vue';
+import eventBus, { EVENTS } from '../utils/eventBus';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
@@ -132,18 +127,18 @@ import { clearData, getSessionItem } from '../token';
 export default {
   components: {
     PendingList,
-    AiSearchModal,
   },
   data() {
     return {
       drawer: null,
       pendingDialog: false,
-      aiSearchModal: false,
       drawerItems: [
         {
           header: 'App',
           items: [
             // { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
+            { title: 'Priority', icon: 'view_module', route: '/priority' },
+            { title: 'Progress', icon: 'pie_chart', route: '/progress' },
             { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
             { title: 'History', icon: 'update', route: '/history' },
             { title: 'Milestones', icon: 'filter_hdr', route: '/goals/milestones' },
@@ -166,8 +161,8 @@ export default {
       ],
       bottomNav: [
         { title: 'Home', icon: 'home', route: '/home' },
+        { title: 'Priority', icon: 'dashboard', route: '/priority' },
         { title: 'Progress', icon: 'pie_chart', route: '/progress' },
-        { title: 'Routine', icon: 'history', route: '/settings' },
         { title: 'Goals', icon: 'assignment', route: '/goals' },
       ],
     };
@@ -191,6 +186,9 @@ export default {
     },
   },
   methods: {
+    openAiSearch() {
+      eventBus.$emit(EVENTS.OPEN_AI_SEARCH);
+    },
     handleClickSignOut() {
       this.$gAuth
         .signOut()

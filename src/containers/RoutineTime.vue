@@ -188,12 +188,6 @@
                 <small class="no-goals-text" v-else>
                   No goal or activity logged.
                 </small>
-                <div class="add-new">
-                  <v-btn small flat @click="goalDetailsDialog = true">
-                    <v-icon>add</v-icon>
-                    Add Goal or Activity
-                  </v-btn>
-                </div>
               </div>
             </v-list-tile-content>
             <v-list-tile-action v-if="task.id !== selectedTaskRef">

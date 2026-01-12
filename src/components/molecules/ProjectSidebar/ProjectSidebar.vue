@@ -1,5 +1,5 @@
 <template>
-  <v-list>
+  <v-list class="pa-0">
     <v-list-group
       v-if="filteredProjectTags.length"
       prepend-icon="folder_shared"

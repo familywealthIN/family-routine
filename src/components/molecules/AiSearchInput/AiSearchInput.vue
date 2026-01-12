@@ -32,8 +32,8 @@
         {{ mode === 'task' ? 'info' : 'info' }}
       </v-icon>
       <span class="ml-1">
-        {{ mode === 'task' 
-          ? 'Task mode: Extract single task from your description' 
+        {{ mode === 'task'
+          ? 'Task mode: Extract single task from your description'
           : 'Goals mode: Generate milestone plan for this period'
         }}
       </span>

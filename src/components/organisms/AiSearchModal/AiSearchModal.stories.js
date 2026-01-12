@@ -18,30 +18,14 @@ const mockCurrentTask = {
 
 // Mock routines
 const mockRoutines = [
-  { taskId: 'task-123', name: 'Morning Exercise', time: '07:00', tags: ['health', 'morning'] },
-  { taskId: 'task-456', name: 'Review emails', time: '09:00', tags: ['work', 'communication'] },
-  { taskId: 'task-789', name: 'Lunch break', time: '12:00', tags: ['break', 'food'] },
-];
-
-// Mock goal items
-const mockGoalItems = [
   {
-    id: 'goal-123',
-    body: 'Build healthy habits',
-    period: 'week',
-    date: '2025-W51',
-    taskRef: 'task-123',
-    tags: ['health'],
-    isComplete: false,
+    taskId: 'task-123', name: 'Morning Exercise', time: '07:00', tags: ['health', 'morning'],
   },
   {
-    id: 'goal-456',
-    body: 'Improve productivity',
-    period: 'week',
-    date: '2025-W51',
-    taskRef: 'task-456',
-    tags: ['work'],
-    isComplete: false,
+    taskId: 'task-456', name: 'Review emails', time: '09:00', tags: ['work', 'communication'],
+  },
+  {
+    taskId: 'task-789', name: 'Lunch break', time: '12:00', tags: ['break', 'food'],
   },
 ];
 
@@ -63,9 +47,9 @@ const Template = (args, { argTypes }) => ({
 
     // Mock currentTask plugin data
     this.$currentTaskData = mockCurrentTask;
-    this.$currentTaskList = mockRoutines.map(r => ({
+    this.$currentTaskList = mockRoutines.map((r) => ({
       id: r.taskId,
-      body: r.name,
+      name: r.name,
       time: r.time,
       tags: r.tags,
     }));
@@ -146,9 +130,9 @@ export const ModeSwitch = () => ({
     }
     this.$root.$data.email = 'user@example.com';
     this.$currentTaskData = mockCurrentTask;
-    this.$currentTaskList = mockRoutines.map(r => ({
+    this.$currentTaskList = mockRoutines.map((r) => ({
       id: r.taskId,
-      body: r.name,
+      name: r.name,
       time: r.time,
       tags: r.tags,
     }));

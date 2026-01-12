@@ -1,5 +1,8 @@
 // molecules/RelatedTasksTimeline/RelatedTasksTimeline.stories.js
+import moment from 'moment';
 import RelatedTasksTimeline from './RelatedTasksTimeline.vue';
+
+// Import moment for ManyTasks story
 
 export default {
   title: 'Molecules/RelatedTasksTimeline',
@@ -153,6 +156,3 @@ WithLongContent.args = {
     },
   ],
 };
-
-// Import moment for ManyTasks story
-import moment from 'moment';

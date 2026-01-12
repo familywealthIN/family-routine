@@ -1,115 +1,275 @@
 <template>
-  <v-container fluid>
-    <v-layout wrap>
+  <v-container fluid class="year-goals-container">
+    <!-- Header with Add Goal Button -->
+    <v-layout row wrap align-center class="mb-4">
       <v-flex xs12>
         <h1 class="display-1">{{ yearGoalTitle }}</h1>
       </v-flex>
+    </v-layout>
 
-      <!-- Summary Cards -->
-      <v-flex xs12 md6 class="d-flex">
-        <summary-cards
-          :goal-items="transformedGoalItems"
-          class="mb-4 flex-grow-1"
-        />
-      </v-flex>
-      <v-flex xs12 md6 class="d-flex">
-        <v-layout row wrap class="flex-grow-1">
-          <v-flex xs12 md6 v-for="period in periods" :key="period.name" class="d-flex">
-            <v-card class="ma-2 modern-card d-flex flex-column" style="width: 100%;">
-              <v-card-title class="pb-1">
-                <div class="d-flex justify-space-between align-center" style="width: 100%">
-                  <span>{{ period.label }} Goals</span>
-                </div>
-              </v-card-title>
-              <v-card-text class="flex-grow-1 d-flex align-center justify-center">
-                <v-list v-if="!loading" class="w-100">
-                  <template v-if="period.goals.length">
-                    <h2>{{ period.completedCount }}/{{ period.goals.length }}</h2>
-                  </template>
-                  <v-list-tile v-else>
-                    <v-list-tile-content>
-                      <v-list-tile-title class="grey--text">
-                        No {{ period.label.toLowerCase() }} goals yet
-                      </v-list-tile-title>
-                    </v-list-tile-content>
-                  </v-list-tile>
-                </v-list>
-                <div v-else class="text-xs-center w-100">
-                  <v-progress-circular indeterminate></v-progress-circular>
-                </div>
-              </v-card-text>
-            </v-card>
-          </v-flex>
-        </v-layout>
-      </v-flex>
+    <!-- Loading State -->
+    <v-layout v-if="loading" justify-center class="mt-5">
+      <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+    </v-layout>
 
-      <!-- Year Goals Progress and Next Steps -->
-      <v-flex xs12 md6>
-        <v-card class="ma-2 modern-card-elevated">
-          <v-card-title>Year Goals Progress</v-card-title>
-          <v-card-text>
-            <v-timeline v-if="!loading" dense>
-              <template v-if="yearGoals.length">
-                <v-timeline-item v-for="goal in yearGoals" :key="goal.id"
-                  :color="isGoalComplete(goal) ? 'success' : 'primary'" small>
-                  <v-card flat>
-                    <v-card-title class="py-2">{{ formatGoalDate(goal.date) }}</v-card-title>
-                    <v-card-text class="py-2">
-                      <div :class="{ 'completed-goal': isGoalComplete(goal), 'pending-goal': !isGoalComplete(goal) }">
-                        <v-icon small :color="isGoalComplete(goal) ? 'success' : 'grey'">
-                          {{ isGoalComplete(goal) ? 'check' : 'schedule' }}
-                        </v-icon>
-                        {{ goal.body }}
-                      </div>
-                      <div v-if="goal.milestones && goal.milestones.length" class="ml-4 mt-2">
-                        <div v-for="milestone in goal.milestones" :key="milestone.id"
-                          class="milestone-item"
-                          :class="{ 'completed-milestone': milestone.isComplete }">
-                          <v-icon small :color="milestone.isComplete ? 'success' : 'grey'">
-                            {{ milestone.isComplete ? 'check_circle_outline' : 'radio_button_unchecked' }}
-                          </v-icon>
-                          {{ milestone.body }}
-                        </div>
-                      </div>
-                    </v-card-text>
-                  </v-card>
-                </v-timeline-item>
-              </template>
-              <v-timeline-item v-else color="grey" small>
-                <v-card flat>
-                  <v-card-text class="text-xs-center grey--text">
-                    No year goals to show
-                  </v-card-text>
-                </v-card>
-              </v-timeline-item>
-            </v-timeline>
-            <div v-else class="text-xs-center">
-              <v-progress-circular indeterminate></v-progress-circular>
-            </div>
-          </v-card-text>
+    <!-- Empty State -->
+    <v-layout v-else-if="!yearGoalsTree.length" justify-center class="mt-5">
+      <v-flex xs12 md8>
+        <v-card class="text-xs-center pa-5">
+          <v-icon size="64" color="grey lighten-1">timeline</v-icon>
+          <h2 class="headline mt-3">No Year Goals to Manage</h2>
+          <p class="subheading grey--text mt-2">
+            Create year goals from the Goals section to start adding month, week, and day milestones here
+          </p>
         </v-card>
       </v-flex>
-      <v-flex xs12 md6>
-        <next-steps
-          :goal-items="transformedGoalItems"
-          class="ma-2"
-        />
+    </v-layout>
+
+    <!-- Year Goals Tree View -->
+    <v-layout v-else row wrap>
+      <v-flex xs12>
+        <div
+          v-for="yearGoal in yearGoalsTree"
+          :key="yearGoal.id"
+          class="year-goal-card mb-4"
+        >
+          <v-card>
+            <!-- Year Goal Content: Description (3/4) + Progress Donut (1/4) -->
+            <v-card-text class="pa-3">
+              <v-layout row wrap>
+                <!-- Contribution/Description (3/4 width) -->
+                <v-flex xs12 md9 class="pr-md-3">
+                  <v-layout align-center class="mb-2">
+                    <v-icon small class="mr-2">description</v-icon>
+                    <strong>Description</strong>
+                  </v-layout>
+                  <div v-if="yearGoal.contribution" class="contribution-text">
+                    <vue-markdown :source="yearGoal.contribution"></vue-markdown>
+                  </div>
+                  <div v-else class="grey--text">
+                    No description provided
+                  </div>
+                </v-flex>
+
+                <!-- Progress Donut (1/4 width) -->
+                <v-flex xs12 md3 class="text-xs-center">
+                  <v-layout column align-center justify-center fill-height>
+                    <v-progress-circular
+                      :value="calculateGoalProgress(yearGoal)"
+                      :color="yearGoal.isComplete ? 'success' : 'primary'"
+                      size="120"
+                      width="8"
+                    >
+                      <div class="text-xs-center">
+                        <div class="display-1 font-weight-bold">{{ Math.round(calculateGoalProgress(yearGoal)) }}%</div>
+                        <div class="caption grey--text">Complete</div>
+                      </div>
+                    </v-progress-circular>
+                  </v-layout>
+                </v-flex>
+              </v-layout>
+            </v-card-text>
+
+            <v-divider></v-divider>
+
+            <!-- Action Buttons -->
+            <v-card-actions class="px-3">
+              <v-btn flat small color="primary" @click="editGoal(yearGoal)">
+                <v-icon small left>edit</v-icon>
+                Edit
+              </v-btn>
+              <v-btn flat small color="accent" @click="openCreateGoalDrawer('month', yearGoal)">
+                <v-icon small left>add</v-icon>
+                Add Month Goal
+              </v-btn>
+            </v-card-actions>
+
+            <v-divider></v-divider>
+
+            <!-- Month Goals (Nested) -->
+            <div v-if="yearGoal.monthGoals && yearGoal.monthGoals.length" class="nested-goals month-goals">
+                <v-subheader class="nested-header">
+                  <v-icon small class="mr-2">event</v-icon>
+                  Month Goals ({{ yearGoal.monthGoals.length }})
+                </v-subheader>
+
+                <v-expansion-panel class="nested-expansion">
+                  <v-expansion-panel-content
+                    v-for="monthGoal in yearGoal.monthGoals"
+                    :key="monthGoal.id"
+                    class="month-goal-panel"
+                  >
+                    <!-- Month Goal Header -->
+                    <template v-slot:header>
+                      <v-layout align-center>
+                        <v-flex shrink>
+                          <v-icon :color="monthGoal.isComplete ? 'success' : 'info'" small class="mr-2">
+                            {{ monthGoal.isComplete ? 'check_circle' : 'radio_button_unchecked' }}
+                          </v-icon>
+                        </v-flex>
+                        <v-flex grow>
+                          <div class="nested-goal-title">{{ monthGoal.body }}</div>
+                          <div class="nested-goal-meta">
+                            <span class="grey--text caption">{{ formatMonthDate(monthGoal.date) }}</span>
+                          </div>
+                        </v-flex>
+                        <v-flex shrink>
+                          <v-chip small :color="monthGoal.isComplete ? 'success' : 'info'" text-color="white">
+                            {{ monthGoal.isComplete ? 'Done' : 'Active' }}
+                          </v-chip>
+                        </v-flex>
+                      </v-layout>
+                    </template>
+
+                    <!-- Month Goal Content -->
+                    <v-card flat class="nested-goal-content">
+                      <v-card-text v-if="monthGoal.contribution" class="py-2">
+                        <div class="contribution-text small">
+                          <vue-markdown :source="monthGoal.contribution"></vue-markdown>
+                        </div>
+                      </v-card-text>
+
+                      <v-card-actions class="px-3 py-1">
+                        <v-btn flat x-small color="primary" @click="editGoal(monthGoal)">
+                          <v-icon x-small left>edit</v-icon>
+                          Edit
+                        </v-btn>
+                        <v-btn flat x-small color="accent" @click="openCreateGoalDrawer('week', monthGoal)">
+                          <v-icon x-small left>add</v-icon>
+                          Add Week Goal
+                        </v-btn>
+                      </v-card-actions>
+
+                      <!-- Week Goals (Nested) -->
+                      <div v-if="monthGoal.weekGoals && monthGoal.weekGoals.length" class="nested-goals week-goals">
+                        <v-subheader class="nested-header py-0">
+                          <v-icon x-small class="mr-1">view_week</v-icon>
+                          Week Goals ({{ monthGoal.weekGoals.length }})
+                        </v-subheader>
+
+                        <v-list dense class="nested-list">
+                          <template v-for="weekGoal in monthGoal.weekGoals">
+                            <v-list-tile
+                              v-if="weekGoal"
+                              :key="weekGoal.id"
+                              @click="toggleWeekGoal(weekGoal)"
+                              class="week-goal-tile"
+                            >
+                            <v-list-tile-action>
+                              <v-icon :color="weekGoal.isComplete ? 'success' : 'warning'" small>
+                                {{ weekGoal.isComplete ? 'check_circle' : 'radio_button_unchecked' }}
+                              </v-icon>
+                            </v-list-tile-action>
+                            <v-list-tile-content>
+                              <v-list-tile-title>{{ weekGoal.body }}</v-list-tile-title>
+                              <v-list-tile-sub-title>{{ formatWeekDate(weekGoal.date) }}</v-list-tile-sub-title>
+                            </v-list-tile-content>
+                            <v-list-tile-action>
+                              <v-menu offset-y>
+                                <template v-slot:activator="{ on }">
+                                  <v-btn icon small v-on="on" @click.stop>
+                                    <v-icon small>more_vert</v-icon>
+                                  </v-btn>
+                                </template>
+                                <v-list dense>
+                                  <v-list-tile @click="editGoal(weekGoal)">
+                                    <v-list-tile-title>
+                                      <v-icon small left>edit</v-icon>
+                                      Edit
+                                    </v-list-tile-title>
+                                  </v-list-tile>
+                                  <v-list-tile @click="openCreateGoalDrawer('day', weekGoal)">
+                                    <v-list-tile-title>
+                                      <v-icon small left>add</v-icon>
+                                      Add Day Goal
+                                    </v-list-tile-title>
+                                  </v-list-tile>
+                                </v-list>
+                              </v-menu>
+                            </v-list-tile-action>
+                          </v-list-tile>
+
+                          <!-- Day Goals (Nested under expanded week) -->
+                          <v-expand-transition :key="`expand-${weekGoal.id}`">
+                            <div v-if="weekGoal && weekGoal.expanded && weekGoal.dayGoals && weekGoal.dayGoals.length" class="nested-goals day-goals">
+                              <v-list dense class="nested-list">
+                                <v-list-tile
+                                  v-for="dayGoal in weekGoal.dayGoals"
+                                  :key="dayGoal.id"
+                                  class="day-goal-tile"
+                                >
+                                  <v-list-tile-action>
+                                    <v-icon :color="dayGoal.isComplete ? 'success' : 'grey'" x-small>
+                                      {{ dayGoal.isComplete ? 'check_circle' : 'radio_button_unchecked' }}
+                                    </v-icon>
+                                  </v-list-tile-action>
+                                  <v-list-tile-content>
+                                    <v-list-tile-title class="caption">{{ dayGoal.body }}</v-list-tile-title>
+                                    <v-list-tile-sub-title class="caption">{{ formatDayDate(dayGoal.date) }}</v-list-tile-sub-title>
+                                  </v-list-tile-content>
+                                  <v-list-tile-action>
+                                    <v-btn icon x-small @click="editGoal(dayGoal)">
+                                      <v-icon x-small>edit</v-icon>
+                                    </v-btn>
+                                  </v-list-tile-action>
+                                </v-list-tile>
+                              </v-list>
+                            </div>
+                          </v-expand-transition>
+                          </template>
+                        </v-list>
+                      </div>
+                    </v-card>
+                  </v-expansion-panel-content>
+                </v-expansion-panel>
+              </div>
+            </v-card>
+          </div>
       </v-flex>
     </v-layout>
+
+    <!-- Goal Edit/Create Dialog -->
+    <v-dialog
+      v-model="goalDrawer"
+      fullscreen
+      hide-overlay
+      transition="dialog-bottom-transition"
+    >
+      <v-card>
+        <v-toolbar color="white">
+          <v-toolbar-title>
+            <v-icon left>{{ drawerGoal.id ? 'edit' : 'add' }}</v-icon>
+            {{ drawerGoal.id ? 'Edit' : 'Create' }} {{ drawerGoal.period }} Goal
+          </v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="closeDrawer">
+            <v-icon>close</v-icon>
+          </v-btn>
+        </v-toolbar>
+        <v-card class="no-shadow">
+          <v-card-text class="pa-0">
+            <goal-creation
+              :newGoalItem="drawerGoal"
+              v-on:add-update-goal-entry="handleGoalSaved"
+            />
+          </v-card-text>
+        </v-card>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script>
 import gql from 'graphql-tag';
 import moment from 'moment';
-import SummaryCards from '@/components/DashboardCards/SummaryCards.vue';
-import NextSteps from '@/components/DashboardCards/NextSteps.vue';
+import VueMarkdown from 'vue-markdown';
+import GoalCreation from '@/components/organisms/GoalCreation/GoalCreation.vue';
 
 export default {
   name: 'YearGoals',
   components: {
-    SummaryCards,
-    NextSteps,
+    GoalCreation,
+    VueMarkdown,
   },
   props: {
     tag: {
@@ -119,157 +279,495 @@ export default {
   },
   data() {
     return {
-      loading: false,
-      goals: [],
-      yearGoals: [],
-      periods: [
-        {
-          name: 'Q1',
-          label: 'Q1',
-          goals: [],
-          completedCount: 0,
-        },
-        {
-          name: 'Q2',
-          label: 'Q2',
-          goals: [],
-          completedCount: 0,
-        },
-        {
-          name: 'Q3',
-          label: 'Q3',
-          goals: [],
-          completedCount: 0,
-        },
-        {
-          name: 'Q4',
-          label: 'Q4',
-          goals: [],
-          completedCount: 0,
-        },
-      ],
+      loading: true,
+      yearGoalsTree: [],
+      goalDrawer: false,
+      drawerGoal: {
+        body: '',
+        period: 'year',
+        date: '',
+        tags: [],
+        contribution: '',
+        isMilestone: false,
+        goalRef: null,
+      },
     };
   },
   computed: {
     yearGoalTitle() {
-      return this.tag
-        ? this.formatYearGoalName(this.tag)
-        : 'Year Goals';
+      if (this.tag) {
+        return this.tag;
+      }
+      return `Year Goals ${moment().format('YYYY')}`;
     },
-    transformedGoalItems() {
-      return this.goals.flatMap((goal) => (Array.isArray(goal.goalItems)
-        ? goal.goalItems.map((goalItem) => ({
-          ...goalItem,
-          period: goal.period,
-          date: goal.date,
-        }))
-        : []));
+  },
+  watch: {
+    tag() {
+      // Rebuild tree when tag changes
+      if (this.yearGoals && this.yearGoals.length) {
+        this.buildGoalTree(this.yearGoals);
+      }
     },
   },
   apollo: {
-    goals: {
+    yearGoals: {
       query: gql`
-        query yearGoals($period: String!) {
-          yearGoals(period: $period) {
+        query currentYearGoals {
+          currentYearGoals {
             id
             date
             period
             goalItems {
               id
               body
-              isComplete
-              isMilestone
-              deadline
+              status
+              tags
+              contribution
+              date
+              period
+              taskRef
+              goalRef
+              routine {
+                id
+                body
+              }
               milestones {
                 id
                 body
-                isComplete
-                deadline
+                date
+                period
+                status
+                contribution
+                taskRef
+                goalRef
+                routine {
+                  id
+                  body
+                }
+                milestones {
+                  id
+                  body
+                  date
+                  period
+                  status
+                  contribution
+                  taskRef
+                  goalRef
+                  milestones {
+                    id
+                    body
+                    date
+                    period
+                    status
+                    contribution
+                    taskRef
+                    goalRef
+                  }
+                }
               }
             }
           }
         }
       `,
-      variables() {
-        return {
-          period: 'year',
-        };
-      },
       update(data) {
-        this.yearGoals = data.yearGoals;
-        this.updatePeriodGoals(data.yearGoals);
-        return data.yearGoals;
+        this.loading = false;
+        const goals = data.currentYearGoals || [];
+        this.buildGoalTree(goals);
+        return goals;
+      },
+      skip() {
+        return !this.$root.$data.email;
+      },
+      error(error) {
+        this.loading = false;
+        console.error('Error fetching year goals:', error);
       },
     },
   },
   methods: {
-    formatYearGoalName(tag) {
-      return tag
-        .replace(/^year:/, '')
-        .split(':')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-    },
-    formatGoalDate(date) {
-      return moment(date).format('MMMM YYYY');
-    },
-    isGoalComplete(goal) {
-      return goal.isComplete || (
-        goal.milestones
-        && goal.milestones.every((milestone) => milestone.isComplete)
-      );
-    },
-    getQuarter(date) {
-      const month = moment(date).month();
-      if (month < 3) return 'Q1';
-      if (month < 6) return 'Q2';
-      if (month < 9) return 'Q3';
-      return 'Q4';
-    },
-    updatePeriodGoals(goals) {
-      // Reset period goals
-      this.periods = this.periods.map((period) => ({
-        ...period,
-        goals: [],
-        completedCount: 0,
-      }));
+    buildGoalTree(goals) {
+      // Transform flat goal structure into hierarchical tree
+      this.yearGoalsTree = goals.flatMap((goalGroup) => {
+        if (!goalGroup.goalItems) return [];
 
-      // Group goals by quarter
-      goals.forEach((goal) => {
-        const quarter = this.getQuarter(goal.date);
-        const periodIndex = this.periods.findIndex((period) => period.name === quarter);
-
-        if (periodIndex !== -1) {
-          const periodCopy = { ...this.periods[periodIndex] };
-          periodCopy.goals.push(goal);
-          if (this.isGoalComplete(goal)) {
-            periodCopy.completedCount += 1;
-          }
-          this.$set(this.periods, periodIndex, periodCopy);
+        // Filter by tag if provided
+        let filteredGoals = goalGroup.goalItems;
+        if (this.tag) {
+          filteredGoals = goalGroup.goalItems.filter((goal) => goal.body === this.tag);
         }
+
+        return filteredGoals.map((yearGoal) => {
+          const tree = {
+            ...yearGoal,
+            isComplete: this.isGoalComplete(yearGoal),
+            routineName: yearGoal.routine ? yearGoal.routine.body : null,
+            monthGoals: [],
+            expanded: false,
+          };
+
+          // Extract month goals from milestones
+          if (yearGoal.milestones && yearGoal.milestones.length > 0) {
+            tree.monthGoals = yearGoal.milestones
+              .filter((m) => m && m.period === 'month')
+              .map((monthGoal) => ({
+                ...monthGoal,
+                isComplete: this.isGoalComplete(monthGoal),
+                weekGoals: monthGoal.milestones && monthGoal.milestones.length > 0
+                  ? monthGoal.milestones
+                    .filter((w) => w && w.period === 'week')
+                    .map((weekGoal) => ({
+                      ...weekGoal,
+                      isComplete: this.isGoalComplete(weekGoal),
+                      expanded: false,
+                      dayGoals: weekGoal.milestones && weekGoal.milestones.length > 0
+                        ? weekGoal.milestones
+                          .filter((d) => d && d.period === 'day')
+                          .map((dayGoal) => ({
+                            ...dayGoal,
+                            isComplete: this.isGoalComplete(dayGoal),
+                          }))
+                        : [],
+                    }))
+                  : [],
+              }));
+          }
+
+          return tree;
+        });
       });
+    },
+
+    isGoalComplete(goal) {
+      if (!goal) return false;
+      return goal.status === 'done';
+    },
+
+    calculateGoalProgress(yearGoal) {
+      // Calculate completion percentage based on month goals
+      if (!yearGoal.monthGoals || yearGoal.monthGoals.length === 0) {
+        return yearGoal.isComplete ? 100 : 0;
+      }
+
+      const completedMonths = yearGoal.monthGoals.filter((m) => m.isComplete).length;
+      return (completedMonths / yearGoal.monthGoals.length) * 100;
+    },
+
+    formatYearDate(date) {
+      const m = moment(date);
+      return m.isValid() ? m.format('YYYY') : date;
+    },
+
+    formatMonthDate(date) {
+      const m = moment(date);
+      return m.isValid() ? m.format('MMMM') : date;
+    },
+
+    formatWeekDate(date) {
+      // Handle week format YYYY-Www
+      if (date && date.includes('W')) {
+        const [, week] = date.split('-W');
+        return `Week ${parseInt(week, 10)}`;
+      }
+      const m = moment(date);
+      return m.isValid() ? `Week ${m.week()}` : date;
+    },
+
+    formatDayDate(date) {
+      const m = moment(date);
+      return m.isValid() ? m.format('dddd, MMM D, YYYY') : date;
+    },
+
+    openCreateGoalDrawer(period, parentGoal = null) {
+      const currentDate = moment();
+      let date = '';
+
+      // Calculate appropriate date based on period
+      switch (period) {
+        case 'year':
+          date = currentDate.format('YYYY');
+          break;
+        case 'month':
+          date = currentDate.format('YYYY-MM');
+          break;
+        case 'week':
+          date = currentDate.format('YYYY-[W]WW');
+          break;
+        case 'day':
+          date = currentDate.format('YYYY-MM-DD');
+          break;
+        default:
+          date = currentDate.format('YYYY');
+          break;
+      }
+
+      this.drawerGoal = {
+        body: '',
+        period,
+        date,
+        tags: [],
+        contribution: '',
+        isMilestone: !!parentGoal,
+        goalRef: parentGoal ? parentGoal.id : null,
+      };
+
+      this.goalDrawer = true;
+    },
+
+    editGoal(goal) {
+      this.drawerGoal = {
+        id: goal.id,
+        body: goal.body,
+        period: goal.period,
+        date: goal.date,
+        tags: goal.tags || [],
+        contribution: goal.contribution || '',
+        status: goal.status,
+        taskRef: goal.taskRef || '',
+        isMilestone: !!goal.goalRef,
+        goalRef: goal.goalRef || null,
+      };
+
+      this.goalDrawer = true;
+    },
+
+    closeDrawer() {
+      this.goalDrawer = false;
+      this.drawerGoal = {
+        body: '',
+        period: 'year',
+        date: '',
+        tags: [],
+        contribution: '',
+        isMilestone: false,
+        goalRef: null,
+      };
+    },
+
+    handleGoalSaved() {
+      // Refetch year goals to update tree
+      this.$apollo.queries.yearGoals.refetch();
+      this.closeDrawer();
+    },
+
+    handleGoalUpdated() {
+      // Refetch year goals to update tree
+      this.$apollo.queries.yearGoals.refetch();
+      this.closeDrawer();
+    },
+
+    toggleWeekGoal(weekGoal) {
+      // Toggle expansion of week goal to show day goals
+      this.$set(weekGoal, 'expanded', !weekGoal.expanded);
+    },
+
+    async markComplete(goal) {
+      try {
+        await this.$apollo.mutate({
+          mutation: gql`
+            mutation updateGoalItem(
+              $id: ID!
+              $body: String!
+              $status: String
+            ) {
+              updateGoalItem(
+                id: $id
+                body: $body
+                status: $status
+              ) {
+                id
+                status
+              }
+            }
+          `,
+          variables: {
+            id: goal.id,
+            body: goal.body,
+            status: 'done',
+          },
+        });
+
+        // Refetch to update UI
+        this.$apollo.queries.yearGoals.refetch();
+
+        this.$notify({
+          title: 'Success',
+          text: 'Goal marked as complete',
+          group: 'notify',
+          type: 'success',
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error('Error marking goal complete:', error);
+        this.$notify({
+          title: 'Error',
+          text: 'Failed to mark goal as complete',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+      }
     },
   },
 };
 </script>
 
 <style scoped>
-.completed-goal {
-  color: rgba(0, 0, 0, 0.54);
-  text-decoration: line-through;
+.year-goals-container {
+  padding: 24px;
 }
 
-.milestone-item {
-  font-size: 0.9em;
+/* Year Goal Panels */
+.year-goal-panel {
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.year-goal-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #1976d2;
+}
+
+.year-goal-meta {
   margin-top: 4px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-.completed-milestone {
-  color: rgba(0, 0, 0, 0.54);
-  text-decoration: line-through;
+.year-goal-content {
+  background: #fafafa;
 }
 
-.v-timeline-item__body {
-  max-width: 100%;
+/* Contribution Section */
+.contribution-section {
+  background: white;
+  border-left: 4px solid #1976d2;
+  margin: 12px;
+  border-radius: 4px;
+}
+
+.contribution-text {
+  line-height: 1.6;
+  color: #424242;
+}
+
+.contribution-text.small {
+  font-size: 13px;
+}
+
+.contribution-text >>> p {
+  margin-bottom: 8px;
+}
+
+.contribution-text >>> h1,
+.contribution-text >>> h2,
+.contribution-text >>> h3 {
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+/* Nested Goals Styling */
+.nested-goals {
+  background: white;
+  margin: 8px 12px 12px 12px;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.month-goals {
+  border-left: 4px solid #0288d1;
+}
+
+.week-goals {
+  border-left: 4px solid #ffa726;
+  margin: 8px;
+}
+
+.day-goals {
+  border-left: 4px solid #9e9e9e;
+  margin-left: 48px;
+  background: #f5f5f5;
+}
+
+.nested-header {
+  font-weight: 500;
+  color: #616161;
+  height: 36px;
+}
+
+.nested-expansion {
+  box-shadow: none !important;
+}
+
+.month-goal-panel {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.month-goal-panel:last-child {
+  border-bottom: none;
+}
+
+.nested-goal-title {
+  font-size: 15px;
+  font-weight: 400;
+  color: #424242;
+}
+
+.nested-goal-meta {
+  margin-top: 2px;
+}
+
+.nested-goal-content {
+  background: #fafafa;
+}
+
+/* Week and Day Goal Tiles */
+.week-goal-tile {
+  border-bottom: 1px solid #eeeeee;
+  cursor: pointer;
+}
+
+.week-goal-tile:hover {
+  background: #f5f5f5;
+}
+
+.week-goal-tile:last-child {
+  border-bottom: none;
+}
+
+.day-goal-tile {
+  padding-left: 24px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.day-goal-tile:last-child {
+  border-bottom: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .year-goals-container {
+    padding: 12px;
+  }
+
+  .year-goal-title {
+    font-size: 16px;
+  }
+
+  .nested-goals {
+    margin: 4px 8px 8px 8px;
+  }
+}
+
+/* Year Goal Card Styling */
+.year-goal-card {
+  transition: box-shadow 0.3s ease;
+}
+
+.year-goal-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 </style>

@@ -18,36 +18,6 @@ const mockGoalItemsRef = [
   { id: 'g2', body: 'Fitness milestone', taskRef: '3' },
 ];
 
-const mockMilestoneData = {
-  period: 'week',
-  title: 'Learn Python Fundamentals',
-  isMilestone: false,
-  goalRef: null,
-  entries: [
-    {
-      period: 'day',
-      periodName: 'Monday',
-      date: '23-12-2025',
-      title: 'Setup environment',
-      description: 'Install Python and VS Code',
-    },
-    {
-      period: 'day',
-      periodName: 'Tuesday',
-      date: '24-12-2025',
-      title: 'Learn variables',
-      description: 'Study basic data types',
-    },
-    {
-      period: 'day',
-      periodName: 'Wednesday',
-      date: '25-12-2025',
-      title: 'Control flow',
-      description: 'If/else and loops',
-    },
-  ],
-};
-
 export const WeekPlan = () => ({
   components: { AiGoalPlanForm },
   data() {
@@ -56,7 +26,70 @@ export const WeekPlan = () => ({
       routines: mockRoutines,
       goalItemsRef: mockGoalItemsRef,
       loading: false,
+      milestoneData: {
+        period: 'week',
+        title: 'Python Learning Week',
+        isMilestone: false,
+        goalRef: null,
+        entries: [
+          {
+            period: 'day',
+            periodName: 'Monday',
+            date: '06-01-2026',
+            title: 'Python Basics',
+            description: '## Goals\n- Install Python\n- Learn syntax\n- Write first program',
+          },
+          {
+            period: 'day',
+            periodName: 'Tuesday',
+            date: '07-01-2026',
+            title: 'Data Structures',
+            description: '## Goals\n- Lists and tuples\n- Dictionaries\n- Sets',
+          },
+          {
+            period: 'day',
+            periodName: 'Wednesday',
+            date: '08-01-2026',
+            title: 'Functions & Modules',
+            description: '## Goals\n- Define functions\n- Import modules\n- Create packages',
+          },
+          {
+            period: 'day',
+            periodName: 'Thursday',
+            date: '09-01-2026',
+            title: 'Object-Oriented Programming',
+            description: '## Goals\n- Classes and objects\n- Inheritance\n- Polymorphism',
+          },
+          {
+            period: 'day',
+            periodName: 'Friday',
+            date: '10-01-2026',
+            title: 'Practice Project',
+            description: '## Goals\n- Build a CLI app\n- Use file I/O\n- Error handling',
+          },
+          {
+            period: 'day',
+            periodName: 'Saturday',
+            date: '11-01-2026',
+            title: 'Web Development',
+            description: '## Goals\n- Flask basics\n- Routes and templates\n- Simple web app',
+          },
+          {
+            period: 'day',
+            periodName: 'Sunday',
+            date: '12-01-2026',
+            title: 'Review & Testing',
+            description: '## Goals\n- Review all concepts\n- Write unit tests\n- Final project',
+          },
+        ],
+      },
     };
+  },
+  mounted() {
+    // Inject milestone data for demo
+    this.$children[0].milestoneData = this.milestoneData;
+    this.$children[0].selectedRoutine = '4';
+    this.$children[0].selectedGoalPeriod = 'week';
   },
   template: `
     <div style="max-width: 800px; padding: 20px;">
@@ -74,11 +107,9 @@ export const WeekPlan = () => ({
   methods: {
     handleError(msg) {
       console.error('Error:', msg);
-      alert(msg);
     },
     handleSaved(items) {
       console.log('Goals saved:', items);
-      alert(`Saved ${items.length} goals!`);
     },
   },
 });

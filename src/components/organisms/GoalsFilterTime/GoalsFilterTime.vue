@@ -60,7 +60,7 @@ export default {
         if (period === 'week') {
           // Allow editing current week and future weeks
           return goalDate.isSameOrAfter(today.startOf('week'), 'day');
-        } else if (period === 'month') {
+        } if (period === 'month') {
           // Allow editing current month and future months
           return goalDate.isSameOrAfter(today.startOf('month'), 'day');
         }
@@ -82,27 +82,29 @@ export default {
           return periodDate;
         case 'lifetime':
           return 'Know your life mission';
+        default:
+          return periodDate;
       }
     },
-    inRangeType(date)  {
-      const startDate = moment(date, "DD-MM-YYYY");
-      const todayDate = moment(new Date(), "DD-MM-YYYY");
+    inRangeType(date) {
+      const startDate = moment(date, 'DD-MM-YYYY');
+      const todayDate = moment(new Date(), 'DD-MM-YYYY');
 
-      if(this.rangeType === 'upcoming') {
-        return moment(startDate).isSameOrAfter(todayDate, "day") || date === '01-01-1970';
-      } else if (this.rangeType === 'past') {
-        return moment(startDate).isBefore(todayDate, "day") && date !== '01-01-1970';
+      if (this.rangeType === 'upcoming') {
+        return moment(startDate).isSameOrAfter(todayDate, 'day') || date === '01-01-1970';
+      } if (this.rangeType === 'past') {
+        return moment(startDate).isBefore(todayDate, 'day') && date !== '01-01-1970';
       }
 
       return true;
-    }
+    },
   },
   filters: {
-  capitalize: function (value) {
-      if (!value) return ''
-      value = value.toString()
-      return value.charAt(0).toUpperCase() + value.slice(1)
-    }
-  }
+    capitalize(value) {
+      if (!value) return '';
+      const str = value.toString();
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    },
+  },
 };
 </script>

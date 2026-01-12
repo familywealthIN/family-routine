@@ -10,8 +10,8 @@
     "serve:server": "cross-env NODE_OPTIONS=--openssl-legacy-provider nodemon --watch src/server ./server.js",
     "mcp:server": "cross-env NODE_OPTIONS=--openssl-legacy-provider node src/server/mcp-http-server.js",
     "setup-encryption": "node scripts/setup-encryption.js",
-    "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook"
+    "storybook": "cross-env NODE_OPTIONS=--openssl-legacy-provider start-storybook -p 6006",
+    "build-storybook": "cross-env NODE_OPTIONS=--openssl-legacy-provider build-storybook"
   },
   "dependencies": {
     "@johmun/vue-tags-input": "^2.1.0",
@@ -82,6 +82,7 @@
     "eslint-config-vue": "^2.0.2",
     "eslint-plugin-import": "^2.20.2",
     "eslint-plugin-vue": "^5.0.0",
+    "ignore-loader": "^0.1.2",
     "nodemon": "^2.0.4",
     "serverless-offline": "^6.1.4",
     "style-loader": "^2.0.0",

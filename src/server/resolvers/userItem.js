@@ -12,7 +12,11 @@ const { UserItemType, UserModel } = require('../schema/UserSchema');
 const { authenticateGoogle, authenticateApple } = require('../passport');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
-const ApiError = require('../utils/ApiError');
+const { ApiError } = require('../utils/ApiError');
+const { RoutineModel } = require('../schema/RoutineSchema');
+const { RoutineItemModel } = require('../schema/RoutineItemSchema');
+const { GoalModel } = require('../schema/GoalSchema');
+const { ProgressModel } = require('../schema/ProgressSchema');
 
 const query = {
   getUserTags: {
@@ -120,7 +124,7 @@ const mutation = {
               id: user.id,
               email: user.email,
               name: user.name,
-              picture: data.profile._json.picture || '',
+              picture: (data.profile._json && data.profile._json.picture) || '', // eslint-disable-line no-underscore-dangle
               token: user.generateJWT(),
               needsOnboarding: user.needsOnboarding || false,
               motto: [],
@@ -274,12 +278,6 @@ const mutation = {
       }
 
       try {
-        // Import required models
-        const { RoutineModel } = require('../schema/RoutineSchema');
-        const { RoutineItemModel } = require('../schema/RoutineItemSchema');
-        const { GoalModel } = require('../schema/GoalSchema');
-        const { ProgressModel } = require('../schema/ProgressSchema');
-
         // Delete all user data in parallel
         await Promise.all([
           // Delete user routines

@@ -166,13 +166,50 @@ export default {
       }
       const firstEntryDate = (this.milestoneData.entries[0] && this.milestoneData.entries[0].date) || moment().format('DD-MM-YYYY');
       const { date, period } = stepupMilestonePeriodDate(
-        firstEntryDate,
         this.milestoneData.period,
+        firstEntryDate,
       );
       return { date, period };
     },
+    planTitleGoalData() {
+      // This is the period and date for the plan title goal itself
+      if (!this.selectedGoalPeriod || !this.milestoneData || !this.milestoneData.entries || !this.milestoneData.entries.length) {
+        return { date: '', period: '' };
+      }
+
+      const firstEntryDate = this.milestoneData.entries[0].date || moment().format('DD-MM-YYYY');
+      let planDate = firstEntryDate;
+
+      // Calculate the appropriate date based on the selected goal period
+      if (this.selectedGoalPeriod === 'week') {
+        const weekNo = moment(firstEntryDate, 'DD-MM-YYYY').weeks();
+        planDate = moment(firstEntryDate, 'DD-MM-YYYY').weeks(weekNo).weekday(5).format('DD-MM-YYYY');
+      } else if (this.selectedGoalPeriod === 'month') {
+        planDate = moment(firstEntryDate, 'DD-MM-YYYY').endOf('month').format('DD-MM-YYYY');
+      } else if (this.selectedGoalPeriod === 'year') {
+        planDate = moment(firstEntryDate, 'DD-MM-YYYY').endOf('year').format('DD-MM-YYYY');
+      }
+
+      return { date: planDate, period: this.selectedGoalPeriod };
+    },
+    isValid() {
+      return !!(
+        this.milestoneData
+        && this.selectedRoutine
+        && this.selectedGoalPeriod
+        && this.milestoneData.title
+        && this.milestoneData.entries
+        && this.milestoneData.entries.length > 0
+      );
+    },
   },
   watch: {
+    isValid: {
+      handler(newVal) {
+        this.$emit('update:valid', newVal);
+      },
+      immediate: true,
+    },
     searchQuery: {
       handler(newVal) {
         if (newVal && !this.milestoneData && !this.loading) {
@@ -189,6 +226,14 @@ export default {
           this.milestoneData.goalRef = null;
         }
       },
+    },
+    planTitlePeriodData: {
+      handler(newVal) {
+        if (newVal && newVal.period) {
+          this.$emit('period-above-changed', newVal);
+        }
+      },
+      immediate: true,
     },
     currentTask(newVal) {
       if (newVal && newVal.id && this.routines.length > 0 && !this.selectedRoutine) {
@@ -344,7 +389,7 @@ export default {
       try {
         // Step 1: Save plan title as goal item
         if (this.milestoneData.title) {
-          const { date: planTitleDate, period: planTitlePeriod } = this.planTitlePeriodData;
+          const { date: planTitleDate, period: planTitlePeriod } = this.planTitleGoalData;
 
           const planTitleResult = await this.$apollo.mutate({
             mutation: gql`
@@ -554,10 +599,6 @@ export default {
 </script>
 
 <style scoped>
-.goal-plan-form {
-  /* Component styles */
-}
-
 .modern-shadow-sm {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }

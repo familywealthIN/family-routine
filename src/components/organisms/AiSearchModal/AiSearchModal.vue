@@ -1,123 +1,264 @@
 <template>
-  <v-dialog v-model="dialog" max-width="800px" persistent>
-    <v-card class="ai-search-modal">
-      <!-- Sticky Header -->
-      <div class="sticky-header">
-        <v-card-title class="pb-2">
-          <v-icon left :color="isTaskMode ? 'primary' : 'accent'">
-            {{ isTaskMode ? 'task_alt' : 'timeline' }}
-          </v-icon>
-          <span>{{ dynamicTitle }}</span>
-          <v-spacer></v-spacer>
-          <v-btn icon @click="closeModal">
-            <v-icon>close</v-icon>
-          </v-btn>
-        </v-card-title>
-      </div>
-
-      <!-- Scroll Shadow Indicators -->
-      <div v-show="showTopShadow" class="scroll-shadow scroll-shadow--top"></div>
-
-      <!-- Scrollable Content -->
-      <v-card-text 
-        ref="scrollableContent" 
-        @scroll="handleScroll" 
-        class="scrollable-content"
-        style="max-height: 70vh; overflow-y: auto;"
-      >
-        <!-- Search Input with Mode Hint -->
-        <div class="search-form mb-4">
-          <v-text-field
-            v-model="searchQuery"
-            :placeholder="intelligentPlaceholder"
-            :loading="loading"
-            prepend-icon="search"
-            @keyup.enter="handleSubmit"
-            filled
-            class="mb-2"
-          ></v-text-field>
-
-          <!-- Mode Hint -->
-          <v-alert
-            v-if="searchQuery && searchQuery.length > 3"
-            :type="isTaskMode ? 'info' : 'warning'"
-            text
-            dense
-            class="mb-0"
-          >
-            <div class="d-flex align-center">
-              <v-icon left small>{{ isTaskMode ? 'add_task' : 'timeline' }}</v-icon>
-              <span class="caption">
-                {{ isTaskMode 
-                  ? 'Creating a task. Add keywords like "this week" or "plan" to build goals instead.' 
-                  : 'Building a goal plan. Remove time keywords to create a simple task instead.' 
-                }}
-              </span>
-            </div>
-          </v-alert>
+  <div>
+    <!-- Mobile Bottom Sheet -->
+    <v-bottom-sheet
+      v-if="$vuetify.breakpoint.xsOnly"
+      v-model="dialog"
+      persistent
+      max-width="100%"
+    >
+      <v-card class="ai-search-modal">
+        <!-- Mobile Handle -->
+        <div class="mobile-handle-container">
+          <div class="mobile-handle"></div>
         </div>
 
-        <!-- Error Display -->
-        <v-alert v-if="error" type="error" dismissible @input="error = ''">
-          {{ error }}
-        </v-alert>
+        <!-- Sticky Header -->
+        <div class="sticky-header">
+          <v-card-title class="pb-2">
+            <v-icon left :color="isTaskMode ? 'primary' : 'accent'">
+              {{ isTaskMode ? 'task_alt' : 'timeline' }}
+            </v-icon>
+            <span>{{ dynamicTitle }}</span>
+            <v-spacer></v-spacer>
+            <v-btn icon @click="closeModal">
+              <v-icon>close</v-icon>
+            </v-btn>
+          </v-card-title>
+        </div>
 
-        <!-- Task Creation Form (Task Mode) -->
-        <AiTaskCreationForm
-          v-if="isTaskMode"
-          ref="taskForm"
-          :searchQuery="searchQuery"
-          :currentTask="$currentTaskData"
-          :goalItemsRef="goalItemsRef"
-          :routines="routines"
-          :relatedGoalsData="relatedGoalsData"
-          :loading.sync="loading"
-          @error="error = $event"
-          @update:loading="loading = $event"
-          @update:saving="saving = $event"
-          @task-created="handleTaskCreated"
-          @success="handleSuccess"
-        />
+        <!-- Scroll Shadow Indicators -->
+        <div v-show="showTopShadow" class="scroll-shadow scroll-shadow--top"></div>
 
-        <!-- Goal Planning Form (Goals Mode) -->
-        <AiGoalPlanForm
-          v-else
-          ref="goalForm"
-          :searchQuery="searchQuery"
-          :currentTask="$currentTaskData"
-          :goalItemsRef="goalItemsRef"
-          :routines="routines"
-          :loading.sync="loading"
-          @error="error = $event"
-          @update:loading="loading = $event"
-          @update:saving="saving = $event"
-          @goals-saved="handleGoalsSaved"
-          @success="handleSuccess"
-        />
-      </v-card-text>
-
-      <div v-show="showBottomShadow" class="scroll-shadow scroll-shadow--bottom"></div>
-
-      <!-- Sticky Footer with Save Button -->
-      <v-card-actions class="sticky-footer">
-        <v-spacer></v-spacer>
-        <v-btn text @click="closeModal">Cancel</v-btn>
-        <v-btn
-          :color="isTaskMode ? 'primary' : 'accent'"
-          :disabled="!canSave"
-          :loading="saving"
-          @click="handleSaveClick"
+        <!-- Scrollable Content -->
+        <v-card-text
+          ref="scrollableContent"
+          @scroll="handleScroll"
+          class="scrollable-content"
+          style="max-height: 70vh; overflow-y: auto;"
         >
-          {{ getSaveButtonText }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+          <!-- Search Input with Mode Hint -->
+          <div class="search-form mb-4">
+            <v-text-field
+              v-model="searchQuery"
+              :placeholder="intelligentPlaceholder"
+              :loading="loading"
+              prepend-icon="search"
+              @keyup.enter="handleSubmit"
+              filled
+              class="mb-2"
+            ></v-text-field>
+
+            <!-- Mode Hint -->
+            <v-alert
+              v-if="searchQuery && searchQuery.length > 3"
+              :type="isTaskMode ? 'info' : 'warning'"
+              text
+              dense
+              class="mb-0"
+            >
+              <div class="d-flex align-center">
+                <v-icon left small>{{ isTaskMode ? 'add_task' : 'timeline' }}</v-icon>
+                <span class="caption">
+                  {{ isTaskMode
+                    ? 'Creating a task. Add keywords like "this week" or "plan" to build goals instead.'
+                    : 'Building a goal plan. Remove time keywords to create a simple task instead.'
+                  }}
+                </span>
+              </div>
+            </v-alert>
+          </div>
+
+          <!-- Error Display -->
+          <v-alert v-if="error" type="error" dismissible @input="error = ''">
+            {{ error }}
+          </v-alert>
+
+          <!-- Task Creation Form (Task Mode) -->
+          <AiTaskCreationForm
+            v-if="hasSubmitted && isTaskMode"
+            ref="taskForm"
+            :searchQuery="searchQuery"
+            :currentTask="$currentTaskData"
+            :goalItemsRef="goalItemsRef"
+            :routines="routines"
+            :relatedGoalsData="relatedGoalsData"
+            :loading.sync="loading"
+            @error="error = $event"
+            @update:loading="loading = $event"
+            @update:saving="saving = $event"
+            @update:valid="isFormValid = $event"
+            @task-created="handleTaskCreated"
+            @success="handleSuccess"
+          />
+
+          <!-- Goal Planning Form (Goals Mode) -->
+          <AiGoalPlanForm
+            v-if="hasSubmitted && !isTaskMode"
+            ref="goalForm"
+            :searchQuery="searchQuery"
+            :currentTask="$currentTaskData"
+            :goalItemsRef="goalItemsRef"
+            :routines="routines"
+            :loading.sync="loading"
+            @error="error = $event"
+            @update:loading="loading = $event"
+            @update:saving="saving = $event"
+            @update:valid="isFormValid = $event"
+            @period-above-changed="handlePeriodAboveChanged"
+            @goals-saved="handleGoalsSaved"
+            @success="handleSuccess"
+          />
+        </v-card-text>
+
+        <div v-show="showBottomShadow" class="scroll-shadow scroll-shadow--bottom"></div>
+
+        <!-- Sticky Footer with Save Button -->
+        <v-card-actions v-if="hasSubmitted" class="sticky-footer">
+          <v-spacer></v-spacer>
+          <v-btn text @click="closeModal">Cancel</v-btn>
+          <v-btn
+            :color="isTaskMode ? 'primary' : 'accent'"
+            :disabled="!canSave"
+            :loading="saving"
+            @click="handleSaveClick"
+          >
+            {{ getSaveButtonText }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-bottom-sheet>
+
+    <!-- Desktop Dialog -->
+    <v-dialog
+      v-else
+      v-model="dialog"
+      persistent
+      max-width="800px"
+    >
+      <v-card class="ai-search-modal">
+        <!-- Sticky Header -->
+        <div class="sticky-header">
+          <v-card-title class="pb-2">
+            <v-icon left :color="isTaskMode ? 'primary' : 'accent'">
+              {{ isTaskMode ? 'task_alt' : 'timeline' }}
+            </v-icon>
+            <span>{{ dynamicTitle }}</span>
+            <v-spacer></v-spacer>
+            <v-btn icon @click="closeModal">
+              <v-icon>close</v-icon>
+            </v-btn>
+          </v-card-title>
+        </div>
+
+        <!-- Scroll Shadow Indicators -->
+        <div v-show="showTopShadow" class="scroll-shadow scroll-shadow--top"></div>
+
+        <!-- Scrollable Content -->
+        <v-card-text
+          ref="scrollableContent"
+          @scroll="handleScroll"
+          class="scrollable-content"
+          style="max-height: 70vh; overflow-y: auto;"
+        >
+          <!-- Search Input with Mode Hint -->
+          <div class="search-form mb-4">
+            <v-text-field
+              v-model="searchQuery"
+              :placeholder="intelligentPlaceholder"
+              :loading="loading"
+              prepend-icon="search"
+              @keyup.enter="handleSubmit"
+              filled
+              class="mb-2"
+            ></v-text-field>
+
+            <!-- Mode Hint -->
+            <v-alert
+              v-if="searchQuery && searchQuery.length > 3"
+              :type="isTaskMode ? 'info' : 'warning'"
+              text
+              dense
+              class="mb-0"
+            >
+              <div class="d-flex align-center">
+                <v-icon left small>{{ isTaskMode ? 'add_task' : 'timeline' }}</v-icon>
+                <span class="caption">
+                  {{ isTaskMode
+                    ? 'Creating a task. Add keywords like "this week" or "plan" to build goals instead.'
+                    : 'Building a goal plan. Remove time keywords to create a simple task instead.'
+                  }}
+                </span>
+              </div>
+            </v-alert>
+          </div>
+
+          <!-- Error Display -->
+          <v-alert v-if="error" type="error" dismissible @input="error = ''">
+            {{ error }}
+          </v-alert>
+
+          <!-- Task Creation Form (Task Mode) -->
+          <AiTaskCreationForm
+            v-if="hasSubmitted && isTaskMode"
+            ref="taskForm"
+            :searchQuery="searchQuery"
+            :currentTask="$currentTaskData"
+            :goalItemsRef="goalItemsRef"
+            :routines="routines"
+            :relatedGoalsData="relatedGoalsData"
+            :loading.sync="loading"
+            @error="error = $event"
+            @update:loading="loading = $event"
+            @update:saving="saving = $event"
+            @update:valid="isFormValid = $event"
+            @task-created="handleTaskCreated"
+            @success="handleSuccess"
+          />
+
+          <!-- Goal Planning Form (Goals Mode) -->
+          <AiGoalPlanForm
+            v-if="hasSubmitted && !isTaskMode"
+            ref="goalForm"
+            :searchQuery="searchQuery"
+            :currentTask="$currentTaskData"
+            :goalItemsRef="goalItemsRef"
+            :routines="routines"
+            :loading.sync="loading"
+            @error="error = $event"
+            @update:loading="loading = $event"
+            @update:saving="saving = $event"
+            @update:valid="isFormValid = $event"
+            @period-above-changed="handlePeriodAboveChanged"
+            @goals-saved="handleGoalsSaved"
+            @success="handleSuccess"
+          />
+        </v-card-text>
+
+        <div v-show="showBottomShadow" class="scroll-shadow scroll-shadow--bottom"></div>
+
+        <!-- Sticky Footer with Save Button -->
+        <v-card-actions v-if="hasSubmitted" class="sticky-footer">
+          <v-spacer></v-spacer>
+          <v-btn text @click="closeModal">Cancel</v-btn>
+          <v-btn
+            :color="isTaskMode ? 'primary' : 'accent'"
+            :disabled="!canSave"
+            :loading="saving"
+            @click="handleSaveClick"
+          >
+            {{ getSaveButtonText }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </div>
 </template>
 
 <script>
 import gql from 'graphql-tag';
 import moment from 'moment';
+import { stepupMilestonePeriodDate } from '@/utils/getDates';
 import AiTaskCreationForm from '../AiTaskCreationForm/AiTaskCreationForm.vue';
 import AiGoalPlanForm from '../AiGoalPlanForm/AiGoalPlanForm.vue';
 
@@ -142,9 +283,12 @@ export default {
       error: '',
       loading: false,
       saving: false,
+      hasSubmitted: false,
+      isFormValid: false,
       showTopShadow: false,
       showBottomShadow: false,
       routineData: [],
+      currentParentPeriodData: null,
     };
   },
 
@@ -161,20 +305,20 @@ export default {
     // Intelligent mode detection based on query content
     isTaskMode() {
       if (!this.searchQuery) return true;
-      
+
       const query = this.searchQuery.toLowerCase();
-      
+
       // Check for time-based keywords (week, month, year, etc.)
       const timeKeywords = /\b(week|month|year|weekly|monthly|yearly|weeks|months|years)\b/;
-      
+
       // Check for planning keywords
       const planKeywords = /\b(plan|schedule|routine|program|strategy|course|curriculum)\b/;
-      
+
       // If query contains time or planning keywords, it's goals mode
       if (timeKeywords.test(query) || planKeywords.test(query)) {
         return false;
       }
-      
+
       // Otherwise, it's task mode
       return true;
     },
@@ -191,31 +335,7 @@ export default {
     },
 
     canSave() {
-      if (this.isTaskMode) {
-        // Check if task form has valid data
-        const taskForm = this.$refs.taskForm;
-        if (!taskForm) return false;
-        
-        const taskData = taskForm.taskData;
-        return !!(taskData && taskData.title && taskData.description);
-      }
-      
-      // Check if goal form has valid data
-      const goalForm = this.$refs.goalForm;
-      if (!goalForm) return false;
-      
-      const milestoneData = goalForm.milestoneData;
-      const selectedRoutine = goalForm.selectedRoutine;
-      const selectedGoalPeriod = goalForm.selectedGoalPeriod;
-      
-      return !!(
-        milestoneData &&
-        selectedRoutine &&
-        selectedGoalPeriod &&
-        milestoneData.title &&
-        milestoneData.entries &&
-        milestoneData.entries.length > 0
-      );
+      return this.isFormValid;
     },
 
     getSaveButtonText() {
@@ -227,38 +347,60 @@ export default {
       if (!this.$currentTaskList || !Array.isArray(this.$currentTaskList)) {
         return [];
       }
-      
+
       return this.$currentTaskList.map((task) => ({
         taskId: task.id,
-        name: task.body || task.title || 'Unnamed Task',
+        name: task.name || task.body || task.title || 'Unnamed Task',
         time: task.time || null,
         tags: task.tags || [],
       }));
     },
 
-    // Compute period data for goalItemsRef query (task mode - week goals)
+    // Compute period data for goalItemsRef query
     goalRefPeriodData() {
+      // If we have specific parent period data from the form, use it
+      if (!this.isTaskMode && this.currentParentPeriodData) {
+        return {
+          period: this.currentParentPeriodData.period,
+          date: this.currentParentPeriodData.date,
+        };
+      }
+
+      // For task mode, calculate based on current task date and period
+      if (this.isTaskMode && this.$currentTaskData) {
+        // If current task has period and date, step up to parent period
+        const taskPeriod = this.$currentTaskData.period || 'day';
+        const taskDate = this.$currentTaskData.date || moment().format('DD-MM-YYYY');
+        return stepupMilestonePeriodDate(taskPeriod, taskDate);
+      }
+
+      // Default fallback to week goals
       const friday = moment().day(5); // Friday
       return {
         period: 'week',
-        date: friday.format('YYYY-[W]WW'),
+        date: friday.format('DD-MM-YYYY'),
       };
     },
   },
 
   apollo: {
-    // Query for week goals (used in task mode for milestone linking)
+    // Query for goals in the period above (used for milestone linking)
     goalItemsRef: {
       query: gql`
         query getGoalItemsRef($period: String!, $date: String!) {
           goalDatePeriod(period: $period, date: $date) {
             id
-            body
-            period
             date
-            taskRef
-            tags
-            isComplete
+            period
+            goalItems {
+              id
+              body
+              period
+              date
+              taskRef
+              tags
+              isComplete
+            }
           }
         }
       `,
@@ -268,13 +410,13 @@ export default {
       skip() {
         // Skip if not authenticated
         if (!this.$root.$data.email) return true;
-        
+
         // Only fetch in task mode when milestone might be needed
         // Or in goals mode when milestone goal reference is needed
         return false;
       },
       update(data) {
-        return data.goalDatePeriod || [];
+        return data.goalDatePeriod && data.goalDatePeriod.date ? data.goalDatePeriod.goalItems : [];
       },
     },
 
@@ -296,11 +438,11 @@ export default {
       variables() {
         // Get goalRef from the active form
         if (this.isTaskMode && this.$refs.taskForm) {
-          const taskData = this.$refs.taskForm.taskData;
+          const { taskData } = this.$refs.taskForm;
           return { goalRef: (taskData && taskData.goalRef) || '' };
         }
         if (!this.isTaskMode && this.$refs.goalForm) {
-          const milestoneData = this.$refs.goalForm.milestoneData;
+          const { milestoneData } = this.$refs.goalForm;
           return { goalRef: (milestoneData && milestoneData.goalRef) || '' };
         }
         return { goalRef: '' };
@@ -308,17 +450,17 @@ export default {
       skip() {
         // Skip if not authenticated
         if (!this.$root.$data.email) return true;
-        
+
         // Skip if no goalRef is set
         if (this.isTaskMode && this.$refs.taskForm) {
-          const taskData = this.$refs.taskForm.taskData;
+          const { taskData } = this.$refs.taskForm;
           return !taskData || !taskData.goalRef;
         }
         if (!this.isTaskMode && this.$refs.goalForm) {
-          const milestoneData = this.$refs.goalForm.milestoneData;
+          const { milestoneData } = this.$refs.goalForm;
           return !milestoneData || !milestoneData.goalRef;
         }
-        
+
         return true;
       },
       update(data) {
@@ -346,7 +488,7 @@ export default {
     dialog(newVal) {
       if (newVal) {
         this.resetForm();
-        
+
         // Initialize scroll shadows after modal opens
         this.$nextTick(() => {
           this.checkScrollShadows();
@@ -360,7 +502,7 @@ export default {
         if (newVal && newVal.length > 0 && this.$currentTaskData && this.$currentTaskData.id) {
           // Check if the current task is in the routines list
           const currentTaskInRoutines = newVal.find(
-            (routine) => routine.taskId === this.$currentTaskData.id
+            (routine) => routine.taskId === this.$currentTaskData.id,
           );
 
           if (currentTaskInRoutines) {
@@ -371,7 +513,7 @@ export default {
 
             // For task mode: auto-select taskRef in task form
             if (this.isTaskMode && this.$refs.taskForm) {
-              const taskData = this.$refs.taskForm.taskData;
+              const { taskData } = this.$refs.taskForm;
               if (taskData && !taskData.taskRef) {
                 taskData.taskRef = this.$currentTaskData.id;
               }
@@ -407,10 +549,19 @@ export default {
     },
 
     handleSubmit() {
-      if (this.isTaskMode && this.$refs.taskForm) {
-        this.$refs.taskForm.createTask();
-      } else if (!this.isTaskMode && this.$refs.goalForm) {
-        this.$refs.goalForm.searchGoals();
+      if (!this.searchQuery) return;
+
+      if (!this.hasSubmitted) {
+        this.hasSubmitted = true;
+      } else {
+        // If already submitted, trigger a re-search in the active form
+        this.$nextTick(() => {
+          if (this.isTaskMode && this.$refs.taskForm) {
+            this.$refs.taskForm.createTask();
+          } else if (!this.isTaskMode && this.$refs.goalForm) {
+            this.$refs.goalForm.searchGoals();
+          }
+        });
       }
     },
 
@@ -422,6 +573,16 @@ export default {
     handleGoalsSaved(data) {
       // Goals were saved successfully
       console.log('Orchestrator: Goals saved', data);
+    },
+
+    handlePeriodAboveChanged(data) {
+      console.log('Orchestrator: Period above changed', data);
+      this.currentParentPeriodData = data;
+
+      // Refetch the goalItemsRef query with the new period data
+      if (this.$apollo.queries.goalItemsRef) {
+        this.$apollo.queries.goalItemsRef.refetch();
+      }
     },
 
     handleSuccess() {
@@ -441,8 +602,11 @@ export default {
       this.error = '';
       this.loading = false;
       this.saving = false;
+      this.hasSubmitted = false;
+      this.isFormValid = false;
       this.showTopShadow = false;
       this.showBottomShadow = false;
+      this.currentParentPeriodData = null;
 
       // Reset child forms
       this.$nextTick(() => {
@@ -469,6 +633,27 @@ export default {
 <style scoped>
 .ai-search-modal {
   position: relative;
+  border-radius: 16px 16px 0 0 !important;
+}
+
+.mobile-handle-container {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 4px 0;
+  background: white;
+}
+
+.mobile-handle {
+  width: 36px;
+  height: 4px;
+  background-color: #e0e0e0;
+  border-radius: 2px;
+}
+
+@media (min-width: 600px) {
+  .ai-search-modal {
+    border-radius: 4px !important;
+  }
 }
 
 .sticky-header {
@@ -510,6 +695,12 @@ export default {
 .scrollable-content {
   position: relative;
   padding: 24px;
+}
+
+@media (max-width: 600px) {
+  .scrollable-content {
+    padding: 16px;
+  }
 }
 
 .search-form {

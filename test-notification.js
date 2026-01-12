@@ -31,7 +31,7 @@ function sendNotification(token, name, description) {
 }
 
 sendNotification(
-  'ya29.a0AX9GBdVq-9vM1MlxbKPFC-_WJmiV0Y4w5sgySqEa7npwWj4KHjiiEvBI-QZQmlGWbvOIt6y0jmoya6a9b5P55SjYUvWVHoEBZQyc-kHipEMKfkFbKFpPL5TQE58xjKQ7ALfUMgqYFJ9MrCJX1Wlp3dV8OoBglcsaCgYKASMSARESFQHUCsbCpuaYN1oBovJkdU6KH4P-6g0166',
+  '',
   'Hello',
   'Hello World',
 );

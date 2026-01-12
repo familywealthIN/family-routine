@@ -21,19 +21,10 @@
     </div>
 
     <container-box transparent="true" :isLoading="isLoading">
-      <v-card class="ma-3">
-      <div class="weekdays pt-2 pb-2">
-        <div
-          v-for="(weekDay, i) in weekDays"
-          :key="weekDay.day"
-          @click="setDate(i)"
-          :class="`day ${weekDay.isActive ? 'active' : ''}`"
-        >
-          <div>{{ weekDay.day }}</div>
-          <div>{{ weekDay.dayNumber }}</div>
-        </div>
-      </div>
-    </v-card>
+      <weekday-selector
+        :selectedDate="date"
+        @date-selected="handleDateSelected"
+      />
     <div v-if="isTodaySelected">
       <div class="d-flex pr-3 pl-3 title-options">
         <h2>
@@ -218,12 +209,6 @@
                         <small class="no-goals-text" v-else>
                           No goal or activity logged.
                         </small>
-                        <div class="add-new">
-                          <v-btn small flat @click="goalDetailsDialog = true">
-                            <v-icon>add</v-icon>
-                            Add Goal or Activity
-                          </v-btn>
-                        </div>
                       </div>
                     </v-list-tile-content>
                   </v-list-tile>
@@ -461,12 +446,6 @@
                         <small class="no-goals-text" v-else>
                           No goal or activity logged.
                         </small>
-                        <div class="add-new">
-                          <v-btn small flat @click="goalDetailsDialog = true">
-                            <v-icon>add</v-icon>
-                            Add Goal or Activity
-                          </v-btn>
-                        </div>
                       </div>
                     </v-list-tile-content>
                     <v-list-tile-action v-if="task.id !== selectedTaskRef">
@@ -480,191 +459,78 @@
                 </div>
               </v-list>
               <div v-if="filterUpcomingPastTask(tabs, tasklist) && filterUpcomingPastTask(tabs, tasklist).length === 0">
-
                   <v-card-text class="text-xs-center">
                     <p>No upcoming routine items.</p>
                   </v-card-text>
-
               </div>
             </v-card>
           </v-flex>
         </v-layout>
       </template>
     </div>
-    <div v-else>
-      <div class="pl-3 pr-3">
-        <p class="pt-4">
-          Work on your daily agenda to bring you closer to your lifetime goal.
-        </p>
-        <template
-          v-if="agendaGoals && agendaGoals.find((goal) => goal.period === 'lifetime')"
-        >
-          <v-card>
-            <v-card-title>
-              <h3>Remember your Lifetime Goals</h3>
-            </v-card-title>
-            <v-card-text class="pt-0">
-              <ul>
-                <li
-                  v-for="goalItem in agendaGoals.find(
-                    (goal) => goal.period === 'lifetime'
-                  ).goalItems"
-                  :key="goalItem.id"
-                >
-                  {{ goalItem.body }}
-                </li>
-              </ul>
+    <div class="non-current-day" v-else>
+      <div class="pl-3 pr-3 pt-3">
+        <h2 class="mb-3">{{ today }}</h2>
+
+        <!-- Loading state -->
+        <v-card v-if="$apollo.queries.agendaGoals.loading" class="modern-card">
+          <v-card-text class="text-xs-center pa-5">
+            <v-progress-circular
+              indeterminate
+              color="primary"
+              size="40"
+              class="mb-3"
+            ></v-progress-circular>
+            <p class="mb-0">Loading day tasks...</p>
+          </v-card-text>
+        </v-card>
+
+        <template v-else-if="tasklist && tasklist.length">
+          <template v-for="task in tasklist">
+            <div :key="task.id" class="mb-4">
+              <!-- Day tasks for this routine -->
+              <template v-if="filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length">
+                <v-list two-line class="modern-card pa-0">
+                  <template v-for="(taskGoals, i) in filterTaskGoalsPeriod(task.id, agendaGoals, 'day')">
+                    <v-list-tile
+                      v-for="goalItem in taskGoals.goalItems"
+                      :key="goalItem.id"
+                    >
+                      <v-list-tile-content @click="openEditGoalDialog(goalItem, taskGoals)">
+                        <v-list-tile-sub-title class="text--primary caption">{{ task.name }}</v-list-tile-sub-title>
+                        <v-list-tile-title>{{ goalItem.body }}</v-list-tile-title>
+                      </v-list-tile-content>
+                      <v-list-tile-action>
+                        <div class="d-flex">
+                          <v-btn icon small @click="openEditGoalDialog(goalItem, taskGoals)">
+                            <v-icon color="primary" size="20">edit</v-icon>
+                          </v-btn>
+                          <v-btn icon small @click="deleteAgendaGoalItem(goalItem.id, taskGoals.id)" class="ml-1">
+                            <v-icon color="error" size="20">delete</v-icon>
+                          </v-btn>
+                        </div>
+                      </v-list-tile-action>
+                    </v-list-tile>
+                    <v-divider v-if="i < filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length - 1" :key="`divider-${i}`"></v-divider>
+                  </template>
+                </v-list>
+              </template>
+            </div>
+          </template>
+
+          <!-- Show placeholder if no day tasks exist -->
+          <v-card v-if="!tasklist.some(task => filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length)" class="modern-card">
+            <v-card-text class="text-xs-center">
+              <p>No Day Tasks</p>
             </v-card-text>
           </v-card>
         </template>
-      </div>
-      <div class="text-xs-center date-navigation" hidden>
-        <v-btn
-          fab
-          outline
-          small
-          absolute
-          left
-          color="primary"
-          :disabled="disablePrevious()"
-          @click="previousDate()"
-        >
-          <v-icon dark> keyboard_arrow_left </v-icon>
-        </v-btn>
-        <v-btn
-          fab
-          outline
-          small
-          absolute
-          right
-          color="primary"
-          @click="nextDate()"
-        >
-          <v-icon dark> keyboard_arrow_right </v-icon>
-        </v-btn>
-        <div class="date-today">{{ today }}</div>
-      </div>
-      <div v-if="tasklist && tasklist.length">
-        <v-timeline dense clipped>
-          <!-- eslint-disable vue/valid-v-for -->
-          <template v-for="task in tasklist">
-            <!-- eslint-disable-next-line vue/valid-v-for -->
-            <span :key="`task-${task.id}`">
-              <v-timeline-item
-                fill-dot
-                :class="`pb-4 pt-4 routine-item ${getActiveClass(task)}`"
-                :color="getButtonColor(task)"
-                medium
-              >
-                <template v-slot:icon>
-                  <v-icon @click="setActiveSelection(task)" class="white--text">{{ getButtonIcon(task) }}</v-icon>
-                </template>
-                <v-layout>
-                  <v-flex xs2>
-                    <strong>{{ displayTime(task.time) }}</strong>
-                  </v-flex>
-                  <v-flex>
-                    <strong>{{ task.name }}</strong>
-                    <br />
-                    <a @click="() => $router.push(`/agenda/tree/${task.id}`)"
-                      >Go to Month Planner</a
-                    >
-                    <div class="caption">
-                      <pre>{{ task.description }}</pre>
-                    </div>
-                  </v-flex>
-                </v-layout>
-              </v-timeline-item>
-              <template v-for="period in periods">
-                <!-- eslint-disable-next-line vue/valid-v-for -->
-                <v-timeline-item
-                  hide-dot
-                  :key="`period-${task.id}-${period}`"
-                  class="pb-0 pt-2"
-                >
-                  <v-layout
-                    class="period-separator"
-                    align-center
-                    justify-space-between
-                  >
-                    <v-flex xs7>
-                      <span style="text-transform: uppercase">{{
-                        period
-                      }}</span>
-                    </v-flex>
-                    <v-flex xs5 text-xs-right>
-                      <!-- <v-btn
-                        flat
-                        icon
-                        color="primary"
-                        v-if="isEditable"
-                        @click="
-                          selectedTaskRef = task.id;
-                          currentGoalPeriod = period;
-                          goalDetailsDialog = true"
-                        >
-                        <v-icon>content_copy</v-icon>
-                        <v-icon class="overlay-icon">arrow_back</v-icon>
-                      </v-btn> -->
-                      <v-btn
-                        flat
-                        icon
-                        color="primary"
-                        v-if="isEditable && period !== 'year'"
-                        @click="clonePeriodGoalItem(task, period)"
-                      >
-                        <v-icon>content_copy</v-icon>
-                        <v-icon class="overlay-icon">arrow_upward</v-icon>
-                      </v-btn>
-                      <v-btn
-                        flat
-                        icon
-                        color="primary"
-                        v-if="isEditable"
-                        @click="newGoalItem(task, period)"
-                      >
-                        <v-icon>add</v-icon>
-                      </v-btn>
-                      <v-btn flat icon color="primary" v-else>
-                        <v-icon></v-icon>
-                      </v-btn>
-                    </v-flex>
-                  </v-layout>
-                </v-timeline-item>
-                <template v-if="filterTaskGoalsPeriod(task.id, agendaGoals, period).length">
-                  <timeline-item-list
-                    v-for="(taskGoals, i) in filterTaskGoalsPeriod(
-                      task.id,
-                      agendaGoals,
-                      period
-                    )"
-                    :key="`goal-${task.id}-${period}-${i}`"
-                    :goal="taskGoals"
-                    :period="period"
-                    @delete-task-goal="deleteTaskAgendaGoal"
-                  />
-                </template>
-                <template v-else>
-                  <v-timeline-item
-                    :key="period"
-                    class="mb-0 pb-3 pt-3"
-                    hide-dot
-                  >
-                    <span>No goal or activity set.</span>
-                  </v-timeline-item>
-                </template>
-              </template>
-            </span>
-          </template>
-        </v-timeline>
-      </div>
-      <div v-if="tasklist && tasklist.length === 0">
-        <v-card-text class="text-xs-center">
-          <p>
-            No items to display. Please go to Routine Settings and add routine
-            items.
-          </p>
-        </v-card-text>
+
+        <v-card v-else class="modern-card">
+          <v-card-text class="text-xs-center">
+            <p>No items to display. Please go to Routine Settings and add routine items.</p>
+          </v-card-text>
+        </v-card>
       </div>
     </div>
     <v-dialog
@@ -778,6 +644,23 @@
       </v-card>
     </v-dialog>
     </container-box>
+
+    <!-- Dashboard FAB for AI Search -->
+    <v-fab-transition>
+      <v-btn
+        key="ai-search-fab-dashboard"
+        fab
+        bottom
+        right
+        color="primary"
+        dark
+        fixed
+        :style="$vuetify.breakpoint.xsOnly ? 'z-index: 4; margin-bottom: 72px;' : 'z-index: 1000; margin-bottom: 16px; margin-right: 16px;'"
+        @click.stop="openAiSearchModal"
+      >
+        <v-icon>add</v-icon>
+      </v-btn>
+    </v-fab-transition>
   </div>
 </template>
 
@@ -786,13 +669,12 @@
 import moment from 'moment';
 import gql from 'graphql-tag';
 
-import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
+import { TIMES_UP_TIME, PROACTIVE_START_TIME, ONBOARDING_COMPLETE } from '../constants/settings';
 import { defaultGoalItem } from '../constants/goals';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import { MeasurementMixin } from '../utils/measurementMixins';
 
 import GoalList from '../components/organisms/GoalList/GoalList.vue';
-import TimelineItemList from '../components/molecules/TimelineItemList/TimelineItemList.vue';
 import GoalItemList from '../components/organisms/GoalItemList/GoalItemList.vue';
 import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
@@ -800,6 +682,7 @@ import QuickGoalCreation from '../components/molecules/QuickGoalCreation/QuickGo
 import StreakChecks from '../components/molecules/StreakChecks/StreakChecks.vue';
 import GoalCreation from '../components/organisms/GoalCreation/GoalCreation.vue';
 import WakeCheck from '../components/atoms/WakeCheck/WakeCheck.vue';
+import WeekdaySelector from '../components/organisms/WeekdaySelector/WeekdaySelector.vue';
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
 import { TimeFormatMixin } from '../utils/timeFormat';
 
@@ -824,12 +707,12 @@ export default {
   components: {
     GoalList,
     GoalItemList,
-    TimelineItemList,
     ContainerBox,
     QuickGoalCreation,
     StreakChecks,
     GoalCreation,
     WakeCheck,
+    WeekdaySelector,
   },
   apollo: {
     tasklist: {
@@ -995,7 +878,6 @@ export default {
       selectedTaskRef: '',
       date: moment().format('DD-MM-YYYY'),
       todayDate: moment().format('DD-MM-YYYY'),
-      weekDays: this.buildWeekdays(),
       periods: ['year', 'month', 'week', 'day'],
       isEditable: true,
       activeSelectionId: '',
@@ -1140,6 +1022,79 @@ export default {
     this.stopIntelligentRefresh();
   },
   methods: {
+    // Open AI Search Modal
+    openAiSearchModal() {
+      eventBus.$emit(EVENTS.OPEN_AI_SEARCH, { date: this.date });
+    },
+
+    // Open edit goal dialog for day tasks
+    openEditGoalDialog(goalItem, taskGoals) {
+      // Construct the full goal item object needed for editing
+      this.selectedGoalItem = {
+        id: goalItem.id,
+        body: goalItem.body,
+        progress: goalItem.progress,
+        isComplete: goalItem.isComplete,
+        taskRef: goalItem.taskRef,
+        goalRef: goalItem.goalRef,
+        contribution: goalItem.contribution || '',
+        reward: goalItem.reward || '',
+        tags: goalItem.tags || [],
+        status: goalItem.status,
+        completedAt: goalItem.completedAt,
+        subTasks: goalItem.subTasks || [],
+        isMilestone: goalItem.isMilestone,
+        date: taskGoals.date,
+        period: taskGoals.period,
+      };
+      this.goalDisplayDialog = true;
+    },
+
+    // Delete agenda goal item
+    async deleteAgendaGoalItem(goalItemId, goalId) {
+      if (!confirm('Are you sure you want to delete this task?')) {
+        return;
+      }
+
+      try {
+        await this.$apollo.mutate({
+          mutation: gql`
+            mutation deleteGoalItem($id: ID!, $goalItemId: ID!) {
+              deleteGoalItem(id: $id, goalItemId: $goalItemId) {
+                id
+              }
+            }
+          `,
+          variables: {
+            id: goalId,
+            goalItemId,
+          },
+        });
+
+        // Refetch agenda goals
+        if (this.$apollo.queries.agendaGoals) {
+          await this.$apollo.queries.agendaGoals.refetch();
+        }
+
+        this.$notify({
+          title: 'Success',
+          text: 'Task deleted successfully',
+          group: 'notify',
+          type: 'success',
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error('Error deleting goal item:', error);
+        this.$notify({
+          title: 'Error',
+          text: 'Failed to delete task',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+      }
+    },
+
     // Pull to refresh methods
     handleTouchStart(event) {
       if (this.scrollTop <= 0) {
@@ -1230,9 +1185,53 @@ export default {
     },
     handleGoalsSaved(eventData) {
       console.log('DashBoard: Handling goals saved event', eventData);
+
+      // Check if user has completed onboarding (has both week and month goals)
+      this.checkOnboardingCompletion(eventData);
+
       // Only refetch if day goals were created
       this.refetchDailyGoals();
     },
+
+    checkOnboardingCompletion(eventData) {
+      // Don't show if already shown
+      if (localStorage.getItem(ONBOARDING_COMPLETE)) {
+        return;
+      }
+
+      // Track which goal periods the user has created
+      const savedPeriods = JSON.parse(localStorage.getItem('SAVED_GOAL_PERIODS') || '[]');
+
+      if (eventData && eventData.period) {
+        const timelineEntryPeriod = eventData.period;
+        let planTitlePeriod = timelineEntryPeriod;
+
+        // Determine the plan title period based on timeline entry period
+        if (timelineEntryPeriod === 'day') planTitlePeriod = 'week';
+        else if (timelineEntryPeriod === 'week') planTitlePeriod = 'month';
+        else if (timelineEntryPeriod === 'month') planTitlePeriod = 'year';
+
+        if (!savedPeriods.includes(planTitlePeriod)) {
+          savedPeriods.push(planTitlePeriod);
+          localStorage.setItem('SAVED_GOAL_PERIODS', JSON.stringify(savedPeriods));
+        }
+      }
+
+      // Check if user has created both week and month goals
+      if (savedPeriods.includes('week') && savedPeriods.includes('month')) {
+        this.$notify({
+          title: 'You\'re All Set! 🎉',
+          text: 'Do daily milestones to complete weekly and monthly goals.',
+          group: 'notify',
+          type: 'success',
+          duration: 8000,
+        });
+
+        // Mark onboarding as complete
+        localStorage.setItem(ONBOARDING_COMPLETE, 'true');
+      }
+    },
+
     handleGoalItemCreated(eventData) {
       console.log('DashBoard: Handling goal item created event', eventData);
 
@@ -1530,23 +1529,8 @@ export default {
     getActiveClass(task) {
       return this.activeSelectionId === task.id ? 'active' : '';
     },
-    buildWeekdays() {
-      const weekDays = [];
-      const dayShort = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-      const currentDate = moment();
-
-      const weekStart = currentDate.clone().startOf('week');
-      // const weekEnd = currentDate.clone().endOf('isoWeek');
-
-      dayShort.forEach((day, i) => {
-        weekDays.push({
-          dayNumber: moment(weekStart).add(i, 'days').format('DD'),
-          isActive: moment().weekday() === i,
-          day,
-        });
-      });
-
-      return weekDays;
+    handleDateSelected(newDate) {
+      this.date = newDate;
     },
     deleteTaskAgendaGoal(id) {
       this.agendaGoals.forEach((goal) => {
@@ -1571,20 +1555,7 @@ export default {
         .add(1, 'days')
         .format('DD-MM-YYYY');
     },
-    setDate(indx) {
-      const currentDate = moment();
-      const weekStart = currentDate.clone().startOf('week');
 
-      this.weekDays = this.weekDays.map((weekDay, i) => {
-        if (Number(indx) === i) {
-          weekDay.isActive = true;
-          return weekDay;
-        }
-        weekDay.isActive = false;
-        return weekDay;
-      });
-      this.date = moment(weekStart).add(indx, 'days').format('DD-MM-YYYY');
-    },
     getButtonColor(task) {
       if (task) {
         if (task.ticked) {
@@ -2095,9 +2066,6 @@ export default {
       console.log('DashBoard: Day changed to', newDate);
       this.date = newDate;
 
-      // Update weekdays display for new date
-      this.weekDays = this.buildWeekdays();
-
       // Add new routine if needed
       this.addNewDayRoutine();
     },
@@ -2266,29 +2234,6 @@ export default {
   height: 40px;
   padding-top: 10px;
   font-weight: bold;
-}
-
-.weekdays {
-  width: 100%;
-  display: flex;
-  justify-content: space-evenly;
-  align-items: center;
-  font-weight: 500;
-}
-
-.weekdays .day {
-  padding: 16px;
-  border-radius: 4px;
-  text-align: center;
-}
-
-#mobileLayout .weekdays .day {
-  border-radius: 16px;
-}
-
-.weekdays .day.active {
-  background-color: #288bd5;
-  color: #fff;
 }
 
 .overlay-icon {

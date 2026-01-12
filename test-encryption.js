@@ -46,8 +46,11 @@ async function testEncryption() {
       console.log('Connected to MongoDB');
 
       // Import schemas to test encryption middleware
+      // eslint-disable-next-line global-require
       const User = require('./src/server/schema/UserSchema');
+      // eslint-disable-next-line global-require
       const Goal = require('./src/server/schema/GoalSchema');
+      // eslint-disable-next-line global-require
       const RoutineItem = require('./src/server/schema/RoutineItemSchema');
 
       console.log('Schemas loaded successfully');
