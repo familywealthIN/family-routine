@@ -2,16 +2,21 @@ const {
   GraphQLString,
   GraphQLNonNull,
   GraphQLList,
+  GraphQLObjectType,
 } = require('graphql');
 
 const uniqid = require('uniqid');
 const { v4: uuidv4 } = require('uuid');
 
 const { UserItemType, UserModel } = require('../schema/UserSchema');
-const { authenticateGoogle } = require('../passport');
+const { authenticateGoogle, authenticateApple } = require('../passport');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
-const ApiError = require('../utils/ApiError');
+const { ApiError } = require('../utils/ApiError');
+const { RoutineModel } = require('../schema/RoutineSchema');
+const { RoutineItemModel } = require('../schema/RoutineItemSchema');
+const { GoalModel } = require('../schema/GoalSchema');
+const { ProgressModel } = require('../schema/ProgressSchema');
 
 const query = {
   getUserTags: {
@@ -93,6 +98,53 @@ const mutation = {
         return (ApiError(500, '500:server error'));
       } catch (error) {
         return error;
+      }
+    },
+  },
+
+  authApple: {
+    type: UserItemType,
+    args: {
+      identityToken: { type: GraphQLNonNull(GraphQLString) },
+      notificationId: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args) => {
+      const req = {};
+      req.body = {
+        identityToken: args.identityToken,
+      };
+
+      try {
+        const { data, info } = await authenticateApple(req);
+        if (data) {
+          const user = await UserModel.upsertAppleUser(data, args.notificationId);
+          console.log('new apple user', user.tags);
+          if (user) {
+            return ({
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              picture: (data.profile._json && data.profile._json.picture) || '', // eslint-disable-line no-underscore-dangle
+              token: user.generateJWT(),
+              needsOnboarding: user.needsOnboarding || false,
+              motto: [],
+              tags: user.tags || [],
+            });
+          }
+        }
+
+        if (info) {
+          switch (info.code) {
+            case 'ETIMEDOUT':
+              return (new ApiError(500, '500:Failed to reach Apple: Try Again'));
+            default:
+              return (new ApiError(500, '500:something went wrong'));
+          }
+        }
+        return (ApiError(500, '500:server error'));
+      } catch (error) {
+        console.error('Apple auth error:', error);
+        return new ApiError(500, `500:Apple authentication failed: ${error.message}`);
       }
     },
   },
@@ -208,6 +260,48 @@ const mutation = {
         { needsOnboarding: false },
         { new: true },
       );
+    },
+  },
+  deleteAccount: {
+    type: new GraphQLObjectType({
+      name: 'DeleteAccountResponse',
+      fields: {
+        success: { type: GraphQLString },
+        message: { type: GraphQLString },
+      },
+    }),
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      if (!email) {
+        throw new ApiError('Authentication required', 401);
+      }
+
+      try {
+        // Delete all user data in parallel
+        await Promise.all([
+          // Delete user routines
+          RoutineModel.deleteMany({ email }),
+          // Delete user routine items
+          RoutineItemModel.deleteMany({ email }),
+          // Delete user goals
+          GoalModel.deleteMany({ email }),
+          // Delete user progress
+          ProgressModel.deleteMany({ email }),
+          // Finally, delete the user account
+          UserModel.deleteOne({ email }),
+        ]);
+
+        console.log(`Account deleted successfully for user: ${email}`);
+
+        return {
+          success: 'true',
+          message: 'Your account and all associated data have been permanently deleted.',
+        };
+      } catch (error) {
+        console.error('Error deleting account:', error);
+        throw new ApiError('Failed to delete account', 500);
+      }
     },
   },
 };

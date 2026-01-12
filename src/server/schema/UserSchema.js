@@ -9,7 +9,7 @@ const {
 const mongoose = require('mongoose');
 const { encryption, ENCRYPTION_FIELDS } = require('../utils/encryption');
 const { MottoItemSchema, MottoItemType } = require('./MottoSchema');
-const { generateAccessToken, upsertGoogleUser } = require('../passport');
+const { generateAccessToken, upsertGoogleUser, upsertAppleUser } = require('../passport');
 
 const UserSchema = new mongoose.Schema({
   name: String,
@@ -36,6 +36,9 @@ const UserSchema = new mongoose.Schema({
     googleProvider: {
       id: String,
       token: String,
+    },
+    appleProvider: {
+      id: String,
     },
   },
   motto: [MottoItemSchema],
@@ -86,6 +89,7 @@ UserSchema.post(['find', 'findOne', 'findOneAndUpdate'], decryptUserData);
 UserSchema.methods.generateJWT = generateAccessToken;
 
 UserSchema.statics.upsertGoogleUser = upsertGoogleUser;
+UserSchema.statics.upsertAppleUser = upsertAppleUser;
 
 const UserItemType = new GraphQLObjectType({
   name: 'UserItem',

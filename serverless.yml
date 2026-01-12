@@ -43,6 +43,8 @@ package:
     - node_modules/.cache/**
     - node_modules/core-js/**
     - node_modules/aws-sdk/**
+    - node_modules/@storybook/**
+    - node_modules/storybook/**
   include:
     - src/server/**
     - serverless.js

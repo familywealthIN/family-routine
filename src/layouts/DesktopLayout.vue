@@ -8,7 +8,7 @@
       mobile-break-point="1024"
       v-if="$route.name !== 'login' && $route.name !== 'stats'"
     >
-      <v-list class="pa-1">
+      <v-list class="pa-0">
         <v-list-tile avatar>
           <v-list-tile-avatar>
             <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src='/img/default-user.png'" />
@@ -20,7 +20,7 @@
           </v-list-tile-content>
         </v-list-tile>
       </v-list>
-      <v-list class="pt-0" dense>
+      <v-list class="pt-0" dense id="desktopLayoutList">
         <v-divider></v-divider>
 
         <v-list-tile v-for="item in items" :key="item.title" :to="item.route">
@@ -43,7 +43,46 @@
             <v-list-tile-title>{{ item.title }}</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
+
         <project-sidebar />
+
+        <!-- Settings Group with Submenu -->
+        <v-list class="pa-0">
+          <v-list-group prepend-icon="settings" no-action>
+            <template v-slot:activator>
+              <v-list-tile-title class="subheader">Settings</v-list-tile-title>
+            </template>
+
+            <v-list-tile :to="'/settings'">
+              <v-list-tile-avatar>
+                <v-icon>tune</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>Routine Settings</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+
+            <v-list-tile :to="'/settings/profile'">
+              <v-list-tile-avatar>
+                <v-icon>account_circle</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>Profile Settings</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list-group>
+        </v-list>
+
+        <v-list-tile :to="'/about'">
+          <v-list-tile-action>
+            <v-icon>info</v-icon>
+          </v-list-tile-action>
+
+          <v-list-tile-content>
+            <v-list-tile-title>About</v-list-tile-title>
+          </v-list-tile-content>
+        </v-list-tile>
+
         <v-list-tile @click="handleClickSignOut">
           <v-list-tile-action>
             <v-icon>logout</v-icon>
@@ -57,7 +96,7 @@
     </v-navigation-drawer>
     <v-toolbar v-if="$route.name !== 'login'" color="white" app style="border-bottom: 1px solid rgba(0,0,0,0.12) !important;">
       <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
-      <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>      <div class="ai-search-box" @click="aiSearchModal = true">
+      <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>      <div class="ai-search-box" @click="openAiSearch">
           <span>Build your routine goals with AI</span>
           <v-icon class="search-icon">search</v-icon>
         </div>
@@ -85,20 +124,15 @@
         </v-toolbar>        <pending-list />
       </v-card>
     </v-dialog>
-
-    <!-- AI Search Modal -->
-    <ai-search-modal
-      v-model="aiSearchModal"
-    />
   </div>
 </template>
 
 <script>
-import ProjectSidebar from '@/components/ProjectSidebar.vue';
-import AreaSidebar from '@/components/AreaSidebar.vue';
-import YearGoalSidebar from '@/components/YearGoalSidebar.vue';
-import PendingList from '../components/PendingList.vue';
-import AiSearchModal from '../components/AiSearchModal.vue';
+import ProjectSidebar from '@/components/molecules/ProjectSidebar/ProjectSidebar.vue';
+import AreaSidebar from '@/components/molecules/AreaSidebar/AreaSidebar.vue';
+import YearGoalSidebar from '@/components/molecules/YearGoalSidebar/YearGoalSidebar.vue';
+import PendingList from '../components/organisms/PendingList/PendingList.vue';
+import eventBus, { EVENTS } from '../utils/eventBus';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
@@ -110,21 +144,18 @@ export default {
     ProjectSidebar,
     AreaSidebar,
     YearGoalSidebar,
-    AiSearchModal,
   },
   data() {
     return {
       drawer: null,
       pendingDialog: false,
-      aiSearchModal: false,
       items: [
         { title: 'Home', icon: 'home', route: '/home' },
+        { title: 'Priority', icon: 'view_module', route: '/priority' },
       ],
       otherItems: [
         { title: 'Progress', icon: 'pie_chart', route: '/progress' },
         { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
-        { title: 'Routine Settings', icon: 'settings', route: '/settings' },
-        { title: 'About', icon: 'info', route: '/about' },
       ],
     };
   },
@@ -147,6 +178,9 @@ export default {
     },
   },
   methods: {
+    openAiSearch() {
+      eventBus.$emit(EVENTS.OPEN_AI_SEARCH);
+    },
     handleClickSignOut() {
       this.$gAuth
         .signOut()
@@ -215,4 +249,15 @@ export default {
     margin: 0;
     padding: 0;
   }
+
+.v-list__group__header  {
+  min-height: 40px;
+}
+.v-list__group__header .v-list__group__header__prepend-icon {
+  color: var(--v-primary-base);
+  min-width: 70px;
+}
+.v-list__group__items--no-action .v-list__tile {
+    padding-left: 12px;
+}
 </style>

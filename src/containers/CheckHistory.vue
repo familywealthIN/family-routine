@@ -44,8 +44,8 @@
 <script>
 import gql from 'graphql-tag';
 
-import UserHistory from '../components/UserHistory.vue';
-import ContainerBox from '../components/ContainerBox.vue';
+import UserHistory from '../components/organisms/UserHistory/UserHistory.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 
 export default {
   components: {

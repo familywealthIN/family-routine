@@ -177,7 +177,11 @@ export default {
   },
   computed: {
     areaTitle() {
-      return this.tag.replace(/^area:/, '').split(':').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      const csuiteTitles = ['ceo', 'cto', 'cio', 'cfo', 'cxo', 'cmo', 'coo'];
+      return this.tag.replace(/^area:/, '').split(':').map((word) => {
+        const lowerWord = word.toLowerCase();
+        return csuiteTitles.includes(lowerWord) ? lowerWord.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1);
+      }).join(' ');
     },
     recentActivity() {
       if (!Array.isArray(this.goals)) return [];

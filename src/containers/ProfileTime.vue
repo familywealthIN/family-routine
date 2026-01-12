@@ -261,31 +261,118 @@
                   Generate a new API key or copy the existing one
               </v-list-tile-sub-title>
           </v-list-tile-content>
-          <v-list-tile-action>
+          <v-list-tile-action class="api-actions-buttons">
+              <div class="d-flex align-center">
+                <v-btn
+                  color="primary"
+                  :loading="generatingApiKey"
+                  @click="generateApiKey"
+                  class="mr-2"
+                >
+                  {{ userApiKey ? 'Regenerate' : 'Generate' }} API Key
+                </v-btn>
+                <v-btn
+                  color="secondary"
+                  :disabled="!userApiKey"
+                  @click="copyToClipboard(userApiKey)"
+                >
+                  Copy API Key
+                </v-btn>
+              </div>
+          </v-list-tile-action>
+        </v-list-tile>
+    </v-list>
+
+    <!-- Account Deletion Section -->
+    <v-divider></v-divider>
+    <v-alert
+      :value="true"
+      type="error"
+      style="margin-top: 20px;"
+    >
+      Danger Zone - Account Deletion
+    </v-alert>
+
+    <v-list
+        subheader
+        three-line
+    >
+        <v-subheader>Delete Account</v-subheader>
+        <v-list-tile>
+          <v-list-tile-content>
+              <v-list-tile-title>Permanently Delete Your Account</v-list-tile-title>
+              <v-list-tile-sub-title>
+                  Warning: This action cannot be undone. All your data including routines, goals, progress, and settings will be permanently deleted.
+              </v-list-tile-sub-title>
+          </v-list-tile-content>
+          <v-list-tile-action class="delete-account-action">
               <v-btn
-                color="primary"
-                :loading="generatingApiKey"
-                @click="generateApiKey"
-                class="mr-2"
+                color="error"
+                @click="showDeleteConfirmation = true"
+                outlined
               >
-                {{ userApiKey ? 'Regenerate' : 'Generate' }} API Key
-              </v-btn>
-              <v-btn
-                color="secondary"
-                :disabled="!userApiKey"
-                @click="copyToClipboard(userApiKey)"
-              >
-                Copy API Key
+                Delete Account
               </v-btn>
           </v-list-tile-action>
         </v-list-tile>
     </v-list>
+
+    <!-- Delete Confirmation Dialog -->
+    <v-dialog v-model="showDeleteConfirmation" max-width="500">
+      <v-card>
+        <v-card-title class="headline error white--text">
+          Confirm Account Deletion
+        </v-card-title>
+        <v-card-text class="pt-4">
+          <p class="mb-3">
+            <strong>Are you absolutely sure you want to delete your account?</strong>
+          </p>
+          <p class="mb-3">
+            This action will permanently delete:
+          </p>
+          <ul class="mb-3">
+            <li>All your routines and tasks</li>
+            <li>All your goals and milestones</li>
+            <li>All your progress and history</li>
+            <li>Your profile and settings</li>
+            <li>Any API keys and integrations</li>
+          </ul>
+          <p class="mb-3">
+            <strong>This action cannot be undone.</strong>
+          </p>
+          <v-text-field
+            v-model="deleteConfirmationText"
+            label="Type DELETE to confirm"
+            outlined
+            :error="deleteConfirmationError"
+            :error-messages="deleteConfirmationError ? 'Please type DELETE to confirm' : ''"
+          ></v-text-field>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            text
+            @click="cancelDeleteAccount"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            :loading="deletingAccount"
+            :disabled="deleteConfirmationText !== 'DELETE'"
+            @click="deleteAccount"
+          >
+            Delete My Account
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </container-box>
 </template>
 
 <script>
 import gql from 'graphql-tag';
-import ContainerBox from '../components/ContainerBox.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 import { PROFILE_SETTINGS, WEEK_START_OPTIONS, TIMEZONE_OPTIONS } from '../constants/settings';
 
 export default {
@@ -303,6 +390,10 @@ export default {
       mcpServerUrl: process.env.NODE_ENV === 'production'
         ? 'https://your-api-domain.com/dev/mcp'
         : 'http://localhost:4000/mcp',
+      showDeleteConfirmation: false,
+      deleteConfirmationText: '',
+      deleteConfirmationError: false,
+      deletingAccount: false,
     };
   },
   apollo: {
@@ -391,6 +482,72 @@ export default {
       // Trigger a global event to update time display across the app
       this.$root.$emit('timeFormatChanged', this.timeFormat);
     },
+
+    cancelDeleteAccount() {
+      this.showDeleteConfirmation = false;
+      this.deleteConfirmationText = '';
+      this.deleteConfirmationError = false;
+    },
+
+    async deleteAccount() {
+      if (this.deleteConfirmationText !== 'DELETE') {
+        this.deleteConfirmationError = true;
+        return;
+      }
+
+      this.deletingAccount = true;
+
+      try {
+        const result = await this.$apollo.mutate({
+          mutation: gql`
+            mutation deleteAccount {
+              deleteAccount {
+                success
+                message
+              }
+            }
+          `,
+        });
+
+        if (result.data && result.data.deleteAccount && result.data.deleteAccount.success === 'true') {
+          // Show success message
+          this.$notify({
+            title: 'Account Deleted',
+            text: result.data.deleteAccount.message,
+            group: 'notify',
+            type: 'success',
+            duration: 5000,
+          });
+
+          // Clear local storage
+          localStorage.clear();
+
+          // Sign out and redirect to login/home page
+          // Wait a bit for the notification to show
+          setTimeout(() => {
+            // Clear Apollo cache
+            this.$apollo.provider.defaultClient.clearStore();
+
+            // Redirect to home/login page
+            window.location.href = '/';
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('Error deleting account:', error);
+        this.$notify({
+          title: 'Error',
+          text: 'Failed to delete account. Please try again or contact support.',
+          group: 'notify',
+          type: 'error',
+          duration: 5000,
+        });
+      } finally {
+        this.deletingAccount = false;
+        this.showDeleteConfirmation = false;
+        this.deleteConfirmationText = '';
+        this.deleteConfirmationError = false;
+      }
+    },
   },
 };
 </script>
@@ -407,5 +564,60 @@ export default {
 }
 .v-text-field__details {
     display: none;
+}
+
+/* Fix button alignment in list tiles */
+
+.api-actions-buttons {
+  min-width: 400px;
+}
+
+.api-actions-buttons .d-flex {
+  gap: 8px;
+}
+
+/* Ensure buttons don't wrap and have proper padding */
+.v-list__tile__action .v-btn {
+  margin: 4px 0;
+  padding: 0 16px !important;
+}
+
+/* Fix button padding globally on profile page */
+.v-btn {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+/* Mobile responsive button widths */
+@media (max-width: 768px) {
+  /* Single button in row - full width */
+  .delete-account-action {
+    width: 100%;
+  }
+
+  .delete-account-action .v-btn {
+    width: 100%;
+  }
+
+  /* Two buttons in row - 50% each */
+  .api-actions-buttons .d-flex {
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .api-actions-buttons .d-flex .v-btn {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .api-actions-buttons .d-flex .v-btn:first-child {
+    margin-right: 8px;
+  }
+
+  .api-actions-buttons {
+    min-width: 100%;
+    width: 100%;
+  }
 }
 </style>

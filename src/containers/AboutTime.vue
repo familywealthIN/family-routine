@@ -4,9 +4,9 @@
 <template>
   <container-box>
     <v-card-text>
-      <h2>About Family Routine</h2>
+      <h2>About Routine Notes</h2>
       <p>
-        Family Routine is a comprehensive productivity and habit-tracking application designed to help individuals and families
+        Routine Notes is a comprehensive productivity and habit-tracking application designed to help individuals and families
         build sustainable daily routines, achieve meaningful goals, and track their progress over time. Our platform combines
         time-based routine management with goal-setting capabilities to create a holistic approach to personal development.
       </p>
@@ -59,7 +59,7 @@
 
 <script>
 import gql from 'graphql-tag';
-import ContainerBox from '../components/ContainerBox.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 
 export default {
   components: { ContainerBox },

@@ -64,7 +64,7 @@ import {
   USER_TAGS,
   GC_AUTH_TOKEN,
 } from '../constants/settings';
-import ContainerBox from '../components/ContainerBox.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 
 export default {
   name: 'Login',

@@ -188,12 +188,6 @@
                 <small class="no-goals-text" v-else>
                   No goal or activity logged.
                 </small>
-                <div class="add-new">
-                  <v-btn small flat @click="goalDetailsDialog = true">
-                    <v-icon>add</v-icon>
-                    Add Goal or Activity
-                  </v-btn>
-                </div>
               </div>
             </v-list-tile-content>
             <v-list-tile-action v-if="task.id !== selectedTaskRef">
@@ -295,11 +289,11 @@ import gql from 'graphql-tag';
 
 import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 
-import GoalList from '../components/GoalList.vue';
-import GoalItemList from '../components/GoalItemList.vue';
-import ContainerBox from '../components/ContainerBox.vue';
-import GoalDisplay from '../components/GoalDisplay.vue';
-import QuickGoalCreation from '../components/QuickGoalCreation.vue';
+import GoalList from '../components/organisms/GoalList/GoalList.vue';
+import GoalItemList from '../components/organisms/GoalItemList/GoalItemList.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
+import GoalDisplay from '../components/organisms/GoalDisplay/GoalDisplay.vue';
+import QuickGoalCreation from '../components/molecules/QuickGoalCreation/QuickGoalCreation.vue';
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
 import { TimeFormatMixin } from '../utils/timeFormat';
 import { threshold } from '../utils/getDates';
