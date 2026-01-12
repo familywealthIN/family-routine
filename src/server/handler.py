@@ -6,7 +6,7 @@ import os
 
 # Configure Gemini API with key from environment variable
 genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 def generate_milestone_plan(user_query):
     # Determine timeframe from query

@@ -89,7 +89,7 @@
 import moment from 'moment';
 import gql from 'graphql-tag';
 
-import ContainerBox from '../components/ContainerBox.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 import NumericCard from '../components/DashboardCards/NumericCard.vue';
 import RadarCard from '../components/DashboardCards/RadarCard.vue';
 import TableCard from '../components/DashboardCards/TableCard.vue';

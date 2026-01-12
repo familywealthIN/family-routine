@@ -1,12 +1,7 @@
 <template>
   <div id="mobileLayout">
-    <v-navigation-drawer
-      fixed
-      clipped
-      right
-      v-model="drawer"
-      v-if="$route.name !== 'login' && $route.name !== 'stats'" class="header"
-    >
+    <v-navigation-drawer fixed clipped right v-model="drawer" v-if="$route.name !== 'login' && $route.name !== 'stats'"
+      class="header">
       <v-list-tile @click.stop="drawer = !drawer">
         <v-list-tile-action style="min-width: 40px;">
           <v-icon>arrow_back</v-icon>
@@ -20,7 +15,8 @@
         <v-divider></v-divider>
         <v-list-tile avatar>
           <v-list-tile-avatar>
-            <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src='/img/default-user.png'" />
+            <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`"
+              @error="$event.target.src = '/img/default-user.png'" />
           </v-list-tile-avatar>
 
           <v-list-tile-content>
@@ -48,12 +44,7 @@
       </template>
       <v-layout row wrap>
         <v-flex d-flex xs12>
-          <v-btn
-            color="error"
-            block
-            class="ma-3"
-            @click="handleClickSignOut"
-          >
+          <v-btn color="error" block class="ma-3" @click="handleClickSignOut">
             Log out
           </v-btn>
         </v-flex>
@@ -62,7 +53,7 @@
     <v-toolbar v-if="$route.name !== 'login'" class="elevation-0 fixed-toolbar safe-area-top" color="white" app>
       <v-toolbar-title style="font-size: 24px">{{ pageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon @click="aiSearchModal = true">
+      <v-btn icon @click="openAiSearch">
         <v-icon size="28">search</v-icon>
       </v-btn>
       <v-btn icon @click="pendingDialog = true">
@@ -70,7 +61,8 @@
       </v-btn>
       <v-btn icon @click.stop="drawer = !drawer">
         <v-avatar size="32">
-          <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src='/img/default-user.png'" />
+          <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`"
+            @error="$event.target.src = '/img/default-user.png'" />
         </v-avatar>
       </v-btn>
     </v-toolbar>
@@ -82,31 +74,14 @@
     <div v-else class="login-content-wrapper">
       <router-view></router-view>
     </div>
-    <v-bottom-nav
-      :value="true"
-      fixed
-      color="white"
-      class="pb-2 fixed-bottom-nav safe-area-bottom"
-      v-if="$route.name !== 'login' && $route.name !== 'stats'"
-    >
-      <v-btn
-        color="primary"
-        flat
-        v-for="item in bottomNav"
-        :key="item.title"
-        :to="item.route"
-        :value="item.route"
-      >
-        <span>{{item.title}}</span>
-        <v-icon>{{item.icon}}</v-icon>
+    <v-bottom-nav :value="true" fixed color="white" class="pb-2 fixed-bottom-nav safe-area-bottom"
+      v-if="$route.name !== 'login' && $route.name !== 'stats'">
+      <v-btn color="primary" flat v-for="item in bottomNav" :key="item.title" :to="item.route" :value="item.route">
+        <span>{{ item.title }}</span>
+        <v-icon>{{ item.icon }}</v-icon>
       </v-btn>
     </v-bottom-nav>
-    <v-dialog
-      v-model="pendingDialog"
-      fullscreen
-      hide-overlay
-      transition="dialog-bottom-transition"
-    >
+    <v-dialog v-model="pendingDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
       <v-card>
         <v-toolbar dark color="primary">
           <v-btn icon dark @click="pendingDialog = false">
@@ -118,17 +93,12 @@
         <pending-list />
       </v-card>
     </v-dialog>
-
-    <!-- AI Search Modal -->
-    <ai-search-modal
-      v-model="aiSearchModal"
-    />
   </div>
 </template>
 
 <script>
-import PendingList from '../components/PendingList.vue';
-import AiSearchModal from '../components/AiSearchModal.vue';
+import PendingList from '../components/organisms/PendingList/PendingList.vue';
+import eventBus, { EVENTS } from '../utils/eventBus';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
@@ -139,18 +109,18 @@ import { Capacitor } from '@capacitor/core';
 export default {
   components: {
     PendingList,
-    AiSearchModal,
   },
   data() {
     return {
       drawer: null,
       pendingDialog: false,
-      aiSearchModal: false,
       drawerItems: [
         {
           header: 'App',
           items: [
             // { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
+            { title: 'Priority', icon: 'view_module', route: '/priority' },
+            { title: 'Progress', icon: 'pie_chart', route: '/progress' },
             { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
             { title: 'History', icon: 'update', route: '/history' },
             { title: 'Milestones', icon: 'filter_hdr', route: '/goals/milestones' },
@@ -173,8 +143,8 @@ export default {
       ],
       bottomNav: [
         { title: 'Home', icon: 'home', route: '/home' },
+        { title: 'Priority', icon: 'dashboard', route: '/priority' },
         { title: 'Progress', icon: 'pie_chart', route: '/progress' },
-        { title: 'Routine', icon: 'history', route: '/settings' },
         { title: 'Goals', icon: 'assignment', route: '/goals' },
       ],
     };
@@ -194,16 +164,19 @@ export default {
     },
     pageTitle() {
       return (this.$route.name && this.$route.name[0].toUpperCase() + this.$route.name.substr(1))
-      || 'Routine Notes';
+        || 'Routine Notes';
     },
   },
   methods: {
-   async handleClickSignOut() {
+    openAiSearch() {
+      eventBus.$emit(EVENTS.OPEN_AI_SEARCH);
+    },
+    async handleClickSignOut() {
       try {
         if (Capacitor.isNativePlatform()) {
           // Initialize before signOut to prevent nil error
           const platform = Capacitor.getPlatform();
-          const clientId = platform === 'ios' 
+          const clientId = platform === 'ios'
             ? '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com'
             : '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com';
 
@@ -211,27 +184,46 @@ export default {
             clientId: clientId,
             scopes: ['profile', 'email']
           });
-          
+
           await GoogleAuth.signOut();
         } else {
           await this.$gAuth.signOut();
         }
-        
+
         this.drawer = false;
         await clearData();
         localStorage.removeItem(USER_TAGS);
         this.$root.$data.userName = getSessionItem(GC_USER_NAME);
         this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
         this.$root.$data.picture = getSessionItem(GC_PICTURE);
-        this.$router.push('/').catch(() => {});
+        this.$router.push('/').catch(() => { });
       } catch (error) {
         console.log(error);
         // Just clear local data and redirect on error
         await clearData();
         localStorage.removeItem(USER_TAGS);
-        this.$router.push('/').catch(() => {});
+        this.$router.push('/').catch(() => { });
       }
     },
+
+    // handleClickSignOut() {
+    //   this.$gAuth
+    //     .signOut()
+    //     .then(async () => {
+    //       this.drawer = false;
+    //       this.isSignIn = this.$gAuth.isAuthorized;
+    //       await clearData();
+    //       localStorage.removeItem(USER_TAGS);
+    //       this.$root.$data.userName = getSessionItem(GC_USER_NAME);
+    //       this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
+    //       this.$root.$data.userEmail = getSessionItem(GC_PICTURE);
+    //       this.$router.push('/').catch(() => {});
+    //     })
+    //     .catch((error) => {
+    //       window.location.reload();
+    //       console.log(error);
+    //     });
+    // },
   },
   mounted() {
     if (typeof window !== 'undefined') {
@@ -277,7 +269,8 @@ body.android15 .safe-area-top {
   right: 0;
   bottom: 0;
   z-index: 10;
-  padding-bottom: 0 !important; /* Remove padding-bottom from footer, let scrollable-content handle it */
+  padding-bottom: 0 !important;
+  /* Remove padding-bottom from footer, let scrollable-content handle it */
 }
 
 .safe-area-bottom {
@@ -294,7 +287,8 @@ body.android15 .safe-area-bottom {
   overflow-x: hidden;
   width: 100%;
   box-sizing: border-box;
-  padding-top: 60px; /* height of toolbar */
+  padding-top: 60px;
+  /* height of toolbar */
   padding-bottom: 100px;
   min-height: 0;
 }
@@ -319,58 +313,59 @@ body.android15 .safe-area-content {
 }
 
 #mobileLayout .v-card {
-    border-radius: 16px;
+  border-radius: 16px;
 }
 
 .login footer {
-  bottom: calc(30px + env(safe-area-inset-bottom))!important;
+  bottom: calc(30px + env(safe-area-inset-bottom)) !important;
 }
 
 #mobileLayout .progress .v-card .headline {
-    color: rgba(0, 0, 0, 0.54);
-    font-size: 14px !important;
-    line-height: 16px !important;
-    font-weight: bold;
+  color: rgba(0, 0, 0, 0.54);
+  font-size: 14px !important;
+  line-height: 16px !important;
+  font-weight: bold;
 }
 
 #mobileLayout .image-card {
-    border-radius: 0;
+  border-radius: 0;
 }
 
 #mobileLayout .v-btn--bottom:not(.v-btn--absolute) {
-    bottom: 70px;
+  bottom: 70px;
 }
 
 #mobileLayout .v-btn--bottom:not(.v-btn--absolute).second-right-btn {
-    right: 16px;
+  right: 16px;
 }
 
 #mobileLayout .image-card .v-btn--bottom.v-btn--absolute {
-    bottom: -12px;
+  bottom: -12px;
 }
 
 #mobileLayout .image-card-page {
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    position: relative;
-    top: -16px;
-    background-color: #fff;
-    padding-top: 16px !important;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  position: relative;
+  top: -16px;
+  background-color: #fff;
+  padding-top: 16px !important;
 }
 
 #mobileLayout .v-chip .v-chip__content {
-    height: 38px;
-    padding: 0 16px;
+  height: 38px;
+  padding: 0 16px;
 }
 
 #mobileLayout .v-chip .v-chip__content .v-icon {
-    font-size: 16px;
+  font-size: 16px;
 }
 
 #mobileLayout .v-navigation-drawer--temporary:not(.v-navigation-drawer--close),
 #mobileLayout .v-navigation-drawer--is-mobile:not(.v-navigation-drawer--close) {
   width: 100% !important;
 }
+
 .v-bottom-nav {
   height: 75px !important;
 }

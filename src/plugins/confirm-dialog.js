@@ -1,6 +1,6 @@
 import Vue from 'vue';
 import VuetifyConfirm from 'vuetify-confirm';
-import Vuetify from 'vuetify';
+import Vuetify from 'vuetify/lib';
 
 // Ensure Vuetify is installed
 if (!Vue.options.components.VApp) {

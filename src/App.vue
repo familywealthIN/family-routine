@@ -8,6 +8,9 @@
     </template>
     <notifications group="notify" position="bottom center" />
     <!-- <v-footer app></v-footer> -->
+
+    <!-- Global AI Search Modal -->
+    <ai-search-modal v-model="aiSearchModal" />
   </v-app>
 </template>
 
@@ -24,15 +27,20 @@ import DesktopLayout from './layouts/DesktopLayout.vue';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+import AiSearchModal from './components/organisms/AiSearchModal/AiSearchModal.vue';
+import eventBus, { EVENTS } from './utils/eventBus';
+
 export default {
   components: {
     MobileLayout,
     DesktopLayout,
+    AiSearchModal,
   },
   data() {
     return {
       drawer: null,
       mottoDialog: false,
+      aiSearchModal: false,
     };
   },
   computed: {

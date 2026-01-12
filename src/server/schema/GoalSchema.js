@@ -10,6 +10,16 @@ const {
 const mongoose = require('mongoose');
 const { encryption, ENCRYPTION_FIELDS } = require('../utils/encryption');
 
+// Lazy import to avoid circular dependency
+let RoutineItemModel;
+const getRoutineItemModel = () => {
+  if (!RoutineItemModel) {
+    // eslint-disable-next-line global-require
+    RoutineItemModel = require('./RoutineItemSchema').RoutineItemModel;
+  }
+  return RoutineItemModel;
+};
+
 const SubTaskItemSchema = new mongoose.Schema({
   body: String,
   isComplete: Boolean,
@@ -147,10 +157,63 @@ const SubTaskItemType = new GraphQLObjectType({
 
 const GoalItemType = new GraphQLObjectType({
   name: 'GoalItem',
-  fields: {
+  fields: () => ({
     ...GoalItemTypeFields,
     subTasks: { type: new GraphQLList(SubTaskItemType) },
-  },
+    routine: {
+      type: new GraphQLObjectType({
+        name: 'RoutineItemRef',
+        fields: {
+          id: { type: GraphQLID },
+          body: { type: GraphQLString },
+        },
+      }),
+      resolve: async (parent) => {
+        if (!parent.taskRef) return null;
+        try {
+          const RoutineItemModelInstance = getRoutineItemModel();
+          const routine = await RoutineItemModelInstance.findById(parent.taskRef).exec();
+          // eslint-disable-next-line no-underscore-dangle
+          return routine ? { id: routine._id, body: routine.body } : null;
+        } catch (error) {
+          return null;
+        }
+      },
+    },
+    milestones: {
+      type: new GraphQLList(GoalItemType),
+      resolve: async (parent) => {
+        if (!parent.id) return [];
+        try {
+          const GoalModel = mongoose.model('Goal');
+          const milestoneGoals = await GoalModel.find({
+            'goalItems.goalRef': parent.id.toString(),
+          }).exec();
+
+          const milestones = [];
+          milestoneGoals.forEach((goal) => {
+            if (goal.goalItems) {
+              goal.goalItems.forEach((item) => {
+                if (item.goalRef && item.goalRef.toString() === parent.id.toString()) {
+                  milestones.push({
+                    ...item.toObject(),
+                    id: item._id, // eslint-disable-line no-underscore-dangle
+                    period: goal.period,
+                    date: goal.date,
+                  });
+                }
+              });
+            }
+          });
+
+          return milestones;
+        } catch (error) {
+          console.error('Error resolving milestones:', error);
+          return [];
+        }
+      },
+    },
+  }),
 });
 
 const GoalItemWeekType = new GraphQLObjectType({
