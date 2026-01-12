@@ -265,7 +265,7 @@ export default {
             this.isAuthenticatedSignIn = this.$gAuth.isAuthorized;
           }
           
-          const userData = { token, email, name, picture };
+          const userData = { token, email, name, picture, notificationId: notificationId };
           try {
             await saveData(userData);
             console.log('saveData completed successfully');

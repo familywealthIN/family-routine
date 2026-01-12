@@ -52,17 +52,13 @@ export default {
       return mapTagItems(this.goalTags || []);
     },
     filteredItems() {
-<<<<<<< HEAD
-      return mapTagItems(this.userTags || []).filter(
-        (i) => i.text.toLowerCase().indexOf(this.tag.toLowerCase()) !== -1,
-=======
       if (!this.userTags || !Array.isArray(this.userTags)) {
         return [];
       }
       return mapTagItems(this.userTags).filter(
         (i) => i.text && i.text.toLowerCase().indexOf(this.tag.toLowerCase()) !== -1,
->>>>>>> develop
       );
+      
     },
   },
   methods: {
