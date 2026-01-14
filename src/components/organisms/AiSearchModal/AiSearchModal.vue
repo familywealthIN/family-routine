@@ -47,7 +47,18 @@
               @keyup.enter="handleSubmit"
               filled
               class="mb-2"
-            ></v-text-field>
+            >
+              <template v-slot:append>
+                <v-btn
+                  icon
+                  :disabled="!searchQuery || loading"
+                  @click="handleSubmit"
+                  :color="isTaskMode ? 'primary' : 'accent'"
+                >
+                  <v-icon>send</v-icon>
+                </v-btn>
+              </template>
+            </v-text-field>
 
             <!-- Mode Hint -->
             <v-alert
@@ -171,7 +182,18 @@
               @keyup.enter="handleSubmit"
               filled
               class="mb-2"
-            ></v-text-field>
+            >
+              <template v-slot:append>
+                <v-btn
+                  icon
+                  :disabled="!searchQuery || loading"
+                  @click="handleSubmit"
+                  :color="isTaskMode ? 'primary' : 'accent'"
+                >
+                  <v-icon>send</v-icon>
+                </v-btn>
+              </template>
+            </v-text-field>
 
             <!-- Mode Hint -->
             <v-alert
