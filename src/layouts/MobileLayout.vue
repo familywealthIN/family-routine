@@ -162,7 +162,7 @@ export default {
       bottomNav: [
         { title: 'Home', icon: 'home', route: '/home' },
         { title: 'Priority', icon: 'dashboard', route: '/priority' },
-        { title: 'Progress', icon: 'pie_chart', route: '/progress' },
+        { title: 'Routine', icon: 'history', route: '/settings' },
         { title: 'Goals', icon: 'assignment', route: '/goals' },
       ],
     };
