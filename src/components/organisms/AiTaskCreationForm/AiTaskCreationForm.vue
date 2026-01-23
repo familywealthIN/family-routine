@@ -86,11 +86,10 @@
       </v-card-text>
     </v-card>
 
-    <!-- Related Tasks Timeline -->
-    <RelatedTasksTimeline
-      v-if="taskData.isMilestone && taskData.goalRef && relatedTasks.length > 0"
-      :tasks="relatedTasks"
-    />
+    <!-- Related tasks timeline -->
+    <v-flex xs12 d-flex v-if="taskData.goalRef">
+      <related-tasks-timeline :tasks="relatedTasks" />
+    </v-flex>
   </div>
 </template>
 
@@ -145,20 +144,41 @@ export default {
   },
   computed: {
     relatedTasks() {
-      if (!this.relatedGoalsData || !Array.isArray(this.relatedGoalsData)) {
+      if (!this.taskData.goalRef || !this.relatedGoalsData || !Array.isArray(this.relatedGoalsData)) {
         return [];
       }
-      // Flatten relatedGoalsData into timeline items
-      return this.relatedGoalsData.flatMap((goalGroup) => (
-        (goalGroup.items || []).map((item) => ({
-          id: item.id,
-          body: item.body,
-          date: item.date,
-          time: item.time,
-          tags: item.tags,
-          isComplete: item.status === 'done',
-        }))
-      ));
+
+      // Since goalsByGoalRef already filters by goalRef on the server,
+      // we just need to flatten the goalItems and add time information
+      const relatedTasks = [];
+      this.relatedGoalsData.forEach((goal) => {
+        if (goal.goalItems && Array.isArray(goal.goalItems)) {
+          goal.goalItems.forEach((goalItem) => {
+            // Add time from tasklist if available
+            if (goalItem.goalRef === this.taskData.goalRef) {
+              relatedTasks.push({
+                id: goalItem.id,
+                body: goalItem.body,
+                date: goal.date,
+                period: goal.period,
+                isComplete: goalItem.isComplete,
+                goalRef: goalItem.goalRef,
+                taskRef: goalItem.taskRef,
+                tags: goalItem.tags || [],
+              });
+            }
+          });
+        }
+      });
+
+      // Sort by time and limit to 10 for condensed view
+      return relatedTasks
+        .sort((a, b) => {
+          if (!a.time) return 1;
+          if (!b.time) return -1;
+          return a.time.localeCompare(b.time);
+        })
+        .slice(0, 10);
     },
     isValid() {
       return !!(this.taskData && this.taskData.title && this.taskData.description);
@@ -171,9 +191,15 @@ export default {
       },
       immediate: true,
     },
+    'taskData.goalRef': function (newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.$emit('goal-ref-changed', newVal);
+      }
+    },
     searchQuery: {
       handler(newVal) {
-        if (newVal && !this.taskData && !this.loading) {
+        // Always attempt extraction once when searchQuery arrives
+        if (newVal && !this.taskData) {
           this.createTask();
         }
       },

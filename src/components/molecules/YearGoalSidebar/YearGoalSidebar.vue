@@ -11,15 +11,15 @@
 
       <v-list-tile
         v-for="goal in groupedYearGoals"
-        :key="goal.category"
-        :to="{ name: 'yearGoals', params: { tag: goal.category }}"
+        :key="goal.id"
+        :to="{ name: 'yearGoal', params: { id: goal.id }}"
       >
         <v-list-tile-action>
           <v-icon>calendar_today</v-icon>
         </v-list-tile-action>
         <v-list-tile-content>
           <v-list-tile-title>
-            {{ goal.category }}
+            {{ goal.title }}
             <span class="goal-count">({{ goal.count }}/{{ goal.total }})</span>
           </v-list-tile-title>
         </v-list-tile-content>
@@ -66,7 +66,11 @@ export default {
             goalItems {
               id
               body
-              isComplete
+              status
+              milestones {
+                id
+                status
+              }
             }
           }
         }
@@ -78,31 +82,26 @@ export default {
   },
   computed: {
     groupedYearGoals() {
-      const goalsMap = new Map();
-      this.yearGoals.forEach((goal) => {
-        goal.goalItems.forEach((item) => {
-          // Use body as category
-          if (!goalsMap.has(item.body)) {
-            goalsMap.set(item.body, {
-              category: item.body,
-              completed: item.isComplete ? 1 : 0,
-              total: 1,
-            });
-          } else {
-            const goalStat = goalsMap.get(item.body);
-            goalStat.total += 1;
-            if (item.isComplete) {
-              goalStat.completed += 1;
-            }
-          }
+      const goalsArray = [];
+
+      this.yearGoals.forEach((goalGroup) => {
+        goalGroup.goalItems.forEach((goalItem) => {
+          // Calculate completion stats
+          const milestones = goalItem.milestones || [];
+          const completedMilestones = milestones.filter((m) => m.status === 'done').length;
+          const totalMilestones = milestones.length;
+
+          goalsArray.push({
+            id: goalItem.id,
+            title: goalItem.body,
+            count: completedMilestones,
+            total: totalMilestones,
+            isComplete: goalItem.status === 'done',
+          });
         });
       });
 
-      return Array.from(goalsMap.values()).map((goal) => ({
-        category: goal.category,
-        count: goal.completed,
-        total: goal.total,
-      }));
+      return goalsArray;
     },
   },
 };
