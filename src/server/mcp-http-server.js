@@ -121,7 +121,7 @@ class HttpMCPServer {
       }
 
       // Redirect to web app for authentication
-      const webAppUrl = process.env.WEB_APP_URL || 'https://routine-notes.netlify.app';
+      const webAppUrl = process.env.WEB_APP_URL || 'https://routine.familywealth.in';
       res.redirect(`${webAppUrl}/oauth/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(redirect_uri)}&state=${state}`);
     });
 
