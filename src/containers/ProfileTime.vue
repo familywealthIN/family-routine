@@ -3,6 +3,7 @@
 </script>
 <template>
   <container-box>
+    <v-card-text class="px-0">
     <v-alert
       :value="true"
       type="warning"
@@ -203,33 +204,42 @@
     </v-list>
 
     <!-- API Integration Section -->
+    <v-divider class="my-4"></v-divider>
+
     <v-alert
       :value="true"
       type="info"
-      style="margin-top: 20px;"
+      class="my-4"
     >
-      API Integration - Use these credentials to access the Routine Notes API via MCP
+      <strong>API Integration</strong> - Use these credentials to access the Routine Notes API via MCP
     </v-alert>
 
+    <!-- OAuth Credentials Section -->
     <v-list
         subheader
         three-line
     >
-        <v-subheader>API Access</v-subheader>
+        <v-subheader>
+          OAuth Credentials
+          <v-chip v-if="oauthConnected" color="success" text-color="white" small class="ml-2">
+            <v-icon left small>check_circle</v-icon>
+            Connected
+          </v-chip>
+        </v-subheader>
 
         <v-list-tile>
           <v-list-tile-content>
-              <v-list-tile-title>MCP Server URL</v-list-tile-title>
+              <v-list-tile-title>Server URL</v-list-tile-title>
               <v-list-tile-sub-title>
                   Use this URL with any MCP client to access the Routine Notes API
               </v-list-tile-sub-title>
           </v-list-tile-content>
-          <v-list-tile-action style="width: 300px;">
+          <v-list-tile-action class="oauth-field-action">
               <v-text-field
-                  label="MCP Server URL"
+                  label="Server URL"
                   readonly
                   :value="mcpServerUrl"
-                  append-icon="mdi-content-copy"
+                  append-icon="content_copy"
                   @click:append="copyToClipboard(mcpServerUrl)"
               ></v-text-field>
           </v-list-tile-action>
@@ -237,29 +247,328 @@
 
         <v-list-tile>
           <v-list-tile-content>
-              <v-list-tile-title>API Key</v-list-tile-title>
+              <v-list-tile-title>OAuth Client ID</v-list-tile-title>
               <v-list-tile-sub-title>
-                  Your personal API key for authentication. Keep this secure and don't share it.
+                  Use this Client ID for all platform integrations
               </v-list-tile-sub-title>
           </v-list-tile-content>
-          <v-list-tile-action style="width: 300px;">
+          <v-list-tile-action class="oauth-field-action">
               <v-text-field
-                  label="API Key"
+                  label="Client ID"
                   readonly
-                  :value="userApiKey || 'No API key generated'"
-                  :type="showApiKey ? 'text' : 'password'"
-                  :append-icon="showApiKey ? 'mdi-eye' : 'mdi-eye-off'"
-                  @click:append="showApiKey = !showApiKey"
+                  value="routine-notes-mcp"
+                  append-icon="content_copy"
+                  @click:append="copyToClipboard('routine-notes-mcp')"
               ></v-text-field>
           </v-list-tile-action>
         </v-list-tile>
 
         <v-list-tile>
           <v-list-tile-content>
-              <v-list-tile-title>API Key Actions</v-list-tile-title>
+              <v-list-tile-title>OAuth Client Secret</v-list-tile-title>
               <v-list-tile-sub-title>
-                  Generate a new API key or copy the existing one
+                  Keep this secret secure. You'll need it to configure integrations.
               </v-list-tile-sub-title>
+          </v-list-tile-content>
+          <v-list-tile-action class="oauth-field-action">
+              <v-text-field
+                  label="Client Secret"
+                  readonly
+                  :value="oauthClientSecret"
+                  :type="showOAuthSecret ? 'text' : 'password'"
+              >
+                <template v-slot:append>
+                  <v-btn
+                    icon
+                    @click="showOAuthSecret = !showOAuthSecret"
+                    title="Toggle visibility"
+                    class="mr-1"
+                  >
+                    <v-icon>{{ showOAuthSecret ? 'visibility_off' : 'visibility' }}</v-icon>
+                  </v-btn>
+                  <v-btn
+                    icon
+                    @click="copyToClipboard(oauthClientSecret)"
+                    title="Copy to clipboard"
+                  >
+                    <v-icon>content_copy</v-icon>
+                  </v-btn>
+                </template>
+              </v-text-field>
+          </v-list-tile-action>
+        </v-list-tile>
+    </v-list>
+
+    <v-divider></v-divider>
+
+    <!-- Platform Setup Guides Tabs -->
+    <v-list
+        subheader
+        three-line
+    >
+        <v-subheader>Platform Integration Guides</v-subheader>
+    </v-list>
+
+    <!-- Tabs Section (outside list for proper rendering) -->
+    <v-card flat class="platform-tabs-card no-shadow">
+      <v-tabs v-model="oauthPlatformTab">
+        <v-tab>
+          <v-icon left>chat</v-icon>
+          ChatGPT
+        </v-tab>
+        <v-tab>
+          <v-icon left>settings_input_component</v-icon>
+          n8n
+        </v-tab>
+        <v-tab>
+          <v-icon left>stars</v-icon>
+          Gemini
+        </v-tab>
+        <v-tab>
+          <v-icon left>search</v-icon>
+          Perplexity
+        </v-tab>
+      </v-tabs>
+
+                <v-tabs-items v-model="oauthPlatformTab">
+                  <!-- ChatGPT Tab -->
+                  <v-tab-item>
+                    <v-card flat class="no-shadow">
+                      <v-card-text class="no-shadow">
+                        <v-alert type="info" outlined dense class="mb-3">
+                          <strong>ChatGPT MCP Integration</strong>
+                        </v-alert>
+
+                        <div class="mb-3">
+                          <strong>Prerequisites:</strong>
+                          <ul style="margin-left: 20px;">
+                            <li>ChatGPT Plus or Team subscription</li>
+                            <li>Access to Beta features</li>
+                          </ul>
+                        </div>
+
+                        <div>
+                          <strong>Setup Steps:</strong>
+                          <ol style="margin-left: 20px; margin-top: 8px;">
+                            <li>Open <strong>ChatGPT</strong></li>
+                            <li>Click your profile → <strong>Settings</strong></li>
+                            <li>Navigate to <strong>Beta Features</strong></li>
+                            <li>Find <strong>MCP Servers</strong> section</li>
+                            <li>Click <strong>Add MCP Server</strong></li>
+                            <li>Enter the <strong>Server URL</strong> from above</li>
+                            <li>Enter <strong>Client ID</strong>: <code>routine-notes-mcp</code></li>
+                            <li>Enter <strong>Client Secret</strong> from above</li>
+                            <li>Click <strong>Authorize</strong></li>
+                            <li>You'll be redirected to this app - click <strong>Authorize</strong> again</li>
+                            <li>✅ Connection complete!</li>
+                          </ol>
+                        </div>
+
+                        <v-divider class="my-3"></v-divider>
+
+                        <div class="caption grey--text">
+                          <v-icon small left>info</v-icon>
+                          After setup, you can ask ChatGPT to access your routines, goals, and tasks.
+                        </div>
+                      </v-card-text>
+                    </v-card>
+                  </v-tab-item>
+
+                  <!-- n8n Tab -->
+                  <v-tab-item>
+                    <v-card flat class="no-shadow">
+                      <v-card-text>
+                        <v-alert type="info" outlined dense class="mb-3">
+                          <strong>n8n Workflow Automation</strong>
+                        </v-alert>
+
+                        <div class="mb-3">
+                          <strong>Prerequisites:</strong>
+                          <ul style="margin-left: 20px;">
+                            <li>n8n instance (cloud or self-hosted)</li>
+                            <li>OAuth2 credentials node support</li>
+                          </ul>
+                        </div>
+
+                        <div>
+                          <strong>Setup Steps:</strong>
+                          <ol style="margin-left: 20px; margin-top: 8px;">
+                            <li>Open your <strong>n8n</strong> instance</li>
+                            <li>Go to <strong>Credentials</strong> section</li>
+                            <li>Click <strong>New Credential</strong></li>
+                            <li>Select <strong>OAuth2 API</strong></li>
+                            <li>Configure the credential:
+                              <ul style="margin-left: 20px; margin-top: 4px;">
+                                <li><strong>Grant Type:</strong> Authorization Code</li>
+                                <li><strong>Authorization URL:</strong> <code>{{ mcpServerUrl }}/oauth/authorize</code></li>
+                                <li><strong>Access Token URL:</strong> <code>{{ mcpServerUrl }}/oauth/token</code></li>
+                                <li><strong>Client ID:</strong> <code>routine-notes-mcp</code></li>
+                                <li><strong>Client Secret:</strong> (paste from above)</li>
+                                <li><strong>Scope:</strong> <code>read write</code></li>
+                              </ul>
+                            </li>
+                            <li>Click <strong>Connect my account</strong></li>
+                            <li>Authorize when redirected to this app</li>
+                            <li>Use <strong>HTTP Request</strong> node with this credential</li>
+                            <li>Make requests to: <code>{{ mcpServerUrl }}/call</code></li>
+                          </ol>
+                        </div>
+
+                        <v-divider class="my-3"></v-divider>
+
+                        <div class="caption grey--text">
+                          <v-icon small left>info</v-icon>
+                          Use the HTTP Request node to query your routines via GraphQL or call MCP tools.
+                        </div>
+                      </v-card-text>
+                    </v-card>
+                  </v-tab-item>
+
+                  <!-- Gemini Tab -->
+                  <v-tab-item>
+                    <v-card flat class="no-shadow">
+                      <v-card-text>
+                        <v-alert type="info" outlined dense class="mb-3">
+                          <strong>Google Gemini Integration</strong>
+                        </v-alert>
+
+                        <div class="mb-3">
+                          <strong>Prerequisites:</strong>
+                          <ul style="margin-left: 20px;">
+                            <li>Google Gemini account</li>
+                            <li>Access to Extensions/Integrations (when available)</li>
+                          </ul>
+                        </div>
+
+                        <div>
+                          <strong>Setup Steps:</strong>
+                          <ol style="margin-left: 20px; margin-top: 8px;">
+                            <li>Open <strong>Google Gemini</strong></li>
+                            <li>Navigate to <strong>Settings</strong></li>
+                            <li>Find <strong>Extensions</strong> or <strong>Connected Apps</strong></li>
+                            <li>Click <strong>Add Extension</strong> or <strong>Connect App</strong></li>
+                            <li>Select <strong>Custom OAuth App</strong> or <strong>MCP Server</strong></li>
+                            <li>Enter configuration:
+                              <ul style="margin-left: 20px; margin-top: 4px;">
+                                <li><strong>Server URL:</strong> (paste from above)</li>
+                                <li><strong>Client ID:</strong> <code>routine-notes-mcp</code></li>
+                                <li><strong>Client Secret:</strong> (paste from above)</li>
+                              </ul>
+                            </li>
+                            <li>Click <strong>Connect</strong></li>
+                            <li>Authorize when prompted</li>
+                            <li>✅ Integration active!</li>
+                          </ol>
+                        </div>
+
+                        <v-divider class="my-3"></v-divider>
+
+                        <div class="caption grey--text">
+                          <v-icon small left>info</v-icon>
+                          Note: Gemini's MCP support may vary. Check Google's documentation for latest features.
+                        </div>
+                      </v-card-text>
+                    </v-card>
+                  </v-tab-item>
+
+                  <!-- Perplexity Tab -->
+                  <v-tab-item>
+                    <v-card flat class="no-shadow">
+                      <v-card-text>
+                        <v-alert type="info" outlined dense class="mb-3">
+                          <strong>Perplexity AI Integration</strong>
+                        </v-alert>
+
+                        <div class="mb-3">
+                          <strong>Prerequisites:</strong>
+                          <ul style="margin-left: 20px;">
+                            <li>Perplexity Pro subscription</li>
+                            <li>Access to API or MCP features</li>
+                          </ul>
+                        </div>
+
+                        <div>
+                          <strong>Setup Steps:</strong>
+                          <ol style="margin-left: 20px; margin-top: 8px;">
+                            <li>Open <strong>Perplexity</strong></li>
+                            <li>Go to <strong>Settings</strong> → <strong>Integrations</strong></li>
+                            <li>Look for <strong>Custom Integrations</strong> or <strong>API Connections</strong></li>
+                            <li>Click <strong>Add Integration</strong></li>
+                            <li>Choose <strong>OAuth 2.0</strong> authentication</li>
+                            <li>Enter credentials:
+                              <ul style="margin-left: 20px; margin-top: 4px;">
+                                <li><strong>Name:</strong> Routine Notes</li>
+                                <li><strong>Server URL:</strong> (paste from above)</li>
+                                <li><strong>Client ID:</strong> <code>routine-notes-mcp</code></li>
+                                <li><strong>Client Secret:</strong> (paste from above)</li>
+                              </ul>
+                            </li>
+                            <li>Click <strong>Connect</strong></li>
+                            <li>Complete OAuth authorization flow</li>
+                            <li>✅ Ready to use!</li>
+                          </ol>
+                        </div>
+
+                        <v-divider class="my-3"></v-divider>
+
+                        <div class="caption grey--text">
+                          <v-icon small left>info</v-icon>
+                          Ask Perplexity to access your routine data for personalized insights and planning.
+                        </div>
+                      </v-card-text>
+                    </v-card>
+                  </v-tab-item>
+                </v-tabs-items>
+    </v-card>
+
+    <v-divider></v-divider>
+
+    <!-- Legacy API Key Section -->
+    <v-divider class="my-4"></v-divider>
+    <v-list
+        subheader
+        three-line
+    >
+        <v-subheader>Legacy API Key (Optional)</v-subheader>
+        <v-list-tile>
+          <v-list-tile-content>
+              <v-list-tile-title>API Key</v-list-tile-title>
+              <v-list-tile-sub-title>
+                  For backward compatibility. OAuth is recommended for new integrations.
+              </v-list-tile-sub-title>
+          </v-list-tile-content>
+          <v-list-tile-action class="oauth-field-action">
+              <v-text-field
+                  label="API Key"
+                  readonly
+                  :value="userApiKey || 'No API key generated'"
+                  :type="showApiKey ? 'text' : 'password'"
+              >
+                <template v-slot:append>
+                  <v-btn
+                    icon
+                    @click="showApiKey = !showApiKey"
+                    title="Toggle visibility"
+                    class="mr-1"
+                  >
+                    <v-icon>{{ showApiKey ? 'visibility_off' : 'visibility' }}</v-icon>
+                  </v-btn>
+                  <v-btn
+                    icon
+                    @click="copyToClipboard(userApiKey)"
+                    title="Copy to clipboard"
+                    :disabled="!userApiKey"
+                  >
+                    <v-icon>content_copy</v-icon>
+                  </v-btn>
+                </template>
+              </v-text-field>
+          </v-list-tile-action>
+        </v-list-tile>
+
+        <v-list-tile>
+          <v-list-tile-content>
+              <v-list-tile-title>API Key Actions</v-list-tile-title>
           </v-list-tile-content>
           <v-list-tile-action class="api-actions-buttons">
               <div class="d-flex align-center">
@@ -268,15 +577,17 @@
                   :loading="generatingApiKey"
                   @click="generateApiKey"
                   class="mr-2"
+                  small
                 >
-                  {{ userApiKey ? 'Regenerate' : 'Generate' }} API Key
+                  {{ userApiKey ? 'Regenerate' : 'Generate' }}
                 </v-btn>
                 <v-btn
                   color="secondary"
                   :disabled="!userApiKey"
                   @click="copyToClipboard(userApiKey)"
+                  small
                 >
-                  Copy API Key
+                  Copy
                 </v-btn>
               </div>
           </v-list-tile-action>
@@ -367,6 +678,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    </v-card-text>
   </container-box>
 </template>
 
@@ -386,6 +698,10 @@ export default {
       userApiKey: null,
       showApiKey: false,
       generatingApiKey: false,
+      oauthConnected: false,
+      showOAuthSecret: false,
+      oauthPlatformTab: 0,
+      oauthClientSecret: 'frt_secret_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
       timeFormat: localStorage.getItem('timeFormat') || '24', // Default to 24-hour format
       mcpServerUrl: process.env.NODE_ENV === 'production'
         ? 'https://your-api-domain.com/dev/mcp'
@@ -404,12 +720,16 @@ export default {
             name
             email
             apiKey
+            oauthConnected
           }
         }
       `,
       result({ data }) {
-        if (data && data.getUserTags && data.getUserTags.apiKey) {
-          this.userApiKey = data.getUserTags.apiKey;
+        if (data && data.getUserTags) {
+          if (data.getUserTags.apiKey) {
+            this.userApiKey = data.getUserTags.apiKey;
+          }
+          this.oauthConnected = data.getUserTags.oauthConnected || false;
         }
       },
       error(error) {
@@ -556,9 +876,9 @@ export default {
 .elevation-1 {
   width: 100%;
 }
-.profile .v-input {
+/* .profile .v-input {
     width: 30px;
-}
+} */
 .profile .v-input__slot {
     margin-bottom: 0;
 }
@@ -580,12 +900,6 @@ export default {
 .v-list__tile__action .v-btn {
   margin: 4px 0;
   padding: 0 16px !important;
-}
-
-/* Fix button padding globally on profile page */
-.v-btn {
-  padding-left: 16px !important;
-  padding-right: 16px !important;
 }
 
 /* Mobile responsive button widths */
@@ -618,6 +932,48 @@ export default {
   .api-actions-buttons {
     min-width: 100%;
     width: 100%;
+  }
+}
+
+/* Platform tabs styling - remove border radius and box shadow */
+.platform-tabs-card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* OAuth credentials and API key field responsiveness */
+.oauth-field-action {
+  width: 350px;
+}
+
+@media (max-width: 768px) {
+  .oauth-field-action {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Make OAuth and API key list tiles stack vertically on mobile */
+  .v-list__tile:has(.oauth-field-action) {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    height: auto !important;
+    padding-bottom: 16px !important;
+  }
+
+  .v-list__tile:has(.oauth-field-action) .v-list__tile__content {
+    width: 100% !important;
+    margin-bottom: 8px;
+  }
+
+  .v-list__tile:has(.oauth-field-action) .v-list__tile__action {
+    width: 100% !important;
+    align-self: stretch !important;
+    margin-bottom: 8px;
+  }
+
+  /* Add spacing after last input field before next section */
+  .v-list__tile:has(.oauth-field-action):last-child {
+    padding-bottom: 24px !important;
   }
 }
 </style>

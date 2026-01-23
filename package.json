@@ -61,6 +61,7 @@
     "vuetify-confirm": "^2.0.6"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-optional-chaining": "^7.21.0",
     "@babel/plugin-transform-arrow-functions": "^7.18.6",
     "@mdi/font": "^7.4.47",
     "@storybook/addon-a11y": "6.5.16",

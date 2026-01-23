@@ -8,7 +8,7 @@
 </template>
 
 <script>
-import RadarChart from '../molecules/RadarChart/RadarChart.vue';
+import RadarChart from '../../molecules/RadarChart/RadarChart.vue';
 
 export default {
   components: {
@@ -33,7 +33,6 @@ export default {
         size = elmnt.offsetWidth * 0.85;
         return String(size);
       }
-      console.log(size);
       return size;
     },
   },

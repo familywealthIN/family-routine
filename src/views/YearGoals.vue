@@ -1,104 +1,90 @@
 <template>
-  <v-container fluid class="year-goals-container">
-    <!-- Header with Add Goal Button -->
-    <v-layout row wrap align-center class="mb-4">
-      <v-flex xs12>
-        <h1 class="display-1">{{ yearGoalTitle }}</h1>
-      </v-flex>
-    </v-layout>
+  <container-box transparent="true" :isLoading="loading">
+    <div class="year-goals-container">
+      <!-- Header with Add Goal Button -->
+      <v-layout row wrap align-center class="mb-4">
+        <v-flex xs12>
+          <h1 class="display-1">{{ yearGoalTitle }}</h1>
+        </v-flex>
+      </v-layout>
 
-    <!-- Loading State -->
-    <v-layout v-if="loading" justify-center class="mt-5">
-      <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
-    </v-layout>
+      <!-- Empty State -->
+      <v-layout v-if="!yearGoalsTree.length" justify-center class="mt-5">
+        <v-flex xs12 md8>
+          <v-card class="text-xs-center pa-5">
+            <v-icon size="64" color="grey lighten-1">timeline</v-icon>
+            <h2 class="headline mt-3">No Year Goals to Manage</h2>
+            <p class="subheading grey--text mt-2">
+              Create year goals from the Goals section to start adding month, week, and day milestones here
+            </p>
+          </v-card>
+        </v-flex>
+      </v-layout>
 
-    <!-- Empty State -->
-    <v-layout v-else-if="!yearGoalsTree.length" justify-center class="mt-5">
-      <v-flex xs12 md8>
-        <v-card class="text-xs-center pa-5">
-          <v-icon size="64" color="grey lighten-1">timeline</v-icon>
-          <h2 class="headline mt-3">No Year Goals to Manage</h2>
-          <p class="subheading grey--text mt-2">
-            Create year goals from the Goals section to start adding month, week, and day milestones here
-          </p>
-        </v-card>
-      </v-flex>
-    </v-layout>
+      <!-- Year Goals Tree View -->
+      <v-layout v-else row wrap>
+        <v-flex xs12>
+          <div v-for="yearGoal in yearGoalsTree" :key="yearGoal.id" class="year-goal-card mb-4">
+            <v-card>
+              <!-- Year Goal Content: Description (3/4) + Progress Donut (1/4) -->
+              <v-card-text class="pa-3">
+                <v-layout row wrap>
+                  <!-- Contribution/Description (3/4 width) -->
+                  <v-flex xs8 md9 class="pr-md-3">
+                    <v-layout align-center class="mb-2">
+                      <v-icon small class="mr-2">description</v-icon>
+                      <strong>Description</strong>
+                    </v-layout>
+                    <div v-if="yearGoal.contribution" class="contribution-text">
+                      <vue-markdown :source="yearGoal.contribution"></vue-markdown>
+                    </div>
+                    <div v-else class="grey--text">
+                      No description provided
+                    </div>
+                  </v-flex>
 
-    <!-- Year Goals Tree View -->
-    <v-layout v-else row wrap>
-      <v-flex xs12>
-        <div
-          v-for="yearGoal in yearGoalsTree"
-          :key="yearGoal.id"
-          class="year-goal-card mb-4"
-        >
-          <v-card>
-            <!-- Year Goal Content: Description (3/4) + Progress Donut (1/4) -->
-            <v-card-text class="pa-3">
-              <v-layout row wrap>
-                <!-- Contribution/Description (3/4 width) -->
-                <v-flex xs12 md9 class="pr-md-3">
-                  <v-layout align-center class="mb-2">
-                    <v-icon small class="mr-2">description</v-icon>
-                    <strong>Description</strong>
-                  </v-layout>
-                  <div v-if="yearGoal.contribution" class="contribution-text">
-                    <vue-markdown :source="yearGoal.contribution"></vue-markdown>
-                  </div>
-                  <div v-else class="grey--text">
-                    No description provided
-                  </div>
-                </v-flex>
+                  <!-- Progress Donut (1/4 width) -->
+                  <v-flex xs4 md3 class="text-xs-center">
+                    <v-layout column align-center justify-center fill-height>
+                      <v-progress-circular :value="calculateGoalProgress(yearGoal)"
+                        :color="yearGoal.isComplete ? 'success' : 'primary'" size="120" width="8">
+                        <div class="text-xs-center">
+                          <div class="display-1 font-weight-bold">{{ Math.round(calculateGoalProgress(yearGoal)) }}%
+                          </div>
+                          <div class="caption grey--text">Complete</div>
+                        </div>
+                      </v-progress-circular>
+                    </v-layout>
+                  </v-flex>
+                </v-layout>
+              </v-card-text>
 
-                <!-- Progress Donut (1/4 width) -->
-                <v-flex xs12 md3 class="text-xs-center">
-                  <v-layout column align-center justify-center fill-height>
-                    <v-progress-circular
-                      :value="calculateGoalProgress(yearGoal)"
-                      :color="yearGoal.isComplete ? 'success' : 'primary'"
-                      size="120"
-                      width="8"
-                    >
-                      <div class="text-xs-center">
-                        <div class="display-1 font-weight-bold">{{ Math.round(calculateGoalProgress(yearGoal)) }}%</div>
-                        <div class="caption grey--text">Complete</div>
-                      </div>
-                    </v-progress-circular>
-                  </v-layout>
-                </v-flex>
-              </v-layout>
-            </v-card-text>
+              <v-divider></v-divider>
 
-            <v-divider></v-divider>
+              <!-- Action Buttons -->
+              <v-card-actions class="px-3">
+                <v-btn flat small color="primary" @click="editGoal(yearGoal)">
+                  <v-icon small left>edit</v-icon>
+                  Edit
+                </v-btn>
+                <v-btn flat small color="accent" @click="openCreateGoalDrawer('month', yearGoal)">
+                  <v-icon small left>add</v-icon>
+                  Add Month Goal
+                </v-btn>
+              </v-card-actions>
 
-            <!-- Action Buttons -->
-            <v-card-actions class="px-3">
-              <v-btn flat small color="primary" @click="editGoal(yearGoal)">
-                <v-icon small left>edit</v-icon>
-                Edit
-              </v-btn>
-              <v-btn flat small color="accent" @click="openCreateGoalDrawer('month', yearGoal)">
-                <v-icon small left>add</v-icon>
-                Add Month Goal
-              </v-btn>
-            </v-card-actions>
+              <v-divider></v-divider>
 
-            <v-divider></v-divider>
-
-            <!-- Month Goals (Nested) -->
-            <div v-if="yearGoal.monthGoals && yearGoal.monthGoals.length" class="nested-goals month-goals">
+              <!-- Month Goals (Nested) -->
+              <div v-if="yearGoal.monthGoals && yearGoal.monthGoals.length" class="nested-goals month-goals">
                 <v-subheader class="nested-header">
                   <v-icon small class="mr-2">event</v-icon>
                   Month Goals ({{ yearGoal.monthGoals.length }})
                 </v-subheader>
 
-                <v-expansion-panel class="nested-expansion">
-                  <v-expansion-panel-content
-                    v-for="monthGoal in yearGoal.monthGoals"
-                    :key="monthGoal.id"
-                    class="month-goal-panel"
-                  >
+                <v-expansion-panel v-model="yearGoal.expandedMonthIndex" class="nested-expansion">
+                  <v-expansion-panel-content v-for="monthGoal in yearGoal.monthGoals" :key="monthGoal.id"
+                    class="month-goal-panel">
                     <!-- Month Goal Header -->
                     <template v-slot:header>
                       <v-layout align-center>
@@ -114,8 +100,11 @@
                           </div>
                         </v-flex>
                         <v-flex shrink>
-                          <v-chip small :color="monthGoal.isComplete ? 'success' : 'info'" text-color="white">
-                            {{ monthGoal.isComplete ? 'Done' : 'Active' }}
+                          <v-chip small
+                            :color="monthGoal.isComplete ? 'success' : (isCurrentMonth(monthGoal.date) ? 'info' : 'grey')"
+                            text-color="white">
+                            {{ monthGoal.isComplete ? 'Done' : (isCurrentMonth(monthGoal.date) ? 'Active' : 'Inactive')
+                            }}
                           </v-chip>
                         </v-flex>
                       </v-layout>
@@ -123,140 +112,147 @@
 
                     <!-- Month Goal Content -->
                     <v-card flat class="nested-goal-content">
-                      <v-card-text v-if="monthGoal.contribution" class="py-2">
-                        <div class="contribution-text small">
-                          <vue-markdown :source="monthGoal.contribution"></vue-markdown>
-                        </div>
-                      </v-card-text>
+                      <v-layout row wrap>
+                        <!-- Month Description (50% on md+) -->
+                        <v-flex xs12 md6 class="pr-md-2">
+                          <v-card-text v-if="monthGoal.contribution" class="py-2">
+                            <div class="contribution-text small">
+                              <vue-markdown :source="monthGoal.contribution"></vue-markdown>
+                            </div>
+                          </v-card-text>
+                          <v-card-text v-else class="py-2">
+                            <div class="grey--text caption">No description</div>
+                          </v-card-text>
 
-                      <v-card-actions class="px-3 py-1">
-                        <v-btn flat x-small color="primary" @click="editGoal(monthGoal)">
-                          <v-icon x-small left>edit</v-icon>
-                          Edit
-                        </v-btn>
-                        <v-btn flat x-small color="accent" @click="openCreateGoalDrawer('week', monthGoal)">
-                          <v-icon x-small left>add</v-icon>
-                          Add Week Goal
-                        </v-btn>
-                      </v-card-actions>
+                          <v-card-actions class="px-3 py-1">
+                            <v-btn flat x-small color="primary" @click="editGoal(monthGoal)">
+                              <v-icon x-small left>edit</v-icon>
+                              Edit
+                            </v-btn>
+                            <v-btn flat x-small color="accent" @click="openCreateGoalDrawer('week', monthGoal)">
+                              <v-icon x-small left>add</v-icon>
+                              Add Week Goal
+                            </v-btn>
+                          </v-card-actions>
+                        </v-flex>
 
-                      <!-- Week Goals (Nested) -->
-                      <div v-if="monthGoal.weekGoals && monthGoal.weekGoals.length" class="nested-goals week-goals">
-                        <v-subheader class="nested-header py-0">
-                          <v-icon x-small class="mr-1">view_week</v-icon>
-                          Week Goals ({{ monthGoal.weekGoals.length }})
-                        </v-subheader>
+                        <!-- Week Goals (50% on md+) -->
+                        <v-flex xs12 md6 class="pl-md-2">
+                          <div v-if="monthGoal.weekGoals && monthGoal.weekGoals.length" class="nested-goals week-goals">
+                            <v-subheader class="nested-header py-0">
+                              <v-icon x-small class="mr-1">view_week</v-icon>
+                              Week Goals ({{ monthGoal.weekGoals.length }})
+                            </v-subheader>
 
-                        <v-list dense class="nested-list">
-                          <template v-for="weekGoal in monthGoal.weekGoals">
-                            <v-list-tile
-                              v-if="weekGoal"
-                              :key="weekGoal.id"
-                              @click="toggleWeekGoal(weekGoal)"
-                              class="week-goal-tile"
-                            >
-                            <v-list-tile-action>
-                              <v-icon :color="weekGoal.isComplete ? 'success' : 'warning'" small>
-                                {{ weekGoal.isComplete ? 'check_circle' : 'radio_button_unchecked' }}
-                              </v-icon>
-                            </v-list-tile-action>
-                            <v-list-tile-content>
-                              <v-list-tile-title>{{ weekGoal.body }}</v-list-tile-title>
-                              <v-list-tile-sub-title>{{ formatWeekDate(weekGoal.date) }}</v-list-tile-sub-title>
-                            </v-list-tile-content>
-                            <v-list-tile-action>
-                              <v-menu offset-y>
-                                <template v-slot:activator="{ on }">
-                                  <v-btn icon small v-on="on" @click.stop>
-                                    <v-icon small>more_vert</v-icon>
-                                  </v-btn>
-                                </template>
-                                <v-list dense>
-                                  <v-list-tile @click="editGoal(weekGoal)">
-                                    <v-list-tile-title>
-                                      <v-icon small left>edit</v-icon>
-                                      Edit
-                                    </v-list-tile-title>
-                                  </v-list-tile>
-                                  <v-list-tile @click="openCreateGoalDrawer('day', weekGoal)">
-                                    <v-list-tile-title>
-                                      <v-icon small left>add</v-icon>
-                                      Add Day Goal
-                                    </v-list-tile-title>
-                                  </v-list-tile>
-                                </v-list>
-                              </v-menu>
-                            </v-list-tile-action>
-                          </v-list-tile>
-
-                          <!-- Day Goals (Nested under expanded week) -->
-                          <v-expand-transition :key="`expand-${weekGoal.id}`">
-                            <div v-if="weekGoal && weekGoal.expanded && weekGoal.dayGoals && weekGoal.dayGoals.length" class="nested-goals day-goals">
-                              <v-list dense class="nested-list">
-                                <v-list-tile
-                                  v-for="dayGoal in weekGoal.dayGoals"
-                                  :key="dayGoal.id"
-                                  class="day-goal-tile"
-                                >
+                            <v-list dense class="nested-list">
+                              <template v-for="weekGoal in monthGoal.weekGoals">
+                                <v-list-tile v-if="weekGoal" :key="weekGoal.id" @click="toggleWeekGoal(weekGoal)"
+                                  class="week-goal-tile">
                                   <v-list-tile-action>
-                                    <v-icon :color="dayGoal.isComplete ? 'success' : 'grey'" x-small>
-                                      {{ dayGoal.isComplete ? 'check_circle' : 'radio_button_unchecked' }}
+                                    <v-icon :color="weekGoal.isComplete ? 'success' : 'warning'" small>
+                                      {{ weekGoal.isComplete ? 'check_circle' : 'radio_button_unchecked' }}
                                     </v-icon>
                                   </v-list-tile-action>
                                   <v-list-tile-content>
-                                    <v-list-tile-title class="caption">{{ dayGoal.body }}</v-list-tile-title>
-                                    <v-list-tile-sub-title class="caption">{{ formatDayDate(dayGoal.date) }}</v-list-tile-sub-title>
+                                    <v-list-tile-title>{{ weekGoal.body }}</v-list-tile-title>
+                                    <v-list-tile-sub-title>{{ formatWeekDate(weekGoal.date) }}</v-list-tile-sub-title>
                                   </v-list-tile-content>
                                   <v-list-tile-action>
-                                    <v-btn icon x-small @click="editGoal(dayGoal)">
-                                      <v-icon x-small>edit</v-icon>
-                                    </v-btn>
+                                    <v-chip x-small
+                                      :color="weekGoal.isComplete ? 'success' : (isCurrentWeek(weekGoal.date) ? 'warning' : 'grey')"
+                                      text-color="white">
+                                      {{ weekGoal.isComplete ? 'Done' : (isCurrentWeek(weekGoal.date) ? 'Active' :
+                                      'Inactive') }}
+                                    </v-chip>
+                                  </v-list-tile-action>
+                                  <v-list-tile-action>
+                                    <v-menu offset-y>
+                                      <template v-slot:activator="{ on }">
+                                        <v-btn icon small v-on="on" @click.stop>
+                                          <v-icon small>more_vert</v-icon>
+                                        </v-btn>
+                                      </template>
+                                      <v-list dense>
+                                        <v-list-tile @click="editGoal(weekGoal)">
+                                          <v-list-tile-title>
+                                            <v-icon small left>edit</v-icon>
+                                            Edit
+                                          </v-list-tile-title>
+                                        </v-list-tile>
+                                        <v-list-tile @click="openCreateGoalDrawer('day', weekGoal)">
+                                          <v-list-tile-title>
+                                            <v-icon small left>add</v-icon>
+                                            Add Day Goal
+                                          </v-list-tile-title>
+                                        </v-list-tile>
+                                      </v-list>
+                                    </v-menu>
                                   </v-list-tile-action>
                                 </v-list-tile>
-                              </v-list>
-                            </div>
-                          </v-expand-transition>
-                          </template>
-                        </v-list>
-                      </div>
+
+                                <!-- Day Goals (Nested under expanded week) -->
+                                <v-expand-transition :key="`expand-${weekGoal.id}`">
+                                  <div
+                                    v-if="weekGoal && weekGoal.expanded && weekGoal.dayGoals && weekGoal.dayGoals.length"
+                                    class="nested-goals day-goals">
+                                    <v-list dense class="nested-list">
+                                      <v-list-tile v-for="dayGoal in weekGoal.dayGoals" :key="dayGoal.id"
+                                        class="day-goal-tile">
+                                        <v-list-tile-action>
+                                          <v-icon :color="dayGoal.isComplete ? 'success' : 'grey'" x-small>
+                                            {{ dayGoal.isComplete ? 'check_circle' : 'radio_button_unchecked' }}
+                                          </v-icon>
+                                        </v-list-tile-action>
+                                        <v-list-tile-content>
+                                          <v-list-tile-title class="caption">{{ dayGoal.body }}</v-list-tile-title>
+                                          <v-list-tile-sub-title class="caption">{{ formatDayDate(dayGoal.date)
+                                            }}</v-list-tile-sub-title>
+                                        </v-list-tile-content>
+                                        <v-list-tile-action>
+                                          <v-btn icon x-small @click="editGoal(dayGoal)">
+                                            <v-icon x-small>edit</v-icon>
+                                          </v-btn>
+                                        </v-list-tile-action>
+                                      </v-list-tile>
+                                    </v-list>
+                                  </div>
+                                </v-expand-transition>
+                              </template>
+                            </v-list>
+                          </div>
+                        </v-flex>
+                      </v-layout>
                     </v-card>
                   </v-expansion-panel-content>
                 </v-expansion-panel>
               </div>
             </v-card>
           </div>
-      </v-flex>
-    </v-layout>
+        </v-flex>
+      </v-layout>
 
-    <!-- Goal Edit/Create Dialog -->
-    <v-dialog
-      v-model="goalDrawer"
-      fullscreen
-      hide-overlay
-      transition="dialog-bottom-transition"
-    >
-      <v-card>
-        <v-toolbar color="white">
-          <v-toolbar-title>
-            <v-icon left>{{ drawerGoal.id ? 'edit' : 'add' }}</v-icon>
-            {{ drawerGoal.id ? 'Edit' : 'Create' }} {{ drawerGoal.period }} Goal
-          </v-toolbar-title>
-          <v-spacer></v-spacer>
-          <v-btn icon @click="closeDrawer">
-            <v-icon>close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <v-card class="no-shadow">
-          <v-card-text class="pa-0">
-            <goal-creation
-              :newGoalItem="drawerGoal"
-              v-on:add-update-goal-entry="handleGoalSaved"
-            />
-          </v-card-text>
+      <!-- Goal Edit/Create Dialog -->
+      <v-dialog v-model="goalDrawer" fullscreen hide-overlay transition="dialog-bottom-transition">
+        <v-card>
+          <v-toolbar color="white">
+            <v-toolbar-title>
+              <v-icon left>{{ drawerGoal.id ? 'edit' : 'add' }}</v-icon>
+              {{ drawerGoal.id ? 'Edit' : 'Create' }} {{ drawerGoal.period }} Goal
+            </v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-btn icon @click="closeDrawer">
+              <v-icon>close</v-icon>
+            </v-btn>
+          </v-toolbar>
+          <v-card class="no-shadow">
+            <v-card-text class="pa-0">
+              <goal-creation :newGoalItem="drawerGoal" v-on:add-update-goal-entry="handleGoalSaved" />
+            </v-card-text>
+          </v-card>
         </v-card>
-      </v-card>
-    </v-dialog>
-  </v-container>
+      </v-dialog>
+    </div>
+  </container-box>
 </template>
 
 <script>
@@ -264,12 +260,14 @@ import gql from 'graphql-tag';
 import moment from 'moment';
 import VueMarkdown from 'vue-markdown';
 import GoalCreation from '@/components/organisms/GoalCreation/GoalCreation.vue';
+import ContainerBox from '@/components/templates/ContainerBox/ContainerBox.vue';
 
 export default {
   name: 'YearGoals',
   components: {
     GoalCreation,
     VueMarkdown,
+    ContainerBox,
   },
   props: {
     tag: {
@@ -294,7 +292,13 @@ export default {
     };
   },
   computed: {
+    goalId() {
+      return this.$route.params.id || null;
+    },
     yearGoalTitle() {
+      if (this.yearGoal && this.yearGoal.body) {
+        return this.yearGoal.body;
+      }
       if (this.tag) {
         return this.tag;
       }
@@ -304,27 +308,44 @@ export default {
   watch: {
     tag() {
       // Rebuild tree when tag changes
-      if (this.yearGoals && this.yearGoals.length) {
-        this.buildGoalTree(this.yearGoals);
+      if (this.yearGoal) {
+        this.buildGoalTree(this.yearGoal);
+      }
+    },
+    goalId() {
+      // Refetch when goalId changes
+      if (this.goalId) {
+        this.loading = true;
+        this.$apollo.queries.yearGoal.refetch();
       }
     },
   },
   apollo: {
-    yearGoals: {
+    yearGoal: {
       query: gql`
-        query currentYearGoals {
-          currentYearGoals {
+        query currentYearGoal($id: ID!) {
+          currentYearGoal(id: $id) {
             id
+            body
             date
             period
-            goalItems {
+            status
+            tags
+            contribution
+            taskRef
+            goalRef
+            routine {
               id
               body
-              status
-              tags
-              contribution
+            }
+            milestones {
+              id
+              body
               date
               period
+              status
+              isComplete
+              contribution
               taskRef
               goalRef
               routine {
@@ -337,104 +358,101 @@ export default {
                 date
                 period
                 status
+                isComplete
                 contribution
                 taskRef
                 goalRef
-                routine {
-                  id
-                  body
-                }
                 milestones {
                   id
                   body
                   date
                   period
                   status
+                  isComplete
                   contribution
                   taskRef
                   goalRef
-                  milestones {
-                    id
-                    body
-                    date
-                    period
-                    status
-                    contribution
-                    taskRef
-                    goalRef
-                  }
                 }
               }
             }
           }
         }
       `,
-      update(data) {
-        this.loading = false;
-        const goals = data.currentYearGoals || [];
-        this.buildGoalTree(goals);
-        return goals;
+      variables() {
+        return {
+          id: this.goalId,
+        };
       },
       skip() {
-        return !this.$root.$data.email;
+        return !this.$root.$data.email || !this.goalId;
+      },
+      update(data) {
+        this.loading = false;
+        console.log('[YearGoals] currentYearGoal response:', data.currentYearGoal);
+        if (data.currentYearGoal) {
+          this.buildGoalTree(data.currentYearGoal);
+        }
+        return data.currentYearGoal;
       },
       error(error) {
         this.loading = false;
-        console.error('Error fetching year goals:', error);
+        console.error('Error fetching year goal:', error);
       },
     },
   },
   methods: {
-    buildGoalTree(goals) {
-      // Transform flat goal structure into hierarchical tree
-      this.yearGoalsTree = goals.flatMap((goalGroup) => {
-        if (!goalGroup.goalItems) return [];
+    buildGoalTree(goalItem) {
+      console.log('[buildGoalTree] Input goalItem:', goalItem);
 
-        // Filter by tag if provided
-        let filteredGoals = goalGroup.goalItems;
-        if (this.tag) {
-          filteredGoals = goalGroup.goalItems.filter((goal) => goal.body === this.tag);
+      // Handle single GoalItem instead of array
+      if (!goalItem) {
+        this.yearGoalsTree = [];
+        return;
+      }
+
+      const tree = {
+        ...goalItem,
+        isComplete: goalItem.isComplete !== undefined ? goalItem.isComplete : this.isGoalComplete(goalItem),
+        routineName: goalItem.routine ? goalItem.routine.body : null,
+        monthGoals: [],
+        expanded: false,
+        expandedMonthIndex: null,
+      };
+
+      // Extract month goals from milestones
+      if (goalItem.milestones && goalItem.milestones.length > 0) {
+        tree.monthGoals = goalItem.milestones
+          .filter((m) => m && m.period === 'month')
+          .map((monthGoal) => ({
+            ...monthGoal,
+            isComplete: monthGoal.isComplete !== undefined ? monthGoal.isComplete : this.isGoalComplete(monthGoal),
+            weekGoals: monthGoal.milestones && monthGoal.milestones.length > 0
+              ? monthGoal.milestones
+                .filter((w) => w && w.period === 'week')
+                .map((weekGoal) => ({
+                  ...weekGoal,
+                  isComplete: weekGoal.isComplete !== undefined ? weekGoal.isComplete : this.isGoalComplete(weekGoal),
+                  expanded: this.isCurrentWeek(weekGoal.date),
+                  dayGoals: weekGoal.milestones && weekGoal.milestones.length > 0
+                    ? weekGoal.milestones
+                      .filter((d) => d && d.period === 'day')
+                      .map((dayGoal) => ({
+                        ...dayGoal,
+                        isComplete: dayGoal.isComplete !== undefined ? dayGoal.isComplete : this.isGoalComplete(dayGoal),
+                      }))
+                    : [],
+                }))
+              : [],
+          }));
+
+        // Auto-expand current month
+        const currentMonthIndex = tree.monthGoals.findIndex((m) => this.isCurrentMonth(m.date));
+        if (currentMonthIndex !== -1) {
+          tree.expandedMonthIndex = currentMonthIndex;
         }
+      }
 
-        return filteredGoals.map((yearGoal) => {
-          const tree = {
-            ...yearGoal,
-            isComplete: this.isGoalComplete(yearGoal),
-            routineName: yearGoal.routine ? yearGoal.routine.body : null,
-            monthGoals: [],
-            expanded: false,
-          };
-
-          // Extract month goals from milestones
-          if (yearGoal.milestones && yearGoal.milestones.length > 0) {
-            tree.monthGoals = yearGoal.milestones
-              .filter((m) => m && m.period === 'month')
-              .map((monthGoal) => ({
-                ...monthGoal,
-                isComplete: this.isGoalComplete(monthGoal),
-                weekGoals: monthGoal.milestones && monthGoal.milestones.length > 0
-                  ? monthGoal.milestones
-                    .filter((w) => w && w.period === 'week')
-                    .map((weekGoal) => ({
-                      ...weekGoal,
-                      isComplete: this.isGoalComplete(weekGoal),
-                      expanded: false,
-                      dayGoals: weekGoal.milestones && weekGoal.milestones.length > 0
-                        ? weekGoal.milestones
-                          .filter((d) => d && d.period === 'day')
-                          .map((dayGoal) => ({
-                            ...dayGoal,
-                            isComplete: this.isGoalComplete(dayGoal),
-                          }))
-                        : [],
-                    }))
-                  : [],
-              }));
-          }
-
-          return tree;
-        });
-      });
+      this.yearGoalsTree = [tree];
     },
 
     isGoalComplete(goal) {
@@ -453,28 +471,41 @@ export default {
     },
 
     formatYearDate(date) {
-      const m = moment(date);
+      const m = moment(date, 'DD-MM-YYYY');
       return m.isValid() ? m.format('YYYY') : date;
     },
 
     formatMonthDate(date) {
-      const m = moment(date);
+      const m = moment(date, 'DD-MM-YYYY');
       return m.isValid() ? m.format('MMMM') : date;
     },
 
     formatWeekDate(date) {
-      // Handle week format YYYY-Www
       if (date && date.includes('W')) {
         const [, week] = date.split('-W');
         return `Week ${parseInt(week, 10)}`;
       }
-      const m = moment(date);
+      const m = moment(date, 'DD-MM-YYYY');
       return m.isValid() ? `Week ${m.week()}` : date;
     },
 
     formatDayDate(date) {
       const m = moment(date);
       return m.isValid() ? m.format('dddd, MMM D, YYYY') : date;
+    },
+
+    isCurrentMonth(date) {
+      // Check if the given date is in the current month
+      const currentMonth = moment().format('YYYY-MM');
+      const goalMonth = moment(date, 'DD-MM-YYYY').format('YYYY-MM');
+      return currentMonth === goalMonth;
+    },
+
+    isCurrentWeek(date) {
+      // Check if the given date is in the current week
+      const currentWeek = moment().format('YYYY-[W]WW');
+      const goalWeek = moment(date, 'DD-MM-YYYY').format('YYYY-[W]WW');
+      return currentWeek === goalWeek;
     },
 
     openCreateGoalDrawer(period, parentGoal = null) {
@@ -544,14 +575,14 @@ export default {
     },
 
     handleGoalSaved() {
-      // Refetch year goals to update tree
-      this.$apollo.queries.yearGoals.refetch();
+      // Refetch year goal to update tree
+      this.$apollo.queries.yearGoal.refetch();
       this.closeDrawer();
     },
 
     handleGoalUpdated() {
-      // Refetch year goals to update tree
-      this.$apollo.queries.yearGoals.refetch();
+      // Refetch year goal to update tree
+      this.$apollo.queries.yearGoal.refetch();
       this.closeDrawer();
     },
 
@@ -587,7 +618,7 @@ export default {
         });
 
         // Refetch to update UI
-        this.$apollo.queries.yearGoals.refetch();
+        this.$apollo.queries.yearGoal.refetch();
 
         this.$notify({
           title: 'Success',
@@ -612,9 +643,6 @@ export default {
 </script>
 
 <style scoped>
-.year-goals-container {
-  padding: 24px;
-}
 
 /* Year Goal Panels */
 .year-goal-panel {
@@ -658,13 +686,13 @@ export default {
   font-size: 13px;
 }
 
-.contribution-text >>> p {
+.contribution-text>>>p {
   margin-bottom: 8px;
 }
 
-.contribution-text >>> h1,
-.contribution-text >>> h2,
-.contribution-text >>> h3 {
+.contribution-text>>>h1,
+.contribution-text>>>h2,
+.contribution-text>>>h3 {
   margin-top: 12px;
   margin-bottom: 8px;
 }

@@ -1,28 +1,14 @@
 <template>
-  <div class="pull-to-refresh-container"
-       @touchstart="handleTouchStart"
-       @touchmove="handleTouchMove"
-       @touchend="handleTouchEnd"
-       @scroll="handleScroll">
-    <!-- Pull to refresh indicator -->
-    <div class="pull-to-refresh-indicator"
-         :class="{ 'visible': pullDistance > 0, 'refreshing': isRefreshing }"
-         :style="{ transform: `translateY(${Math.min(pullDistance, 80)}px)` }">
-      <v-progress-circular
-        v-if="isRefreshing"
-        indeterminate
-        color="primary"
-        size="24">
-      </v-progress-circular>
-      <v-icon v-else color="primary" size="24">refresh</v-icon>
-      <span class="refresh-text">
-        {{ isRefreshing ? 'Refreshing...' : (pullDistance > 60 ? 'Release to refresh' : 'Pull to refresh') }}
-      </span>
-    </div>
-
-    <container-box transparent="true" :isLoading="isLoading">
+  <div>
+    <!-- Pull-to-refresh wrapper (handles mobile/tablet condition internally) -->
+    <pull-to-refresh-container
+      ref="pullToRefreshWrapper"
+      @refresh="handlePullToRefresh"
+    >
+      <container-box transparent="true" :isLoading="isLoading">
       <weekday-selector
         :selectedDate="date"
+        :class="$vuetify.breakpoint.xsOnly ? 'mr-3 mb-2 ml-3 mt-3' : 'mr-3 mb-3 ml-3'"
         @date-selected="handleDateSelected"
       />
     <div v-if="isTodaySelected">
@@ -644,6 +630,7 @@
       </v-card>
     </v-dialog>
     </container-box>
+    </pull-to-refresh-container>
 
     <!-- Dashboard FAB for AI Search -->
     <v-fab-transition>
@@ -677,6 +664,7 @@ import { MeasurementMixin } from '../utils/measurementMixins';
 import GoalList from '../components/organisms/GoalList/GoalList.vue';
 import GoalItemList from '../components/organisms/GoalItemList/GoalItemList.vue';
 import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
+import PullToRefreshContainer from '../components/molecules/PullToRefreshContainer/PullToRefreshContainer.vue';
 import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
 import QuickGoalCreation from '../components/molecules/QuickGoalCreation/QuickGoalCreation.vue';
 import StreakChecks from '../components/molecules/StreakChecks/StreakChecks.vue';
@@ -708,6 +696,7 @@ export default {
     GoalList,
     GoalItemList,
     ContainerBox,
+    PullToRefreshContainer,
     QuickGoalCreation,
     StreakChecks,
     GoalCreation,
@@ -898,12 +887,6 @@ export default {
       routineGoalIds: {}, // { routineItemId: goalId }
       // Analytics: Track component mount time for session duration
       mountTime: Date.now(),
-      // Pull to refresh functionality
-      pullDistance: 0,
-      startY: 0,
-      isPulling: false,
-      isRefreshing: false,
-      scrollTop: 0,
     };
   },
   watch: {
@@ -1095,46 +1078,8 @@ export default {
       }
     },
 
-    // Pull to refresh methods
-    handleTouchStart(event) {
-      if (this.scrollTop <= 0) {
-        this.startY = event.touches[0].clientY;
-        this.isPulling = true;
-      }
-    },
-    handleTouchMove(event) {
-      if (!this.isPulling || this.isRefreshing) return;
-
-      const currentY = event.touches[0].clientY;
-      const deltaY = currentY - this.startY;
-
-      if (deltaY > 0 && this.scrollTop <= 0) {
-        event.preventDefault();
-        this.pullDistance = Math.min(deltaY * 0.5, 100); // Dampen the pull effect
-      }
-    },
-    handleTouchEnd() {
-      if (!this.isPulling || this.isRefreshing) return;
-
-      this.isPulling = false;
-
-      if (this.pullDistance > 60) {
-        this.triggerRefresh();
-      } else {
-        this.resetPull();
-      }
-    },
-    handleScroll(event) {
-      this.scrollTop = event.target.scrollTop;
-      if (this.scrollTop > 0) {
-        this.resetPull();
-      }
-    },
-    triggerRefresh() {
-      this.isRefreshing = true;
-      this.pullDistance = 60; // Set to final position
-
-      // Track pull to refresh action
+    // Handle pull to refresh from wrapper
+    handlePullToRefresh() {
       this.trackUserInteraction('pull_to_refresh', 'gesture', {
         date: this.date,
         is_today: this.isTodaySelected,
@@ -1145,8 +1090,7 @@ export default {
         this.refreshApolloQueries(),
         new Promise((resolve) => setTimeout(resolve, 1000)), // Minimum refresh time for UX
       ]).then(() => {
-        this.resetPull();
-        this.isRefreshing = false;
+        this.$refs.pullToRefreshWrapper.endRefresh();
 
         this.$notify({
           title: 'Refreshed',
@@ -1157,8 +1101,7 @@ export default {
         });
       }).catch((error) => {
         console.error('Pull to refresh error:', error);
-        this.resetPull();
-        this.isRefreshing = false;
+        this.$refs.pullToRefreshWrapper.endRefresh();
 
         this.$notify({
           title: 'Refresh Failed',
@@ -1169,10 +1112,7 @@ export default {
         });
       });
     },
-    resetPull() {
-      this.pullDistance = 0;
-      this.isPulling = false;
-    },
+
     // Global event handlers
     handleRefetchDailyGoals() {
       console.log('DashBoard: Handling refetch daily goals event');

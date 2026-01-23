@@ -1,14 +1,24 @@
 <template>
-  <v-card class="ma-3">
+  <v-card>
     <div class="weekdays pt-2 pb-2">
       <div
         v-for="(weekDay, i) in weekDays"
         :key="weekDay.day"
-        @click="handleDateSelect(i)"
-        :class="`day ${weekDay.isActive ? 'active' : ''}`"
+        @click="!isLoading && handleDateSelect(i)"
+        :class="`day ${weekDay.isActive ? 'active' : ''} ${loadingDay === i ? 'loading' : ''} ${isLoading ? 'disabled' : ''}`"
       >
-        <div>{{ weekDay.day }}</div>
-        <div>{{ weekDay.dayNumber }}</div>
+        <div v-if="loadingDay === i" class="day-loading-spinner">
+          <v-progress-circular
+            :size="20"
+            :width="2"
+            color="white"
+            indeterminate
+          ></v-progress-circular>
+        </div>
+        <template v-else>
+          <div>{{ weekDay.day }}</div>
+          <div>{{ weekDay.dayNumber }}</div>
+        </template>
       </div>
     </div>
   </v-card>
@@ -23,6 +33,14 @@ export default {
     selectedDate: {
       type: String,
       default: () => moment().format('DD-MM-YYYY'),
+    },
+    loadingDay: {
+      type: Number,
+      default: null,
+    },
+    isLoading: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {
@@ -106,5 +124,23 @@ export default {
 .weekdays .day.active {
   background-color: #288bd5;
   color: #fff;
+}
+
+.weekdays .day.loading {
+  opacity: 0.9;
+  cursor: wait;
+}
+
+.weekdays .day.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.day-loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 32px;
 }
 </style>

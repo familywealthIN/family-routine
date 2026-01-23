@@ -98,6 +98,7 @@
             @error="error = $event"
             @update:loading="loading = $event"
             @update:saving="saving = $event"
+            @goal-ref-changed="refetchRelatedGoalsData"
             @update:valid="isFormValid = $event"
             @task-created="handleTaskCreated"
             @success="handleSuccess"
@@ -233,6 +234,7 @@
             @error="error = $event"
             @update:loading="loading = $event"
             @update:saving="saving = $event"
+            @goal-ref-changed="refetchRelatedGoalsData"
             @update:valid="isFormValid = $event"
             @task-created="handleTaskCreated"
             @success="handleSuccess"
@@ -307,6 +309,7 @@ export default {
       saving: false,
       hasSubmitted: false,
       isFormValid: false,
+      activeGoalRef: '',
       showTopShadow: false,
       showBottomShadow: false,
       routineData: [],
@@ -445,48 +448,35 @@ export default {
     // Query for related goals data (used when a goal is selected as milestone)
     relatedGoalsData: {
       query: gql`
-        query getRelatedGoalsData($goalRef: ID!) {
-          goalItemMilestone(goalRef: $goalRef) {
+        query goalsByGoalRef($goalRef: String!) {
+          goalsByGoalRef(goalRef: $goalRef) {
             id
-            body
-            period
             date
-            taskRef
-            tags
-            isComplete
+            period
+            goalItems {
+              id
+              body
+              isComplete
+              goalRef
+              taskRef
+              tags
+              isMilestone
+            }
           }
         }
       `,
       variables() {
-        // Get goalRef from the active form
-        if (this.isTaskMode && this.$refs.taskForm) {
-          const { taskData } = this.$refs.taskForm;
-          return { goalRef: (taskData && taskData.goalRef) || '' };
-        }
-        if (!this.isTaskMode && this.$refs.goalForm) {
-          const { milestoneData } = this.$refs.goalForm;
-          return { goalRef: (milestoneData && milestoneData.goalRef) || '' };
-        }
-        return { goalRef: '' };
+        return { goalRef: this.activeGoalRef || '' };
       },
       skip() {
         // Skip if not authenticated
         if (!this.$root.$data.email) return true;
 
         // Skip if no goalRef is set
-        if (this.isTaskMode && this.$refs.taskForm) {
-          const { taskData } = this.$refs.taskForm;
-          return !taskData || !taskData.goalRef;
-        }
-        if (!this.isTaskMode && this.$refs.goalForm) {
-          const { milestoneData } = this.$refs.goalForm;
-          return !milestoneData || !milestoneData.goalRef;
-        }
-
-        return true;
+        return !this.activeGoalRef;
       },
       update(data) {
-        return data.goalItemMilestone || [];
+        return data && data.goalsByGoalRef ? data.goalsByGoalRef : [];
       },
     },
   },
@@ -548,6 +538,14 @@ export default {
   },
 
   methods: {
+    refetchRelatedGoalsData(goalRef = '') {
+      if (goalRef) {
+        this.activeGoalRef = goalRef;
+      }
+      if (this.$apollo && this.$apollo.queries && this.$apollo.queries.relatedGoalsData) {
+        this.$apollo.queries.relatedGoalsData.refetch();
+      }
+    },
     handleScroll() {
       const el = this.$refs.scrollableContent;
       if (!el) return;

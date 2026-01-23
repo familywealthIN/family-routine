@@ -1,9 +1,9 @@
 <template>
-  <v-layout row >
+  <v-layout row class="container-box-layout">
     <v-flex xs12 lg10 offset-lg1>
       <v-card
         max-width="800"
-        :class="transparent ? 'transparent mx-auto elevation-0' : 'mx-auto'"
+        :class="transparent ? 'transparent mx-auto elevation-0 main-card' : 'mx-auto main-card'"
       >
         <div
           v-if="isLoading"
@@ -62,5 +62,21 @@ export default {
 
 .transparent {
   background-color: transparent;
+}
+
+.main-card {
+  border-radius: 16px;
+}
+
+@media (max-width: 767px) {
+  .main-card {
+    border-radius: 0;
+  }
+}
+
+@media (min-width: 768px) {
+  .container-box-layout {
+    margin: 24px 0 24px 0;
+  }
 }
 </style>

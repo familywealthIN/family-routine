@@ -23,45 +23,10 @@
         label="Goal Task"
       >
       </v-select>
-    </v-flex>    <!-- Condensed timeline showing related goals based on selected goalRef -->
-    <v-flex xs12 d-flex v-if="relatedTasks.length > 0 && newGoalItem.goalRef">
-      <v-card flat class="condensed-timeline mb-3 modern-shadow-sm" style="width: 100%;">
-        <v-card-title class="pb-2">
-          <v-icon left small>track_changes</v-icon>
-          <span class="subtitle-2">Related Goals ({{ relatedTasks.length }})</span>
-        </v-card-title>
-        <v-card-text class="pt-0">
-          <v-timeline dense>
-            <v-timeline-item
-              v-for="task in relatedTasks"
-              :key="task.id"
-              :color="task.isComplete ? 'green' : 'orange'"
-              small
-              class="mb-1"
-            >              <v-layout align-center>
-                <v-flex>
-                  <div v-if="task.date" class="caption text--secondary">
-                    {{ formatDateToDayOfWeek(task.date) }}
-                  </div>
-                  <span class="caption text--secondary">{{ formatTime(task.time) }}</span>
-                  <div class="body-2">{{ task.body }}</div>
-                  <div v-if="task.tags && task.tags.length > 0" class="mt-1">
-                    <v-chip
-                      v-for="tag in task.tags"
-                      :key="tag"
-                      x-small
-                      outlined
-                      class="mr-1"
-                    >
-                      {{ tag }}
-                    </v-chip>
-                  </div>
-                </v-flex>
-              </v-layout>
-            </v-timeline-item>
-          </v-timeline>
-        </v-card-text>
-      </v-card>
+    </v-flex>
+    <!-- Related tasks timeline -->
+    <v-flex xs12 d-flex v-if="newGoalItem.goalRef">
+      <related-tasks-timeline :tasks="relatedTasks" />
     </v-flex>
     <v-flex xs12 d-flex>
       <goal-tags-input
@@ -90,6 +55,7 @@ import taskStatusMixin from '@/composables/useTaskStatus';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../../../utils/getDates';
 import getJSON from '../../../utils/getJSON';
 import GoalTagsInput from '../GoalTagsInput/GoalTagsInput.vue';
+import RelatedTasksTimeline from '../RelatedTasksTimeline/RelatedTasksTimeline.vue';
 import { USER_TAGS } from '../../../constants/settings';
 import eventBus, { EVENTS } from '../../../utils/eventBus';
 import measurementMixins from '../../../utils/measurementMixins';
@@ -97,6 +63,7 @@ import measurementMixins from '../../../utils/measurementMixins';
 export default {
   components: {
     GoalTagsInput,
+    RelatedTasksTimeline,
   },
   mixins: [taskStatusMixin, measurementMixins],
   props: [
@@ -135,6 +102,9 @@ export default {
         return {
           ...stepupMilestonePeriodDate(this.period, this.date),
         };
+      },
+      skip() {
+        return !this.period || !this.date;
       },
       error() {
         this.loading = false;
@@ -645,15 +615,6 @@ export default {
 .condensed-timeline .v-timeline {
   padding-top: 0;
 }
-
-.condensed-timeline .v-timeline-item {
-  padding-bottom: 8px !important;
-}
-
-.condensed-timeline .v-timeline-item__body {
-  max-width: calc(100% - 32px);
-}
-
 .condensed-timeline .v-card-title {
   padding-bottom: 8px;
 }

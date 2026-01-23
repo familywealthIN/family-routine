@@ -25,16 +25,49 @@ class HttpMCPServer {
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true }));
 
-    // API Key authentication middleware
+    // OAuth and API Key authentication middleware
     this.app.use('/mcp', async (req, res, next) => {
-      const apiKey = req.headers['x-api-key'] || req.headers.authorization?.replace('Bearer ', '');
+      // Skip auth for OAuth endpoints and configuration
+      if (req.path === '/oauth/token' || req.path === '/oauth/authorize' || req.path === '/.well-known/mcp-configuration') {
+        return next();
+      }
+
+      // Try OAuth token first (Bearer token)
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.replace('Bearer ', '');
+        try {
+          // Try to find user by OAuth access token
+          const user = await UserModel.findOne({ 'oauth.accessToken': token }).exec();
+          if (user) {
+            // Check if token is expired
+            if (user.oauth.expiresAt && new Date(user.oauth.expiresAt) < new Date()) {
+              return res.status(401).json({
+                jsonrpc: '2.0',
+                error: {
+                  code: -32001,
+                  message: 'OAuth token expired',
+                },
+              });
+            }
+            req.user = user;
+            req.context = { decodedToken: { email: user.email } };
+            return next();
+          }
+        } catch (error) {
+          console.error('OAuth token validation error:', error);
+        }
+      }
+
+      // Fallback to API Key authentication (X-API-Key header or legacy Bearer)
+      const apiKey = req.headers['x-api-key'] || (authHeader && authHeader.replace('Bearer ', ''));
 
       if (!apiKey) {
         return res.status(401).json({
           jsonrpc: '2.0',
           error: {
             code: -32001,
-            message: 'API Key required. Please provide API key in X-API-Key header or Authorization header.',
+            message: 'Authentication required. Please provide OAuth token or API key.',
           },
         });
       }
@@ -46,7 +79,7 @@ class HttpMCPServer {
             jsonrpc: '2.0',
             error: {
               code: -32001,
-              message: 'Invalid API Key',
+              message: 'Invalid API Key or OAuth token',
             },
           });
         }
@@ -67,6 +100,105 @@ class HttpMCPServer {
   }
 
   setupRoutes() {
+    // OAuth configuration endpoint for ChatGPT
+    this.app.get('/mcp/.well-known/mcp-configuration', (req, res) => {
+      const baseUrl = process.env.MCP_BASE_URL || 'https://your-domain.com';
+      res.json({
+        oauth: {
+          authorizationUrl: `${baseUrl}/mcp/oauth/authorize`,
+          tokenUrl: `${baseUrl}/mcp/oauth/token`,
+          scopes: ['read', 'write'],
+        },
+      });
+    });
+
+    // OAuth Authorization endpoint
+    this.app.get('/mcp/oauth/authorize', async (req, res) => {
+      const { client_id, redirect_uri, state, response_type } = req.query;
+
+      if (response_type !== 'code') {
+        return res.status(400).json({ error: 'Unsupported response_type' });
+      }
+
+      // Redirect to web app for authentication
+      const webAppUrl = process.env.WEB_APP_URL || 'https://routine.familywealth.in';
+      res.redirect(`${webAppUrl}/oauth/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(redirect_uri)}&state=${state}`);
+    });
+
+    // OAuth Token endpoint
+    this.app.post('/mcp/oauth/token', async (req, res) => {
+      const { grant_type, code, client_id, client_secret, refresh_token } = req.body;
+
+      // Validate client credentials
+      const validClientId = process.env.OAUTH_CLIENT_ID || 'routine-notes-mcp';
+      const validClientSecret = process.env.OAUTH_CLIENT_SECRET || 'frt_secret_' + require('crypto').randomBytes(16).toString('hex');
+
+      if (client_id !== validClientId || client_secret !== validClientSecret) {
+        return res.status(401).json({ error: 'Invalid client credentials' });
+      }
+
+      try {
+        if (grant_type === 'authorization_code') {
+          // Exchange authorization code for access token
+          const user = await UserModel.findOne({ 'oauth.authCode': code }).exec();
+
+          if (!user) {
+            return res.status(401).json({ error: 'Invalid authorization code' });
+          }
+
+          // Generate tokens
+          const crypto = require('crypto');
+          const accessToken = `mcp_${crypto.randomBytes(32).toString('hex')}`;
+          const refreshToken = `mcpr_${crypto.randomBytes(32).toString('hex')}`;
+          const expiresIn = 3600; // 1 hour
+
+          // Save tokens
+          user.oauth = {
+            accessToken,
+            refreshToken,
+            expiresAt: new Date(Date.now() + expiresIn * 1000),
+            authCode: null,
+          };
+          await user.save();
+
+          return res.json({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            token_type: 'Bearer',
+            expires_in: expiresIn,
+          });
+        } else if (grant_type === 'refresh_token') {
+          // Refresh access token
+          const user = await UserModel.findOne({ 'oauth.refreshToken': refresh_token }).exec();
+
+          if (!user) {
+            return res.status(401).json({ error: 'Invalid refresh token' });
+          }
+
+          // Generate new access token
+          const crypto = require('crypto');
+          const accessToken = `mcp_${crypto.randomBytes(32).toString('hex')}`;
+          const expiresIn = 3600;
+
+          user.oauth.accessToken = accessToken;
+          user.oauth.expiresAt = new Date(Date.now() + expiresIn * 1000);
+          await user.save();
+
+          return res.json({
+            access_token: accessToken,
+            refresh_token: user.oauth.refreshToken,
+            token_type: 'Bearer',
+            expires_in: expiresIn,
+          });
+        } else {
+          return res.status(400).json({ error: 'Unsupported grant_type' });
+        }
+      } catch (error) {
+        console.error('OAuth token error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
     // MCP Server info endpoint
     this.app.get('/mcp', (req, res) => {
       const now = new Date();
@@ -79,6 +211,11 @@ class HttpMCPServer {
         description: 'MCP Server for Routine Notes GraphQL API with date context support',
         current_date: currentDate.current_date,
         date_format: 'dd-mm-yyyy',
+        authentication: {
+          type: 'oauth',
+          oauth_config_url: '/.well-known/mcp-configuration',
+          legacy_api_key: 'supported (X-API-Key header)',
+        },
         capabilities: {
           resources: true,
           tools: true,
@@ -90,6 +227,9 @@ class HttpMCPServer {
           'GET /mcp/tools': 'List available tools',
           'GET /mcp/events': 'SSE endpoint for real-time updates',
           'POST /mcp/events/send': 'Send events to SSE clients',
+          'GET /mcp/.well-known/mcp-configuration': 'OAuth configuration',
+          'GET /mcp/oauth/authorize': 'OAuth authorization',
+          'POST /mcp/oauth/token': 'OAuth token exchange',
         },
         date_context: {
           description: 'Date context is automatically provided in dd-mm-yyyy format',

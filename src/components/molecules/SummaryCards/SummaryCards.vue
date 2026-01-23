@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card class="flex-column" style="width: 100%;">
     <v-card-title class="headline">
       Description
       <v-spacer></v-spacer>
@@ -7,14 +7,14 @@
         <v-icon>mdi-refresh</v-icon>
       </v-btn>
     </v-card-title>
-    <v-card-text>
-      <div v-if="loading" class="text-center">
+    <v-card-text class="flex-grow-1 d-flex align-center">
+      <div v-if="loading" class="text-center w-100">
         <v-progress-circular indeterminate color="primary"></v-progress-circular>
       </div>
-      <div v-else-if="error" class="error--text">
+      <div v-else-if="error" class="error--text w-100">
         {{ error }}
       </div>
-      <div v-else class="text-body-1">
+      <div v-else class="text-body-1 w-100">
         {{ summary }}
       </div>
     </v-card-text>

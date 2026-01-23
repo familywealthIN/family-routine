@@ -227,10 +227,6 @@ export default {
     border-radius: 0;
 }
 
-#mobileLayout .v-btn--bottom:not(.v-btn--absolute) {
-    bottom: 70px;
-}
-
 #mobileLayout .v-btn--bottom:not(.v-btn--absolute).second-right-btn {
     right: 16px;
 }
