@@ -151,9 +151,7 @@ export default {
       // Since goalsByGoalRef already filters by goalRef on the server,
       // we just need to flatten the goalItems and add time information
       const relatedTasks = [];
-      console.log('Finding related tasks for goalRef:', this.taskData.goalRef, this.relatedGoalsData);
       this.relatedGoalsData.forEach((goal) => {
-        console.log('Processing goal for related tasks:', goal);
         if (goal.goalItems && Array.isArray(goal.goalItems)) {
           goal.goalItems.forEach((goalItem) => {
             // Add time from tasklist if available
@@ -172,8 +170,6 @@ export default {
           });
         }
       });
-
-      console.log('Related tasks for goalRef', this.taskData.goalRef, relatedTasks);
 
       // Sort by time and limit to 10 for condensed view
       return relatedTasks
