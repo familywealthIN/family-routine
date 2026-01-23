@@ -28,6 +28,12 @@ const UserSchema = new mongoose.Schema({
     unique: true,
     sparse: true, // allows multiple null values
   },
+  oauth: {
+    accessToken: String,
+    refreshToken: String,
+    expiresAt: Date,
+    authCode: String, // Temporary auth code for OAuth flow
+  },
   needsOnboarding: {
     type: Boolean,
     default: true,
@@ -105,6 +111,7 @@ const UserItemType = new GraphQLObjectType({
     invitedEmail: { type: GraphQLString },
     needsOnboarding: { type: GraphQLBoolean },
     apiKey: { type: GraphQLString },
+    oauthConnected: { type: GraphQLBoolean },
     motto: {
       type: new GraphQLList(MottoItemType),
     },

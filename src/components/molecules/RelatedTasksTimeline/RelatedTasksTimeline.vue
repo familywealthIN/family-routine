@@ -25,18 +25,6 @@
               </span>
               <!-- Body/Title -->
               <div class="body-2">{{ task.body }}</div>
-              <!-- Tags -->
-              <div v-if="task.tags && task.tags.length > 0" class="mt-1">
-                <v-chip
-                  v-for="tag in task.tags"
-                  :key="tag"
-                  x-small
-                  outlined
-                  class="mr-1"
-                >
-                  {{ tag }}
-                </v-chip>
-              </div>
             </v-flex>
           </v-layout>
         </v-timeline-item>

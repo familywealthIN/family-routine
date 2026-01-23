@@ -2,7 +2,7 @@
 /* eslint-disable max-len */
 </script>
 <template>
-  <container-box :isLoading="$apollo.queries.goals.loading">
+  <container-box :isLoading="$apollo.queries.goals.loading || (rangeType === 'past' && $apollo.queries.pastGoals.loading)">
     <v-card
       dark
       flat
@@ -35,7 +35,7 @@
         @click="() => {
           trackUserInteraction('add_goal_dialog_open', 'button_click', {
             from_page: 'goals',
-            goals_count: goals ? goals.length : 0,
+            goals_count: allGoals ? allGoals.length : 0,
           });
           addGoalItemDialog = true;
         }"
@@ -122,10 +122,10 @@
             </v-btn-toggle>
           </div>
         </div>
-        <div v-else :key="period.name">
+        <div v-else :key="`${period.name}-filter`">
           <goals-filter-time
             :key="period.name"
-            :goals="goals"
+            :goals="allGoals"
             :periodFilter="period.name"
             :rangeType="rangeType"
             :updateNewGoalItem="updateNewGoalItem"
@@ -190,44 +190,131 @@ export default {
     ContainerBox,
   },
   apollo: {
-    goals: gql`
-      query {
-        goals {
-          id
-          date
-          period
-          goalItems {
+    goals: {
+      query: gql`
+        query goalsOptimized($currentMonth: String) {
+          goalsOptimized(currentMonth: $currentMonth) {
             id
-            body
-            tags
-            isComplete
-            isMilestone
-            contribution,
-            reward,
-            taskRef
-            goalRef
-            status
-            createdAt
-            originalDate
-            subTasks {
+            date
+            period
+            goalItems {
               id
               body
+              tags
               isComplete
-            },
+              isMilestone
+              contribution,
+              reward,
+              taskRef
+              goalRef
+              status
+              createdAt
+              originalDate
+              subTasks {
+                id
+                body
+                isComplete
+              },
+            }
           }
         }
-      }
-    `,
+      `,
+      variables() {
+        return {
+          currentMonth: this.currentMonthVariable || moment().endOf('month').format('DD-MM-YYYY'),
+        };
+      },
+      skip() {
+        return !this.$root.$data.email;
+      },
+      update(data) {
+        console.log('[GoalsTime] goals query update:', data);
+        return data.goalsOptimized || [];
+      },
+    },
+    pastGoals: {
+      query: gql`
+        query goalsPast {
+          goalsPast {
+            id
+            date
+            period
+            goalItems {
+              id
+              body
+              tags
+              isComplete
+              isMilestone
+              contribution,
+              reward,
+              taskRef
+              goalRef
+              status
+              createdAt
+              originalDate
+              subTasks {
+                id
+                body
+                isComplete
+              },
+            }
+          }
+        }
+      `,
+      skip() {
+        return !this.$root.$data.email || this.rangeType !== 'past';
+      },
+      update(data) {
+        console.log('[GoalsTime] pastGoals query update:', data);
+        return data.goalsPast || [];
+      },
+    },
+  },
+  watch: {
+    goals(newVal) {
+      console.log('[GoalsTime] goals updated:', {
+        count: newVal ? newVal.length : 0,
+        periods: newVal ? newVal.reduce((acc, g) => {
+          acc[g.period] = (acc[g.period] || 0) + 1;
+          return acc;
+        }, {}) : {},
+        sample: newVal ? newVal.slice(0, 5).map((g) => ({ period: g.period, date: g.date, itemsCount: g.goalItems.length })) : [],
+      });
+    },
+    allGoals(newVal) {
+      console.log('[GoalsTime] allGoals computed:', {
+        count: newVal ? newVal.length : 0,
+        periods: newVal ? newVal.reduce((acc, g) => {
+          acc[g.period] = (acc[g.period] || 0) + 1;
+          return acc;
+        }, {}) : {},
+      });
+    },
   },
   computed: {
     date() {
       return moment().format('DD-MM-YYYY');
     },
+    // Merge goals from optimized query and past query
+    allGoals() {
+      const optimizedGoals = this.goals || [];
+      const past = this.pastGoals || [];
+
+      // Combine and deduplicate by id
+      const goalsMap = new Map();
+      [...optimizedGoals, ...past].forEach((goal) => {
+        if (goal && goal.id) {
+          goalsMap.set(goal.id, goal);
+        }
+      });
+
+      return Array.from(goalsMap.values());
+    },
     // convert the list of events into a map of lists keyed by date
     goalsMap() {
       const map = {};
-      if(this.goals) {
-        this.goals.forEach((goal) => {
+      if(this.allGoals) {
+        this.allGoals.forEach((goal) => {
           if(goal.period === 'day') {
             const date = this.formatCalendarDate(goal.date);
             (map[date] = map[date] || []).push(goal);
@@ -243,6 +330,7 @@ export default {
     start: moment().format('YYYY-MM-DD'),
     end: moment().endOf('year').format('YYYY-MM-DD'),
     currentMonth: moment().format('MMMM YYYY'),
+    currentMonthVariable: moment().endOf('month').format('DD-MM-YYYY'),
     valid: true,
     addGoalItemDialog: false,
     buttonLoading: false,
@@ -267,14 +355,20 @@ export default {
     selectedDayGoal: {}
   }),
   methods: {
-    updateRange({ start }) {
+    async updateRange({ start }) {
       this.currentMonth = moment(start.date, 'YYYY-MM-DD').format('MMMM YYYY');
+      this.currentMonthVariable = moment(start.date, 'YYYY-MM-DD').endOf('month').format('DD-MM-YYYY');
+
+      // Refetch optimized goals for the new month
+      await this.$apollo.queries.goals.refetch({
+        currentMonth: this.currentMonthVariable,
+      });
     },
     formatCalendarDate(date) {
       return moment(date, 'DD-MM-YYYY').format('YYYY-MM-DD');
     },
     getGoal(period, date) {
-      const goal = this.goals.find((aGoal) => aGoal.period === period && aGoal.date === date);
+      const goal = this.allGoals.find((aGoal) => aGoal.period === period && aGoal.date === date);
       if (!goal) {
         const newGoal = {
           id: `${Math.random()}`,
@@ -282,6 +376,9 @@ export default {
           date,
           goalItems: [],
         };
+        if (!this.goals) {
+          this.goals = [];
+        }
         this.goals.push(newGoal);
         return newGoal;
       }
@@ -289,7 +386,7 @@ export default {
       return goal;
     },
     getLifetimeGoalsCount() {
-      const lifetimeGoals = this.goals && this.goals.find((goal) => goal && goal.period === 'lifetime');
+      const lifetimeGoals = this.allGoals && this.allGoals.find((goal) => goal && goal.period === 'lifetime');
       return lifetimeGoals && lifetimeGoals.goalItems && lifetimeGoals.goalItems.length || 0
     },
     updateNewGoalItem(goalItem, period, date) {
@@ -353,7 +450,7 @@ export default {
     this.trackPageView('goals');
     this.trackUserInteraction('goals_page_mounted', 'lifecycle', {
       component: 'GoalsTime',
-      goals_count: this.goals ? this.goals.length : 0,
+      goals_count: this.allGoals ? this.allGoals.length : 0,
     });
   },
 };

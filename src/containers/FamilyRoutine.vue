@@ -24,6 +24,7 @@
       <v-img
         src="https://cdn.vuetifyjs.com/images/cards/forest.jpg"
         gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
+        class="image-card-img"
       >
         <v-container fill-height>
           <v-layout align-center>
@@ -505,6 +506,24 @@ export default {
 </script>
 
 <style>
+  .image-card {
+    border-radius: 16px;
+  }
+
+  .image-card-img {
+    border-radius: 16px !important;
+  }
+
+  @media (max-width: 767px) {
+    .image-card {
+      border-radius: 0;
+    }
+
+    .image-card-img {
+      border-radius: 0 !important;
+    }
+  }
+
   .custom-loader {
     animation: loader 1s infinite;
     display: flex;

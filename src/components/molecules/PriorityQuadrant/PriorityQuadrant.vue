@@ -18,10 +18,10 @@
             @click="$emit('item-click', item)"
             class="quadrant-item"
           >
-            <v-list-tile-action>
+            <v-list-tile-action @click.stop>
               <v-checkbox
                 :input-value="item.isComplete"
-                @click.stop="$emit('toggle-complete', item)"
+                @change="$emit('toggle-complete', item)"
                 dark
                 color="white"
               />

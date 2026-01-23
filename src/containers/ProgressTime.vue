@@ -90,10 +90,10 @@ import moment from 'moment';
 import gql from 'graphql-tag';
 
 import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
-import NumericCard from '../components/DashboardCards/NumericCard.vue';
-import RadarCard from '../components/DashboardCards/RadarCard.vue';
-import TableCard from '../components/DashboardCards/TableCard.vue';
-import TasksCompletedCard from '../components/DashboardCards/TasksCompletedCard.vue';
+import NumericCard from '../components/atoms/NumericCard/NumericCard.vue';
+import RadarCard from '../components/atoms/RadarCard/RadarCard.vue';
+import TableCard from '../components/molecules/TableCard/TableCard.vue';
+import TasksCompletedCard from '../components/atoms/TasksCompletedCard/TasksCompletedCard.vue';
 
 export default {
   components: {
