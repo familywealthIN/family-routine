@@ -66,6 +66,8 @@ provider:
     DOMAIN: ${self:custom.secrets.DOMAIN}
     ENCRYPTION_KEY: ${self:custom.secrets.ENCRYPTION_KEY}
     GEMINI_API_KEY: ${self:custom.secrets.GEMINI_API_KEY}
+    OPENROUTER_API_KEY: ${self:custom.secrets.OPENROUTER_API_KEY}
+    MCP_BASE_URL: ${self:custom.secrets.MCP_BASE_URL}
 
 functions:
   query:
