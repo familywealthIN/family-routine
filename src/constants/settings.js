@@ -6,6 +6,7 @@ export const GC_NOTIFICATION_TOKEN = 'notification-token';
 export const USER_TAGS = 'USER_TAGS';
 export const TIMES_UP_TIME = 30;
 export const PROACTIVE_START_TIME = 60;
+export const ONBOARDING_COMPLETE = 'ONBOARDING_COMPLETE';
 
 // Profile Settings Constants
 export const PROFILE_SETTINGS = {
@@ -19,6 +20,8 @@ export const PROFILE_SETTINGS = {
     day: 5, // Number of days to be completed to auto check week goal
   },
   defaultTimezone: '+05:50', // GMT +5:30 (India Standard Time)
+  // Added user preference for time display (12h or 24h)
+  timeFormat: '24h',
 };
 
 // Week start options

@@ -8,7 +8,7 @@
 </template>
 
 <script>
-import RadarChart from '../RadarChart.vue';
+import RadarChart from '../molecules/RadarChart/RadarChart.vue';
 
 export default {
   components: {

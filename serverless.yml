@@ -43,6 +43,8 @@ package:
     - node_modules/.cache/**
     - node_modules/core-js/**
     - node_modules/aws-sdk/**
+    - node_modules/@storybook/**
+    - node_modules/storybook/**
   include:
     - src/server/**
     - serverless.js
@@ -57,6 +59,8 @@ provider:
     MONGDO_DEBUG: ${self:custom.secrets.MONGDO_DEBUG}
     GOOGLE_CLIENT_ID: ${self:custom.secrets.GOOGLE_CLIENT_ID}
     GOOGLE_CLIENT_KEY: ${self:custom.secrets.GOOGLE_CLIENT_KEY}
+    GA_IOS_CLIENT_ID: ${self:custom.secrets.GA_IOS_CLIENT_ID}
+    GA_CLIENT_ID: ${self:custom.secrets.GA_CLIENT_ID}
     JWT_SECRET: ${self:custom.secrets.JWT_SECRET}
     DOMAIN: ${self:custom.secrets.DOMAIN}
     ENCRYPTION_KEY: ${self:custom.secrets.ENCRYPTION_KEY}

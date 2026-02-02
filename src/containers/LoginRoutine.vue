@@ -56,6 +56,7 @@ import gql from 'graphql-tag';
 import { saveData, clearData, getSessionItem, isRunningStandalone } from '../token';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
+import { MeasurementMixin } from '@/utils/measurementMixins.js';
 
 import {
   GC_USER_NAME,
@@ -65,10 +66,11 @@ import {
   USER_TAGS,
   GC_AUTH_TOKEN,
 } from '../constants/settings';
-import ContainerBox from '../components/ContainerBox.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 
 export default {
   name: 'Login',
+  mixins: [MeasurementMixin],
   components: {
     ContainerBox,
   },
@@ -164,6 +166,10 @@ export default {
         })
         .catch((error) => {
           console.log(error);
+          this.trackError('login_error', error, {
+            provider: 'google',
+            error_type: 'auth_failure',
+          });
           this.isLoading = false;
           window.location.reload();
         });
@@ -185,6 +191,10 @@ export default {
           console.log(error);
         });
       } else {
+      this.trackUserInteraction('logout_attempt', 'button_click', {
+        provider: 'google',
+      });
+
       this.$gAuth
         .signOut()
         .then(async () => {
@@ -195,9 +205,17 @@ export default {
           this.$root.$data.userName = getSessionItem(GC_USER_NAME);
           this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
           this.$root.$data.picture = getSessionItem(GC_PICTURE);
+
+          this.trackUserInteraction('logout_success', 'auth_flow', {
+            provider: 'google',
+          });
         })
         .catch((error) => {
           console.log(error);
+          this.trackError('logout_error', error, {
+            provider: 'google',
+            error_type: 'signout_failure',
+          });
           this.$notify({
             title: 'Logout',
             text: 'Unable to Logout',
@@ -256,7 +274,7 @@ export default {
             this.isAuthenticatedSignIn = this.$gAuth.isAuthorized;
           }
           
-          const userData = { token, email, name, picture };
+          const userData = { token, email, name, picture, notificationId: notificationId };
           try {
             await saveData(userData);
             console.log('saveData completed successfully');
@@ -273,9 +291,25 @@ export default {
           
           this.$root.$data.picture = getSessionItem(GC_PICTURE);
 
+          // Track successful login
+          this.trackBusinessEvent('user_login', {
+            provider: 'google',
+            is_new_user: needsOnboarding,
+            user_email: email,
+            tags_count: tags.length,
+          });
+
           if (needsOnboarding) {
+            this.trackUserInteraction('onboarding_redirect', 'navigation', {
+              from_page: 'login',
+              to_page: 'wizard',
+            });
             this.$router.push('wizard');
           } else {
+            this.trackUserInteraction('dashboard_redirect', 'navigation', {
+              from_page: 'login',
+              to_page: 'home',
+            });
             this.$router.push('home');
           }
 
@@ -285,6 +319,10 @@ export default {
         },
       }).catch((error) => {
           this.isLoading = false;
+          this.trackError('login_session_error', error, {
+            provider: 'google',
+            error_type: 'auth_mutation_failure',
+          });
           this.$notify({
             title: 'Login',
             text: 'Unable to Login',
@@ -324,6 +362,11 @@ export default {
       this.isStandalone = isRunningStandalone() && token;
       this.isAuthenticatedSignIn = this.isSignIn || this.isStandalone;
       if (this.isAuthenticatedSignIn) {
+        this.trackUserInteraction('auto_redirect_authenticated', 'navigation', {
+          from_page: 'login',
+          to_page: 'home',
+          redirect_count: this.redirectCount,
+        });
         this.$router.push('home');
         this.isLoading = false;
         // eslint-disable-next-line no-plusplus

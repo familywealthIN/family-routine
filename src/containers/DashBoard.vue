@@ -1,18 +1,30 @@
 <template>
-  <container-box transparent="true" :isLoading="isLoading">
-    <v-card class="ma-3">
-      <div class="weekdays pt-2 pb-2">
-        <div
-          v-for="(weekDay, i) in weekDays"
-          :key="weekDay.day"
-          @click="setDate(i)"
-          :class="`day ${weekDay.isActive ? 'active' : ''}`"
-        >
-          <div>{{ weekDay.day }}</div>
-          <div>{{ weekDay.dayNumber }}</div>
-        </div>
-      </div>
-    </v-card>
+  <div class="pull-to-refresh-container"
+       @touchstart="handleTouchStart"
+       @touchmove="handleTouchMove"
+       @touchend="handleTouchEnd"
+       @scroll="handleScroll">
+    <!-- Pull to refresh indicator -->
+    <div class="pull-to-refresh-indicator"
+         :class="{ 'visible': pullDistance > 0, 'refreshing': isRefreshing }"
+         :style="{ transform: `translateY(${Math.min(pullDistance, 80)}px)` }">
+      <v-progress-circular
+        v-if="isRefreshing"
+        indeterminate
+        color="primary"
+        size="24">
+      </v-progress-circular>
+      <v-icon v-else color="primary" size="24">refresh</v-icon>
+      <span class="refresh-text">
+        {{ isRefreshing ? 'Refreshing...' : (pullDistance > 60 ? 'Release to refresh' : 'Pull to refresh') }}
+      </span>
+    </div>
+
+    <container-box transparent="true" :isLoading="isLoading">
+      <weekday-selector
+        :selectedDate="date"
+        @date-selected="handleDateSelected"
+      />
     <div v-if="isTodaySelected">
       <div class="d-flex pr-3 pl-3 title-options">
         <h2>
@@ -71,7 +83,7 @@
                       </v-list-tile-title>
                       <v-list-tile-sub-title class="pt-2">
                         <div class="time-text">
-                          {{ currentTask.time }} - {{ countTaskCompleted(currentTask) }}/{{ countTaskTotal(currentTask) }}
+                          {{ displayTime(currentTask.time) }} - {{ countTaskCompleted(currentTask) }}/{{ countTaskTotal(currentTask) }}
                         </div>
                         <div>
                           <v-btn-toggle v-model="currentGoalPeriod">
@@ -197,12 +209,6 @@
                         <small class="no-goals-text" v-else>
                           No goal or activity logged.
                         </small>
-                        <div class="add-new">
-                          <v-btn small flat @click="goalDetailsDialog = true">
-                            <v-icon>add</v-icon>
-                            Add Goal or Activity
-                          </v-btn>
-                        </div>
                       </div>
                     </v-list-tile-content>
                   </v-list-tile>
@@ -352,7 +358,7 @@
                       </v-list-tile-title>
                       <v-list-tile-sub-title v-if="task.id === selectedTaskRef">
                         <div class="time-text">
-                          {{ task.time }} - {{ countTaskCompleted(task) }}/{{ countTaskTotal(task) }}
+                          {{ displayTime(task.time) }} - {{ countTaskCompleted(task) }}/{{ countTaskTotal(task) }}
                         </div>
                         <div>
                           <v-btn-toggle v-model="currentGoalPeriod">
@@ -372,7 +378,7 @@
                         </div>
                       </v-list-tile-sub-title>
                       <v-list-tile-sub-title v-else>
-                        {{ task.time }}
+                        {{ displayTime(task.time) }}
                       </v-list-tile-sub-title>
                       <div v-if="task.id === selectedTaskRef" class="pt-2 pb-2 task-goals">
                         <v-layout
@@ -440,12 +446,6 @@
                         <small class="no-goals-text" v-else>
                           No goal or activity logged.
                         </small>
-                        <div class="add-new">
-                          <v-btn small flat @click="goalDetailsDialog = true">
-                            <v-icon>add</v-icon>
-                            Add Goal or Activity
-                          </v-btn>
-                        </div>
                       </div>
                     </v-list-tile-content>
                     <v-list-tile-action v-if="task.id !== selectedTaskRef">
@@ -459,191 +459,78 @@
                 </div>
               </v-list>
               <div v-if="filterUpcomingPastTask(tabs, tasklist) && filterUpcomingPastTask(tabs, tasklist).length === 0">
-
                   <v-card-text class="text-xs-center">
                     <p>No upcoming routine items.</p>
                   </v-card-text>
-
               </div>
             </v-card>
           </v-flex>
         </v-layout>
       </template>
     </div>
-    <div v-else>
-      <div class="pl-3 pr-3">
-        <p class="pt-4">
-          Work on your daily agenda to bring you closer to your lifetime goal.
-        </p>
-        <template
-          v-if="agendaGoals && agendaGoals.find((goal) => goal.period === 'lifetime')"
-        >
-          <v-card>
-            <v-card-title>
-              <h3>Remember your Lifetime Goals</h3>
-            </v-card-title>
-            <v-card-text class="pt-0">
-              <ul>
-                <li
-                  v-for="goalItem in agendaGoals.find(
-                    (goal) => goal.period === 'lifetime'
-                  ).goalItems"
-                  :key="goalItem.id"
-                >
-                  {{ goalItem.body }}
-                </li>
-              </ul>
+    <div class="non-current-day" v-else>
+      <div class="pl-3 pr-3 pt-3">
+        <h2 class="mb-3">{{ today }}</h2>
+
+        <!-- Loading state -->
+        <v-card v-if="$apollo.queries.agendaGoals.loading" class="modern-card">
+          <v-card-text class="text-xs-center pa-5">
+            <v-progress-circular
+              indeterminate
+              color="primary"
+              size="40"
+              class="mb-3"
+            ></v-progress-circular>
+            <p class="mb-0">Loading day tasks...</p>
+          </v-card-text>
+        </v-card>
+
+        <template v-else-if="tasklist && tasklist.length">
+          <template v-for="task in tasklist">
+            <div :key="task.id" class="mb-4">
+              <!-- Day tasks for this routine -->
+              <template v-if="filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length">
+                <v-list two-line class="modern-card pa-0">
+                  <template v-for="(taskGoals, i) in filterTaskGoalsPeriod(task.id, agendaGoals, 'day')">
+                    <v-list-tile
+                      v-for="goalItem in taskGoals.goalItems"
+                      :key="goalItem.id"
+                    >
+                      <v-list-tile-content @click="openEditGoalDialog(goalItem, taskGoals)">
+                        <v-list-tile-sub-title class="text--primary caption">{{ task.name }}</v-list-tile-sub-title>
+                        <v-list-tile-title>{{ goalItem.body }}</v-list-tile-title>
+                      </v-list-tile-content>
+                      <v-list-tile-action>
+                        <div class="d-flex">
+                          <v-btn icon small @click="openEditGoalDialog(goalItem, taskGoals)">
+                            <v-icon color="primary" size="20">edit</v-icon>
+                          </v-btn>
+                          <v-btn icon small @click="deleteAgendaGoalItem(goalItem.id, taskGoals.id)" class="ml-1">
+                            <v-icon color="error" size="20">delete</v-icon>
+                          </v-btn>
+                        </div>
+                      </v-list-tile-action>
+                    </v-list-tile>
+                    <v-divider v-if="i < filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length - 1" :key="`divider-${i}`"></v-divider>
+                  </template>
+                </v-list>
+              </template>
+            </div>
+          </template>
+
+          <!-- Show placeholder if no day tasks exist -->
+          <v-card v-if="!tasklist.some(task => filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length)" class="modern-card">
+            <v-card-text class="text-xs-center">
+              <p>No Day Tasks</p>
             </v-card-text>
           </v-card>
         </template>
-      </div>
-      <div class="text-xs-center date-navigation" hidden>
-        <v-btn
-          fab
-          outline
-          small
-          absolute
-          left
-          color="primary"
-          :disabled="disablePrevious()"
-          @click="previousDate()"
-        >
-          <v-icon dark> keyboard_arrow_left </v-icon>
-        </v-btn>
-        <v-btn
-          fab
-          outline
-          small
-          absolute
-          right
-          color="primary"
-          @click="nextDate()"
-        >
-          <v-icon dark> keyboard_arrow_right </v-icon>
-        </v-btn>
-        <div class="date-today">{{ today }}</div>
-      </div>
-      <div v-if="tasklist && tasklist.length">
-        <v-timeline dense clipped>
-          <!-- eslint-disable vue/valid-v-for -->
-          <template v-for="task in tasklist">
-            <!-- eslint-disable-next-line vue/valid-v-for -->
-            <span :key="`task-${task.id}`">
-              <v-timeline-item
-                fill-dot
-                :class="`pb-4 pt-4 routine-item ${getActiveClass(task)}`"
-                :color="getButtonColor(task)"
-                medium
-              >
-                <template v-slot:icon>
-                  <v-icon @click="setActiveSelection(task)" class="white--text">{{ getButtonIcon(task) }}</v-icon>
-                </template>
-                <v-layout>
-                  <v-flex xs2>
-                    <strong>{{ task.time }}</strong>
-                  </v-flex>
-                  <v-flex>
-                    <strong>{{ task.name }}</strong>
-                    <br />
-                    <a @click="() => $router.push(`/agenda/tree/${task.id}`)"
-                      >Go to Month Planner</a
-                    >
-                    <div class="caption">
-                      <pre>{{ task.description }}</pre>
-                    </div>
-                  </v-flex>
-                </v-layout>
-              </v-timeline-item>
-              <template v-for="period in periods">
-                <!-- eslint-disable-next-line vue/valid-v-for -->
-                <v-timeline-item
-                  hide-dot
-                  :key="`period-${task.id}-${period}`"
-                  class="pb-0 pt-2"
-                >
-                  <v-layout
-                    class="period-separator"
-                    align-center
-                    justify-space-between
-                  >
-                    <v-flex xs7>
-                      <span style="text-transform: uppercase">{{
-                        period
-                      }}</span>
-                    </v-flex>
-                    <v-flex xs5 text-xs-right>
-                      <!-- <v-btn
-                        flat
-                        icon
-                        color="primary"
-                        v-if="isEditable"
-                        @click="
-                          selectedTaskRef = task.id;
-                          currentGoalPeriod = period;
-                          goalDetailsDialog = true"
-                        >
-                        <v-icon>content_copy</v-icon>
-                        <v-icon class="overlay-icon">arrow_back</v-icon>
-                      </v-btn> -->
-                      <v-btn
-                        flat
-                        icon
-                        color="primary"
-                        v-if="isEditable && period !== 'year'"
-                        @click="clonePeriodGoalItem(task, period)"
-                      >
-                        <v-icon>content_copy</v-icon>
-                        <v-icon class="overlay-icon">arrow_upward</v-icon>
-                      </v-btn>
-                      <v-btn
-                        flat
-                        icon
-                        color="primary"
-                        v-if="isEditable"
-                        @click="newGoalItem(task, period)"
-                      >
-                        <v-icon>add</v-icon>
-                      </v-btn>
-                      <v-btn flat icon color="primary" v-else>
-                        <v-icon></v-icon>
-                      </v-btn>
-                    </v-flex>
-                  </v-layout>
-                </v-timeline-item>
-                <template v-if="filterTaskGoalsPeriod(task.id, agendaGoals, period).length">
-                  <timeline-item-list
-                    v-for="(taskGoals, i) in filterTaskGoalsPeriod(
-                      task.id,
-                      agendaGoals,
-                      period
-                    )"
-                    :key="`goal-${task.id}-${period}-${i}`"
-                    :goal="taskGoals"
-                    :period="period"
-                    @delete-task-goal="deleteTaskAgendaGoal"
-                  />
-                </template>
-                <template v-else>
-                  <v-timeline-item
-                    :key="period"
-                    class="mb-0 pb-3 pt-3"
-                    hide-dot
-                  >
-                    <span>No goal or activity set.</span>
-                  </v-timeline-item>
-                </template>
-              </template>
-            </span>
-          </template>
-        </v-timeline>
-      </div>
-      <div v-if="tasklist && tasklist.length === 0">
-        <v-card-text class="text-xs-center">
-          <p>
-            No items to display. Please go to Routine Settings and add routine
-            items.
-          </p>
-        </v-card-text>
+
+        <v-card v-else class="modern-card">
+          <v-card-text class="text-xs-center">
+            <p>No items to display. Please go to Routine Settings and add routine items.</p>
+          </v-card-text>
+        </v-card>
       </div>
     </div>
     <v-dialog
@@ -756,7 +643,25 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </container-box>
+    </container-box>
+
+    <!-- Dashboard FAB for AI Search -->
+    <v-fab-transition>
+      <v-btn
+        key="ai-search-fab-dashboard"
+        fab
+        bottom
+        right
+        color="primary"
+        dark
+        fixed
+        :style="$vuetify.breakpoint.xsOnly ? 'z-index: 4; margin-bottom: 72px;' : 'z-index: 1000; margin-bottom: 16px; margin-right: 16px;'"
+        @click.stop="openAiSearchModal"
+      >
+        <v-icon>add</v-icon>
+      </v-btn>
+    </v-fab-transition>
+  </div>
 </template>
 
 <script>
@@ -764,19 +669,22 @@
 import moment from 'moment';
 import gql from 'graphql-tag';
 
-import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
+import { TIMES_UP_TIME, PROACTIVE_START_TIME, ONBOARDING_COMPLETE } from '../constants/settings';
 import { defaultGoalItem } from '../constants/goals';
 import eventBus, { EVENTS } from '../utils/eventBus';
+import { MeasurementMixin } from '../utils/measurementMixins';
 
-import GoalList from '../components/GoalList.vue';
-import TimelineItemList from '../components/TimelineItemList.vue';
-import GoalItemList from '../components/GoalItemList.vue';
-import ContainerBox from '../components/ContainerBox.vue';
+import GoalList from '../components/organisms/GoalList/GoalList.vue';
+import GoalItemList from '../components/organisms/GoalItemList/GoalItemList.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
-import QuickGoalCreation from '../components/QuickGoalCreation.vue';
-import StreakChecks from '../components/StreakChecks.vue';
-import GoalCreation from '../components/GoalCreation.vue';
-import WakeCheck from '../components/WakeCheck.vue';
+import QuickGoalCreation from '../components/molecules/QuickGoalCreation/QuickGoalCreation.vue';
+import StreakChecks from '../components/molecules/StreakChecks/StreakChecks.vue';
+import GoalCreation from '../components/organisms/GoalCreation/GoalCreation.vue';
+import WakeCheck from '../components/atoms/WakeCheck/WakeCheck.vue';
+import WeekdaySelector from '../components/organisms/WeekdaySelector/WeekdaySelector.vue';
+import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
+import { TimeFormatMixin } from '../utils/timeFormat';
 
 function weekOfMonth(d) {
   const addFirstWeek = moment(d, 'DD-MM-YYYY')
@@ -794,15 +702,17 @@ function weekOfMonth(d) {
 }
 
 export default {
+  name: 'DashBoard',
+  mixins: [MeasurementMixin, intelligentRefreshMixin, TimeFormatMixin],
   components: {
     GoalList,
     GoalItemList,
-    TimelineItemList,
     ContainerBox,
     QuickGoalCreation,
     StreakChecks,
     GoalCreation,
     WakeCheck,
+    WeekdaySelector,
   },
   apollo: {
     tasklist: {
@@ -823,6 +733,7 @@ export default {
               wait
               startEvent
               endEvent
+              tags
               steps {
                 name
               }
@@ -967,7 +878,6 @@ export default {
       selectedTaskRef: '',
       date: moment().format('DD-MM-YYYY'),
       todayDate: moment().format('DD-MM-YYYY'),
-      weekDays: this.buildWeekdays(),
       periods: ['year', 'month', 'week', 'day'],
       isEditable: true,
       activeSelectionId: '',
@@ -986,6 +896,14 @@ export default {
       pendingEvents: [],
       // Track created goal IDs per routine item for placeholder replacement
       routineGoalIds: {}, // { routineItemId: goalId }
+      // Analytics: Track component mount time for session duration
+      mountTime: Date.now(),
+      // Pull to refresh functionality
+      pullDistance: 0,
+      startY: 0,
+      isPulling: false,
+      isRefreshing: false,
+      scrollTop: 0,
     };
   },
   watch: {
@@ -1021,6 +939,17 @@ export default {
       }
     },
 
+    // Track goal period changes
+    currentGoalPeriod(newPeriod, oldPeriod) {
+      if (newPeriod !== oldPeriod && oldPeriod) {
+        this.trackUserInteraction('goal_period_change', 'button_toggle', {
+          from_period: oldPeriod,
+          to_period: newPeriod,
+          selected_task_ref: this.selectedTaskRef,
+        });
+      }
+    },
+
     // Update global current task store when local currentTask changes
     currentTask: {
       handler(newTask, oldTask) {
@@ -1050,6 +979,14 @@ export default {
     },
   },
   mounted() {
+    // Track component mount for analytics
+    this.trackPageView('dashboard');
+    this.trackUserInteraction('component_mounted', 'lifecycle', {
+      component: 'DashBoard',
+      user_email: this.$root.$data.email || 'anonymous',
+      goal_period: this.currentGoalPeriod,
+    });
+
     // Set up global event listeners for refetching data
     eventBus.$on(EVENTS.REFETCH_DAILY_GOALS, this.handleRefetchDailyGoals);
     eventBus.$on(EVENTS.TASK_CREATED, this.handleTaskCreated);
@@ -1057,8 +994,21 @@ export default {
     eventBus.$on(EVENTS.GOAL_ITEM_CREATED, this.handleGoalItemCreated);
 
     console.log('DashBoard: Event listeners registered');
+
+    // Start intelligent refresh system
+    this.startIntelligentRefresh({
+      interval: 30 * 1000, // 30 seconds
+      onDayChange: this.handleDayChange,
+      onRoutineCheck: this.handleRoutineItemCheck,
+    });
   },
   beforeDestroy() {
+    // Track component destruction for analytics
+    this.trackUserInteraction('component_destroyed', 'lifecycle', {
+      component: 'DashBoard',
+      session_duration: Date.now() - (this.mountTime || Date.now()),
+    });
+
     // Clean up event listeners to prevent memory leaks
     eventBus.$off(EVENTS.REFETCH_DAILY_GOALS, this.handleRefetchDailyGoals);
     eventBus.$off(EVENTS.TASK_CREATED, this.handleTaskCreated);
@@ -1067,8 +1017,162 @@ export default {
 
     // Clean up timer
     this.stopEventExecutionTimer();
+
+    // Clean up intelligent refresh timer
+    this.stopIntelligentRefresh();
   },
   methods: {
+    // Open AI Search Modal
+    openAiSearchModal() {
+      eventBus.$emit(EVENTS.OPEN_AI_SEARCH, { date: this.date });
+    },
+
+    // Open edit goal dialog for day tasks
+    openEditGoalDialog(goalItem, taskGoals) {
+      // Construct the full goal item object needed for editing
+      this.selectedGoalItem = {
+        id: goalItem.id,
+        body: goalItem.body,
+        progress: goalItem.progress,
+        isComplete: goalItem.isComplete,
+        taskRef: goalItem.taskRef,
+        goalRef: goalItem.goalRef,
+        contribution: goalItem.contribution || '',
+        reward: goalItem.reward || '',
+        tags: goalItem.tags || [],
+        status: goalItem.status,
+        completedAt: goalItem.completedAt,
+        subTasks: goalItem.subTasks || [],
+        isMilestone: goalItem.isMilestone,
+        date: taskGoals.date,
+        period: taskGoals.period,
+      };
+      this.goalDisplayDialog = true;
+    },
+
+    // Delete agenda goal item
+    async deleteAgendaGoalItem(goalItemId, goalId) {
+      if (!confirm('Are you sure you want to delete this task?')) {
+        return;
+      }
+
+      try {
+        await this.$apollo.mutate({
+          mutation: gql`
+            mutation deleteGoalItem($id: ID!, $goalItemId: ID!) {
+              deleteGoalItem(id: $id, goalItemId: $goalItemId) {
+                id
+              }
+            }
+          `,
+          variables: {
+            id: goalId,
+            goalItemId,
+          },
+        });
+
+        // Refetch agenda goals
+        if (this.$apollo.queries.agendaGoals) {
+          await this.$apollo.queries.agendaGoals.refetch();
+        }
+
+        this.$notify({
+          title: 'Success',
+          text: 'Task deleted successfully',
+          group: 'notify',
+          type: 'success',
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error('Error deleting goal item:', error);
+        this.$notify({
+          title: 'Error',
+          text: 'Failed to delete task',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+      }
+    },
+
+    // Pull to refresh methods
+    handleTouchStart(event) {
+      if (this.scrollTop <= 0) {
+        this.startY = event.touches[0].clientY;
+        this.isPulling = true;
+      }
+    },
+    handleTouchMove(event) {
+      if (!this.isPulling || this.isRefreshing) return;
+
+      const currentY = event.touches[0].clientY;
+      const deltaY = currentY - this.startY;
+
+      if (deltaY > 0 && this.scrollTop <= 0) {
+        event.preventDefault();
+        this.pullDistance = Math.min(deltaY * 0.5, 100); // Dampen the pull effect
+      }
+    },
+    handleTouchEnd() {
+      if (!this.isPulling || this.isRefreshing) return;
+
+      this.isPulling = false;
+
+      if (this.pullDistance > 60) {
+        this.triggerRefresh();
+      } else {
+        this.resetPull();
+      }
+    },
+    handleScroll(event) {
+      this.scrollTop = event.target.scrollTop;
+      if (this.scrollTop > 0) {
+        this.resetPull();
+      }
+    },
+    triggerRefresh() {
+      this.isRefreshing = true;
+      this.pullDistance = 60; // Set to final position
+
+      // Track pull to refresh action
+      this.trackUserInteraction('pull_to_refresh', 'gesture', {
+        date: this.date,
+        is_today: this.isTodaySelected,
+      });
+
+      // Refresh all data
+      Promise.all([
+        this.refreshApolloQueries(),
+        new Promise((resolve) => setTimeout(resolve, 1000)), // Minimum refresh time for UX
+      ]).then(() => {
+        this.resetPull();
+        this.isRefreshing = false;
+
+        this.$notify({
+          title: 'Refreshed',
+          text: 'Dashboard data has been updated',
+          group: 'notify',
+          type: 'success',
+          duration: 2000,
+        });
+      }).catch((error) => {
+        console.error('Pull to refresh error:', error);
+        this.resetPull();
+        this.isRefreshing = false;
+
+        this.$notify({
+          title: 'Refresh Failed',
+          text: 'Could not refresh data. Please try again.',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+      });
+    },
+    resetPull() {
+      this.pullDistance = 0;
+      this.isPulling = false;
+    },
     // Global event handlers
     handleRefetchDailyGoals() {
       console.log('DashBoard: Handling refetch daily goals event');
@@ -1081,9 +1185,53 @@ export default {
     },
     handleGoalsSaved(eventData) {
       console.log('DashBoard: Handling goals saved event', eventData);
+
+      // Check if user has completed onboarding (has both week and month goals)
+      this.checkOnboardingCompletion(eventData);
+
       // Only refetch if day goals were created
       this.refetchDailyGoals();
     },
+
+    checkOnboardingCompletion(eventData) {
+      // Don't show if already shown
+      if (localStorage.getItem(ONBOARDING_COMPLETE)) {
+        return;
+      }
+
+      // Track which goal periods the user has created
+      const savedPeriods = JSON.parse(localStorage.getItem('SAVED_GOAL_PERIODS') || '[]');
+
+      if (eventData && eventData.period) {
+        const timelineEntryPeriod = eventData.period;
+        let planTitlePeriod = timelineEntryPeriod;
+
+        // Determine the plan title period based on timeline entry period
+        if (timelineEntryPeriod === 'day') planTitlePeriod = 'week';
+        else if (timelineEntryPeriod === 'week') planTitlePeriod = 'month';
+        else if (timelineEntryPeriod === 'month') planTitlePeriod = 'year';
+
+        if (!savedPeriods.includes(planTitlePeriod)) {
+          savedPeriods.push(planTitlePeriod);
+          localStorage.setItem('SAVED_GOAL_PERIODS', JSON.stringify(savedPeriods));
+        }
+      }
+
+      // Check if user has created both week and month goals
+      if (savedPeriods.includes('week') && savedPeriods.includes('month')) {
+        this.$notify({
+          title: 'You\'re All Set! 🎉',
+          text: 'Do daily milestones to complete weekly and monthly goals.',
+          group: 'notify',
+          type: 'success',
+          duration: 8000,
+        });
+
+        // Mark onboarding as complete
+        localStorage.setItem(ONBOARDING_COMPLETE, 'true');
+      }
+    },
+
     handleGoalItemCreated(eventData) {
       console.log('DashBoard: Handling goal item created event', eventData);
 
@@ -1147,19 +1295,24 @@ export default {
 
     refreshApolloQueries() {
       // Refresh all Apollo queries in this component when user logs in
+      const refreshPromises = [];
+
       try {
         if (this.$apollo.queries.tasklist) {
-          this.$apollo.queries.tasklist.refetch();
+          refreshPromises.push(this.$apollo.queries.tasklist.refetch());
         }
         if (this.$apollo.queries.agendaGoals) {
-          this.$apollo.queries.agendaGoals.refetch();
+          refreshPromises.push(this.$apollo.queries.agendaGoals.refetch());
         }
         if (this.$apollo.queries.goals) {
-          this.$apollo.queries.goals.refetch();
+          refreshPromises.push(this.$apollo.queries.goals.refetch());
         }
+
         console.log('DashBoard: Apollo queries refreshed successfully');
+        return Promise.all(refreshPromises);
       } catch (error) {
         console.warn('DashBoard: Error refreshing Apollo queries:', error);
+        return Promise.reject(error);
       }
     },
 
@@ -1376,23 +1529,8 @@ export default {
     getActiveClass(task) {
       return this.activeSelectionId === task.id ? 'active' : '';
     },
-    buildWeekdays() {
-      const weekDays = [];
-      const dayShort = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-      const currentDate = moment();
-
-      const weekStart = currentDate.clone().startOf('week');
-      // const weekEnd = currentDate.clone().endOf('isoWeek');
-
-      dayShort.forEach((day, i) => {
-        weekDays.push({
-          dayNumber: moment(weekStart).add(i, 'days').format('DD'),
-          isActive: moment().weekday() === i,
-          day,
-        });
-      });
-
-      return weekDays;
+    handleDateSelected(newDate) {
+      this.date = newDate;
     },
     deleteTaskAgendaGoal(id) {
       this.agendaGoals.forEach((goal) => {
@@ -1417,20 +1555,7 @@ export default {
         .add(1, 'days')
         .format('DD-MM-YYYY');
     },
-    setDate(indx) {
-      const currentDate = moment();
-      const weekStart = currentDate.clone().startOf('week');
 
-      this.weekDays = this.weekDays.map((weekDay, i) => {
-        if (Number(indx) === i) {
-          weekDay.isActive = true;
-          return weekDay;
-        }
-        weekDay.isActive = false;
-        return weekDay;
-      });
-      this.date = moment(weekStart).add(indx, 'days').format('DD-MM-YYYY');
-    },
     getButtonColor(task) {
       if (task) {
         if (task.ticked) {
@@ -1534,6 +1659,20 @@ export default {
     },
     toggleGoalDetailsDialog(bool) {
       this.goalDetailsDialog = bool;
+
+      // Track goal dialog interactions
+      this.trackModalInteraction('goal_details_dialog', bool ? 'open' : 'close', {
+        current_goal_period: this.currentGoalPeriod,
+        selected_task_ref: this.selectedTaskRef,
+      });
+    },
+
+    // Helper method to get task status
+    getTaskStatus(task) {
+      if (task.ticked) return 'completed';
+      if (task.passed) return 'passed';
+      if (task.wait) return 'waiting';
+      return 'pending';
     },
     addNewDayRoutine() {
       this.isLoading = true;
@@ -1608,6 +1747,15 @@ export default {
     },
     checkDialogClick(e, task) {
       e.stopPropagation();
+
+      // Track user interaction
+      this.trackButtonClick('task_action_button', {
+        task_id: task.id,
+        task_name: task.name,
+        task_status: this.getTaskStatus(task),
+        has_goals: this.filterTaskGoalsPeriod(task.id, this.goals, 'day').length > 0,
+      });
+
       if (!task.passed && !task.wait && !task.ticked) {
         if (this.filterTaskGoalsPeriod(task.id, this.goals, 'day').length) {
           this.checkClick(task);
@@ -1616,13 +1764,30 @@ export default {
           this.quickTaskTitle = task.name;
           this.quickTaskDescription = task.description;
           this.quickTaskDialog = true;
+
+          // Track quick task dialog opening
+          this.trackModalInteraction('quick_task_dialog', 'open', {
+            task_id: task.id,
+            task_name: task.name,
+          });
         }
       }
     },
     checkClick(task) {
+      // Track task completion
+      this.trackTaskEvent('complete', {
+        id: task.id,
+        name: task.name,
+        time: task.time,
+        points: task.points,
+        ticked: true,
+      });
+
       this.quickTaskDialog = false;
       if (!task.passed && !task.wait && !task.ticked) {
         task.ticked = true;
+
+        const mutationStartTime = Date.now();
         this.$apollo
           .mutate({
             mutation: gql`
@@ -1642,7 +1807,16 @@ export default {
               ticked: task.ticked,
             },
           })
-          .then(() => this.$apollo.queries.tasklist.refetch())
+          .then(() => {
+            // Track mutation performance
+            this.trackMutationPerformance('tickRoutineItem', {
+              id: this.did,
+              taskId: task.id,
+              ticked: task.ticked,
+            }, mutationStartTime);
+
+            return this.$apollo.queries.tasklist.refetch();
+          })
           .then(() => {
             // Check for event execution after task state changes and refetch completes
             console.log('DashBoard: Tasklist refetch completed, checking events for task:', task.id);
@@ -1883,6 +2057,34 @@ export default {
       }
       return 0;
     },
+
+    /**
+     * Handle day change event
+     * @param {string} newDate - New date in DD-MM-YYYY format
+     */
+    handleDayChange(newDate) {
+      console.log('DashBoard: Day changed to', newDate);
+      this.date = newDate;
+
+      // Add new routine if needed
+      this.addNewDayRoutine();
+    },
+
+    /**
+     * Handle routine item check for intelligent refresh
+     */
+    handleRoutineItemCheck() {
+      // Only update passed/wait status if today is selected
+      if (this.isTodaySelected) {
+        this.setPassedWait();
+      }
+
+      // Get next routine item status
+      const nextItem = this.getNextRoutineItem();
+      if (nextItem && nextItem.isStartingSoon) {
+        console.log(`Next routine item "${nextItem.name}" starts in ${nextItem.minutesToStart} minutes`);
+      }
+    },
   },
   computed: {
     today() {
@@ -1923,6 +2125,54 @@ export default {
   // },
 };
 </script>
+
+<style scoped>
+.pull-to-refresh-container {
+  position: relative;
+  height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pull-to-refresh-indicator {
+  position: absolute;
+  top: -80px;
+  left: 0;
+  right: 0;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  opacity: 0;
+}
+
+.pull-to-refresh-indicator.visible {
+  opacity: 1;
+}
+
+.pull-to-refresh-indicator.refreshing {
+  transform: translateY(80px) !important;
+}
+
+.refresh-text {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Ensure proper touch handling on mobile */
+@media (max-width: 768px) {
+  .pull-to-refresh-container {
+    touch-action: pan-y;
+  }
+}
+</style>
 
 <style>
 .current-task .active .v-list__tile--avatar:hover {

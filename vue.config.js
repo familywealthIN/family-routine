@@ -6,7 +6,22 @@ module.exports = {
     },
   },
   chainWebpack: (config) => {
+    // Exclude .stories.js files from webpack build
+    config.module.rule('js').exclude.add(/\.stories\.js$/);
+
     config.plugins.delete('prefetch');
+    const oneOfsMap = config.module.rule('stylus').oneOfs.store;
+    oneOfsMap.forEach((item) => {
+      item
+        .use('stylus-loader')
+        .loader('stylus-loader')
+        .tap((options) => {
+          if (options.preferPathResolver) {
+            delete options.preferPathResolver; // eslint-disable-line no-param-reassign
+          }
+          return options;
+        });
+    });
   },
   pwa: {
     name: 'Routine Notes',

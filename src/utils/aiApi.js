@@ -1,39 +1,146 @@
 const moment = require('moment');
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_MODEL = 'google/gemini-2.0-flash-001'; // Using a free model from OpenRouter
+
+/**
+ * Cleans the AI response to ensure it's a valid JSON string.
+ * Removes markdown code blocks and any leading/trailing text.
+ *
+ * @param {string} text The raw response from the AI.
+ * @returns {string} The cleaned JSON string.
+ */
+function cleanJsonResponse(text) {
+  let cleaned = text.trim();
+
+  // Remove markdown code blocks if present
+  if (cleaned.includes('```json')) {
+    cleaned = cleaned.split('```json')[1].split('```')[0].trim();
+  } else if (cleaned.includes('```')) {
+    const parts = cleaned.split('```');
+    if (parts.length >= 3) {
+      cleaned = parts[1].trim();
+    }
+  }
+
+  // Sometimes AI adds text before or after the JSON object
+  // Find the first '{' and the last '}'
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+
+  // Remove trailing commas before closing braces/brackets
+  // This handles a common AI mistake
+  cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
+
+  return cleaned;
+}
+
+/**
+ * A centralized function to handle AI API requests with a fallback mechanism.
+ * It first tries Gemini, and if that fails or is not configured, it falls back to OpenRouter.
+ *
+ * @param {string} prompt The prompt to send to the AI model.
+ * @param {boolean} isJsonMode Whether to ask the AI to respond in JSON format.
+ * @returns {Promise<string>} The text response from the AI.
+ * @throws {Error} If both AI services fail.
+ */
+async function fetchFromAi(prompt, isJsonMode = false) {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+
+  const fullPrompt = isJsonMode
+    ? `${prompt}\n\nRespond ONLY with a valid JSON object.`
+    : prompt;
+
+  // 1. Try Google Gemini API
+  if (geminiApiKey) {
+    try {
+      const response = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': geminiApiKey,
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: fullPrompt }] }],
+          ...(isJsonMode && { generationConfig: { response_mime_type: 'application/json' } }),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini API Error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      if (!data.candidates || !data.candidates[0].content.parts[0].text) {
+        throw new Error('Invalid response structure from Gemini');
+      }
+      console.log('Successfully fetched from Gemini API.');
+      const result = data.candidates[0].content.parts[0].text.trim();
+      console.log('=================== result =======================');
+      console.log(result);
+      return isJsonMode ? cleanJsonResponse(result) : result;
+    } catch (error) {
+      console.warn(`Gemini API request failed: ${error.message}. Falling back to OpenRouter.`);
+    }
+  }
+
+  // 2. Fallback to OpenRouter API
+  if (openRouterApiKey) {
+    try {
+      const response = await fetch(OPENROUTER_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${openRouterApiKey}`,
+          'HTTP-Referer': 'https://family-routine.com', // Replace with your actual site URL
+          'X-Title': 'Family Routine AI', // Replace with your actual app name
+        },
+        body: JSON.stringify({
+          model: OPENROUTER_MODEL,
+          messages: [{ role: 'user', content: fullPrompt }],
+          ...(isJsonMode && { response_format: { type: 'json_object' } }),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenRouter API Error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      if (!data.choices || !data.choices[0].message.content) {
+        throw new Error('Invalid response structure from OpenRouter');
+      }
+      console.log('Successfully fetched from OpenRouter API.');
+      const result = data.choices[0].message.content.trim();
+      console.log('=================== result =======================');
+      console.log(result);
+      return isJsonMode ? cleanJsonResponse(result) : result;
+    } catch (error) {
+      console.error(`OpenRouter API request failed: ${error.message}`);
+    }
+  }
+
+  // 3. If both fail
+  throw new Error('Both AI services are unavailable or misconfigured.');
+}
 
 async function getSummaryFromGoalItems(goalItems) {
-  console.log('Fetching summary from Gemini API for items:', goalItems);
+  console.log('Fetching summary for items:', goalItems);
   const prompt = `Summarize these goal items in a concise paragraph:
     ${JSON.stringify(goalItems)}
     
     Provide a clear, actionable summary that highlights the main objectives and themes.`;
 
   try {
-    const response = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY,
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt,
-          }],
-        }],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API Error Response:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('Gemini API response:', data);
-    return data.candidates[0].content.parts[0].text.trim();
+    return await fetchFromAi(prompt);
   } catch (error) {
     console.error('Error in getSummaryFromGoalItems:', error);
     return 'Unable to generate summary at this time. Please try again later.';
@@ -48,29 +155,7 @@ async function getNextStepsFromGoalItems(goalItems) {
     Focus on practical actions the user can take immediately.`;
 
   try {
-    const response = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY,
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt,
-          }],
-        }],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API Error Response:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-    }
-
-    const data = await response.json();
-    return data.candidates[0].content.parts[0].text.trim();
+    return await fetchFromAi(prompt);
   } catch (error) {
     console.error('Error in getNextStepsFromGoalItems:', error);
     return 'Unable to generate next steps at this time. Please try again later.';
@@ -290,43 +375,27 @@ function generateFallbackPlan(userQuery, timeframe) {
 }
 
 async function generateMilestonePlan(userQuery) {
+  let timeframe = 'week'; // default
+
+  // Check for specific patterns in the modified query
+  if (/\d+\s*days?\b/i.test(userQuery) || /next\s*week/i.test(userQuery)) {
+    timeframe = 'week';
+  } else if (/\d+\s*weeks?\b/i.test(userQuery) || /next\s*month/i.test(userQuery)) {
+    timeframe = 'month';
+  } else if (/\d+\s*months?\b/i.test(userQuery) || /next\s*year/i.test(userQuery)) {
+    timeframe = 'year';
+  }
+
+  // Fallback mechanism is now handled by fetchFromAi, but we can keep this for non-API failures
+  const useFallback = () => {
+    console.warn('API failed or not configured, using local fallback data.');
+    return generateFallbackPlan(userQuery, timeframe);
+  };
+
   try {
-    // Enhanced timeframe determination from query
-    let timeframe = 'week'; // default
-
-    // Check for specific patterns in the modified query
-    if (/\d+\s*days?\b/i.test(userQuery) || /next\s*week/i.test(userQuery)) {
-      timeframe = 'week';
-    } else if (/\d+\s*weeks?\b/i.test(userQuery) || /next\s*month/i.test(userQuery)) {
-      timeframe = 'month';
-    } else if (/\d+\s*months?\b/i.test(userQuery) || /next\s*year/i.test(userQuery)) {
-      timeframe = 'year';
-    } else {
-      // Fallback to original logic for basic keywords
-      const timeframeMap = {
-        week: 'week',
-        month: 'month',
-        year: 'year',
-      };
-
-      Object.keys(timeframeMap).forEach((key) => {
-        if (userQuery.toLowerCase().includes(key)) {
-          timeframe = timeframeMap[key];
-        }
-      });
-    }
-
-    // Check if API key exists, if not use fallback
-    if (!process.env.GEMINI_API_KEY) {
-      console.warn('GEMINI_API_KEY not found, using fallback data');
-      return generateFallbackPlan(userQuery, timeframe);
-    }
-
-    // Generate appropriate date ranges with user query context
     const entriesTemplate = generateEntriesTemplate(timeframe, userQuery);
     const baseDate = new Date();
 
-    // Generate prompt for Gemini API
     const prompt = `Generate a detailed plan in JSON format for: "${userQuery}".
     Use this structure:
     {
@@ -337,132 +406,39 @@ async function generateMilestonePlan(userQuery) {
     
     Current date: ${baseDate.toISOString().split('T')[0]}
 
-    Follow these period formatting rules strictly:
-    1. Use ONLY the period type specified in the template above
-    2. Keep all periodName values exactly as provided in the template
-    3. Maintain the exact dates provided in the template
-    4. Include all activities for each period in the description field
-    5. DO NOT create additional entries or change the period structure
+    Follow these rules strictly:
+    1. Use ONLY the period type specified in the template.
+    2. Keep all periodName and date values exactly as provided.
+    3. Include all activities for each period in the description field.
+    4. Use newline characters (\\n) and bullet points in descriptions for readability.
+    5. DO NOT use any placeholders like $ or {}. Fill in all details with actual content.
+    6. Ensure the response is a single, valid JSON object.
     
-    Based on the type of plan requested, include these specific details in the description field:
-    - For fitness/workout plans: Include exercises, sets, reps, and rest periods
-    - For diet plans: Include meals, portions, calories, and nutritional info
-    - For study plans: Include topics, learning objectives, and resources
-    - For financial plans: Include specific amounts, strategies, and goals
-    - For project plans: Include tasks, deadlines, and deliverables
-    - For habit-building plans: Include specific actions, triggers, and tracking methods
-    
-    IMPORTANT: Use newline characters (\\n) in descriptions to separate different points, steps, or sections.
-    Format descriptions with bullet points and line breaks for better readability.
-    Keep descriptions detailed but concise. Format numbers consistently.`;
+    Based on the plan type, include specific details in the description:
+    - Fitness: Exercises, sets, reps, rest.
+    - Diet: Meals, portions, calories.
+    - Study: Topics, objectives, resources.
+    - Project: Tasks, deadlines, deliverables.`;
 
-    // Use Google Gemini API (assuming we have access to it)
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY,
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt,
-          }],
-        }],
-      }),
-    });
+    const responseText = await fetchFromAi(prompt, true);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error Response:', errorText);
-      console.warn('API failed, using fallback data');
-      return generateFallbackPlan(userQuery, timeframe);
-    }
+    try {
+      const parsedJson = JSON.parse(responseText);
 
-    const data = await response.json();
-    let responseText = data.candidates[0].content.parts[0].text.trim();
-
-    // Extract JSON content between ```json and ``` markers
-    if (responseText.includes('```json')) {
-      responseText = responseText.split('```json')[1].split('```')[0].trim();
-    }
-
-    // Parse and validate the JSON
-    const parsedJson = JSON.parse(responseText);
-
-    // Validate required fields and structure
-    const requiredFields = ['period', 'title', 'entries'];
-    if (!requiredFields.every((field) => field in parsedJson)) {
-      throw new Error('Missing required fields in response');
-    }
-
-    // Validate period consistency
-    if (parsedJson.period !== timeframe) {
-      throw new Error(`Incorrect period type. Expected ${timeframe}`);
-    }
-
-    // Validate entries structure matches template
-    if (parsedJson.entries.length !== entriesTemplate.length) {
-      throw new Error('Incorrect number of entries');
-    }
-
-    // Validate and normalize entries structure
-    parsedJson.entries = parsedJson.entries.map((entry, i) => {
-      const templateEntry = entriesTemplate[i];
-      const normalizedEntry = { ...entry };
-
-      if (entry.period !== templateEntry.period) {
-        throw new Error(`Incorrect period type in entry ${i}`);
+      // Basic validation
+      if (!parsedJson.period || !parsedJson.title || !parsedJson.entries) {
+        throw new Error('Invalid JSON structure from AI');
       }
 
-      if (entry.date !== templateEntry.date) {
-        console.warn(`Date mismatch in entry ${i}: expected "${templateEntry.date}", got "${entry.date}"`);
-        // Auto-correct the date to match the template
-        normalizedEntry.date = templateEntry.date;
-      }
-
-      if (entry.periodName !== templateEntry.periodName) {
-        console.warn(`PeriodName mismatch in entry ${i}: expected "${templateEntry.periodName}", got "${entry.periodName}"`);
-        // Auto-correct the periodName to match the template
-        normalizedEntry.periodName = templateEntry.periodName;
-      }
-
-      // Ensure date is in DD-MM-YYYY format
-      if (normalizedEntry.date) {
-        // If the date is in ISO format (YYYY-MM-DD), convert it
-        if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedEntry.date)) {
-          normalizedEntry.date = moment(normalizedEntry.date, 'YYYY-MM-DD').format('DD-MM-YYYY');
-          console.log(`Converted ISO date to DD-MM-YYYY format for entry ${i}: ${normalizedEntry.date}`);
-        }
-        // Validate that the date is now in DD-MM-YYYY format
-        if (!/^\d{2}-\d{2}-\d{4}$/.test(normalizedEntry.date)) {
-          console.warn(`Invalid date format in entry ${i}: ${normalizedEntry.date}, using template date`);
-          normalizedEntry.date = entriesTemplate[i].date;
-        }
-      }
-
-      return normalizedEntry;
-    });
-
-    return parsedJson;
+      return parsedJson;
+    } catch (parseError) {
+      console.error('Failed to parse AI JSON response:', parseError.message);
+      console.error('Cleaned response text:', responseText);
+      throw parseError;
+    }
   } catch (error) {
     console.error('Error generating milestone plan:', error);
-
-    if (error instanceof SyntaxError) {
-      return {
-        error: `Invalid JSON response: ${error.message}`,
-        rawResponse: error.responseText || 'No response received',
-      };
-    }
-    if (error.message.includes('Validation error') || error.message.includes('Incorrect')) {
-      return {
-        error: `Validation error: ${error.message}`,
-        rawResponse: error.responseText || 'No response received',
-      };
-    }
-    return {
-      error: `Unexpected error: ${error.message}`,
-    };
+    return useFallback();
   }
 }
 
@@ -473,36 +449,14 @@ async function extractTaskFromNaturalLanguage(naturalLanguageText) {
 Convert this natural language text into a structured todo item:
 "${naturalLanguageText}"
 
-Extract and provide the following information:
+Extract and provide the following information in a JSON object:
 1. A clear, actionable title (max 60 characters)
 2. A detailed description explaining what needs to be done
-3. 2-3 relevant tags using these prefixes:
-   - priority: (MUST include based on determined priority using: do, plan, delegate, automate)
-   - category: (work, personal, health, finance, education, etc.)
-   - type: (task, meeting, review, research, call, email, etc.)
-   - context: (office, home, online, phone, travel, etc.)
-   - person: (if involves specific person)
-   - urgency: (critical, high, medium, low)
-   - time: (morning, afternoon, evening, weekend, etc.)
-   - energy: (high, medium, low - energy required)
-   - tool: (specific tools/software needed)
-   - location: (specific location if mentioned)
-   - tag: (general descriptive tags without prefix)
-4. Due date if mentioned (ISO format YYYY-MM-DD) or null if not specified
+3. 2-3 relevant tags using prefixes like priority:, category:, type:, context:, etc.
+   - A 'priority:' tag is mandatory (do, plan, delegate, automate).
+4. Due date if mentioned (ISO format YYYY-MM-DD) or null if not specified.
 
-Priority Guidelines:
-- priority:do - Important and urgent tasks requiring immediate action
-- priority:plan - Important but not urgent tasks to be scheduled
-- priority:delegate - Urgent but not important tasks that can be assigned to others
-- priority:automate - Neither urgent nor important tasks that can be systematized
-
-Rules:
-- Title should be concise and actionable
-- Description should be detailed and helpful
-- Priority should reflect the Eisenhower Matrix principles (do/plan/delegate/automate)
-- Tags should be specific and use appropriate prefixes
-
-Respond ONLY with valid JSON in this exact format:
+Respond ONLY with a valid JSON object in this exact format:
 {
   "title": "Clear actionable title",
   "description": "Detailed description of what needs to be done",
@@ -512,124 +466,43 @@ Respond ONLY with valid JSON in this exact format:
 }`;
 
   try {
-    const response = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY,
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt,
-          }],
-        }],
-      }),
-    });
+    const responseText = await fetchFromAi(prompt, true);
+    const extractedData = JSON.parse(responseText);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API Error Response:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('Gemini API response for task extraction:', data);
-
-    const responseText = data.candidates[0].content.parts[0].text.trim();
-
-    // Try to parse the JSON response
-    let extractedData;
-    try {
-      // Look for JSON in the response
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        extractedData = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError);
-      throw new Error('Invalid response format from AI');
-    }
-
-    // Validate extracted data
     if (!extractedData.title || !extractedData.description) {
-      throw new Error('Incomplete task data extracted');
+      throw new Error('Incomplete task data extracted from AI response');
     }
 
     return extractedData;
   } catch (error) {
     console.error('Error in extractTaskFromNaturalLanguage:', error);
-    throw error;
+    throw new Error('Failed to extract task from text.');
   }
 }
 
 async function enhanceRoutineItemWithAI(routineItem) {
-  if (!process.env.GEMINI_API_KEY) {
-    console.warn('GEMINI_API_KEY not found, returning routine item without AI enhancement');
-    return routineItem;
-  }
-
   const prompt = `Enhance this routine item with a helpful description and specific steps.
 
 Routine Item: ${JSON.stringify(routineItem)}
 
 Please respond with ONLY a JSON object in this exact format:
 {
-  "description": "A motivating 1-2 sentence description of this routine and its benefits",
+  "description": "A motivating 1-2 sentence description of this routine and its benefits.",
   "steps": [
     {"name": "Step 1 description"},
     {"name": "Step 2 description"},
     {"name": "Step 3 description"}
   ]
-}
-
-Guidelines:
-- Description should be motivating and highlight benefits
-- Include 3-5 practical steps that break down the routine
-- Keep steps concise but actionable
-- Consider the time of day and routine type
-- Focus on practical execution`;
+}`;
 
   try {
-    const response = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY,
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt,
-          }],
-        }],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API Error Response:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-    }
-
-    const data = await response.json();
-    let responseText = data.candidates[0].content.parts[0].text.trim();
-
-    // Extract JSON from response
-    if (responseText.includes('```json')) {
-      responseText = responseText.split('```json')[1].split('```')[0].trim();
-    } else if (responseText.includes('```')) {
-      responseText = responseText.split('```')[1].split('```')[0].trim();
-    }
-
+    const responseText = await fetchFromAi(prompt, true);
     const enhancement = JSON.parse(responseText);
 
     return {
       ...routineItem,
       description: enhancement.description,
-      steps: enhancement.steps || [],
+      // steps: enhancement.steps || [],
     };
   } catch (error) {
     console.error('Error enhancing routine item with AI:', error);
@@ -637,11 +510,6 @@ Guidelines:
     return {
       ...routineItem,
       description: `A ${routineItem.name.toLowerCase()} routine to help you build healthy habits.`,
-      steps: [
-        { name: 'Prepare your space and materials' },
-        { name: `Complete your ${routineItem.name.toLowerCase()} activity` },
-        { name: 'Reflect on your progress' },
-      ],
     };
   }
 }

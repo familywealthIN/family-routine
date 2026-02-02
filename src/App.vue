@@ -8,6 +8,9 @@
     </template>
     <notifications group="notify" position="bottom center" />
     <!-- <v-footer app></v-footer> -->
+
+    <!-- Global AI Search Modal -->
+    <ai-search-modal v-model="aiSearchModal" />
   </v-app>
 </template>
 
@@ -24,15 +27,20 @@ import DesktopLayout from './layouts/DesktopLayout.vue';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+import AiSearchModal from './components/organisms/AiSearchModal/AiSearchModal.vue';
+import eventBus, { EVENTS } from './utils/eventBus';
+
 export default {
   components: {
     MobileLayout,
     DesktopLayout,
+    AiSearchModal,
   },
   data() {
     return {
       drawer: null,
       mottoDialog: false,
+      aiSearchModal: false,
     };
   },
   computed: {
@@ -65,27 +73,30 @@ export default {
     }
   },
   methods: {
-    initPwaFCM() {
+    async initPwaFCM() {
       if (isDevelopment || netlify) {
         firebase.initializeApp(config);
 
         const messaging = firebase.messaging();
         messaging.usePublicVapidKey(publicKey);
         console.log('testttttttttttt')
-
-        // Request Permission of Notifications
-        messaging.requestPermission().then(() => {
-          console.log('testttttttttttt111')
-          console.log('Notification permission granted.');
-
-          // Get Token
-          messaging.getToken().then((token) => {
-            console.log('token', token);
-            localStorage.setItem(GC_NOTIFICATION_TOKEN, token);
-          });
-        }).catch((err) => {
-          console.log('Unable to get permission to notify.', err);
-        });
+try {
+      // Request permission using Notification API
+      const permission = await Notification.requestPermission();
+      
+      if (permission === 'granted') {
+        console.log('Notification permission granted.');
+        
+        // Get Token
+        const token = await messaging.getToken();
+        console.log('FCM token:', token);
+        localStorage.setItem(GC_NOTIFICATION_TOKEN, token);
+      } else {
+        console.log('Notification permission denied.');
+      }
+    } catch (err) {
+      console.log('Unable to get permission to notify.', err);
+    }
 
         // Foreground messages
         messaging.onMessage((payload) => {
@@ -129,7 +140,7 @@ export default {
 
       PushNotifications.addListener('registration', token => {
         console.log('Device registered', token.value);
-        localStorage.setItem('fcm_token', token.value);
+        localStorage.setItem('GC_NOTIFICATION_TOKEN', token.value);
       });
 
       PushNotifications.addListener('pushNotificationReceived', async (notification) => {

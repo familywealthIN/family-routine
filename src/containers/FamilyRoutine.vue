@@ -180,8 +180,8 @@
 <script>
 import gql from 'graphql-tag';
 
-import FamilyUserHistory from '../components/FamilyUserHistory.vue';
-import ContainerBox from '../components/ContainerBox.vue';
+import FamilyUserHistory from '../components/organisms/FamilyUserHistory/FamilyUserHistory.vue';
+import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 
 export default {
   components: {
