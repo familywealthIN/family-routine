@@ -104,7 +104,15 @@ export default {
       //       grantOfflineAccess: true,
       //       forceCodeForRefreshToken: true
       //     });
+          if(platform === 'ios'){
+                await GoogleAuth.initialize({
+                  clientId: clientId,
+                  scopes: ['profile', 'email'],
+                  grantOfflineAccess: true,
+                  forceCodeForRefreshToken: true
+                });
 
+          }else{
           await GoogleAuth.initialize({
             clientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
             scopes: ['profile', 'email'],
@@ -114,6 +122,7 @@ export default {
             webClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
             forceCodeForRefreshToken: true
           });
+        }
           
           console.log('Attempting to sign in with GoogleAuth');
           const result = await GoogleAuth.signIn();
@@ -418,7 +427,8 @@ export default {
 
 .login footer {
   position: absolute;
-  bottom: calc(8px + env(safe-area-inset-bottom));
+  /* bottom: calc(8px + env(safe-area-inset-bottom)); */
+  bottom: 0 !important;
   margin: 0 auto;
   display: block;
   width: 100%;

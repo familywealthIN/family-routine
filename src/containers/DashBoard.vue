@@ -1989,15 +1989,19 @@ export default {
 .weekdays {
   width: 100%;
   display: flex;
-  justify-content: space-evenly;
+  justify-content: space-between;
   align-items: center;
   font-weight: 500;
+  gap: 4px;
 }
 
 .weekdays .day {
-  padding: 16px;
+  flex: 1;
+  padding: 12px 4px;
   border-radius: 4px;
   text-align: center;
+  min-width: 0;
+  /* font-size: 12px; */
 }
 
 #mobileLayout .weekdays .day {

@@ -107,6 +107,19 @@ export default {
         return;
       }
 
+      // Create notification channel for Android
+      await LocalNotifications.createChannel({
+        id: 'routine-notifications',
+        name: 'Routine Notifications',
+        description: 'Notifications for routine updates and reminders',
+        sound: 'default',
+        importance: 5,
+        visibility: 1,
+        lights: true,
+        lightColor: '#4285f4',
+        vibration: true
+      });
+
       PushNotifications.requestPermissions().then(result => {
       console.log('pust notification result', result)
         if (result.receive === 'granted') {
@@ -121,20 +134,24 @@ export default {
 
       PushNotifications.addListener('pushNotificationReceived', async (notification) => {
         console.log('Push received: ', notification);
-        // show toast or alert here
         await LocalNotifications.schedule({
           notifications: [
             {
-              title: notification.title || 'Notification',
+              title: notification.title || 'Routine Notes',
               body: notification.body || '',
               id: Math.floor(Math.random() * 100000),
               schedule: { at: new Date(Date.now() + 100) },
-              sound: null,
-              attachments: null,
+              sound: 'default',
+              smallIcon: 'file://android_asset/icon-512.webp',
+              largeIcon: 'ic_launcher',
+              iconColor: '#4285f4',
               actionTypeId: '',
               extra: notification.data,
-              importance: 5, // 'high' = 5
-             
+              importance: 5,
+              visibility: 1,
+              ongoing: false,
+              autoCancel: true,
+              channelId: 'routine-notifications'
             },
           ],
         });
@@ -147,26 +164,15 @@ export default {
     },
 
     checkSoftKeys() {
-      if (window.SoftKeyChecker) {
-        window.SoftKeyChecker.hasSoftKeys((result) => {
-          console.log('hasSoftKeys', result);
-          const hasSoftKeys = result === 1;
-
-          if (hasSoftKeys) {
-            document.body.classList.add('android15-soft-keys');
-            document.body.classList.remove('android15-no-soft-keys');
-          } else {
-            document.body.classList.add('android15-no-soft-keys');
-            document.body.classList.remove('android15-soft-keys');
-          }
-        }, (err) => {
-          console.error('Failed to check soft keys', err);
-          // Fallback for Android 15
-          document.body.classList.add('android15-no-soft-keys');
-        });
-      } else {
-        console.warn('SoftKeyChecker plugin not available');
-        document.body.classList.add('android15-no-soft-keys');
+      // Android 14+ detection
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      const androidMatch = ua.match(/Android\s([0-9\.]+)/);
+      if (androidMatch) {
+        const androidVersion = parseFloat(androidMatch[1]);
+        if (androidVersion >= 14) {
+          document.body.classList.add('android14-plus');
+          document.documentElement.classList.add('android14-plus');
+        }
       }
     }
   },

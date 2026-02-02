@@ -236,10 +236,25 @@ export default {
   mounted() {
     if (typeof window !== 'undefined') {
       const ua = navigator.userAgent || navigator.vendor || window.opera;
-      // Android 15 user agent detection (API 35, Android 15 is codename 'Vanilla Ice Cream')
-      // This is a best-effort guess, update as needed for your app's UA string
-      if (/Android\s15|Android\sVanilla|Android\sVIC/i.test(ua)) {
-        document.body.classList.add('android15');
+      
+      // Extract Android version from user agent
+      const androidMatch = ua.match(/Android\s([0-9\.]+)/);
+      if (androidMatch) {
+        const androidVersion = parseFloat(androidMatch[1]);
+        
+        // Android 14+ detection (API 34+)
+        if (androidVersion >= 14) {
+          document.body.classList.add('android14-plus');
+          document.documentElement.classList.add('android14-plus');
+          
+          // Set CSS custom properties for safe area handling
+          document.documentElement.style.setProperty('--android-version', androidVersion.toString());
+        }
+        
+        // Legacy Android 15 detection for backward compatibility
+        if (androidVersion >= 15 || /Android\s15|Android\sVanilla|Android\sVIC/i.test(ua)) {
+          document.body.classList.add('android15');
+        }
       }
     }
   },
@@ -267,6 +282,11 @@ export default {
   padding-top: env(safe-area-inset-top);
 }
 
+/* Android 14+ specific safe area handling */
+body.android14-plus .safe-area-top {
+  padding-top: max(env(safe-area-inset-top), 24px) !important;
+}
+
 body.android15 .safe-area-top {
   padding-top: max(env(safe-area-inset-top, 0px), 8px);
 }
@@ -284,6 +304,11 @@ body.android15 .safe-area-top {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Android 14+ specific safe area handling */
+body.android14-plus .safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px) !important;
+}
+
 body.android15 .safe-area-bottom {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px);
 }
@@ -297,6 +322,12 @@ body.android15 .safe-area-bottom {
   padding-top: 60px; /* height of toolbar */
   padding-bottom: 100px;
   min-height: 0;
+}
+
+/* Android 14+ content padding */
+body.android14-plus .scrollable-content {
+  padding-top: calc(64px + max(env(safe-area-inset-top), 24px)) !important;
+  padding-bottom: calc(75px + max(env(safe-area-inset-bottom), 16px)) !important;
 }
 
 body.android15 .scrollable-content {
@@ -372,7 +403,7 @@ body.android15 .safe-area-content {
   width: 100% !important;
 }
 .v-bottom-nav {
-  height: 75px !important;
+  height: 100px !important;
 }
 
 .login-content-wrapper {

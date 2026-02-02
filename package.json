@@ -2,7 +2,7 @@
   "name": "routine-notes",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
+ "scripts": {
     "mcp:test": "set NODE_OPTIONS=--openssl-legacy-provider && node test-mcp-client.js",
     "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
     "serve": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",

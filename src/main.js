@@ -15,8 +15,8 @@ import './plugins/notifications';
 import './plugins/curl-executor';
 import './styles/shadows.css';
 import VueApollo from './plugins/apollo';
-import './styles/ios-safe-area.css';
 import './styles/android-safe-area.css';
+import './utils/androidSafeArea'; // Initialize Android safe area manager
 import currentTaskPlugin from './plugins/currentTask';
 import { SplashScreen } from '@capacitor/splash-screen';
 import App from './App.vue';
