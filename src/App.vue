@@ -90,7 +90,7 @@ try {
         // Get Token
         const token = await messaging.getToken();
         console.log('FCM token:', token);
-        localStorage.setItem(GC_NOTIFICATION_TOKEN, token);
+        localStorage.setItem('GC_NOTIFICATION_TOKEN', token);
       } else {
         console.log('Notification permission denied.');
       }

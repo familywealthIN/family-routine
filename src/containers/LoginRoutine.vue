@@ -135,7 +135,7 @@ export default {
           }
           
           const accessToken = result.authentication.idToken;
-          const notificationId = getSessionItem(GC_NOTIFICATION_TOKEN) || '';
+          const notificationId = getSessionItem('GC_NOTIFICATION_TOKEN') || '';
           console.log('Access Token:', accessToken);
           //console.log('Notification ID:', notificationId);
           this.createSession(accessToken, notificationId);
@@ -158,7 +158,7 @@ export default {
           // Using the new Google Identity Services API response format
           // The credential property contains the JWT access token
           const accessToken = user.credential;
-          const notificationId = getSessionItem(GC_NOTIFICATION_TOKEN) || '';
+          const notificationId = getSessionItem('GC_NOTIFICATION_TOKEN') || '';
           console.log('Access Token:', accessToken);  
           console.log('Notification ID:', notificationId);
 

@@ -54,7 +54,7 @@ function sendNotification(token, name, description) {
   }
 
   const payload = {
-    token: 'fa35f7YxQ7KLdebfPxzlUx:APA91bHnFnjLQ4fPr6sMz8_VnkbHCowDg6mjcl0Qkws9Xa6Eq-qIU6aG3t7J0FV2dFDm672UcoPmAb535ZUz9xEc8kAmzQUkyf2ZUrWcDOWFcO0GROnJ50o',
+    token: 'fb5vyFhTq03XjnCzcTfqAt:APA91bEQCkuR9Wb2_571vY2P0S3KoZ8_SCRzy7h_r2n8PJLC_UqZt_tJmPFyKzGGGEzGDFIkpo_HNEzjSoBeXQ2iekzEb-31ikhbtzXgH9vOoZMsUYe9FvI',
     notification: {
       title: name,
       body: description,
