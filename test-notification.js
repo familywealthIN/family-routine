@@ -53,6 +53,8 @@ function sendNotification(token, name, description) {
     return;
   }
 
+  console.log('Sending notification to token:', token);
+
   const payload = {
     token: 'fb5vyFhTq03XjnCzcTfqAt:APA91bEQCkuR9Wb2_571vY2P0S3KoZ8_SCRzy7h_r2n8PJLC_UqZt_tJmPFyKzGGGEzGDFIkpo_HNEzjSoBeXQ2iekzEb-31ikhbtzXgH9vOoZMsUYe9FvI',
     notification: {
