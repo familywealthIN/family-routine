@@ -1,7 +1,7 @@
 <template>
-  <v-layout row class="container-box-layout">
-    <v-flex xs12 lg10 offset-lg1>
-      <v-card
+  <AtomLayout row class="container-box-layout">
+    <AtomFlex xs12 lg10 offset-lg1>
+      <AtomCard
         max-width="800"
         :class="transparent ? 'transparent mx-auto elevation-0 main-card' : 'mx-auto main-card'"
       >
@@ -10,19 +10,32 @@
           class="text-xs-center"
           style="padding-top:100px; padding-bottom:100px; height: 100%;"
         >
-          <v-progress-circular indeterminate color="primary"></v-progress-circular>
+          <AtomProgressCircular indeterminate color="primary" />
         </div>
         <div class="animated fadeIn" v-else>
           <slot></slot>
         </div>
-      </v-card>
-    </v-flex>
-  </v-layout>
+      </AtomCard>
+    </AtomFlex>
+  </AtomLayout>
 </template>
 
 <script>
+import {
+  AtomCard,
+  AtomFlex,
+  AtomLayout,
+  AtomProgressCircular,
+} from '../../atoms';
+
 export default {
   name: 'ContainerBox',
+  components: {
+    AtomCard,
+    AtomFlex,
+    AtomLayout,
+    AtomProgressCircular,
+  },
   props: ['isLoading', 'transparent'],
 };
 </script>

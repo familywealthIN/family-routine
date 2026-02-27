@@ -1,53 +1,78 @@
 <template>
-  <v-card>
-    <v-list subheader style="width:100%" v-if="routines.length">
+  <AtomCard>
+    <AtomList subheader style="width:100%" v-if="routines.length">
       <v-subheader>History</v-subheader>
-      <v-list-group
+      <AtomListGroup
         v-for="routine in routines"
         :key="routine.date"
         v-model="routine.active"
         no-action
       >
         <template v-slot:activator>
-          <v-list-tile>
-            <v-list-tile-action>
-              <v-progress-circular
+          <AtomListTile>
+            <AtomListTileAction>
+              <AtomProgressCircular
                 rotate="-90"
                 :value="countTotal(routine.tasklist)"
                 color="primary"
-              >{{countTotal(routine.tasklist)}}</v-progress-circular>
-            </v-list-tile-action>
-            <v-list-tile-content>
-              <v-list-tile-title>{{ routine.date }}</v-list-tile-title>
-            </v-list-tile-content>
-          </v-list-tile>
+              >{{countTotal(routine.tasklist)}}</AtomProgressCircular>
+            </AtomListTileAction>
+            <AtomListTileContent>
+              <AtomListTileTitle>{{ routine.date }}</AtomListTileTitle>
+            </AtomListTileContent>
+          </AtomListTile>
         </template>
 
-        <v-list-tile
+        <AtomListTile
           v-for="task in routine.tasklist"
           :key="task.id"
           @click="console.log('details click')"
         >
-          <v-list-tile-action>
+          <AtomListTileAction>
             <v-avatar size="24" :color="getButtonColor(task)">
-              <v-icon color="white" size="16">{{getButtonIcon(task)}}</v-icon>
+              <AtomIcon color="white" size="16">{{getButtonIcon(task)}}</AtomIcon>
             </v-avatar>
-          </v-list-tile-action>
-          <v-list-tile-content>
-            <v-list-tile-title>{{ task.name }}</v-list-tile-title>
-          </v-list-tile-content>
-        </v-list-tile>
-      </v-list-group>
-    </v-list>
+          </AtomListTileAction>
+          <AtomListTileContent>
+            <AtomListTileTitle>{{ task.name }}</AtomListTileTitle>
+          </AtomListTileContent>
+        </AtomListTile>
+      </AtomListGroup>
+    </AtomList>
     <div v-else class="text-xs-center pt-3 pb-3">
       We do not have history of routine, check back later.
     </div>
-  </v-card>
+  </AtomCard>
 </template>
 
 <script>
+import {
+  AtomCard,
+  AtomIcon,
+  AtomList,
+  AtomListGroup,
+  AtomListTile,
+  AtomListTileAction,
+  AtomListTileContent,
+  AtomListTileTitle,
+  AtomProgressCircular,
+} from '../../atoms';
 
 export default {
+  name: 'OrganismFamilyUserHistory',
+
+  components: {
+    AtomCard,
+    AtomIcon,
+    AtomList,
+    AtomListGroup,
+    AtomListTile,
+    AtomListTileAction,
+    AtomListTileContent,
+    AtomListTileTitle,
+    AtomProgressCircular,
+  },
+
   props: ['routines'],
   methods: {
     countTotal(tasklist) {

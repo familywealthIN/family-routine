@@ -1,26 +1,19 @@
 <template>
-  <div v-if="milestoneData && milestoneData.entries" class="goal-plan-form">
-    <v-divider class="my-4"></v-divider>
+  <div v-if="localMilestoneData && localMilestoneData.entries" class="goal-plan-form">
+    <AtomDivider class="my-4" />
 
     <!-- Plan Title (Editable) -->
-    <v-text-field
-      v-model="milestoneData.title"
+    <AtomTextField
+      v-model="localMilestoneData.title"
       label="Plan Title (will be saved as parent goal)"
       prepend-icon="title"
       filled
       class="mb-3"
-    ></v-text-field>
-
-    <!-- Milestone Checkbox for Goals Plan -->
-    <v-checkbox
-      v-model="milestoneData.isMilestone"
-      label="Link to goal in period above?"
-      class="mb-3"
-    ></v-checkbox>
+    />
 
     <!-- Milestone explanation -->
-    <v-alert
-      v-if="milestoneData.isMilestone"
+    <AtomAlert
+      v-if="selectedGoalRef"
       type="info"
       dense
       outlined
@@ -29,8 +22,8 @@
       <span class="caption">
         The plan title will be linked to a goal in the period above, and all timeline entries will be milestones referencing the plan title.
       </span>
-    </v-alert>
-    <v-alert
+    </AtomAlert>
+    <AtomAlert
       v-else
       type="info"
       dense
@@ -40,70 +33,53 @@
       <span class="caption">
         The plan title will be saved as a standalone goal, and all timeline entries will be milestones referencing it.
       </span>
-    </v-alert>
+    </AtomAlert>
 
-    <!-- Goal Reference (only show when milestone is checked) -->
-    <v-select
-      v-if="milestoneData.isMilestone"
-      :items="goalItemsRef"
-      v-model="milestoneData.goalRef"
-      item-text="body"
-      item-value="id"
-      label="On Period Above"
-      prepend-icon="flag"
-      filled
-      class="mb-4"
-    ></v-select>
-
-    <!-- Routine and Period Selection -->
-    <PlanConfigSelector
-      :routines="routines"
-      :selectedRoutine.sync="selectedRoutine"
-      :selectedPeriod.sync="selectedGoalPeriod"
-      :periodOptions="periodOptions"
-    />
-
-    <!-- Timeline Results Card -->
-    <v-card outlined class="mb-4 modern-shadow-sm">
-      <v-card-title class="subtitle-1">
-        <v-icon left>timeline</v-icon>
-        Generated {{ milestoneData.period }} Plan ({{ milestoneData.entries.length }} items)
-      </v-card-title>
-      <v-card-text>
-        <v-timeline dense>
-          <TimelineEntryEditor
-            v-for="(entry, index) in milestoneData.entries"
-            :key="index"
-            :title.sync="entry.title"
-            :description.sync="entry.description"
-            :periodName="entry.periodName"
-            :date="entry.date"
-            :color="getTimelineColor(entry.period)"
-            :editorKey="`${index}-${editorKey}`"
-            :editorConfig="editorConfig"
-          />
-        </v-timeline>
-      </v-card-text>
-    </v-card>
+    <!-- Timeline Results -->
+    <div class="mb-4">
+      <div class="mb-3 pl-2">
+        <AtomIcon class="mr-1">timeline</AtomIcon>
+        Generated {{ periodDisplayName }} Plan ({{ localMilestoneData.entries.length }} items)
+      </div>
+      <AtomTimeline dense>
+        <TimelineEntryEditor
+          v-for="(entry, index) in localMilestoneData.entries"
+          :key="index"
+          :title.sync="entry.title"
+          :description.sync="entry.description"
+          :periodName="entry.periodName"
+          :date="entry.date"
+          :color="getTimelineColor(entry.period)"
+          :editorKey="`${index}-${editorKey}`"
+          :editorConfig="mobileEditorConfig"
+        />
+      </AtomTimeline>
+    </div>
   </div>
 </template>
 
 <script>
-import gql from 'graphql-tag';
 import moment from 'moment';
-import PlanConfigSelector from '../../molecules/PlanConfigSelector/PlanConfigSelector.vue';
 import TimelineEntryEditor from '../../molecules/TimelineEntryEditor/TimelineEntryEditor.vue';
-import eventBus, { EVENTS } from '../../../utils/eventBus';
 import {
   stepupMilestonePeriodDate,
-  getTimelineEntryPeriod,
-  getTimelineEntryDate,
 } from '../../../utils/getDates';
+import {
+  AtomAlert,
+  AtomDivider,
+  AtomIcon,
+  AtomTextField,
+  AtomTimeline,
+} from '../../atoms';
 
 export default {
   name: 'OrganismAiGoalPlanForm',
   components: {
-    PlanConfigSelector,
+    AtomAlert,
+    AtomDivider,
+    AtomIcon,
+    AtomTextField,
+    AtomTimeline,
     TimelineEntryEditor,
   },
   props: {
@@ -111,15 +87,11 @@ export default {
       type: String,
       required: true,
     },
-    currentTask: {
-      type: Object,
-      default: null,
-    },
     goalItemsRef: {
       type: Array,
       default: () => [],
     },
-    routines: {
+    tasklist: {
       type: Array,
       default: () => [],
     },
@@ -127,26 +99,47 @@ export default {
       type: Boolean,
       default: false,
     },
+    saving: {
+      type: Boolean,
+      default: false,
+    },
+    milestoneData: {
+      type: Object,
+      default: null,
+    },
+    // Props from GoalTaskToolbar
+    selectedPeriod: {
+      type: String,
+      default: 'day',
+    },
+    selectedDate: {
+      type: String,
+      default: '',
+    },
+    selectedTaskRef: {
+      type: String,
+      default: null,
+    },
+    selectedGoalRef: {
+      type: String,
+      default: null,
+    },
+    promptTags: {
+      type: Array,
+      default: () => [],
+    },
   },
   data() {
     return {
-      milestoneData: null,
-      selectedRoutine: null,
-      selectedGoalPeriod: null,
+      localMilestoneData: null,
       editorKey: 0,
-      saving: false,
-      periodOptions: [
-        { text: 'Week Goals', value: 'week' },
-        { text: 'Month Goals', value: 'month' },
-        { text: 'Year Goals', value: 'year' },
-      ],
-      editorConfig: {
+      mobileEditorConfig: {
         toolbar: false,
         status: false,
         spellChecker: false,
         hideIcons: ['side-by-side', 'fullscreen'],
-        minHeight: '72px',
-        maxHeight: '120px',
+        minHeight: '60px',
+        maxHeight: '100px',
         placeholder: 'Enter goal description...',
         renderingConfig: {
           singleLineBreaks: true,
@@ -160,46 +153,56 @@ export default {
     };
   },
   computed: {
+    periodDisplayName() {
+      const periodMap = {
+        day: 'Daily',
+        week: 'Weekly',
+        month: 'Monthly',
+        year: 'Yearly',
+        lifetime: 'Lifetime',
+      };
+      return periodMap[this.selectedPeriod] || 'Weekly';
+    },
     planTitlePeriodData() {
-      if (!this.milestoneData || !this.milestoneData.period) {
+      if (!this.localMilestoneData || !this.localMilestoneData.period) {
         return { date: '', period: '' };
       }
-      const firstEntryDate = (this.milestoneData.entries[0] && this.milestoneData.entries[0].date) || moment().format('DD-MM-YYYY');
+      const firstEntryDate = (this.localMilestoneData.entries[0] && this.localMilestoneData.entries[0].date) || moment().format('DD-MM-YYYY');
       const { date, period } = stepupMilestonePeriodDate(
-        this.milestoneData.period,
+        this.localMilestoneData.period,
         firstEntryDate,
       );
       return { date, period };
     },
     planTitleGoalData() {
       // This is the period and date for the plan title goal itself
-      if (!this.selectedGoalPeriod || !this.milestoneData || !this.milestoneData.entries || !this.milestoneData.entries.length) {
+      if (!this.selectedPeriod || !this.localMilestoneData || !this.localMilestoneData.entries || !this.localMilestoneData.entries.length) {
         return { date: '', period: '' };
       }
 
-      const firstEntryDate = this.milestoneData.entries[0].date || moment().format('DD-MM-YYYY');
+      const firstEntryDate = this.localMilestoneData.entries[0].date || moment().format('DD-MM-YYYY');
       let planDate = firstEntryDate;
 
       // Calculate the appropriate date based on the selected goal period
-      if (this.selectedGoalPeriod === 'week') {
+      if (this.selectedPeriod === 'week') {
         const weekNo = moment(firstEntryDate, 'DD-MM-YYYY').weeks();
         planDate = moment(firstEntryDate, 'DD-MM-YYYY').weeks(weekNo).weekday(5).format('DD-MM-YYYY');
-      } else if (this.selectedGoalPeriod === 'month') {
+      } else if (this.selectedPeriod === 'month') {
         planDate = moment(firstEntryDate, 'DD-MM-YYYY').endOf('month').format('DD-MM-YYYY');
-      } else if (this.selectedGoalPeriod === 'year') {
+      } else if (this.selectedPeriod === 'year') {
         planDate = moment(firstEntryDate, 'DD-MM-YYYY').endOf('year').format('DD-MM-YYYY');
       }
 
-      return { date: planDate, period: this.selectedGoalPeriod };
+      return { date: planDate, period: this.selectedPeriod };
     },
     isValid() {
       return !!(
-        this.milestoneData
-        && this.selectedRoutine
-        && this.selectedGoalPeriod
-        && this.milestoneData.title
-        && this.milestoneData.entries
-        && this.milestoneData.entries.length > 0
+        this.localMilestoneData
+        && this.selectedTaskRef
+        && this.selectedPeriod
+        && this.localMilestoneData.title
+        && this.localMilestoneData.entries
+        && this.localMilestoneData.entries.length > 0
       );
     },
   },
@@ -212,18 +215,32 @@ export default {
     },
     searchQuery: {
       handler(newVal) {
-        if (newVal && !this.milestoneData && !this.loading) {
-          this.searchGoals();
+        if (newVal && !this.localMilestoneData && !this.loading) {
+          this.$emit('search-goals');
         }
       },
       immediate: true,
     },
     milestoneData: {
+      immediate: true,
       deep: true,
       handler(newVal) {
-        // Enforce milestone/goalRef relationship
-        if (newVal && !newVal.isMilestone) {
-          this.milestoneData.goalRef = null;
+        // Initialize local data from prop
+        if (newVal && !this.localMilestoneData) {
+          this.localMilestoneData = JSON.parse(JSON.stringify(newVal));
+          this.editorKey += 1;
+        } else if (newVal && JSON.stringify(newVal) !== JSON.stringify(this.localMilestoneData)) {
+          this.localMilestoneData = JSON.parse(JSON.stringify(newVal));
+          this.editorKey += 1;
+        }
+      },
+    },
+    localMilestoneData: {
+      deep: true,
+      handler(newVal) {
+        // Emit updates to parent
+        if (newVal) {
+          this.$emit('update:milestoneData', newVal);
         }
       },
     },
@@ -234,16 +251,6 @@ export default {
         }
       },
       immediate: true,
-    },
-    currentTask(newVal) {
-      if (newVal && newVal.id && this.routines.length > 0 && !this.selectedRoutine) {
-        const currentTaskInRoutines = this.routines.find(
-          (routine) => routine.taskId === newVal.id,
-        );
-        if (currentTaskInRoutines) {
-          this.selectedRoutine = newVal.id;
-        }
-      }
     },
   },
   methods: {
@@ -261,338 +268,18 @@ export default {
           return 'primary';
       }
     },
-    autoSelectGoalPeriod(query) {
-      const lowerQuery = query.toLowerCase();
-      if (/\b(year|yearly|annual|annually|12 months?)\b/.test(lowerQuery)) {
-        return 'year';
-      }
-      if (/\b(month|monthly|4 weeks?|30 days?)\b/.test(lowerQuery)) {
-        return 'month';
-      }
-      if (/\b(week|weekly|7 days?)\b/.test(lowerQuery)) {
-        return 'week';
-      }
-      return 'week';
-    },
-    modifyQueryPeriod(query) {
-      const now = moment();
-      let modifiedQuery = query;
-
-      // Week logic
-      if (/\bweek\b/i.test(query)) {
-        const daysLeftInWeek = 7 - now.day();
-        if (daysLeftInWeek >= 5) {
-          modifiedQuery = modifiedQuery.replace(/\bweek\b/gi, `${daysLeftInWeek} days`);
-        } else {
-          modifiedQuery = modifiedQuery.replace(/\bweek\b/gi, 'next week starting Sunday');
-        }
-      }
-
-      // Month logic
-      if (/\bmonth\b/i.test(query)) {
-        const daysLeftInMonth = now.clone().endOf('month').diff(now, 'days') + 1;
-        const weeksLeftInMonth = Math.ceil(daysLeftInMonth / 7);
-        if (weeksLeftInMonth >= 3) {
-          modifiedQuery = modifiedQuery.replace(/\bmonth\b/gi, `${weeksLeftInMonth} weeks`);
-        } else {
-          const nextMonth = now.clone().add(1, 'month').format('MMMM YYYY');
-          modifiedQuery = modifiedQuery.replace(/\bmonth\b/gi, `next month (${nextMonth})`);
-        }
-      }
-
-      // Year logic
-      if (/\byear\b/i.test(query)) {
-        const monthsLeftInYear = 12 - now.month();
-        if (monthsLeftInYear >= 6) {
-          modifiedQuery = modifiedQuery.replace(/\byear\b/gi, `${monthsLeftInYear} months`);
-        } else {
-          const nextYear = now.clone().add(1, 'year').format('YYYY');
-          modifiedQuery = modifiedQuery.replace(/\byear\b/gi, `next year (${nextYear})`);
-        }
-      }
-
-      return modifiedQuery;
-    },
-    async searchGoals() {
-      if (!this.searchQuery.trim()) {
-        this.$emit('error', 'Please enter a search query');
-        return;
-      }
-
-      this.$emit('update:loading', true);
-
-      try {
-        this.selectedGoalPeriod = this.autoSelectGoalPeriod(this.searchQuery);
-        const modifiedQuery = this.modifyQueryPeriod(this.searchQuery);
-
-        const result = await this.$apollo.mutate({
-          mutation: gql`
-            mutation generateMilestonePlan($query: String!) {
-              generateMilestonePlan(query: $query) {
-                period
-                title
-                entries {
-                  period
-                  periodName
-                  date
-                  title
-                  description
-                }
-              }
-            }
-          `,
-          variables: {
-            query: modifiedQuery,
-          },
-        });
-
-        if (result.data && result.data.generateMilestonePlan) {
-          this.milestoneData = {
-            ...result.data.generateMilestonePlan,
-            isMilestone: false,
-            goalRef: null,
-          };
-          this.editorKey += 1;
-
-          // Auto-select routine after goals search
-          this.$nextTick(() => {
-            if (this.currentTask && this.currentTask.id && this.routines.length > 0) {
-              const currentTaskInRoutines = this.routines.find(
-                (routine) => routine.taskId === this.currentTask.id,
-              );
-              if (currentTaskInRoutines && !this.selectedRoutine) {
-                this.selectedRoutine = this.currentTask.id;
-              }
-            }
-          });
-        } else {
-          this.$emit('error', 'No results found for your query');
-        }
-      } catch (error) {
-        console.error('Error searching goals:', error);
-        this.$emit('error', 'Failed to search. Please try again.');
-      } finally {
-        this.$emit('update:loading', false);
-      }
-    },
-    async saveGoals() {
-      if (!this.milestoneData || !this.selectedRoutine || !this.selectedGoalPeriod) {
-        this.$emit('error', 'Please select a routine and goal period');
-        return;
-      }
-
-      this.saving = true;
-      this.$emit('update:saving', true);
-
-      let planGoalRef = null;
-
-      try {
-        // Step 1: Save plan title as goal item
-        if (this.milestoneData.title) {
-          const { date: planTitleDate, period: planTitlePeriod } = this.planTitleGoalData;
-
-          const planTitleResult = await this.$apollo.mutate({
-            mutation: gql`
-              mutation addGoalItem(
-                $date: String!
-                $period: String!
-                $body: String!
-                $taskRef: String!
-                $isMilestone: Boolean!
-                $goalRef: String
-              ) {
-                addGoalItem(
-                  date: $date
-                  period: $period
-                  body: $body
-                  taskRef: $taskRef
-                  isMilestone: $isMilestone
-                  goalRef: $goalRef
-                ) {
-                  id
-                  body
-                  isMilestone
-                  goalRef
-                }
-              }
-            `,
-            variables: {
-              date: planTitleDate,
-              period: planTitlePeriod,
-              body: this.milestoneData.title,
-              taskRef: this.selectedRoutine,
-              isMilestone: this.milestoneData.isMilestone || false,
-              goalRef: this.milestoneData.isMilestone
-                ? this.milestoneData.goalRef || null
-                : null,
-            },
-          });
-
-          if (planTitleResult.data && planTitleResult.data.addGoalItem) {
-            planGoalRef = planTitleResult.data.addGoalItem.id;
-          } else {
-            throw new Error('Failed to save plan title');
-          }
-        }
-
-        // Step 2: Prepare timeline entries
-        const goalItems = this.milestoneData.entries.map((entry) => {
-          const entryPeriod = getTimelineEntryPeriod(this.milestoneData.period);
-
-          if (!entry.date) {
-            throw new Error('Invalid entry: missing date');
-          }
-
-          let formattedDate = entry.date;
-          if (/^\d{4}-\d{2}-\d{2}$/.test(formattedDate)) {
-            formattedDate = moment(formattedDate, 'YYYY-MM-DD').format('DD-MM-YYYY');
-          }
-
-          if (!/^\d{2}-\d{2}-\d{4}$/.test(formattedDate)) {
-            throw new Error(`Invalid date format: ${formattedDate}`);
-          }
-
-          const timelineDate = getTimelineEntryDate(formattedDate, entryPeriod);
-
-          return {
-            date: timelineDate,
-            period: entryPeriod,
-            body: entry.title,
-            contribution: entry.description,
-            taskRef: this.selectedRoutine,
-            isMilestone: true,
-            goalRef: planGoalRef,
-            tags: [],
-          };
-        });
-
-        // Step 3: Bulk save timeline entries
-        const result = await this.$apollo.mutate({
-          mutation: gql`
-            mutation bulkAddGoalItems($goalItems: [GoalItemInput!]!) {
-              bulkAddGoalItems(goalItems: $goalItems) {
-                id
-                body
-                contribution
-                date
-                period
-                isMilestone
-                goalRef
-              }
-            }
-          `,
-          variables: {
-            goalItems,
-          },
-        });
-
-        if (result.data && result.data.bulkAddGoalItems) {
-          const savedItems = result.data.bulkAddGoalItems;
-          const hasDayGoals = savedItems.some((item) => item.period === 'day');
-
-          eventBus.$emit(EVENTS.GOALS_SAVED, {
-            count: savedItems.length,
-            period: this.milestoneData.period,
-            hasDayGoals,
-            items: savedItems,
-          });
-
-          this.$emit('goals-saved', savedItems);
-          this.$emit('success');
-        } else {
-          throw new Error('Bulk mutation failed');
-        }
-      } catch (error) {
-        console.error('Error saving goals (attempting fallback):', error);
-
-        // Fallback: Individual mutations
-        try {
-          const mutations = this.milestoneData.entries.map((entry) => {
-            const entryPeriod = getTimelineEntryPeriod(this.milestoneData.period);
-
-            if (!entry.date) {
-              throw new Error('Invalid entry: missing date');
-            }
-
-            let formattedDate = entry.date;
-            if (/^\d{4}-\d{2}-\d{2}$/.test(formattedDate)) {
-              formattedDate = moment(formattedDate, 'YYYY-MM-DD').format('DD-MM-YYYY');
-            }
-
-            if (!/^\d{2}-\d{2}-\d{4}$/.test(formattedDate)) {
-              throw new Error(`Invalid date format: ${formattedDate}`);
-            }
-
-            const timelineDate = getTimelineEntryDate(formattedDate, this.milestoneData.period);
-
-            return this.$apollo.mutate({
-              mutation: gql`
-                mutation addGoalItem(
-                  $date: String!
-                  $period: String!
-                  $body: String!
-                  $contribution: String
-                  $taskRef: String!
-                  $isMilestone: Boolean!
-                  $goalRef: String
-                ) {
-                  addGoalItem(
-                    date: $date
-                    period: $period
-                    body: $body
-                    contribution: $contribution
-                    taskRef: $taskRef
-                    isMilestone: $isMilestone
-                    goalRef: $goalRef
-                  ) {
-                    id
-                    body
-                    contribution
-                    isMilestone
-                    goalRef
-                  }
-                }
-              `,
-              variables: {
-                date: timelineDate,
-                period: entryPeriod,
-                body: entry.title,
-                contribution: entry.description,
-                taskRef: this.selectedRoutine,
-                isMilestone: true,
-                goalRef: planGoalRef,
-              },
-            });
-          });
-
-          await Promise.all(mutations);
-
-          const hasDayGoals = getTimelineEntryPeriod(this.milestoneData.period) === 'day';
-
-          eventBus.$emit(EVENTS.GOALS_SAVED, {
-            count: this.milestoneData.entries.length,
-            period: this.milestoneData.period,
-            hasDayGoals,
-            items: [],
-          });
-
-          this.$emit('goals-saved', []);
-          this.$emit('success');
-        } catch (fallbackError) {
-          console.error('Fallback error:', fallbackError);
-          this.$emit('error', 'Failed to save goals. Please try again.');
-        }
-      } finally {
-        this.saving = false;
-        this.$emit('update:saving', false);
-      }
+    saveGoals() {
+      this.$emit('save-goals', {
+        milestoneData: this.localMilestoneData,
+        selectedRoutine: this.selectedTaskRef,
+        selectedGoalPeriod: this.selectedPeriod,
+        planTitleGoalData: this.planTitleGoalData,
+        selectedGoalRef: this.selectedGoalRef,
+      });
     },
     resetForm() {
-      this.milestoneData = null;
-      this.selectedRoutine = null;
-      this.selectedGoalPeriod = null;
       this.editorKey = 0;
-      this.saving = false;
+      this.$emit('reset-form');
     },
   },
 };
@@ -601,5 +288,15 @@ export default {
 <style scoped>
 .modern-shadow-sm {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-card-content {
+  padding: 16px;
+}
+
+@media (max-width: 600px) {
+  .timeline-card-content {
+    padding: 8px;
+  }
 }
 </style>

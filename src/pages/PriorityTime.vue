@@ -1,0 +1,327 @@
+<template>
+  <container-box transparent="true" :isLoading="isLoading">
+    <div class="priority-dashboard">
+      <atom-layout wrap>
+        <!-- Header -->
+        <atom-flex xs12 class="mr-2 ml-2 mb-4" cla>
+          <atom-layout align-center>
+            <atom-flex grow>
+              <h2 class="headline pl-2 mb-0">
+                {{ formattedDate }}
+              </h2>
+            </atom-flex>
+            <atom-flex shrink>
+              <atom-button icon @click="refreshData" :loading="isRefreshing">
+                <atom-icon>refresh</atom-icon>
+              </atom-button>
+            </atom-flex>
+          </atom-layout>
+        </atom-flex>
+
+        <!-- Priority Matrix -->
+        <atom-flex xs12>
+          <!-- Summary Stats -->
+          <atom-layout row wrap class="mr-2 ml-2 mb-4">
+            <atom-flex xs6 sm3 class="pa-2">
+              <atom-card class="pa-3" color="error" dark>
+                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1;">
+                  {{ doItems.length }}
+                </h1>
+                <div class="text-xs-center caption mt-2">
+                  DO NOW
+                </div>
+              </atom-card>
+            </atom-flex>
+            <atom-flex xs6 sm3 class="pa-2">
+              <atom-card class="pa-3" color="primary" dark>
+                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1;">
+                  {{ planItems.length }}
+                </h1>
+                <div class="text-xs-center caption mt-2">
+                  PLAN
+                </div>
+              </atom-card>
+            </atom-flex>
+            <atom-flex xs6 sm3 class="pa-2">
+              <atom-card class="pa-3" color="warning" dark>
+                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1;">
+                  {{ delegateItems.length }}
+                </h1>
+                <div class="text-xs-center caption mt-2">
+                  DELEGATE
+                </div>
+              </atom-card>
+            </atom-flex>
+            <atom-flex xs6 sm3 class="pa-2">
+              <atom-card class="pa-3" color="grey darken-1" dark>
+                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1;">
+                  {{ automateItems.length }}
+                </h1>
+                <div class="text-xs-center caption mt-2">
+                  AUTOMATE
+                </div>
+              </atom-card>
+            </atom-flex>
+          </atom-layout>
+
+          <!-- Matrix -->
+          <priority-matrix
+            :do-items="doItems"
+            :plan-items="planItems"
+            :delegate-items="delegateItems"
+            :automate-items="automateItems"
+            :tasklist="tasklist"
+            @item-click="handleItemClick"
+            @toggle-complete="handleToggleComplete"
+            @edit-item="handleEditItem"
+          />
+        </atom-flex>
+      </atom-layout>
+
+      <!-- Edit Goal Dialog -->
+      <atom-dialog
+        v-model="goalDisplayDialog"
+        fullscreen
+        hide-overlay
+        transition="dialog-bottom-transition"
+      >
+        <atom-card>
+          <atom-toolbar color="white">
+            <atom-spacer></atom-spacer>
+            <atom-button icon @click="closeEditDialog">
+              <atom-icon>close</atom-icon>
+            </atom-button>
+          </atom-toolbar>
+          <atom-card class="no-shadow">
+            <atom-card-text class="pa-0">
+              <goal-creation
+                :newGoalItem="selectedGoalItem"
+                @add-update-goal-entry="handleGoalUpdated"
+              />
+            </atom-card-text>
+          </atom-card>
+        </atom-card>
+      </atom-dialog>
+    </div>
+  </container-box>
+</template>
+
+<script>
+import moment from 'moment';
+import ContainerBox from '@/components/templates/ContainerBox/ContainerBox.vue';
+import { defaultGoalItem } from '@/constants/goals';
+import {
+  AtomButton,
+  AtomCard,
+  AtomCardText,
+  AtomDialog,
+  AtomFlex,
+  AtomIcon,
+  AtomLayout,
+  AtomSpacer,
+  AtomToolbar,
+} from '@/components/atoms';
+import PriorityMatrix from '../components/organisms/PriorityMatrix/PriorityMatrix.vue';
+import GoalCreation from '../containers/GoalCreationContainer.vue';
+
+export default {
+  name: 'PriorityTime',
+  components: {
+    PriorityMatrix,
+    GoalCreation,
+    ContainerBox,
+    AtomButton,
+    AtomCard,
+    AtomCardText,
+    AtomDialog,
+    AtomFlex,
+    AtomIcon,
+    AtomLayout,
+    AtomSpacer,
+    AtomToolbar,
+  },
+  data() {
+    return {
+      doGoals: [],
+      planGoals: [],
+      delegateGoals: [],
+      automateGoals: [],
+      tasklist: [],
+      goalDisplayDialog: false,
+      selectedGoalItem: { ...defaultGoalItem }, // Initialize with all default fields
+      isFirstLoad: true,
+      isRefreshing: false,
+      currentDate: moment().format('DD-MM-YYYY'),
+    };
+  },
+  computed: {
+    formattedDate() {
+      return moment(this.currentDate, 'DD-MM-YYYY').format('MMMM D, YYYY');
+    },
+    doItems() {
+      return this.flattenAndFilterGoals(this.doGoals);
+    },
+    planItems() {
+      return this.flattenAndFilterGoals(this.planGoals);
+    },
+    delegateItems() {
+      return this.flattenAndFilterGoals(this.delegateGoals);
+    },
+    automateItems() {
+      return this.flattenAndFilterGoals(this.automateGoals);
+    },
+    isLoading() {
+      return this.isFirstLoad && !this.doGoals.length;
+    },
+  },
+  async mounted() {
+    if (this.$root.$data.email) {
+      await this.loadAllGoals();
+    }
+  },
+  watch: {
+    '$root.$data.email': {
+      async handler(newVal) {
+        if (newVal) {
+          await this.loadAllGoals();
+        }
+      },
+    },
+  },
+  methods: {
+    /**
+     * Load all priority goals using shared composable
+     */
+    async loadAllGoals() {
+      this.isFirstLoad = true;
+      try {
+        // Load all priority tags in parallel
+        const [doData, planData, delegateData, automateData, routineData] = await Promise.all([
+          this.$goals.fetchGoalsByTag('priority:do', { useCache: true }),
+          this.$goals.fetchGoalsByTag('priority:plan', { useCache: true }),
+          this.$goals.fetchGoalsByTag('priority:delegate', { useCache: true }),
+          this.$goals.fetchGoalsByTag('priority:automate', { useCache: true }),
+          this.$routine.fetchRoutine(this.currentDate, { useCache: true }),
+        ]);
+
+        this.doGoals = doData || [];
+        this.planGoals = planData || [];
+        this.delegateGoals = delegateData || [];
+        this.automateGoals = automateData || [];
+        this.tasklist = routineData?.tasklist || [];
+      } catch (error) {
+        console.error('Error loading goals:', error);
+      } finally {
+        this.isFirstLoad = false;
+      }
+    },
+    flattenAndFilterGoals(goals) {
+      const today = moment(this.currentDate, 'DD-MM-YYYY');
+
+      return goals
+        .filter((goal) => {
+          // Filter to current day only
+          const goalDate = moment(goal.date, 'DD-MM-YYYY');
+          return goalDate.isSame(today, 'day');
+        })
+        .flatMap((goal) => goal.goalItems.map((item) => ({
+          ...item,
+          period: goal.period,
+          date: goal.date,
+          goalId: goal.id,
+        })));
+    },
+    handleItemClick(item) {
+      // Open edit dialog
+      this.handleEditItem(item);
+    },
+    handleEditItem(item) {
+      this.selectedGoalItem = {
+        id: item.id,
+        body: item.body,
+        progress: item.progress,
+        isComplete: item.isComplete,
+        taskRef: item.taskRef,
+        goalRef: item.goalRef,
+        contribution: item.contribution || '',
+        reward: item.reward || '',
+        tags: item.tags || [],
+        status: item.status,
+        isMilestone: item.isMilestone,
+        subTasks: item.subTasks || [],
+        date: item.date,
+        period: item.period,
+      };
+      this.goalDisplayDialog = true;
+    },
+    async handleToggleComplete(item) {
+      try {
+        await this.$goals.completeGoalItem({
+          id: item.id,
+          taskRef: item.taskRef || '',
+          date: item.date,
+          period: item.period,
+          isComplete: !item.isComplete,
+          isMilestone: item.isMilestone || false,
+          dayDate: this.currentDate,
+        });
+
+        // Refetch all goals
+        this.refreshData();
+
+        this.$notify({
+          title: 'Success',
+          text: item.isComplete ? 'Task marked incomplete' : 'Task completed',
+          group: 'notify',
+          type: 'success',
+          duration: 2000,
+        });
+      } catch (error) {
+        console.error('Error toggling task completion:', error);
+        this.$notify({
+          title: 'Error',
+          text: 'Failed to update task',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+      }
+    },
+    handleGoalUpdated() {
+      this.closeEditDialog();
+      this.refreshData();
+    },
+    closeEditDialog() {
+      this.goalDisplayDialog = false;
+      this.selectedGoalItem = {};
+    },
+    async refreshData() {
+      this.isRefreshing = true;
+      try {
+        await this.loadAllGoals();
+      } catch (error) {
+        console.error('Error refreshing data:', error);
+      } finally {
+        this.isRefreshing = false;
+      }
+    },
+  },
+};
+</script>
+
+<style scoped>
+
+.flex-grow-1 {
+  flex-grow: 1;
+}
+
+.no-shadow {
+  box-shadow: none !important;
+}
+
+@media (max-width: 600px) {
+  .display-1 {
+    font-size: 24px !important;
+  }
+}
+</style>

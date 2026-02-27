@@ -1,11 +1,11 @@
 <template>
   <div>
-    <v-card class="tableCard">
-      <v-card-title class="pb-0">
+    <AtomCard class="tableCard">
+      <AtomCardTitle class="pb-0">
         <h3 class="headline full-width">{{ details.name || 'Title' }}</h3>
         <span class="grey--text">{{ details.value }}</span>
-      </v-card-title>
-      <v-data-table
+      </AtomCardTitle>
+      <AtomDataTable
         :headers="headers"
         :items="details.values"
         class="full-width progress-table"
@@ -16,13 +16,25 @@
           <td>{{ props.item.name }}</td>
           <td class="text-xs-right">{{ props.item.value }}</td>
         </template>
-      </v-data-table>
-    </v-card>
+      </AtomDataTable>
+    </AtomCard>
   </div>
 </template>
 
 <script>
+import {
+  AtomCard,
+  AtomCardTitle,
+  AtomDataTable,
+} from '../../atoms';
+
 export default {
+  name: 'MoleculeTableCard',
+  components: {
+    AtomCard,
+    AtomCardTitle,
+    AtomDataTable,
+  },
   props: ['details'],
   data() {
     return {

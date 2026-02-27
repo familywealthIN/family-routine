@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import AgendaTreeTime from '@/containers/AgendaTreeTime.vue';
+import AgendaTreeTime from '@/pages/AgendaTreeTime.vue';
 
 export default {
   name: 'agendaTree',

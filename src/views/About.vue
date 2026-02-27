@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import AboutTime from '@/containers/AboutTime.vue';
+import AboutTime from '@/pages/AboutTime.vue';
 
 export default {
   name: 'about',

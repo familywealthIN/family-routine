@@ -1,7 +1,7 @@
 <template>
   <div class="about">
     <container-box>
-      <v-card-text>
+      <atom-card-text>
         <p>Routine Notes helps you organize your routine and goals.</p>
         <ul>
           <li>Groom your routine with Discipline</li>
@@ -215,16 +215,17 @@
           potential. Let me know if I have missed any feature by contacting at
           support@familywealth.in
         </p>
-      </v-card-text>
+      </atom-card-text>
     </container-box>
   </div>
 </template>
 
 <script>
+import { AtomCardText } from '@/components/atoms';
 import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 
 export default {
-  components: { ContainerBox },
+  components: { ContainerBox, AtomCardText },
   name: 'guide',
 };
 </script>

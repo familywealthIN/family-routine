@@ -26,3 +26,6 @@ serviceAccountKey.json
 .env
 .serverless
 secrets.json
+storybook-static
+coverage
+nohup.out

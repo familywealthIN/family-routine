@@ -6,7 +6,7 @@
 
 <script>
 // @ is an alias to /src
-import CheckHistory from '@/containers/CheckHistory.vue';
+import CheckHistory from '@/pages/CheckHistory.vue';
 
 export default {
   name: 'history',

@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import SettingsTime from '@/containers/SettingsTime.vue';
+import SettingsTime from '@/pages/SettingsTime.vue';
 
 export default {
   name: 'settings',

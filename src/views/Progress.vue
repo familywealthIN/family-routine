@@ -6,7 +6,7 @@
 
 <script>
 // @ is an alias to /src
-import ProgressTime from '@/containers/ProgressTime.vue';
+import ProgressTime from '@/pages/ProgressTime.vue';
 
 export default {
   name: 'history',
