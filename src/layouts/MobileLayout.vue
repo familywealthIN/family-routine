@@ -117,12 +117,12 @@
 </template>
 
 <script>
+import localforage from 'localforage';
 import PendingList from '../containers/PendingListContainer.vue';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
-import localforage from 'localforage';
 import { clearData, getSessionItem } from '../token';
 
 export default {

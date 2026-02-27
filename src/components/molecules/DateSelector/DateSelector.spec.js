@@ -47,7 +47,7 @@ describe('MoleculeDateSelector', () => {
     it('updates internal period when period prop changes', async () => {
       const wrapper = createWrapper({ period: 'day' });
       expect(wrapper.vm.internalPeriod).toBe('day');
-      
+
       await wrapper.setProps({ period: 'month' });
       expect(wrapper.vm.internalPeriod).toBe('month');
     });
@@ -55,7 +55,7 @@ describe('MoleculeDateSelector', () => {
     it('emits update:period event when period changes', async () => {
       const wrapper = createWrapper();
       await wrapper.vm.handlePeriodChange('week');
-      
+
       expect(wrapper.emitted('update:period')).toBeTruthy();
       expect(wrapper.emitted('update:period')[0]).toEqual(['week']);
     });
@@ -63,7 +63,7 @@ describe('MoleculeDateSelector', () => {
     it('emits period-change event when period changes', async () => {
       const wrapper = createWrapper();
       await wrapper.vm.handlePeriodChange('month');
-      
+
       expect(wrapper.emitted('period-change')).toBeTruthy();
       expect(wrapper.emitted('period-change')[0]).toEqual(['month']);
     });
@@ -71,7 +71,7 @@ describe('MoleculeDateSelector', () => {
     it('sets date to 01-01-1970 when switching to lifetime', async () => {
       const wrapper = createWrapper({ value: '22-02-2026' });
       await wrapper.vm.handlePeriodChange('lifetime');
-      
+
       expect(wrapper.emitted('input')).toBeTruthy();
       expect(wrapper.emitted('input')[0]).toEqual(['01-01-1970']);
     });
@@ -79,7 +79,7 @@ describe('MoleculeDateSelector', () => {
     it('clears lifetime date when switching away from lifetime', async () => {
       const wrapper = createWrapper({ value: '01-01-1970', period: 'lifetime' });
       await wrapper.vm.handlePeriodChange('day');
-      
+
       expect(wrapper.emitted('input')).toBeTruthy();
       expect(wrapper.emitted('input')[0]).toEqual(['']);
     });
@@ -109,7 +109,7 @@ describe('MoleculeDateSelector', () => {
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const year = today.getFullYear();
       const todayString = `${day}-${month}-${year}`;
-      
+
       const wrapper = createWrapper({ value: todayString, period: 'day' });
       expect(wrapper.vm.displayValue).toBe('Today');
     });
@@ -121,7 +121,7 @@ describe('MoleculeDateSelector', () => {
       const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
       const year = tomorrow.getFullYear();
       const tomorrowString = `${day}-${month}-${year}`;
-      
+
       const wrapper = createWrapper({ value: tomorrowString, period: 'day' });
       expect(wrapper.vm.displayValue).toBe('Tomorrow');
     });
@@ -137,7 +137,7 @@ describe('MoleculeDateSelector', () => {
       const wrapper = createWrapper({ period: 'week' });
       const currentWeek = wrapper.vm.getCurrentWeek();
       wrapper.setProps({ value: currentWeek });
-      
+
       expect(wrapper.vm.displayValue).toBe('This Week');
     });
 
@@ -153,7 +153,7 @@ describe('MoleculeDateSelector', () => {
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const currentMonth = `${year}-${month}`;
-      
+
       const wrapper = createWrapper({ value: currentMonth, period: 'month' });
       expect(wrapper.vm.displayValue).toBe('This Month');
     });
@@ -188,14 +188,14 @@ describe('MoleculeDateSelector', () => {
     it('calculates current week correctly', () => {
       const wrapper = createWrapper();
       const currentWeek = wrapper.vm.getCurrentWeek();
-      
+
       expect(currentWeek).toMatch(/^\d{4}-W\d{2}$/);
     });
 
     it('generates correct number of weeks for standard year', () => {
       const wrapper = createWrapper();
       const weeks2025 = wrapper.vm.getWeeksOfYearISO(2025);
-      
+
       expect(weeks2025.length).toBeGreaterThanOrEqual(52);
       expect(weeks2025.length).toBeLessThanOrEqual(53);
     });
@@ -203,7 +203,7 @@ describe('MoleculeDateSelector', () => {
     it('generates correct week numbers', () => {
       const wrapper = createWrapper();
       const weeks = wrapper.vm.getWeeksOfYearISO(2026);
-      
+
       expect(weeks[0].weekNum).toBe(1);
       expect(weeks[0].value).toBe('2026-W01');
     });
@@ -211,7 +211,7 @@ describe('MoleculeDateSelector', () => {
     it('calculates week date ranges without invalid dates', () => {
       const wrapper = createWrapper();
       const range = wrapper.vm.getWeekDateRange(2026, 10);
-      
+
       expect(range).not.toContain('Invalid');
       expect(range).toMatch(/\w{3} \d{1,2} - \w{3} \d{1,2}/);
     });
@@ -219,7 +219,7 @@ describe('MoleculeDateSelector', () => {
     it('handles week 1 correctly (ISO 8601)', () => {
       const wrapper = createWrapper();
       const range = wrapper.vm.getWeekDateRange(2026, 1);
-      
+
       // Week 1 should contain the first Thursday
       expect(range).toBeDefined();
       expect(range).not.toContain('Invalid');
@@ -230,7 +230,7 @@ describe('MoleculeDateSelector', () => {
       const weeks = wrapper.vm.getWeeksOfYearISO(2026);
       const lastWeek = weeks[weeks.length - 1];
       const range = wrapper.vm.getWeekDateRange(2026, lastWeek.weekNum);
-      
+
       expect(range).not.toContain('Invalid');
     });
   });
@@ -239,14 +239,14 @@ describe('MoleculeDateSelector', () => {
     it('generates all 12 months for a given year', () => {
       const wrapper = createWrapper();
       const months = wrapper.vm.getMonthsForYear(2026);
-      
+
       expect(months.length).toBe(12);
     });
 
     it('generates months with correct format', () => {
       const wrapper = createWrapper();
       const months = wrapper.vm.getMonthsForYear(2026);
-      
+
       expect(months[0].value).toBe('2026-01');
       expect(months[0].shortName).toBe('Jan');
       expect(months[11].value).toBe('2026-12');
@@ -256,7 +256,7 @@ describe('MoleculeDateSelector', () => {
     it('gets current month in correct format', () => {
       const wrapper = createWrapper();
       const currentMonth = wrapper.vm.getCurrentMonth();
-      
+
       expect(currentMonth).toMatch(/^\d{4}-\d{2}$/);
     });
   });
@@ -265,7 +265,7 @@ describe('MoleculeDateSelector', () => {
     it('navigates to previous year', () => {
       const wrapper = createWrapper();
       const initialYear = wrapper.vm.displayYear;
-      
+
       wrapper.vm.navigateYear(-1);
       expect(wrapper.vm.displayYear).toBe(initialYear - 1);
     });
@@ -273,7 +273,7 @@ describe('MoleculeDateSelector', () => {
     it('navigates to next year', () => {
       const wrapper = createWrapper();
       const initialYear = wrapper.vm.displayYear;
-      
+
       wrapper.vm.navigateYear(1);
       expect(wrapper.vm.displayYear).toBe(initialYear + 1);
     });
@@ -283,7 +283,7 @@ describe('MoleculeDateSelector', () => {
     it('navigates to previous decade', () => {
       const wrapper = createWrapper();
       const initialDecade = wrapper.vm.decadeStart;
-      
+
       wrapper.vm.navigateDecade(-1);
       expect(wrapper.vm.decadeStart).toBe(initialDecade - 12);
     });
@@ -291,7 +291,7 @@ describe('MoleculeDateSelector', () => {
     it('navigates to next decade', () => {
       const wrapper = createWrapper();
       const initialDecade = wrapper.vm.decadeStart;
-      
+
       wrapper.vm.navigateDecade(1);
       expect(wrapper.vm.decadeStart).toBe(initialDecade + 12);
     });
@@ -299,7 +299,7 @@ describe('MoleculeDateSelector', () => {
     it('displays correct decade range', () => {
       const wrapper = createWrapper();
       wrapper.vm.decadeStart = 2020;
-      
+
       expect(wrapper.vm.decadeRange).toBe('2020 - 2031');
     });
   });
@@ -308,7 +308,7 @@ describe('MoleculeDateSelector', () => {
     it('handles day selection and emits correct format', async () => {
       const wrapper = createWrapper();
       await wrapper.vm.handleDaySelect('2026-03-15');
-      
+
       expect(wrapper.emitted('input')).toBeTruthy();
       expect(wrapper.emitted('input')[0]).toEqual(['15-03-2026']);
       expect(wrapper.emitted('change')).toBeTruthy();
@@ -317,7 +317,7 @@ describe('MoleculeDateSelector', () => {
     it('handles week selection', async () => {
       const wrapper = createWrapper({ period: 'week' });
       await wrapper.vm.handleWeekSelect('2026-W10');
-      
+
       expect(wrapper.emitted('input')).toBeTruthy();
       expect(wrapper.emitted('input')[0]).toEqual(['2026-W10']);
     });
@@ -325,7 +325,7 @@ describe('MoleculeDateSelector', () => {
     it('handles month selection', async () => {
       const wrapper = createWrapper({ period: 'month' });
       await wrapper.vm.handleMonthSelect('2026-03');
-      
+
       expect(wrapper.emitted('input')).toBeTruthy();
       expect(wrapper.emitted('input')[0]).toEqual(['2026-03']);
     });
@@ -333,7 +333,7 @@ describe('MoleculeDateSelector', () => {
     it('handles year selection', async () => {
       const wrapper = createWrapper({ period: 'year' });
       await wrapper.vm.handleYearSelect('2026');
-      
+
       expect(wrapper.emitted('input')).toBeTruthy();
       expect(wrapper.emitted('input')[0]).toEqual(['2026']);
     });
@@ -341,7 +341,7 @@ describe('MoleculeDateSelector', () => {
     it('handles clear action', async () => {
       const wrapper = createWrapper({ value: '15-03-2026' });
       await wrapper.vm.handleClear();
-      
+
       expect(wrapper.emitted('input')).toBeTruthy();
       expect(wrapper.emitted('input')[0]).toEqual(['']);
     });
@@ -351,10 +351,10 @@ describe('MoleculeDateSelector', () => {
     it('handles "Today" quick action', async () => {
       const wrapper = createWrapper({ period: 'day' });
       await wrapper.vm.handleToday();
-      
+
       const today = new Date();
       const expectedDate = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
-      
+
       expect(wrapper.emitted('input')).toBeTruthy();
       expect(wrapper.emitted('input')[0]).toEqual([expectedDate]);
     });
@@ -363,7 +363,7 @@ describe('MoleculeDateSelector', () => {
       const wrapper = createWrapper({ period: 'week' });
       const currentWeek = wrapper.vm.getCurrentWeek();
       await wrapper.vm.handleThisWeek();
-      
+
       expect(wrapper.emitted('input')).toBeTruthy();
       expect(wrapper.emitted('input')[0]).toEqual([currentWeek]);
     });
@@ -372,7 +372,7 @@ describe('MoleculeDateSelector', () => {
       const wrapper = createWrapper({ period: 'month' });
       const currentMonth = wrapper.vm.getCurrentMonth();
       await wrapper.vm.handleThisMonth();
-      
+
       expect(wrapper.emitted('input')).toBeTruthy();
       expect(wrapper.emitted('input')[0]).toEqual([currentMonth]);
     });
@@ -381,7 +381,7 @@ describe('MoleculeDateSelector', () => {
       const wrapper = createWrapper({ period: 'year' });
       const currentYear = String(new Date().getFullYear());
       await wrapper.vm.handleThisYear();
-      
+
       expect(wrapper.emitted('input')).toBeTruthy();
       expect(wrapper.emitted('input')[0]).toEqual([currentYear]);
     });
@@ -391,35 +391,35 @@ describe('MoleculeDateSelector', () => {
     it('initializes display year from day value', () => {
       const wrapper = createWrapper({ value: '15-03-2025', period: 'day' });
       wrapper.vm.initializeDisplayYear();
-      
+
       expect(wrapper.vm.displayYear).toBe(2025);
     });
 
     it('initializes display year from week value', () => {
       const wrapper = createWrapper({ value: '2025-W10', period: 'week' });
       wrapper.vm.initializeDisplayYear();
-      
+
       expect(wrapper.vm.displayYear).toBe(2025);
     });
 
     it('initializes display year from month value', () => {
       const wrapper = createWrapper({ value: '2025-03', period: 'month' });
       wrapper.vm.initializeDisplayYear();
-      
+
       expect(wrapper.vm.displayYear).toBe(2025);
     });
 
     it('initializes display year from year value', () => {
       const wrapper = createWrapper({ value: '2025', period: 'year' });
       wrapper.vm.initializeDisplayYear();
-      
+
       expect(wrapper.vm.displayYear).toBe(2025);
     });
 
     it('defaults to current year when no value provided', () => {
       const wrapper = createWrapper({ value: '', period: 'day' });
       wrapper.vm.initializeDisplayYear();
-      
+
       expect(wrapper.vm.displayYear).toBe(new Date().getFullYear());
     });
   });
@@ -444,7 +444,7 @@ describe('MoleculeDateSelector', () => {
   describe('Props Validation', () => {
     it('accepts valid period values', () => {
       const validPeriods = ['day', 'week', 'month', 'year', 'lifetime'];
-      
+
       validPeriods.forEach((period) => {
         const wrapper = createWrapper({ period });
         expect(wrapper.vm.internalPeriod).toBe(period);
@@ -467,14 +467,14 @@ describe('MoleculeDateSelector', () => {
       const wrapper = createWrapper();
       // Test a year that has 53 weeks
       const weeks2020 = wrapper.vm.getWeeksOfYearISO(2020);
-      
+
       expect(weeks2020.length).toBeGreaterThanOrEqual(52);
     });
 
     it('handles leap years correctly', () => {
       const wrapper = createWrapper();
       const months2024 = wrapper.vm.getMonthsForYear(2024);
-      
+
       expect(months2024.length).toBe(12);
       expect(months2024[1].value).toBe('2024-02'); // February in leap year
     });
@@ -482,7 +482,7 @@ describe('MoleculeDateSelector', () => {
     it('handles invalid week number gracefully', () => {
       const wrapper = createWrapper();
       const range = wrapper.vm.getWeekDateRange(2026, 0);
-      
+
       // Should not crash, even with week 0
       expect(range).toBeDefined();
     });
