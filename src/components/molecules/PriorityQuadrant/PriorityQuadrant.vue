@@ -90,7 +90,7 @@ export default {
     },
     getTaskName(taskRef) {
       if (!taskRef || !this.tasklist) return '';
-      const task = this.tasklist.find((t) => t.id === taskRef);
+      const task = this.tasklist.find((t) => t.id === taskRef || t.taskId === taskRef);
       return task ? task.name : '';
     },
   },

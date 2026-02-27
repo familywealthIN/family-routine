@@ -70,13 +70,13 @@ export function determineTaskStatus({
     }
 
     const completedAt = moment(taskItem.completedAt);
-    const taskFromTasklist = tasklist.find((t) => t.id === taskItem.taskRef);
+    const taskFromTasklist = tasklist.find((t) => t.id === taskItem.taskRef || t.taskId === taskItem.taskRef);
 
     if (taskFromTasklist) {
       const taskTime = moment(taskFromTasklist.time, 'HH:mm');
 
       // Find the task's time window
-      const taskIndex = tasklist.findIndex((t) => t.id === taskItem.taskRef);
+      const taskIndex = tasklist.findIndex((t) => t.id === taskItem.taskRef || t.taskId === taskItem.taskRef);
       const nextTask = tasklist[taskIndex + 1];
       const nextTime = nextTask ? moment(nextTask.time, 'HH:mm') : moment('23:59', 'HH:mm');
 
@@ -100,14 +100,14 @@ export function determineTaskStatus({
   }
 
   const createdAt = moment(taskItem.createdAt);
-  const taskFromTasklist = tasklist.find((t) => t.id === taskItem.taskRef);
+  const taskFromTasklist = tasklist.find((t) => t.id === taskItem.taskRef || t.taskId === taskItem.taskRef);
 
   if (!taskFromTasklist) {
     return TASK_STATUS.TODO;
   }
 
   // Find current task's time window
-  const currentTaskIndex = tasklist.findIndex((t) => t.id === currentTask.id);
+  const currentTaskIndex = tasklist.findIndex((t) => t.id === currentTask.id || t.taskId === currentTask.id);
   if (currentTaskIndex === -1) {
     return TASK_STATUS.TODO;
   }

@@ -374,7 +374,7 @@ function generateFallbackPlan(userQuery, timeframe) {
   };
 }
 
-async function generateMilestonePlan(userQuery) {
+async function generateMilestonePlan(userQuery, systemPrompt = null) {
   let timeframe = 'week'; // default
 
   // Check for specific patterns in the modified query
@@ -396,7 +396,12 @@ async function generateMilestonePlan(userQuery) {
     const entriesTemplate = generateEntriesTemplate(timeframe, userQuery);
     const baseDate = new Date();
 
-    const prompt = `Generate a detailed plan in JSON format for: "${userQuery}".
+    // Build context prefix from parent goal if provided
+    const contextPrefix = systemPrompt
+      ? `Context from parent goal:\n${systemPrompt}\n\nUsing the above parent goal as context, generate a plan that aligns with and supports it.\n\n`
+      : '';
+
+    const prompt = `${contextPrefix}Generate a detailed plan in JSON format for: "${userQuery}".
     Use this structure:
     {
         "period": "${timeframe}",

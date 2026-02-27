@@ -1,25 +1,25 @@
 <template>
-  <v-timeline-item
+  <AtomTimelineItem
     :color="color"
     small
     class="mb-2"
   >
-    <v-layout>
-      <v-flex>
+    <AtomLayout>
+      <AtomFlex>
         <!-- Period and Date Header -->
         <div class="caption text--secondary mb-1">
           {{ periodName }} ({{ date }})
         </div>
 
         <!-- Editable Title -->
-        <v-text-field
+        <AtomTextField
           :value="title"
           @input="$emit('update:title', $event)"
           label="Goal Title"
           dense
           filled
           class="mb-2"
-        ></v-text-field>
+        />
 
         <!-- Editable Description with Markdown Editor -->
         <div class="description-editor">
@@ -31,17 +31,27 @@
             :key="`editor-${editorKey}`"
           />
         </div>
-      </v-flex>
-    </v-layout>
-  </v-timeline-item>
+      </AtomFlex>
+    </AtomLayout>
+  </AtomTimelineItem>
 </template>
 
 <script>
 import VueEasymde from 'vue-easymde';
+import {
+  AtomFlex,
+  AtomLayout,
+  AtomTextField,
+  AtomTimelineItem,
+} from '../../atoms';
 
 export default {
   name: 'MoleculeTimelineEntryEditor',
   components: {
+    AtomFlex,
+    AtomLayout,
+    AtomTextField,
+    AtomTimelineItem,
     VueEasymde,
   },
   props: {

@@ -6,7 +6,7 @@
 
 <script>
 // @ is an alias to /src
-import WelcomeWizard from '@/containers/WelcomeWizard.vue';
+import WelcomeWizard from '@/pages/WelcomeWizard.vue';
 
 export default {
   name: 'Wizard',

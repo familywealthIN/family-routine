@@ -1,133 +1,65 @@
 <template>
-  <v-form ref="form" v-model="valid">
-    <v-container  style="max-width: 900px;" fill-height>
-      <v-layout wrap class="goal-creation">
-        <v-flex xs12 d-flex>
-          <v-text-field
-            v-model="newGoalItem.body"
+  <AtomForm ref="form" v-model="valid">
+    <AtomContainer style="max-width: 900px;" fill-height>
+      <AtomLayout wrap class="goal-creation">
+        <AtomFlex xs12 d-flex>
+          <AtomTextField
+            v-model="localGoalItem.body"
             id="newGoalItemBody"
             name="newGoalItemBody"
             label="Type your task"
             class="inputGoal"
             :rules="formRules.body"
-            @keyup.enter="addGoalItem"
+            @keyup.enter="saveGoalItem"
             required
-          >
-          </v-text-field>
-        </v-flex>
-        <v-flex xs12>
-          <v-card class="no-shadow">
-            <v-toolbar dense class="toolbar">
-              <v-btn-toggle
-                small
-                v-model="newGoalItem.period"
-                rounded="0"
-                group
-                label="Period"
-                @change="updatePeriod()"
-                :disabled="newItemLoaded"
-                required
-              >
-                <v-btn value="year" small :disabled="newItemLoaded">
-                  Year
-                </v-btn>
-
-                <v-btn value="month" small :disabled="newItemLoaded">
-                  Month
-                </v-btn>
-
-                <v-btn value="week" small :disabled="newItemLoaded">
-                  Week
-                </v-btn>
-
-                <v-btn value="day" small :disabled="newItemLoaded">
-                  Day
-                </v-btn>
-              </v-btn-toggle>
-              <!-- <v-select
-                :items="periodOptionList"
-                :disabled="newItemLoaded"
-                v-model="newGoalItem.period"
-                item-text="label"
-                item-value="value"
-                :rules="formRules.dropDown"
-                label="Period"
-                @change="updatePeriod()"
-                required
-              ></v-select> -->
-              <v-select
-                prepend-inner-icon="event"
-                small
-                class="ml-1 mr-1"
-                v-if="dateOptionList.length"
-                :items="dateOptionList"
-                :disabled="newItemLoaded"
-                v-model="newGoalItem.date"
-                item-text="label"
-                item-value="value"
-                :rules="formRules.dropDown"
-                label="Date"
-                @change="triggerGoalItemsRef()"
-                solo
-                required
-              ></v-select>
-              <v-select
-                small
-                prepend-inner-icon="history"
-                class="ml-1 mr-1"
-                :items="tasklist"
-                :disabled="newItemLoaded"
-                v-model="newGoalItem.taskRef"
-                item-text="name"
-                item-value="id"
-                label="Routine Task"
-                solo
-              ></v-select>
-              <template v-if="showMilestoneOption">
-                <v-checkbox :disabled="newItemLoaded" v-model="newGoalItem.isMilestone" label="Milestone?" class="pt-0 pr-2"></v-checkbox>
-              </template>
-              <template v-if="newGoalItem.isMilestone">
-                <v-select
-                  prepend-inner-icon="assignment"
-                  :items="goalItemsRef"
-                  v-model="newGoalItem.goalRef"
-                  :disabled="newItemLoaded"
-                  item-text="body"
-                  item-value="id"
-                  label="Goal Task"
-                  solo
-                ></v-select>
-              </template>
-            </v-toolbar>
-            <v-card-text class="pt-0">
-            <v-flex xs12 d-flex>
+          />
+        </AtomFlex>
+        <AtomFlex xs12>
+          <GoalTaskToolbar
+            :period.sync="localGoalItem.period"
+            :date.sync="localGoalItem.date"
+            :task-ref.sync="localGoalItem.taskRef"
+            :goal-ref.sync="localGoalItem.goalRef"
+            :is-milestone="localGoalItem.isMilestone"
+            :tasklist="tasklist"
+            :goal-items-ref="goalItemsRef"
+            :disabled="newItemLoaded"
+            :min-date="todayISO"
+            @date-change="handleDateChange"
+            @period-change="handlePeriodChange"
+          />
+          <AtomCard class="no-shadow">
+            <AtomCardText class="pt-0">
+            <AtomFlex xs12 d-flex>
           <goal-tags-input
-            :goalTags="newGoalItem.tags"
+            :goalTags="localGoalItem.tags"
             :userTags="userTags"
             @update-new-tag-items="updateNewTagItems"
           ></goal-tags-input>
-        </v-flex>
-        <v-flex xs12 v-if="shouldShowStatus(newGoalItem.period) && newGoalItem.body">
+        </AtomFlex>
+        <AtomFlex xs12 v-if="shouldShowStatus(localGoalItem.period) && localGoalItem.body">
           <div class="d-flex align-center status-container">
             <task-status-tag
-              :status="getNewTaskStatus(newGoalItem.taskRef, newGoalItem.originalDate, newGoalItem)"
+              :status="getNewTaskStatus(localGoalItem.taskRef, localGoalItem.originalDate, localGoalItem)"
               class="status-chip"
             />
           </div>
-        </v-flex>
-        <v-layout row wrap>
-        <v-flex sm8 d-flex>
-          <v-tabs
+        </AtomFlex>
+        <AtomLayout row wrap>
+        <AtomFlex sm8 class="tabs-container">
+          <AtomTabs
           v-model="active"
         >
-          <v-tab>Description</v-tab>
-          <v-tab>Reward</v-tab>
-          <v-tab-item>
-            <v-card flat>
-              <v-card-text class="pt-2 pr-0 pb-0 pl-0">
-                <vue-easymde v-model="newGoalItem.contribution" ref="markdownEditor" />
+          <AtomTab>Description</AtomTab>
+          <AtomTab>Reward</AtomTab>
+        </AtomTabs>
+        <AtomTabsItems v-model="active">
+          <AtomTabItem>
+            <AtomCard flat>
+              <AtomCardText class="pt-2 pr-0 pb-0 pl-0">
+                <vue-easymde v-model="localGoalItem.contribution" ref="markdownEditor" />
                 <!-- Auto-save status indicator -->
-                <div v-if="newGoalItem.id" class="editor-statusbar text-right ml-2 text-muted mb-3">
+                <div v-if="localGoalItem.id" class="editor-statusbar text-right ml-2 text-muted mb-3">
                   <div
                     v-if="autoSaveLoading"
                     small
@@ -135,23 +67,23 @@
                     outlined
                     class="mr-2"
                   >
-                    <v-progress-circular
+                    <AtomProgressCircular
                       size="12"
                       width="2"
                       indeterminate
                       color="primary"
                       class="mr-1"
-                    ></v-progress-circular>
+                    />
                     Auto-saving...
                   </div>
                   <div
-                    v-else-if="newGoalItem.contribution !== lastSavedContribution"
+                    v-else-if="localGoalItem.contribution !== lastSavedContribution"
                     small
                     color="orange"
                     outlined
                     class="mr-2"
                   >
-                    <v-icon small class="mr-1">mdi-pencil</v-icon>
+                    <AtomIcon small class="mr-1">mdi-pencil</AtomIcon>
                     Unsaved changes
                   </div>
                   <div
@@ -161,157 +93,139 @@
                     outlined
                     class="mr-2"
                   >
-                    <v-icon small class="mr-1">mdi-check</v-icon>
+                    <AtomIcon small class="mr-1">mdi-check</AtomIcon>
                     Saved
                   </div>
                 </div>
-              </v-card-text>
-            </v-card>
-          </v-tab-item>
-          <v-tab-item>
-            <v-card flat>
-              <v-card-text>
-                <v-textarea v-model="newGoalItem.reward">
+              </AtomCardText>
+            </AtomCard>
+          </AtomTabItem>
+          <AtomTabItem>
+            <AtomCard flat>
+              <AtomCardText>
+                <AtomTextarea v-model="localGoalItem.reward">
                   <template v-slot:label>
                     <div>
                       Reward / Resolution
                     </div>
                   </template>
-                </v-textarea>
-              </v-card-text>
-            </v-card>
-          </v-tab-item>
-        </v-tabs>
-        </v-flex>
-        <v-flex sm4  d-flex v-if="newGoalItem.period === 'day' && newGoalItem.id">
+                </AtomTextarea>
+              </AtomCardText>
+            </AtomCard>
+          </AtomTabItem>
+        </AtomTabsItems>
+        </AtomFlex>
+        <AtomFlex sm4  d-flex v-if="localGoalItem.period === 'day' && localGoalItem.id">
           <sub-task-item-list
-            :subTasks="newGoalItem.subTasks"
-            :taskId="newGoalItem.id"
-            :period="newGoalItem.period"
-            :date="newGoalItem.date"
+            :subTasks="localGoalItem.subTasks"
+            :taskId="localGoalItem.id"
+            :period="localGoalItem.period"
+            :date="localGoalItem.date"
             @update-sub-task-items="updateSubTaskItems"
+            @add-sub-task-item="$emit('add-sub-task-item', $event)"
+            @delete-sub-task-item="$emit('delete-sub-task-item', $event)"
+            @complete-sub-task-item="$emit('complete-sub-task-item', $event)"
           />
-        </v-flex>
-      </v-layout>
-    </v-card-text>
-        <v-flex xs12>
+        </AtomFlex>
+      </AtomLayout>
+    </AtomCardText>
+        <AtomFlex xs12>
           <div style="float: right;" class="mr-1">
-            <v-btn color="primary" :disabled="!valid" :loading="buttonLoading" @click="saveGoalItem" class="mr-3">
+            <AtomButton color="primary" :disabled="!valid" :loading="buttonLoading" @click="saveGoalItem" class="mr-3">
               Save
-            </v-btn>
+            </AtomButton>
           </div>
-        </v-flex>
-          </v-card>
-        </v-flex>
-      </v-layout>
-    </v-container>
-  </v-form>
+        </AtomFlex>
+          </AtomCard>
+        </AtomFlex>
+      </AtomLayout>
+    </AtomContainer>
+  </AtomForm>
 </template>
 
 <script>
-import gql from 'graphql-tag';
-import moment from 'moment';
 import VueEasymde from 'vue-easymde';
 
 import taskStatusMixin from '@/composables/useTaskStatus';
-import {
-  getDatesOfYear,
-  getWeeksOfYear,
-  getMonthsOfYear,
-  getYearsOfLife,
-  stepupMilestonePeriodDate,
-} from '../../../utils/getDates';
 import SubTaskItemList from '../../molecules/SubTaskItemList/SubTaskItemList.vue';
 import GoalTagsInput from '../../molecules/GoalTagsInput/GoalTagsInput.vue';
+import GoalTaskToolbar from '../GoalTaskToolbar/GoalTaskToolbar.vue';
 import TaskStatusTag from '../../atoms/TaskStatusTag/TaskStatusTag.vue';
 import getJSON from '../../../utils/getJSON';
 import { USER_TAGS } from '../../../constants/settings';
-import eventBus, { EVENTS } from '../../../utils/eventBus';
+import {
+  AtomButton,
+  AtomCard,
+  AtomCardText,
+  AtomContainer,
+  AtomFlex,
+  AtomForm,
+  AtomIcon,
+  AtomLayout,
+  AtomProgressCircular,
+  AtomTab,
+  AtomTabItem,
+  AtomTabs,
+  AtomTabsItems,
+  AtomTextarea,
+  AtomTextField,
+} from '../../atoms';
 
 export default {
+  name: 'OrganismGoalCreation',
   components: {
+    AtomButton,
+    AtomCard,
+    AtomCardText,
+    AtomContainer,
+    AtomFlex,
+    AtomForm,
+    AtomIcon,
+    AtomLayout,
+    AtomProgressCircular,
+    AtomTab,
+    AtomTabItem,
+    AtomTabs,
+    AtomTabsItems,
+    AtomTextarea,
+    AtomTextField,
     SubTaskItemList,
     GoalTagsInput,
+    GoalTaskToolbar,
     VueEasymde,
     TaskStatusTag,
   },
   mixins: [taskStatusMixin],
-  props: ['newGoalItem'],
-  apollo: {
+  props: {
+    newGoalItem: {
+      type: Object,
+      required: true,
+    },
     tasklist: {
-      query: gql`
-        query getRoutineDate($date: String!) {
-          routineDate(date: $date) {
-            id
-            date
-            tasklist {
-              id
-              name
-              time
-              points
-              ticked
-              passed
-              wait
-              tags
-            }
-          }
-        }
-      `,
-      skip() {
-        // Skip query if user is not authenticated
-        return !this.$root.$data.email;
-      },
-      update(data) {
-        this.loading = false;
-        return data.routineDate && data.routineDate.date ? data.routineDate.tasklist : [];
-      },
-      variables() {
-        return {
-          date: moment().format('DD-MM-YYYY'),
-        };
-      },
-      error() {
-        this.loading = false;
-      },
+      type: Array,
+      default: () => [],
     },
     goalItemsRef: {
-      query: gql`
-        query goalDatePeriod($period: String!, $date: String!) {
-          goalDatePeriod(period: $period, date: $date) {
-            id
-            date
-            period
-            goalItems {
-              id
-              body
-            }
-          }
-        }
-      `,
-      skip() {
-        // Skip query if user is not authenticated or if skipQuery is true
-        return !this.$root.$data.email || this.skipQuery;
-      },
-      update(data) {
-        this.loading = false;
-        return data.goalDatePeriod && data.goalDatePeriod.date ? data.goalDatePeriod.goalItems : [];
-      },
-      variables() {
-        return {
-          ...stepupMilestonePeriodDate(this.newGoalItem.period, this.newGoalItem.date),
-        };
-      },
-      error() {
-        this.loading = false;
-      },
+      type: Array,
+      default: () => [],
+    },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
+    buttonLoading: {
+      type: Boolean,
+      default: false,
+    },
+    autoSaveLoading: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {
     return {
-      skipQuery: true,
       valid: false,
       active: 0,
-      buttonLoading: false,
       newItemLoaded: false,
       formRules: {
         body: [
@@ -346,292 +260,90 @@ export default {
 
       // Auto-save functionality
       autoSaveTimeout: null,
-      autoSaveLoading: false,
       lastSavedContribution: '',
-      isInitialLoad: true, // Flag to track initial component load
+      isInitialLoad: true,
+
+      // Track previous period to detect actual changes
+      previousPeriod: null,
     };
   },
   computed: {
-    dateOptionList() {
-      switch (this.newGoalItem.period) {
-        case 'day':
-          if (this.newItemLoaded) {
-            return getDatesOfYear(this.newGoalItem.date);
-          }
-          return getDatesOfYear();
-        case 'week':
-          return getWeeksOfYear();
-        case 'month':
-          return getMonthsOfYear();
-        case 'year':
-          return getYearsOfLife();
-        default:
-          return [];
-      }
+    todayISO() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     },
-    showMilestoneOption() {
-      // Important to trigger
-      console.log(
-        this.newGoalItem.period,
-        this.newGoalItem.date,
-        this.newGoalItem.date !== '01-01-1970',
-        this.goalItemsRef && this.goalItemsRef.length,
-      );
-      return (
-        this.newGoalItem.period
-        && this.newGoalItem.date
-        && this.newGoalItem.date !== '01-01-1970'
-        && this.goalItemsRef
-        && this.goalItemsRef.length
-      );
+    localGoalItem: {
+      get() {
+        return this.newGoalItem;
+      },
+      set(val) {
+        this.$emit('update:newGoalItem', val);
+      },
     },
   },
   methods: {
-    triggerGoalItemsRef() {
-      this.$apollo.queries.goalItemsRef.skip = false;
-      this.$apollo.queries.goalItemsRef.refetch();
+    handleDateChange() {
+      this.$emit('trigger-goal-items-ref');
     },
-    refreshApolloQueries() {
-      // Refresh all Apollo queries in this component when user logs in
-      try {
-        if (this.$apollo.queries.tasklist) {
-          this.$apollo.queries.tasklist.refetch();
-        }
-        if (this.$apollo.queries.goalItemsRef) {
-          this.$apollo.queries.goalItemsRef.refetch();
-        }
-        console.log('GoalCreation: Apollo queries refreshed successfully');
-      } catch (error) {
-        console.warn('GoalCreation: Error refreshing Apollo queries:', error);
+
+    handlePeriodChange(newPeriod) {
+      // GoalTaskToolbar already handles date clearing and period tracking
+      // This handler only needs to trigger goal items fetch when needed
+      console.log('GoalCreation handlePeriodChange:', {
+        newPeriod,
+        currentDate: this.localGoalItem.date,
+        currentPeriod: this.localGoalItem.period,
+      });
+
+      // Update tracked period for watchers
+      this.previousPeriod = newPeriod;
+
+      // Trigger goal items fetch if we have a valid date and not lifetime
+      if (this.localGoalItem.date && newPeriod !== 'lifetime') {
+        this.$emit('trigger-goal-items-ref');
       }
     },
+
     updatePeriod() {
-      if (this.newGoalItem.period === 'lifetime') {
-        this.newGoalItem.date = '01-01-1970';
+      if (this.localGoalItem.period === 'lifetime') {
+        this.localGoalItem.date = '01-01-1970';
       } else {
-        this.newGoalItem.date = '';
+        this.localGoalItem.date = '';
       }
     },
     saveGoalItem() {
       this.$refs.form.validate();
       if (this.valid) {
-        this.buttonLoading = true;
-        if (this.newGoalItem.id) {
-          this.updateGoalItem();
+        this.setLocalUserTag(this.localGoalItem.tags || []);
+        if (this.localGoalItem.id) {
+          this.$emit('update-goal-item', { ...this.localGoalItem }, {
+            onSuccess: () => this.resetForm(),
+            onError: () => this.resetForm(),
+          });
         } else {
-          this.addGoalItem();
+          this.$emit('add-goal-item', { ...this.localGoalItem }, {
+            onSuccess: () => this.resetForm(),
+            onError: () => this.resetForm(),
+          });
         }
       }
     },
 
     updateNewTagItems(tags) {
-      this.newGoalItem.tags = tags;
+      this.localGoalItem.tags = tags;
     },
 
     updateSubTaskItems(subTasks) {
-      this.newGoalItem.subTasks = subTasks;
+      this.localGoalItem.subTasks = subTasks;
     },
 
-    addGoalItem() {
-      const {
-        body = '',
-        period,
-        date,
-        deadline = '',
-        contribution = '',
-        reward = '',
-        isComplete = false,
-        isMilestone = false,
-        taskRef = '',
-        goalRef = '',
-        tags = [],
-        originalDate = null,
-      } = this.newGoalItem;
-
-      if (!body) {
-        return;
-      }
-
-      this.setLocalUserTag(tags);
-
-      this.$apollo
-        .mutate({
-          mutation: gql`
-            mutation addGoalItem(
-              $body: String!
-              $period: String!
-              $date: String!
-              $isComplete: Boolean
-              $isMilestone: Boolean
-              $deadline: String
-              $contribution: String
-              $reward: String
-              $taskRef: String
-              $goalRef: String
-              $tags: [String]
-              $originalDate: String
-            ) {
-              addGoalItem(
-                body: $body
-                period: $period
-                date: $date
-                isComplete: $isComplete
-                isMilestone: $isMilestone
-                deadline: $deadline
-                contribution: $contribution
-                reward: $reward
-                taskRef: $taskRef
-                goalRef: $goalRef
-                tags: $tags
-                originalDate: $originalDate
-              ) {
-                id
-                body
-                isComplete
-                isMilestone
-                status
-                createdAt
-                originalDate
-              }
-            }
-          `,
-          variables: {
-            body,
-            period,
-            date,
-            deadline: deadline || '',
-            contribution: contribution || '',
-            reward: reward || '',
-            isComplete: isComplete || false,
-            isMilestone: isMilestone || false,
-            taskRef: taskRef || '',
-            goalRef: goalRef || '',
-            tags,
-            originalDate: originalDate || null,
-          },
-          update: (scope, { data: { addGoalItem } }) => {
-            const goalItem = {
-              ...this.newGoalItem,
-              id: addGoalItem.id,
-            };
-            this.$emit('add-update-goal-entry', goalItem, false);
-            this.resetForm();
-
-            // Emit event to notify Dashboard about the new goal item
-            eventBus.$emit(EVENTS.GOAL_ITEM_CREATED, {
-              goalId: addGoalItem.id,
-              goalRef: this.newGoalItem.goalRef,
-              taskRef: this.newGoalItem.taskRef,
-              body: this.newGoalItem.body,
-            });
-            console.log('GoalCreation: Emitted GOAL_ITEM_CREATED event with ID:', addGoalItem.id);
-          },
-        })
-        .catch(() => {
-          this.resetForm();
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
-    },
-    updateGoalItem() {
-      const {
-        id,
-        body = '',
-        period,
-        date,
-        deadline = '',
-        contribution = '',
-        reward = '',
-        isMilestone = false,
-        taskRef = '',
-        goalRef = '',
-        tags = [],
-      } = this.newGoalItem;
-
-      this.setLocalUserTag(tags);
-
-      if (!body) {
-        return;
-      }
-
-      this.$apollo
-        .mutate({
-          mutation: gql`
-            mutation updateGoalItem(
-              $id: ID!
-              $body: String!
-              $period: String!
-              $date: String!
-              $isMilestone: Boolean!
-              $deadline: String!
-              $contribution: String!
-              $reward: String!
-              $taskRef: String!
-              $goalRef: String!
-              $tags: [String]
-            ) {
-              updateGoalItem(
-                id: $id
-                body: $body
-                period: $period
-                date: $date
-                isMilestone: $isMilestone
-                deadline: $deadline
-                contribution: $contribution
-                reward: $reward
-                taskRef: $taskRef
-                goalRef: $goalRef
-                tags: $tags
-              ) {
-                id
-                body
-                isComplete
-                isMilestone
-              }
-            }
-          `,
-          variables: {
-            id,
-            body,
-            period,
-            date,
-            deadline: deadline || '',
-            contribution: contribution || '',
-            reward: reward || '',
-            isMilestone: isMilestone || false,
-            taskRef: taskRef || '',
-            goalRef: goalRef || '',
-            tags,
-          },
-          update: (scope, { data: { updateGoalItem } }) => {
-            const goalItem = {
-              ...this.newGoalItem,
-              id: updateGoalItem.id,
-            };
-            this.$emit('add-update-goal-entry', goalItem, false);
-            this.resetForm();
-          },
-        })
-        .catch(() => {
-          this.resetForm();
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
-    },
     resetForm() {
-      this.buttonLoading = false;
       this.$refs.form.reset();
     },
+
     setLocalUserTag(newTags) {
       const userTags = getJSON(localStorage.getItem(USER_TAGS), []);
       newTags.forEach((tag) => {
@@ -642,66 +354,43 @@ export default {
       localStorage.setItem(USER_TAGS, JSON.stringify(userTags));
       this.userTags = [...userTags];
     },
-
-    // Auto-save contribution field
-    async autoSaveContribution() {
-      if (!this.newGoalItem.id || this.autoSaveLoading) {
-        return;
-      }
-
-      try {
-        this.autoSaveLoading = true;
-
-        await this.$apollo.mutate({
-          mutation: gql`
-            mutation updateGoalItemContribution(
-              $id: ID!
-              $contribution: String!
-            ) {
-              updateGoalItemContribution(
-                id: $id
-                contribution: $contribution
-              ) {
-                id
-                contribution
-              }
-            }
-          `,
-          variables: {
-            id: this.newGoalItem.id,
-            contribution: this.newGoalItem.contribution || '',
-          },
-        });
-
-        // Update the lastSavedContribution to prevent unnecessary saves
-        this.lastSavedContribution = this.newGoalItem.contribution || '';
-
-        // Show a subtle success indicator
-        this.$store.dispatch('showSnackbar', {
-          message: 'Contribution auto-saved',
-          color: 'success',
-          timeout: 2000,
-        });
-      } catch (error) {
-        console.error('Auto-save failed:', error);
-        this.$store.dispatch('showSnackbar', {
-          message: 'Auto-save failed. Please save manually.',
-          color: 'warning',
-          timeout: 3000,
-        });
-      } finally {
-        this.autoSaveLoading = false;
-      }
-    },
   },
   watch: {
+    goalItemsRef: {
+      handler(newVal, oldVal) {
+        console.log('goalItemsRef changed:', {
+          oldLength: oldVal ? oldVal.length : 0,
+          newLength: newVal ? newVal.length : 0,
+          newVal,
+        });
+      },
+      immediate: true,
+    },
+
     newGoalItem(newVal, oldVal) {
       this.newItemLoaded = !!newVal.id && (oldVal.date === '' || typeof oldVal.date === 'undefined');
       if (
         newVal.date !== oldVal.date
         && (oldVal.date === '' || typeof oldVal.date === 'undefined')
       ) {
-        this.triggerGoalItemsRef();
+        this.$emit('trigger-goal-items-ref');
+      }
+
+      // Reset component state when newGoalItem is cleared (dialog closed)
+      // Or initialize it when loading a new/existing goal item
+      if (!newVal.period || newVal.period === '') {
+        // Form was cleared/reset - reset all tracking state
+        this.previousPeriod = null;
+        this.lastSavedContribution = '';
+        this.isInitialLoad = true;
+        // Clear any pending auto-save timeout
+        if (this.autoSaveTimeout) {
+          clearTimeout(this.autoSaveTimeout);
+          this.autoSaveTimeout = null;
+        }
+      } else if (newVal.period !== this.previousPeriod) {
+        // Period changed or new item loaded - update tracking
+        this.previousPeriod = newVal.period;
       }
 
       // Initialize lastSavedContribution when newGoalItem loads
@@ -731,29 +420,38 @@ export default {
 
       // Set new timeout for auto-save (2 seconds after user stops typing)
       this.autoSaveTimeout = setTimeout(() => {
-        this.autoSaveContribution();
+        this.$emit('auto-save-contribution', this.newGoalItem.id, this.newGoalItem.contribution);
+        this.lastSavedContribution = this.newGoalItem.contribution || '';
       }, 2000);
     },
 
     // Watch for taskRef changes to auto-fill tags
     'newGoalItem.taskRef': function watchTaskRef(newTaskRef, oldTaskRef) {
       if (newTaskRef !== oldTaskRef && newTaskRef && this.tasklist && this.tasklist.length > 0) {
-        const selectedTask = this.tasklist.find((task) => task.id === newTaskRef);
+        const selectedTask = this.tasklist.find((task) => task.id === newTaskRef || task.taskId === newTaskRef);
         if (selectedTask && selectedTask.tags && selectedTask.tags.length > 0) {
           // Merge existing tags with routine item tags, avoiding duplicates
-          const existingTags = this.newGoalItem.tags || [];
+          const existingTags = this.localGoalItem.tags || [];
           const routineTags = selectedTask.tags || [];
           const mergedTags = [...new Set([...existingTags, ...routineTags])];
-          this.newGoalItem.tags = mergedTags;
+          this.localGoalItem.tags = mergedTags;
         }
       }
     },
 
-    // Watch for user email changes (indicates login/logout)
-    '$root.$data.email': function watchUserEmail(newEmail, oldEmail) {
-      // If email changes from null/undefined to a value, or from one user to another
-      if ((!oldEmail && newEmail) || (oldEmail && newEmail && oldEmail !== newEmail)) {
-        this.refreshApolloQueries();
+    // Watch for goalRef changes to automatically set isMilestone
+    'newGoalItem.goalRef': function watchGoalRef(newGoalRef) {
+      if (newGoalRef) {
+        // Automatically set isMilestone to true when a goalRef is selected
+        this.localGoalItem.isMilestone = true;
+      }
+    },
+
+    // Also watch localGoalItem.goalRef for direct changes
+    'localGoalItem.goalRef': function watchLocalGoalRef(newGoalRef) {
+      if (newGoalRef) {
+        // Automatically set isMilestone to true when a goalRef is selected
+        this.localGoalItem.isMilestone = true;
       }
     },
   },
@@ -769,19 +467,7 @@ export default {
 
 <style>
   @import '~easymde/dist/easymde.min.css';
-  .v-toolbar {
-    box-shadow: none;
-  }
-  .v-toolbar .v-input__control {
-    min-height: auto !important;
-    min-width: 175px;
-  }
-  .v-toolbar .v-input__control .v-input__slot {
-    margin-bottom: 0;
-    background: transparent !important;
-    border: none;
-    box-shadow: none !important;
-  }
+
   .no-shadow {
     box-shadow: none !important;
   }
@@ -794,15 +480,6 @@ export default {
     font-weight: 700;
   }
 
-  .toolbar {
-    overflow-y: hidden;
-    overflow-x: auto;
-    width: 100%;
-  }
-  .v-toolbar__content {
-    width: 100%;
-  }
-
   .status-chip {
     max-width: fit-content;
     margin-left: 0;
@@ -812,5 +489,20 @@ export default {
     justify-content: flex-start;
     align-items: center;
     gap: 8px;
+    margin-top: 8px;
+  }
+
+  .tabs-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .tabs-container .v-tabs {
+    flex: 0 0 auto;
+  }
+
+  .tabs-container .v-tabs-items {
+    flex: 1 1 auto;
   }
 </style>

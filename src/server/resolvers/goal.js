@@ -310,6 +310,54 @@ const query = {
         current.add(1, 'day');
       }
 
+      // Calculate all week Fridays that overlap with this month
+      // A week overlaps with the month if any of its days (Mon-Sun) fall within the month
+      const weekFridays = [];
+      const firstWeekOfMonth = monthStart.clone().week();
+      const lastWeekOfMonth = monthEnd.clone().week();
+      const targetYear = monthStart.year();
+
+      // Handle year boundary (e.g., week 1 of next year in December, or week 52/53 in January)
+      if (lastWeekOfMonth < firstWeekOfMonth) {
+        // Month spans year boundary (e.g., December to January)
+        // Get weeks from firstWeekOfMonth to last week of year
+        const weeksInYear = monthStart.clone().weeksInYear();
+        for (let week = firstWeekOfMonth; week <= weeksInYear; week += 1) {
+          // Use a date from the target year as base for week calculation
+          const friday = moment([targetYear, 5, 15]).week(week).weekday(5);
+          weekFridays.push(friday.format('DD-MM-YYYY'));
+        }
+        // Get weeks from 1 to lastWeekOfMonth of next year
+        for (let week = 1; week <= lastWeekOfMonth; week += 1) {
+          const friday = moment([targetYear + 1, 5, 15]).week(week).weekday(5);
+          weekFridays.push(friday.format('DD-MM-YYYY'));
+        }
+      } else {
+        // Normal case: all weeks within same year
+        // Check if January has weeks from previous year (week 52/53)
+        if (monthStart.month() === 0 && firstWeekOfMonth > 50) {
+          // January starts in last week of previous year
+          const prevYear = targetYear - 1;
+          const weeksInPrevYear = moment([prevYear, 5, 15]).weeksInYear();
+          for (let week = firstWeekOfMonth; week <= weeksInPrevYear; week += 1) {
+            const friday = moment([prevYear, 5, 15]).week(week).weekday(5);
+            weekFridays.push(friday.format('DD-MM-YYYY'));
+          }
+          // Then weeks 1 to lastWeekOfMonth of current year
+          for (let week = 1; week <= lastWeekOfMonth; week += 1) {
+            const friday = moment([targetYear, 5, 15]).week(week).weekday(5);
+            weekFridays.push(friday.format('DD-MM-YYYY'));
+          }
+        } else {
+          // Standard case: all weeks in same year
+          for (let week = firstWeekOfMonth; week <= lastWeekOfMonth; week += 1) {
+            // Use a date from the target year as base for week calculation
+            const friday = moment([targetYear, 5, 15]).week(week).weekday(5);
+            weekFridays.push(friday.format('DD-MM-YYYY'));
+          }
+        }
+      }
+
       // Generate upcoming dates from today to end of month
       const todayMoment = today.clone().startOf('day');
       const upcomingDates = datesInMonth.filter((date) => {
@@ -325,8 +373,7 @@ const query = {
         monthEnd: monthEnd.format('DD-MM-YYYY'),
         datesInMonthCount: datesInMonth.length,
         upcomingDatesCount: upcomingDates.length,
-        upcomingDatesFirst5: upcomingDates.slice(0, 5),
-        upcomingDatesLast5: upcomingDates.slice(-5),
+        weekFridays,
       });
 
       // Check what day goals exist in database for this user
@@ -351,8 +398,8 @@ const query = {
           { period: 'year', date: `31-12-${currentYear}` },
           // Month goals ending with last day of target month
           { period: 'month', date: monthEnd.format('DD-MM-YYYY') },
-          // Week goals (Fridays within the month)
-          { period: 'week', date: { $in: datesInMonth } },
+          // Week goals (Fridays of weeks that overlap with the month)
+          { period: 'week', date: { $in: weekFridays } },
           // Day goals (all days in the month, including past)
           { period: 'day', date: { $in: datesInMonth } },
         ],
@@ -365,6 +412,7 @@ const query = {
           return acc;
         }, {}),
         dayGoalDates: goals.filter((g) => g.period === 'day').map((g) => g.date),
+        weekGoalDates: goals.filter((g) => g.period === 'week').map((g) => g.date),
       });
 
       return goals.filter((goal) => goal.goalItems && goal.goalItems.length);
@@ -1181,24 +1229,27 @@ const mutation = {
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
-      if (args.period === 'day') {
+      // Only update routine stimuli if taskRef is provided
+      if (args.period === 'day' && args.taskRef) {
         const routine = await findTodayandSort(args, email);
         // eslint-disable-next-line no-underscore-dangle
-        const task = routine.tasklist.find((t) => t._id.toString() === args.taskRef.toString());
-        if (args.isComplete && args.period === 'day') {
-          task.stimuli = updateStimulusEarnedPoint('K', task);
-          if (args.isMilestone) {
-            task.stimuli = updateStimulusEarnedPoint('G', task, args.period);
+        const task = routine?.tasklist?.find((t) => t._id.toString() === args.taskRef.toString());
+        if (task) {
+          if (args.isComplete && args.period === 'day') {
+            task.stimuli = updateStimulusEarnedPoint('K', task);
+            if (args.isMilestone) {
+              task.stimuli = updateStimulusEarnedPoint('G', task, args.period);
+            }
+          } else {
+            task.stimuli = removeStimulusEarnedPoint('K', task);
           }
-        } else {
-          task.stimuli = removeStimulusEarnedPoint('K', task);
-        }
 
-        await RoutineModel.findOneAndUpdate(
-          { date: args.date, email, 'tasklist._id': args.taskRef },
-          { $set: { 'tasklist.$.stimuli': task.stimuli } },
-          { new: true },
-        ).exec();
+          await RoutineModel.findOneAndUpdate(
+            { date: args.date, email, 'tasklist._id': args.taskRef },
+            { $set: { 'tasklist.$.stimuli': task.stimuli } },
+            { new: true },
+          ).exec();
+        }
       }
 
       // Prepare the update object

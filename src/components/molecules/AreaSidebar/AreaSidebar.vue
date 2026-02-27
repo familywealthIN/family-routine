@@ -61,13 +61,16 @@
 </template>
 
 <script>
-import gql from 'graphql-tag';
-
 export default {
-  name: 'AreaSidebar',
+  name: 'MoleculeAreaSidebar',
+  props: {
+    areaTags: {
+      type: Array,
+      default: () => [],
+    },
+  },
   data() {
     return {
-      areaTags: [],
       areaIcons: {
         health: 'favorite',
         work: 'work',
@@ -83,15 +86,6 @@ export default {
         career: 'trending_up',
       },
     };
-  },
-  apollo: {
-    areaTags: {
-      query: gql`
-        query areaTags {
-          areaTags
-        }
-      `,
-    },
   },
   computed: {
     groupedAreas() {

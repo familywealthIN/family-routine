@@ -60,6 +60,7 @@
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
+import localforage from 'localforage';
 import { clearData, getSessionItem } from '../token';
 
 export default {
@@ -103,6 +104,9 @@ export default {
           this.drawer = false;
           await clearData();
           localStorage.removeItem(USER_TAGS);
+          // Clear Apollo in-memory cache and persisted storage
+          await this.$apollo.provider.defaultClient.clearStore();
+          await localforage.clear();
           this.$root.$data.userName = getSessionItem(GC_USER_NAME);
           this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
           this.$root.$data.picture = getSessionItem(GC_PICTURE);

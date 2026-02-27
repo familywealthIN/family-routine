@@ -1,7 +1,8 @@
-<template>  <v-card class="pl-3 mb-3 sub-task-list">
-    <v-card-title class="headline pb-0 pt-3 pl-0">SUB TASKS</v-card-title>
+<template>
+  <AtomCard class="pl-3 mb-3 sub-task-list">
+    <AtomCardTitle class="headline pb-0 pt-3 pl-0">SUB TASKS</AtomCardTitle>
     <div class="formGoal mb-1">
-      <v-text-field
+      <AtomTextField
         clearable
         v-model="newSubTaskItemBody"
         id="newSubTaskItemBody"
@@ -11,9 +12,8 @@
         @keyup.enter="addSubTaskItem"
         :disabled="isAddingSubTask"
         :loading="isAddingSubTask"
-      >
-      </v-text-field>
-      <v-btn
+      />
+      <AtomButton
         icon
         color="success"
         fab
@@ -24,43 +24,71 @@
         :disabled="isAddingSubTask"
         :loading="isAddingSubTask"
       >
-        <v-icon dark>send</v-icon>
-      </v-btn>
+        <AtomIcon dark>send</AtomIcon>
+      </AtomButton>
     </div>
-    <v-list dense subheader>
-      <v-subheader class="subheading" v-if="subTasks && subTasks.length == 0">
+    <AtomList dense subheader>
+      <AtomSubheader class="subheading" v-if="subTasks && subTasks.length == 0">
         You have 0 sub tasks
-      </v-subheader>
-      <v-subheader class="subheading" v-else>
+      </AtomSubheader>
+      <AtomSubheader class="subheading" v-else>
         {{ subTasks && subTasks.length }} sub tasks
-      </v-subheader>
+      </AtomSubheader>
       <template v-for="(subTaskItem, i) in subTasks">
-        <v-list-tile v-bind:key="subTaskItem.id">
-          <v-list-tile-action>
-            <v-checkbox v-model="subTaskItem.isComplete" @change="completeSubTaskItem(
+        <AtomListTile v-bind:key="subTaskItem.id">
+          <AtomListTileAction>
+            <AtomCheckbox v-model="subTaskItem.isComplete" @change="completeSubTaskItem(
               subTaskItem.id,
               subTaskItem.isComplete,
-            )"></v-checkbox>
-          </v-list-tile-action>
-          <v-list-tile-content>
-            <v-list-tile-title :class="{ completed: subTaskItem.isComplete }">
+            )" />
+          </AtomListTileAction>
+          <AtomListTileContent>
+            <AtomListTileTitle :class="{ completed: subTaskItem.isComplete }">
               {{ subTaskItem.body }}
-            </v-list-tile-title>
-          </v-list-tile-content>
-          <v-list-tile-action>
-            <v-btn flat icon @click="deleteSubTaskItem(subTaskItem, i)">
-              <v-icon>delete</v-icon>
-            </v-btn>
-          </v-list-tile-action>
-        </v-list-tile>
+            </AtomListTileTitle>
+          </AtomListTileContent>
+          <AtomListTileAction>
+            <AtomButton flat icon @click="deleteSubTaskItem(subTaskItem, i)">
+              <AtomIcon>delete</AtomIcon>
+            </AtomButton>
+          </AtomListTileAction>
+        </AtomListTile>
       </template>
-    </v-list>
-  </v-card>
+    </AtomList>
+  </AtomCard>
 </template>
 <script>
-import gql from 'graphql-tag';
+import {
+  AtomButton,
+  AtomCard,
+  AtomCardTitle,
+  AtomCheckbox,
+  AtomIcon,
+  AtomList,
+  AtomListTile,
+  AtomListTileAction,
+  AtomListTileContent,
+  AtomListTileTitle,
+  AtomSubheader,
+  AtomTextField,
+} from '../../atoms';
 
 export default {
+  name: 'MoleculeSubTaskItemList',
+  components: {
+    AtomButton,
+    AtomCard,
+    AtomCardTitle,
+    AtomCheckbox,
+    AtomIcon,
+    AtomList,
+    AtomListTile,
+    AtomListTileAction,
+    AtomListTileContent,
+    AtomListTileTitle,
+    AtomSubheader,
+    AtomTextField,
+  },
   props: ['subTasks', 'editMode', 'newGoalItem', 'taskId', 'date', 'period'],
 
   data() {
@@ -82,107 +110,50 @@ export default {
         return;
       }
 
-      const { date, taskId } = this;
+      const { date, taskId, period } = this;
       this.isAddingSubTask = true;
       this.$emit('sub-task-loading', true);
 
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation addSubTaskItem(
-            $taskId: ID!
-            $body: String!
-            $period: String!
-            $date: String!
-            $isComplete: Boolean!
-          ) {
-            addSubTaskItem(
-              taskId: $taskId
-              body: $body
-              period: $period
-              date: $date
-              isComplete: $isComplete
-            ) {
-              id
-              body
-              isComplete
-            }
-          }
-        `,
-        variables: {
-          taskId,
-          body: this.newSubTaskItemBody,
-          period: 'day',
-          date,
-          isComplete: false,
-        },
-        update: (scope, { data: { addSubTaskItem } }) => {
+      // Emit event with all data needed for mutation - parent handles GraphQL
+      this.$emit('add-sub-task-item', {
+        taskId,
+        body: this.newSubTaskItemBody,
+        period: period || 'day',
+        date,
+        isComplete: false,
+        onSuccess: (addedSubTask) => {
           if (!this.subTasks) {
             this.subTasks = [];
           }
-
-          this.subTasks.push(
-            {
-              id: addSubTaskItem.id,
-              body: this.newSubTaskItemBody,
-              isComplete: false,
-            },
-          );
+          this.subTasks.push({
+            id: addedSubTask.id,
+            body: this.newSubTaskItemBody,
+            isComplete: false,
+          });
           this.$emit('update-sub-task-items', this.subTasks);
           this.newSubTaskItemBody = '';
           this.isAddingSubTask = false;
           this.$emit('sub-task-loading', false);
         },
-      }).catch(() => {
-        this.isAddingSubTask = false;
-        this.$emit('sub-task-loading', false);
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
+        onError: () => {
+          this.isAddingSubTask = false;
+          this.$emit('sub-task-loading', false);
+        },
       });
     },
     deleteSubTaskItem(subTaskItem, index) {
       const { id } = subTaskItem;
       const { taskId, period, date } = this;
-      this.subTasks.splice(index, 1);
 
-      this.$emit('update-sub-task-items', this.subTasks);
+      this.$emit('update-sub-task-items', this.subTasks.filter((_, i) => i !== index));
 
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation deleteSubTaskItem(
-            $id: ID!
-            $taskId: ID!
-            $period: String!
-            $date: String!
-          ) {
-            deleteSubTaskItem(
-              id: $id
-              taskId: $taskId,
-              period: $period
-              date: $date
-            ) {
-              id
-            }
-          }
-        `,
-        variables: {
-          id,
-          taskId,
-          period,
-          date,
-        },
-      }).catch(() => {
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
+      // Emit event with all data needed for mutation - parent handles GraphQL
+      // Apollo cache optimistic update handles instant UI removal
+      this.$emit('delete-sub-task-item', {
+        id,
+        taskId,
+        period,
+        date,
       });
     },
     completeSubTaskItem(id, isComplete) {
@@ -193,44 +164,14 @@ export default {
         taskId,
       } = this;
 
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation completeSubTaskItem(
-            $id: ID!
-            $taskId: ID!
-            $period: String!
-            $date: String!
-            $isComplete: Boolean!
-          ) {
-            completeSubTaskItem(
-              id: $id
-              taskId: $taskId
-              period: $period
-              date: $date
-              isComplete: $isComplete
-            ) {
-              id
-            }
-          }
-        `,
-        variables: {
-          id,
-          taskId,
-          period,
-          date,
-          isComplete: Boolean(isComplete),
-        },
-      })
-        // .then(() => (this.$emit('refresh-task-goal', goalRef)))
-        .catch(() => {
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
+      // Emit event with all data needed for mutation - parent handles GraphQL
+      this.$emit('complete-sub-task-item', {
+        id,
+        taskId,
+        period,
+        date,
+        isComplete: Boolean(isComplete),
+      });
     },
   },
   watch: {
