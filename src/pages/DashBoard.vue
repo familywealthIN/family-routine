@@ -2337,6 +2337,7 @@ export default {
   }
   .concentrated-view .active .v-list__tile__content {
     overflow: visible;
+    min-width: 0;
   }
   .concentrated-view .active .task-goals {
     height: auto;
@@ -2350,6 +2351,9 @@ export default {
 </style>
 
 <style>
+.current-task {
+  overflow: hidden;
+}
 .current-task .active .v-list__tile--avatar:hover {
   background-color: #fff;
 }
@@ -2476,11 +2480,15 @@ export default {
 
 .concentrated-view .active .v-list__tile__content {
   justify-content: start;
+  min-width: 0;
 }
 
 .concentrated-view .active .v-list__tile__title {
   font-size: 24px;
   height: 28px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .concentrated-view .active .goal-list .v-list__tile__title {
@@ -2566,6 +2574,9 @@ export default {
 }
 .concentrated-view .task-goals .v-list__tile__title {
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .concentrated-view .task-goals .v-chip {
   cursor: pointer;

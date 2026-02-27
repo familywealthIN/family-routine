@@ -20,8 +20,9 @@
         </AtomListTileAction>
         <AtomListTileContent
           @click="completeGoalItemText(goalItem, goal.period, goal.date, goalItem.taskRef)"
+          class="goal-item-content"
         >
-        <AtomListTileTitle :class="{ completed: goalItem.isComplete}">
+        <AtomListTileTitle :class="{ completed: goalItem.isComplete, 'goal-item-title': true }">
           {{goalItem.body}}
         </AtomListTileTitle>
         <!-- <v-list-tile-sub-title
@@ -428,6 +429,17 @@ export default {
   .completed {
     text-decoration: line-through;
   }
+
+  .goal-item-content {
+    overflow: hidden;
+  }
+
+  .goal-item-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .v-list__group__items--no-action .v-list__tile {
     padding-left: 16px;
   }
