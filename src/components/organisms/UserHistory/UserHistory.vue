@@ -1,15 +1,15 @@
 <template>
   <div>
-    <v-layout v-if="routines.length">
-      <v-flex xs12>
-        <v-layout wrap>
-          <v-flex
+    <AtomLayout v-if="routines.length">
+      <AtomFlex xs12>
+        <AtomLayout wrap>
+          <AtomFlex
             xs12
             class="mb-3"
           >
             <div class="text-xs-center"><h2 class="pt-3 pb-2 pl-2">{{ currentMonth }}</h2></div>
-            <v-sheet height="250">
-              <v-calendar
+            <AtomSheet height="250">
+              <AtomCalendar
                 ref="calendar"
                 v-model="start"
                 :type="type"
@@ -20,88 +20,133 @@
               >
                 <template v-slot:day="{ date }">
                   <template v-for="routine in routinesMap[date]">
-                    <v-progress-circular
+                    <AtomProgressCircular
                       :key="routine.id"
                       rotate="-90"
                       :value="countTotal((routine && routine.tasklist) || [])"
                       color="primary"
-                    ></v-progress-circular>
+                    />
                   </template>
                 </template>
-              </v-calendar>
-            </v-sheet>
-          </v-flex>
+              </AtomCalendar>
+            </AtomSheet>
+          </AtomFlex>
 
-          <v-flex
+          <AtomFlex
             xs4
             class="text-xs-left"
           >
-            <v-btn outline color="primary" @click="$refs.calendar.prev()">
-              <v-icon
+            <AtomButton outline color="primary" @click="$refs.calendar.prev()">
+              <AtomIcon
                 left
                 dark
               >
                 keyboard_arrow_left
-              </v-icon>
+              </AtomIcon>
               Prev
-            </v-btn>
-          </v-flex>
-          <v-flex xs4></v-flex>
-          <v-flex
+            </AtomButton>
+          </AtomFlex>
+          <AtomFlex xs4></AtomFlex>
+          <AtomFlex
             xs4
             class="text-xs-right"
           >
-            <v-btn outline color="primary" @click="$refs.calendar.next()">
+            <AtomButton outline color="primary" @click="$refs.calendar.next()">
               Next
-              <v-icon
+              <AtomIcon
                 right
                 dark
               >
                 keyboard_arrow_right
-              </v-icon>
-            </v-btn>
-          </v-flex>
-        </v-layout>
-      </v-flex>
-    </v-layout>
+              </AtomIcon>
+            </AtomButton>
+          </AtomFlex>
+        </AtomLayout>
+      </AtomFlex>
+    </AtomLayout>
     <div v-else class="text-xs-center pt-3 pb-3">
       We do not have history of routine, check back later.
     </div>
-    <v-dialog v-model="taskDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
-      <v-card>
-        <v-toolbar dark color="primary">
-          <v-btn icon dark @click="taskDialog = false">
-            <v-icon>close</v-icon>
-          </v-btn>
-          <v-toolbar-title>{{selectedTasklistTitle}}</v-toolbar-title>
-          <v-spacer></v-spacer>
-        </v-toolbar>
-        <v-list subheader style="width:100%">
-          <v-subheader>Routine</v-subheader>
-          <v-list-tile
+    <AtomDialog v-model="taskDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
+      <AtomCard>
+        <AtomToolbar dark color="primary">
+          <AtomButton icon dark @click="taskDialog = false">
+            <AtomIcon>close</AtomIcon>
+          </AtomButton>
+          <AtomToolbarTitle>{{selectedTasklistTitle}}</AtomToolbarTitle>
+          <AtomSpacer />
+        </AtomToolbar>
+        <AtomList subheader style="width:100%">
+          <AtomSubheader>Routine</AtomSubheader>
+          <AtomListTile
             v-for="task in selectedTasklist"
             :key="task.id"
           >
-            <v-list-tile-action>
-              <v-avatar size="24" :color="getButtonColor(task)">
-                <v-icon color="white" size="16">{{getButtonIcon(task)}}</v-icon>
-              </v-avatar>
-            </v-list-tile-action>
-            <v-list-tile-content>
-              <v-list-tile-title>{{ task.name }}</v-list-tile-title>
-            </v-list-tile-content>
-          </v-list-tile>
-        </v-list>
-      </v-card>
-    </v-dialog>
+            <AtomListTileAction>
+              <AtomAvatar size="24" :color="getButtonColor(task)">
+                <AtomIcon color="white" size="16">{{getButtonIcon(task)}}</AtomIcon>
+              </AtomAvatar>
+            </AtomListTileAction>
+            <AtomListTileContent>
+              <AtomListTileTitle>{{ task.name }}</AtomListTileTitle>
+            </AtomListTileContent>
+          </AtomListTile>
+        </AtomList>
+      </AtomCard>
+    </AtomDialog>
   </div>
 </template>
 
 <script>
 
 import moment from 'moment';
+import {
+  AtomAvatar,
+  AtomButton,
+  AtomCalendar,
+  AtomCard,
+  AtomDialog,
+  AtomFlex,
+  AtomIcon,
+  AtomLayout,
+  AtomList,
+  AtomListTile,
+  AtomListTileAction,
+  AtomListTileContent,
+  AtomListTileTitle,
+  AtomProgressCircular,
+  AtomSheet,
+  AtomSpacer,
+  AtomSubheader,
+  AtomToolbar,
+  AtomToolbarTitle,
+} from '@/components/atoms';
 
 export default {
+  name: 'OrganismUserHistory',
+
+  components: {
+    AtomAvatar,
+    AtomButton,
+    AtomCalendar,
+    AtomCard,
+    AtomDialog,
+    AtomFlex,
+    AtomIcon,
+    AtomLayout,
+    AtomList,
+    AtomListTile,
+    AtomListTileAction,
+    AtomListTileContent,
+    AtomListTileTitle,
+    AtomProgressCircular,
+    AtomSheet,
+    AtomSpacer,
+    AtomSubheader,
+    AtomToolbar,
+    AtomToolbarTitle,
+  },
+
   props: ['routines'],
   data: () => ({
     taskDialog: false,

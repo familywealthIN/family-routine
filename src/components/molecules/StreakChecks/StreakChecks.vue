@@ -4,34 +4,41 @@
     >
         <template v-for="indx in stars">
           <template v-if="indx < Number(progress)">
-            <v-avatar :key="`avatar-${indx}`" size="24">
-              <v-icon color="green" size="24">check_circle</v-icon>
-            </v-avatar>
+            <AtomAvatar :key="`avatar-${indx}`" size="24">
+              <AtomIcon color="green" size="24">check_circle</AtomIcon>
+            </AtomAvatar>
           </template>
           <template v-else-if="indx === Number(progress)">
-            <v-avatar :key="`avatar-${indx}`" size="24">
-              <v-icon color="green" size="24">
+            <AtomAvatar :key="`avatar-${indx}`" size="24">
+              <AtomIcon color="green" size="24">
                 <template v-if="animate">
                   <template v-if="animateComplete">check_circle</template>
                   <template v-else>check_circle_outline</template>
                 </template>
                 <template v-else>check_circle</template>
-              </v-icon>
-            </v-avatar>
+              </AtomIcon>
+            </AtomAvatar>
           </template>
           <template v-else>
-            <v-avatar :key="`avatar-${indx}`" size="24">
-              <v-icon color="green" size="24">check_circle_outline</v-icon>
-            </v-avatar>
+            <AtomAvatar :key="`avatar-${indx}`" size="24">
+              <AtomIcon color="green" size="24">check_circle_outline</AtomIcon>
+            </AtomAvatar>
           </template>
-          <v-divider :key="`divider-${indx}`" v-if="indx !== 5"></v-divider>
+          <AtomDivider :key="`divider-${indx}`" v-if="indx !== 5" />
         </template>
     </span>
 </template>
 
 <script>
+import { AtomAvatar, AtomDivider, AtomIcon } from '@/components/atoms';
+
 export default {
-  name: 'streak-checks',
+  name: 'MoleculeStreakChecks',
+  components: {
+    AtomAvatar,
+    AtomDivider,
+    AtomIcon,
+  },
   props: ['progress', 'animate'],
   data() {
     return {

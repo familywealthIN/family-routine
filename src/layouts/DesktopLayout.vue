@@ -32,8 +32,8 @@
             <v-list-tile-title>{{ item.title }}</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
-        <year-goal-sidebar />
-        <area-sidebar />
+        <year-goal-sidebar :yearGoals="yearGoals" />
+        <area-sidebar :areaTags="areaTags" />
         <v-list-tile v-for="item in otherItems" :key="item.title" :to="item.route">
           <v-list-tile-action>
             <v-icon>{{ item.icon }}</v-icon>
@@ -44,7 +44,7 @@
           </v-list-tile-content>
         </v-list-tile>
 
-        <project-sidebar />
+        <project-sidebar :projectTags="projectTags" />
 
         <!-- Settings Group with Submenu -->
         <v-list class="pa-0">
@@ -128,10 +128,12 @@
 </template>
 
 <script>
+import gql from 'graphql-tag';
 import ProjectSidebar from '@/components/molecules/ProjectSidebar/ProjectSidebar.vue';
 import AreaSidebar from '@/components/molecules/AreaSidebar/AreaSidebar.vue';
 import YearGoalSidebar from '@/components/molecules/YearGoalSidebar/YearGoalSidebar.vue';
-import PendingList from '../components/organisms/PendingList/PendingList.vue';
+import localforage from 'localforage';
+import PendingList from '../containers/PendingListContainer.vue';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
@@ -157,7 +159,57 @@ export default {
         { title: 'Progress', icon: 'pie_chart', route: '/progress' },
         { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
       ],
+      yearGoals: [],
+      projectTags: [],
+      areaTags: [],
     };
+  },
+  apollo: {
+    yearGoals: {
+      query: gql`
+        query currentYearGoals {
+          currentYearGoals {
+            id
+            date
+            goalItems {
+              id
+              body
+              status
+              milestones {
+                id
+                status
+              }
+            }
+          }
+        }
+      `,
+      update(data) {
+        return data.currentYearGoals || [];
+      },
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
+    projectTags: {
+      query: gql`
+        query projectTags {
+          projectTags
+        }
+      `,
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
+    areaTags: {
+      query: gql`
+        query areaTags {
+          areaTags
+        }
+      `,
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
   },
   computed: {
     name() {
@@ -189,6 +241,9 @@ export default {
           this.isSignIn = this.$gAuth.isAuthorized;
           await clearData();
           localStorage.removeItem(USER_TAGS);
+          // Clear Apollo in-memory cache and persisted storage
+          await this.$apollo.provider.defaultClient.clearStore();
+          await localforage.clear();
           this.$root.$data.userName = getSessionItem(GC_USER_NAME);
           this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
           this.$root.$data.userEmail = getSessionItem(GC_PICTURE);

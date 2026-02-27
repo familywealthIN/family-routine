@@ -1,3 +1,38 @@
+/**
+ * Date Utility Functions for Family Routine Application
+ * 
+ * This module provides date manipulation and period management utilities
+ * for the goal and task management system.
+ * 
+ * KEY CONCEPT - PERIOD HIERARCHY FOR MILESTONE GOALS:
+ * =====================================================
+ * Goals exist in a hierarchical period structure:
+ * 
+ *   Lifetime (01-01-1970) ← Eternal, overarching life goals
+ *        ↑
+ *      Year (Dec 31) ← Annual goals
+ *        ↑
+ *     Month (Last day) ← Monthly goals
+ *        ↑
+ *      Week (Friday) ← Weekly goals
+ *        ↑
+ *       Day ← Daily tasks
+ * 
+ * A goal at any level can be a MILESTONE (sub-goal) of a goal in the level above.
+ * 
+ * Example flow:
+ * - Daily task: "Practice coding for 2 hours"
+ *   → Milestone of weekly goal: "Complete JavaScript fundamentals"
+ *   → Milestone of monthly goal: "Finish online web development course"
+ *   → Milestone of yearly goal: "Become a full-stack developer"
+ *   → Milestone of lifetime goal: "Build a successful tech career"
+ * 
+ * The stepupMilestonePeriodDate() function implements this hierarchy logic.
+ * 
+ * DATE FORMAT: All dates are stored and manipulated in DD-MM-YYYY format
+ * internally, though displayed in various formats to users.
+ */
+
 import moment from 'moment';
 
 export default function getDates() {
@@ -65,7 +100,51 @@ export function getYearsOfLife() {
   return years;
 }
 
+/**
+ * Step up to the parent period for milestone goal relationships
+ * 
+ * PURPOSE:
+ * When creating a milestone goal, this function determines which parent period
+ * to fetch goals from. A goal can be a milestone (sub-goal) of another goal
+ * in the period above it.
+ * 
+ * PERIOD HIERARCHY (child → parent):
+ * - day     → week     (Friday of the week containing the day)
+ * - week    → month    (Last day of the month containing the week)
+ * - month   → year     (December 31st of the year containing the month)
+ * - year    → lifetime (Eternal goals, represented by 01-01-1970)
+ * 
+ * EXAMPLES:
+ * 1. Creating a task on Feb 23, 2026 (day):
+ *    - Can be milestone of week goals ending Friday Feb 27, 2026
+ *    stepupMilestonePeriodDate('day', '23-02-2026')
+ *    → { period: 'week', date: '27-02-2026' }
+ * 
+ * 2. Creating a weekly goal ending Feb 27, 2026:
+ *    - Can be milestone of monthly goals ending Feb 28, 2026
+ *    stepupMilestonePeriodDate('week', '27-02-2026')
+ *    → { period: 'month', date: '28-02-2026' }
+ * 
+ * 3. Creating a monthly goal ending Feb 28, 2026:
+ *    - Can be milestone of yearly goals ending Dec 31, 2026
+ *    stepupMilestonePeriodDate('month', '28-02-2026')
+ *    → { period: 'year', date: '31-12-2026' }
+ * 
+ * 4. Creating a yearly goal ending Dec 31, 2026:
+ *    - Can be milestone of lifetime goals
+ *    stepupMilestonePeriodDate('year', '31-12-2026')
+ *    → { period: 'lifetime', date: '01-01-1970' }
+ * 
+ * USAGE:
+ * Used in GoalListContainer, AiSearchModalContainer, and other components
+ * to fetch parent period goals when showing milestone selection options.
+ * 
+ * @param {string} period - Current period: 'day', 'week', 'month', 'year', or 'lifetime'
+ * @param {string} date - Current date in DD-MM-YYYY format
+ * @returns {Object} Parent period and date { period: string, date: string (DD-MM-YYYY) }
+ */
 export function stepupMilestonePeriodDate(period, date) {
+  // Day → Week: Return Friday of the week containing this day
   if (period === 'day') {
     const weekNo = moment(date, 'DD-MM-YYYY').weeks();
     return {
@@ -73,24 +152,32 @@ export function stepupMilestonePeriodDate(period, date) {
       date: moment(date, 'DD-MM-YYYY').weeks(weekNo).weekday(5).format('DD-MM-YYYY'),
     };
   }
+
+  // Week → Month: Return last day of the month containing this week
   if (period === 'week') {
     return {
       period: 'month',
       date: moment(date, 'DD-MM-YYYY').endOf('month').format('DD-MM-YYYY'),
     };
   }
+
+  // Month → Year: Return December 31st of the year containing this month
   if (period === 'month') {
     return {
       period: 'year',
       date: moment(date, 'DD-MM-YYYY').endOf('year').format('DD-MM-YYYY'),
     };
   }
+
+  // Year → Lifetime: Return the eternal goal date (Unix epoch start)
   if (period === 'year') {
     return {
       period: 'lifetime',
       date: '01-01-1970',
     };
   }
+
+  // Default fallback: treat as day and return week
   const weekNo = moment(date, 'DD-MM-YYYY').weeks();
   return {
     period: 'week',

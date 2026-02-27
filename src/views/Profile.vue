@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import ProfileTime from '@/containers/ProfileTime.vue';
+import ProfileTime from '@/pages/ProfileTime.vue';
 
 export default {
   name: 'profile',

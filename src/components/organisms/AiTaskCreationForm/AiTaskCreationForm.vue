@@ -1,123 +1,100 @@
 <template>
   <div v-if="taskData" class="task-creation-form">
-    <v-divider class="my-4"></v-divider>
+    <AtomDivider class="my-4" />
 
     <!-- Success Message -->
-    <v-alert v-if="taskSuccess" type="success" dismissible @click="taskSuccess = false">
+    <AtomAlert v-if="taskSuccess" type="success" dismissible @click="$emit('dismiss-success')">
       Task successfully created!
-    </v-alert>
+    </AtomAlert>
 
-    <!-- Task Information Card -->
-    <v-card outlined class="mb-4 modern-shadow-sm">
-      <v-card-title class="subtitle-1">
-        <v-icon left>task_alt</v-icon>
-        Extracted Task Information
-      </v-card-title>
-      <v-card-text>
-        <!-- Editable Task Title -->
-        <v-text-field
-          v-model="taskData.title"
-          label="Task Title"
-          prepend-icon="title"
-          filled
-          class="mb-3"
-        ></v-text-field>
+    <!-- Task Information Card - TickTick Style -->
+    <div class="task-card-compact">
+      <!-- Editable Task Title (Large, Bold) -->
+      <AtomTextField
+        :value="taskData.title"
+        @input="updateField('title', $event)"
+        placeholder="Task name"
+        solo
+        flat
+        hide-details
+        class="task-title-input mb-2"
+      />
 
-        <!-- Editable Task Description -->
-        <v-textarea
-          v-model="taskData.description"
-          label="Task Description"
-          prepend-icon="description"
-          filled
-          auto-grow
-          rows="3"
-          class="mb-3"
-        ></v-textarea>
+      <!--Tags (Move above description) -->
+      <goal-tags-input
+        :goalTags="taskData.tags"
+        :userTags="userTags"
+        @update-new-tag-items="updateField('tags', $event)"
+        class="mb-3"
+      ></goal-tags-input>
 
-        <!-- Task Date -->
-        <v-text-field
-          v-model="taskData.dueDate"
-          label="Task Date"
-          prepend-icon="event"
-          filled
-          type="date"
-          class="mb-3"
-        ></v-text-field>
-
-        <!-- Tags -->
-        <goal-tags-input
-          :goalTags="taskData.tags"
-          :userTags="userTags"
-          @update-new-tag-items="updateTaskTags"
-          class="mb-3"
-        ></goal-tags-input>
-
-        <!-- Routine Task Selection -->
-        <v-select
-          :items="routines"
-          v-model="taskData.taskRef"
-          item-text="name"
-          item-value="taskId"
-          label="Routine Task"
-          prepend-icon="schedule"
-          filled
-          class="mb-3"
-        ></v-select>
-
-        <!-- Milestone Checkbox -->
-        <v-checkbox
-          v-model="taskData.isMilestone"
-          label="Milestone?"
-          class="mb-3"
-        ></v-checkbox>
-
-        <!-- Goal Reference (only show when milestone is checked) -->
-        <v-select
-          v-if="taskData.isMilestone"
-          :items="goalItemsRef"
-          v-model="taskData.goalRef"
-          item-text="body"
-          item-value="id"
-          label="Goal Task"
-          prepend-icon="flag"
-          filled
-          class="mb-3"
-        ></v-select>
-      </v-card-text>
-    </v-card>
+      <!-- Editable Task Description -->
+      <AtomTextarea
+        :value="taskData.description"
+        @input="updateField('description', $event)"
+        placeholder="Description"
+        solo
+        flat
+        auto-grow
+        rows="2"
+        hide-details
+        class="task-description-input"
+      />
+    </div>
 
     <!-- Related tasks timeline -->
-    <v-flex xs12 d-flex v-if="taskData.goalRef">
+    <AtomFlex xs12 d-flex v-if="selectedGoalRef">
       <related-tasks-timeline :tasks="relatedTasks" />
-    </v-flex>
+    </AtomFlex>
   </div>
 </template>
 
 <script>
-import gql from 'graphql-tag';
-import moment from 'moment';
 import GoalTagsInput from '../../molecules/GoalTagsInput/GoalTagsInput.vue';
 import RelatedTasksTimeline from '../../molecules/RelatedTasksTimeline/RelatedTasksTimeline.vue';
 import { USER_TAGS } from '../../../constants/settings';
-import eventBus, { EVENTS } from '../../../utils/eventBus';
 import getJSON from '../../../utils/getJSON';
+import {
+  AtomAlert,
+  AtomDivider,
+  AtomFlex,
+  AtomTextarea,
+  AtomTextField,
+} from '../../atoms';
 
 export default {
   name: 'OrganismAiTaskCreationForm',
   components: {
+    AtomAlert,
+    AtomDivider,
+    AtomFlex,
+    AtomTextarea,
+    AtomTextField,
     GoalTagsInput,
     RelatedTasksTimeline,
   },
   props: {
-    searchQuery: {
-      type: String,
-      required: true,
-    },
-    currentTask: {
+    taskData: {
       type: Object,
       default: null,
     },
+    taskSuccess: {
+      type: Boolean,
+      default: false,
+    },
+    saving: {
+      type: Boolean,
+      default: false,
+    },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
     goalItemsRef: {
+      type: Array,
+      default: () => [],
+    },
+    tasklist: {
       type: Array,
       default: () => [],
     },
@@ -129,34 +106,41 @@ export default {
       type: Array,
       default: () => [],
     },
-    loading: {
-      type: Boolean,
-      default: false,
+    // Props from GoalTaskToolbar
+    selectedDate: {
+      type: String,
+      default: '',
+    },
+    selectedTaskRef: {
+      type: String,
+      default: null,
+    },
+    selectedGoalRef: {
+      type: String,
+      default: null,
+    },
+    promptTags: {
+      type: Array,
+      default: () => [],
     },
   },
   data() {
     return {
-      taskData: null,
-      taskSuccess: false,
-      saving: false,
       userTags: getJSON(localStorage.getItem(USER_TAGS), []),
     };
   },
   computed: {
     relatedTasks() {
-      if (!this.taskData.goalRef || !this.relatedGoalsData || !Array.isArray(this.relatedGoalsData)) {
+      if (!this.selectedGoalRef || !this.relatedGoalsData || !Array.isArray(this.relatedGoalsData)) {
         return [];
       }
 
-      // Since goalsByGoalRef already filters by goalRef on the server,
-      // we just need to flatten the goalItems and add time information
-      const relatedTasks = [];
+      const tasks = [];
       this.relatedGoalsData.forEach((goal) => {
         if (goal.goalItems && Array.isArray(goal.goalItems)) {
           goal.goalItems.forEach((goalItem) => {
-            // Add time from tasklist if available
-            if (goalItem.goalRef === this.taskData.goalRef) {
-              relatedTasks.push({
+            if (goalItem.goalRef === this.selectedGoalRef) {
+              tasks.push({
                 id: goalItem.id,
                 body: goalItem.body,
                 date: goal.date,
@@ -171,8 +155,7 @@ export default {
         }
       });
 
-      // Sort by time and limit to 10 for condensed view
-      return relatedTasks
+      return tasks
         .sort((a, b) => {
           if (!a.time) return 1;
           if (!b.time) return -1;
@@ -191,240 +174,80 @@ export default {
       },
       immediate: true,
     },
-    'taskData.goalRef': function (newVal, oldVal) {
-      if (newVal !== oldVal) {
-        this.$emit('goal-ref-changed', newVal);
-      }
-    },
-    searchQuery: {
-      handler(newVal) {
-        // Always attempt extraction once when searchQuery arrives
-        if (newVal && !this.taskData) {
-          this.createTask();
-        }
-      },
-      immediate: true,
-    },
-    taskData: {
-      deep: true,
-      handler(newVal) {
-        if (newVal && newVal.taskRef && !newVal.goalRef) {
-          // Auto-select goalRef when taskRef is selected and matches current task
-          this.$nextTick(() => {
-            if (this.goalItemsRef && Array.isArray(this.goalItemsRef)) {
-              const matchingGoalItem = this.goalItemsRef.find(
-                (item) => item.taskRef === newVal.taskRef,
-              );
-              if (matchingGoalItem) {
-                this.taskData.goalRef = matchingGoalItem.id;
-                this.taskData.isMilestone = true;
-              }
-            }
-          });
-        }
-
-        // Enforce milestone/goalRef relationship
-        if (newVal && !newVal.isMilestone) {
-          this.taskData.goalRef = '';
-        }
-      },
-    },
-    'taskData.taskRef': {
-      handler(newVal) {
-        if (newVal) {
-          // Auto-fill tags from selected routine task
-          const selectedTask = this.routines.find((task) => task.taskId === newVal);
-          if (selectedTask && selectedTask.tags && selectedTask.tags.length > 0) {
-            this.taskData.tags = [...new Set([...(this.taskData.tags || []), ...selectedTask.tags])];
-          }
-        }
-      },
-    },
-    currentTask(newVal) {
-      if (newVal && newVal.id && this.taskData && !this.taskData.taskRef) {
-        this.taskData.taskRef = newVal.id;
-      }
-    },
-    goalItemsRef(newGoalItems) {
-      if (this.taskData && this.currentTask && this.currentTask.id) {
-        const matchingGoalItem = newGoalItems.find(
-          (item) => item.taskRef === this.currentTask.id,
-        );
-        if (matchingGoalItem && !this.taskData.goalRef) {
-          this.taskData.goalRef = matchingGoalItem.id;
-          this.taskData.isMilestone = true;
-        }
-      }
-    },
   },
   methods: {
-    updateTaskTags(tags) {
-      if (this.taskData) {
-        this.taskData.tags = tags;
-      }
-    },
-    setLocalUserTag(newTags) {
-      if (newTags && newTags.length > 0) {
-        const currentTags = getJSON(localStorage.getItem(USER_TAGS), []);
-        const mergedTags = [...new Set([...currentTags, ...newTags])];
-        localStorage.setItem(USER_TAGS, JSON.stringify(mergedTags));
-        this.userTags = mergedTags;
-      }
-    },
-    getTaskDate() {
-      if (this.taskData && this.taskData.dueDate) {
-        return moment(this.taskData.dueDate).format('DD-MM-YYYY');
-      }
-      return moment().format('DD-MM-YYYY');
-    },
-    async createTask() {
-      if (!this.searchQuery.trim()) {
-        this.$emit('error', 'Please enter a task description');
-        return;
-      }
-
-      this.$emit('update:loading', true);
-
-      try {
-        const result = await this.$apollo.mutate({
-          mutation: gql`
-            mutation extractDayTask($query: String!) {
-              extractDayTask(query: $query) {
-                title
-                description
-                dueDate
-                tags
-                priority
-              }
-            }
-          `,
-          variables: {
-            query: this.searchQuery,
-          },
-        });
-
-        if (result.data && result.data.extractDayTask) {
-          this.taskData = {
-            ...result.data.extractDayTask,
-            goalRef: '',
-            taskRef: '',
-            isMilestone: false,
-            dueDate: result.data.extractDayTask.dueDate || moment().format('YYYY-MM-DD'),
-          };
-
-          // Auto-select current task immediately if available
-          if (this.currentTask && this.currentTask.id) {
-            this.taskData.taskRef = this.currentTask.id;
-
-            // Auto-select goalRef and milestone checkbox
-            this.$nextTick(() => {
-              if (this.goalItemsRef && Array.isArray(this.goalItemsRef)) {
-                const matchingGoalItem = this.goalItemsRef.find(
-                  (item) => item.taskRef === this.currentTask.id,
-                );
-                if (matchingGoalItem) {
-                  this.taskData.goalRef = matchingGoalItem.id;
-                  this.taskData.isMilestone = true;
-                }
-              }
-            });
-          }
-        } else {
-          this.$emit('error', 'Failed to extract task information from your query');
-        }
-      } catch (error) {
-        console.error('Error extracting task:', error);
-        this.$emit('error', 'Failed to process your request. Please try again.');
-      } finally {
-        this.$emit('update:loading', false);
-      }
-    },
-    async saveTask() {
-      if (!this.taskData || !this.taskData.title || !this.taskData.description) {
-        this.$emit('error', 'Please fill in all required fields');
-        return;
-      }
-
-      this.saving = true;
-      this.$emit('update:saving', true);
-
-      try {
-        const result = await this.$apollo.mutate({
-          mutation: gql`
-            mutation addGoalItem(
-              $date: String!
-              $period: String!
-              $body: String!
-              $contribution: String
-              $taskRef: String!
-              $goalRef: String
-              $tags: [String]
-              $isMilestone: Boolean!
-            ) {
-              addGoalItem(
-                date: $date
-                period: $period
-                body: $body
-                contribution: $contribution
-                taskRef: $taskRef
-                goalRef: $goalRef
-                tags: $tags
-                isMilestone: $isMilestone
-              ) {
-                id
-                body
-                contribution
-                taskRef
-                goalRef
-                tags
-                isMilestone
-              }
-            }
-          `,
-          variables: {
-            date: this.getTaskDate(),
-            period: 'day',
-            body: this.taskData.title,
-            contribution: this.taskData.description,
-            taskRef: this.taskData.taskRef || '',
-            goalRef: this.taskData.isMilestone ? this.taskData.goalRef || null : null,
-            tags: this.taskData.tags || [],
-            isMilestone: this.taskData.isMilestone || false,
-          },
-        });
-
-        if (result.data && result.data.addGoalItem) {
-          this.taskSuccess = true;
-          this.setLocalUserTag(this.taskData.tags || []);
-
-          // Emit global event for dashboard refetch
-          eventBus.$emit(EVENTS.TASK_CREATED, result.data.addGoalItem);
-
-          // Emit success to parent
-          this.$emit('task-created', result.data.addGoalItem);
-          this.$emit('success');
-        } else {
-          this.$emit('error', 'Failed to create task');
-        }
-      } catch (error) {
-        console.error('Error saving task:', error);
-        this.$emit('error', 'Failed to save task. Please try again.');
-      } finally {
-        this.saving = false;
-        this.$emit('update:saving', false);
-      }
-    },
-    resetForm() {
-      this.taskData = null;
-      this.taskSuccess = false;
-      this.saving = false;
+    updateField(field, value) {
+      this.$emit('update-task-data', {
+        ...this.taskData,
+        [field]: value,
+      });
     },
   },
 };
 </script>
 
 <style scoped>
-.modern-shadow-sm {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.task-creation-form {
+  width: 100%;
+}
+
+/* Compact Task Card - TickTick/Todoist Style */
+.task-card-compact {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #e0e0e0;
+}
+
+.task-title-input >>> .v-input__control .v-input__slot {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  padding: 8px 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.task-title-input >>> input {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
+.task-title-input >>> input::placeholder {
+  color: #999 !important;
+  font-weight: 500 !important;
+}
+
+.task-description-input >>> .v-input__control .v-input__slot {
+  padding: 8px 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.task-description-input >>> textarea {
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  color: #666 !important;
+}
+
+.task-description-input >>> textarea::placeholder {
+  color: #aaa !important;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  .task-card-compact {
+    padding: 12px;
+  }
+
+  .task-title-input >>> .v-input__control .v-input__slot,
+  .task-title-input >>> input {
+    font-size: 16px !important;
+  }
+
+  .task-description-input >>> textarea {
+    font-size: 13px !important;
+  }
 }
 </style>

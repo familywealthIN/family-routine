@@ -66,13 +66,16 @@ const mutation = {
       query: {
         type: new GraphQLNonNull(GraphQLString),
       },
+      systemPrompt: {
+        type: GraphQLString,
+      },
     },
-    resolve: async (root, { query: userQuery }, context) => {
+    resolve: async (root, { query: userQuery, systemPrompt }, context) => {
       // Require authentication even for AI operations
       getEmailfromSession(context);
 
       try {
-        const plan = await generateMilestonePlan(userQuery);
+        const plan = await generateMilestonePlan(userQuery, systemPrompt);
         return plan;
       } catch (error) {
         console.error('Error generating milestone plan:', error);

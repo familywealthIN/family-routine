@@ -24,7 +24,7 @@ import {
 } from './constants/settings';
 import MobileLayout from './layouts/MobileLayout.vue';
 import DesktopLayout from './layouts/DesktopLayout.vue';
-import AiSearchModal from './components/organisms/AiSearchModal/AiSearchModal.vue';
+import AiSearchModal from './containers/AiSearchModalContainer.vue';
 import eventBus, { EVENTS } from './utils/eventBus';
 
 export default {

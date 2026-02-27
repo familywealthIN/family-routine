@@ -1,83 +1,76 @@
 <template>
-  <v-list class="pa-0">
-    <v-list-group
+  <AtomList class="pa-0">
+    <AtomListGroup
       prepend-icon="assignment"
       :value="false"
     >
       <template v-slot:activator>
-
-          <v-list-tile-title class="subheader">Goals</v-list-tile-title>
+          <AtomListTileTitle class="subheader">Goals</AtomListTileTitle>
       </template>
 
-      <v-list-tile
+      <AtomListTile
         v-for="goal in groupedYearGoals"
         :key="goal.id"
         :to="{ name: 'yearGoal', params: { id: goal.id }}"
       >
-        <v-list-tile-action>
-          <v-icon>calendar_today</v-icon>
-        </v-list-tile-action>
-        <v-list-tile-content>
-          <v-list-tile-title>
+        <AtomListTileAction>
+          <AtomIcon>calendar_today</AtomIcon>
+        </AtomListTileAction>
+        <AtomListTileContent>
+          <AtomListTileTitle>
             {{ goal.title }}
             <span class="goal-count">({{ goal.count }}/{{ goal.total }})</span>
-          </v-list-tile-title>
-        </v-list-tile-content>
-      </v-list-tile>
+          </AtomListTileTitle>
+        </AtomListTileContent>
+      </AtomListTile>
 
       <!-- Show message when no goals exist -->
-      <v-list-tile v-if="!yearGoals.length">
-        <v-list-tile-content>
-          <v-list-tile-title class="no-goals-message">
-            No goals created yet
-          </v-list-tile-title>
-        </v-list-tile-content>
-      </v-list-tile>
+      <AtomListTile v-if="!yearGoals.length">
+        <AtomListTileContent>
+          <AtomListTileTitle class="no-goals-message">
+            No Year goals created yet
+          </AtomListTileTitle>
+        </AtomListTileContent>
+      </AtomListTile>
 
-      <v-list-tile to="/goals">
-          <v-list-tile-action>
-            <v-icon>list</v-icon>
-          </v-list-tile-action>
-          <v-list-tile-content>
-            <v-list-tile-title>All Goals</v-list-tile-title>
-          </v-list-tile-content>
-      </v-list-tile>
-    </v-list-group>
-  </v-list>
+      <AtomListTile to="/goals">
+          <AtomListTileAction>
+            <AtomIcon>list</AtomIcon>
+          </AtomListTileAction>
+          <AtomListTileContent>
+            <AtomListTileTitle>All Goals</AtomListTileTitle>
+          </AtomListTileContent>
+      </AtomListTile>
+    </AtomListGroup>
+  </AtomList>
 </template>
 
 <script>
-import gql from 'graphql-tag';
+import {
+  AtomIcon,
+  AtomList,
+  AtomListGroup,
+  AtomListTile,
+  AtomListTileAction,
+  AtomListTileContent,
+  AtomListTileTitle,
+} from '../../atoms';
 
 export default {
-  name: 'YearGoalSidebar',
-  data() {
-    return {
-      yearGoals: [],
-    };
+  name: 'MoleculeYearGoalSidebar',
+  components: {
+    AtomIcon,
+    AtomList,
+    AtomListGroup,
+    AtomListTile,
+    AtomListTileAction,
+    AtomListTileContent,
+    AtomListTileTitle,
   },
-  apollo: {
+  props: {
     yearGoals: {
-      query: gql`
-        query currentYearGoals {
-          currentYearGoals {
-            id
-            date
-            goalItems {
-              id
-              body
-              status
-              milestones {
-                id
-                status
-              }
-            }
-          }
-        }
-      `,
-      update(data) {
-        return data.currentYearGoals || [];
-      },
+      type: Array,
+      default: () => [],
     },
   },
   computed: {

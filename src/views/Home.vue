@@ -6,7 +6,7 @@
 
 <script>
 // @ is an alias to /src
-import DashBoard from '@/containers/DashBoard.vue';
+import DashBoard from '@/pages/DashBoard.vue';
 
 export default {
   name: 'home',

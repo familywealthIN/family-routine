@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <AtomCard>
     <div class="weekdays pt-2 pb-2">
       <div
         v-for="(weekDay, i) in weekDays"
@@ -8,12 +8,12 @@
         :class="`day ${weekDay.isActive ? 'active' : ''} ${loadingDay === i ? 'loading' : ''} ${isLoading ? 'disabled' : ''}`"
       >
         <div v-if="loadingDay === i" class="day-loading-spinner">
-          <v-progress-circular
+          <AtomProgressCircular
             :size="20"
             :width="2"
             color="white"
             indeterminate
-          ></v-progress-circular>
+          />
         </div>
         <template v-else>
           <div>{{ weekDay.day }}</div>
@@ -21,14 +21,24 @@
         </template>
       </div>
     </div>
-  </v-card>
+  </AtomCard>
 </template>
 
 <script>
 import moment from 'moment';
+import {
+  AtomCard,
+  AtomProgressCircular,
+} from '../../atoms';
 
 export default {
   name: 'OrganismWeekdaySelector',
+
+  components: {
+    AtomCard,
+    AtomProgressCircular,
+  },
+
   props: {
     selectedDate: {
       type: String,

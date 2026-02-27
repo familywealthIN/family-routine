@@ -26,22 +26,12 @@
 </template>
 
 <script>
-import gql from 'graphql-tag';
-
 export default {
-  name: 'ProjectSidebar',
-  data() {
-    return {
-      projectTags: [],
-    };
-  },
-  apollo: {
+  name: 'MoleculeProjectSidebar',
+  props: {
     projectTags: {
-      query: gql`
-        query projectTags {
-          projectTags
-        }
-      `,
+      type: Array,
+      default: () => [],
     },
   },
   computed: {
