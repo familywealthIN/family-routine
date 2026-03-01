@@ -54,7 +54,7 @@
           :value="goalRef"
           @input="$emit('update:goalRef', $event)"
           :disabled="disabled"
-          label="GoalTask"
+          label="Goal Task"
           prepend-icon=""
           prepend-inner-icon="flag"
           hide-details
