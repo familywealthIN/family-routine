@@ -22,9 +22,9 @@
  */
 
 import {
-    DAILY_GOALS_QUERY,
-    AGENDA_GOALS_QUERY,
-    ROUTINE_DATE_QUERY,
+  DAILY_GOALS_QUERY,
+  AGENDA_GOALS_QUERY,
+  ROUTINE_DATE_QUERY,
 } from './graphql/queries';
 
 /**
@@ -36,7 +36,7 @@ import {
  * that trigger proper query re-renders.
  */
 function cloneDeep(data) {
-    return JSON.parse(JSON.stringify(data));
+  return JSON.parse(JSON.stringify(data));
 }
 
 /**
@@ -53,11 +53,11 @@ function cloneDeep(data) {
  * @returns {string} Today's date in DD-MM-YYYY format
  */
 function getCurrentDayDate() {
-    const now = new Date();
-    const dd = String(now.getDate()).padStart(2, '0');
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const yyyy = now.getFullYear();
-    return `${dd}-${mm}-${yyyy}`;
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yyyy = now.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
 }
 
 /**
@@ -80,42 +80,42 @@ function getCurrentDayDate() {
  * @returns {Array<{query: Object, goalsKey: string, useDayDate: boolean}>} Cache targets to update
  */
 function getCacheTargets(period) {
-    if (period === 'day') {
-        return [{ query: DAILY_GOALS_QUERY, goalsKey: 'dailyGoals', useDayDate: false }];
-    }
-    // Non-day periods (week, month, year) should only update AGENDA_GOALS_QUERY
-    // because DAILY_GOALS_QUERY already fetches them from the database via autoCheckTaskPeriod
-    // Adding them to both caches causes duplicates
-    return [
-        { query: AGENDA_GOALS_QUERY, goalsKey: 'agendaGoals', useDayDate: true },
-    ];
+  if (period === 'day') {
+    return [{ query: DAILY_GOALS_QUERY, goalsKey: 'dailyGoals', useDayDate: false }];
+  }
+  // Non-day periods (week, month, year) should only update AGENDA_GOALS_QUERY
+  // because DAILY_GOALS_QUERY already fetches them from the database via autoCheckTaskPeriod
+  // Adding them to both caches causes duplicates
+  return [
+    { query: AGENDA_GOALS_QUERY, goalsKey: 'agendaGoals', useDayDate: true },
+  ];
 }
 
 /**
  * Create a normalized goal item object for cache storage
  */
 function createGoalItemObject(goalItem) {
-    return {
-        __typename: 'GoalItem',
-        id: goalItem.id,
-        body: goalItem.body,
-        progress: goalItem.progress != null ? goalItem.progress : 0,
-        isComplete: goalItem.isComplete != null ? goalItem.isComplete : false,
-        taskRef: goalItem.taskRef || null,
-        goalRef: goalItem.goalRef || null,
-        isMilestone: goalItem.isMilestone != null ? goalItem.isMilestone : false,
-        contribution: goalItem.contribution || '',
-        reward: goalItem.reward || '',
-        tags: goalItem.tags || [],
-        status: goalItem.status || 'todo',
-        completedAt: goalItem.completedAt || null,
-        subTasks: (goalItem.subTasks || []).map((subTask) => ({
-            __typename: 'SubTaskItem',
-            id: subTask.id,
-            body: subTask.body,
-            isComplete: subTask.isComplete != null ? subTask.isComplete : false,
-        })),
-    };
+  return {
+    __typename: 'GoalItem',
+    id: goalItem.id,
+    body: goalItem.body,
+    progress: goalItem.progress != null ? goalItem.progress : 0,
+    isComplete: goalItem.isComplete != null ? goalItem.isComplete : false,
+    taskRef: goalItem.taskRef || null,
+    goalRef: goalItem.goalRef || null,
+    isMilestone: goalItem.isMilestone != null ? goalItem.isMilestone : false,
+    contribution: goalItem.contribution || '',
+    reward: goalItem.reward || '',
+    tags: goalItem.tags || [],
+    status: goalItem.status || 'todo',
+    completedAt: goalItem.completedAt || null,
+    subTasks: (goalItem.subTasks || []).map((subTask) => ({
+      __typename: 'SubTaskItem',
+      id: subTask.id,
+      body: subTask.body,
+      isComplete: subTask.isComplete != null ? subTask.isComplete : false,
+    })),
+  };
 }
 
 /**
@@ -136,55 +136,55 @@ function createGoalItemObject(goalItem) {
  * @returns {boolean} Success status
  */
 export function addGoalItemToCache(apolloClient, {
-    goalItem, date, period, dayDate,
+  goalItem, date, period, dayDate,
 }) {
-    try {
-        const cacheTargets = getCacheTargets(period);
-        let updated = false;
+  try {
+    const cacheTargets = getCacheTargets(period);
+    let updated = false;
 
-        cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
-            const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
-            try {
-                // Read current cache (deep clone to avoid mutating Apollo's internal references)
-                const cacheData = cloneDeep(apolloClient.readQuery({
-                    query,
-                    variables: { date: queryDate },
-                }));
+    cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
+      const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
+      try {
+        // Read current cache (deep clone to avoid mutating Apollo's internal references)
+        const cacheData = cloneDeep(apolloClient.readQuery({
+          query,
+          variables: { date: queryDate },
+        }));
 
-                if (!cacheData || !cacheData[goalsKey]) return;
+        if (!cacheData || !cacheData[goalsKey]) return;
 
-                // Find or create the goal entry for this period
-                const periodGoal = cacheData[goalsKey].find((g) => g.period === period && g.date === date);
+        // Find or create the goal entry for this period
+        const periodGoal = cacheData[goalsKey].find((g) => g.period === period && g.date === date);
 
-                if (periodGoal) {
-                    periodGoal.goalItems.push(createGoalItemObject(goalItem));
-                } else {
-                    cacheData[goalsKey].push({
-                        __typename: 'Goal',
-                        id: `temp-${Date.now()}-${period}`,
-                        period,
-                        date,
-                        goalItems: [createGoalItemObject(goalItem)],
-                    });
-                }
+        if (periodGoal) {
+          periodGoal.goalItems.push(createGoalItemObject(goalItem));
+        } else {
+          cacheData[goalsKey].push({
+            __typename: 'Goal',
+            id: `temp-${Date.now()}-${period}`,
+            period,
+            date,
+            goalItems: [createGoalItemObject(goalItem)],
+          });
+        }
 
-                apolloClient.writeQuery({
-                    query,
-                    variables: { date: queryDate },
-                    data: cacheData,
-                });
-                updated = true;
-            } catch (e) {
-                // Cache may not exist for this query yet, skip
-            }
+        apolloClient.writeQuery({
+          query,
+          variables: { date: queryDate },
+          data: cacheData,
         });
+        updated = true;
+      } catch (e) {
+        // Cache may not exist for this query yet, skip
+      }
+    });
 
-        console.log(`[addGoalItemToCache] Successfully added goal item to ${period} cache`);
-        return updated;
-    } catch (error) {
-        console.error('[addGoalItemToCache] Error updating cache:', error);
-        return false;
-    }
+    console.log(`[addGoalItemToCache] Successfully added goal item to ${period} cache`);
+    return updated;
+  } catch (error) {
+    console.error('[addGoalItemToCache] Error updating cache:', error);
+    return false;
+  }
 }
 
 /**
@@ -199,54 +199,54 @@ export function addGoalItemToCache(apolloClient, {
  * @returns {boolean} Success status
  */
 export function addMultipleGoalItemsToCache(apolloClient, {
-    goalItems, date, period, dayDate,
+  goalItems, date, period, dayDate,
 }) {
-    try {
-        const cacheTargets = getCacheTargets(period);
-        let updated = false;
-        const newGoalItems = goalItems.map(createGoalItemObject);
+  try {
+    const cacheTargets = getCacheTargets(period);
+    let updated = false;
+    const newGoalItems = goalItems.map(createGoalItemObject);
 
-        cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
-            const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
-            try {
-                const cacheData = cloneDeep(apolloClient.readQuery({
-                    query,
-                    variables: { date: queryDate },
-                }));
+    cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
+      const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
+      try {
+        const cacheData = cloneDeep(apolloClient.readQuery({
+          query,
+          variables: { date: queryDate },
+        }));
 
-                if (!cacheData || !cacheData[goalsKey]) return;
+        if (!cacheData || !cacheData[goalsKey]) return;
 
-                const periodGoal = cacheData[goalsKey].find((g) => g.period === period && g.date === date);
+        const periodGoal = cacheData[goalsKey].find((g) => g.period === period && g.date === date);
 
-                if (periodGoal) {
-                    periodGoal.goalItems.push(...cloneDeep(newGoalItems));
-                } else {
-                    cacheData[goalsKey].push({
-                        __typename: 'Goal',
-                        id: `temp-${Date.now()}-${period}`,
-                        period,
-                        date,
-                        goalItems: cloneDeep(newGoalItems),
-                    });
-                }
+        if (periodGoal) {
+          periodGoal.goalItems.push(...cloneDeep(newGoalItems));
+        } else {
+          cacheData[goalsKey].push({
+            __typename: 'Goal',
+            id: `temp-${Date.now()}-${period}`,
+            period,
+            date,
+            goalItems: cloneDeep(newGoalItems),
+          });
+        }
 
-                apolloClient.writeQuery({
-                    query,
-                    variables: { date: queryDate },
-                    data: cacheData,
-                });
-                updated = true;
-            } catch (e) {
-                // Cache may not exist for this query yet, skip
-            }
+        apolloClient.writeQuery({
+          query,
+          variables: { date: queryDate },
+          data: cacheData,
         });
+        updated = true;
+      } catch (e) {
+        // Cache may not exist for this query yet, skip
+      }
+    });
 
-        console.log(`[addMultipleGoalItemsToCache] Successfully added ${goalItems.length} goal items to ${period} cache`);
-        return updated;
-    } catch (error) {
-        console.error('[addMultipleGoalItemsToCache] Error updating cache:', error);
-        return false;
-    }
+    console.log(`[addMultipleGoalItemsToCache] Successfully added ${goalItems.length} goal items to ${period} cache`);
+    return updated;
+  } catch (error) {
+    console.error('[addMultipleGoalItemsToCache] Error updating cache:', error);
+    return false;
+  }
 }
 
 /**
@@ -271,50 +271,50 @@ export function addMultipleGoalItemsToCache(apolloClient, {
  * @returns {boolean} Success status
  */
 export function updateGoalItemCompletionInCache(apolloClient, {
-    id, isComplete, date, period, progress, status, completedAt, dayDate,
+  id, isComplete, date, period, progress, status, completedAt, dayDate,
 }) {
-    try {
-        const cacheTargets = getCacheTargets(period);
-        let updated = false;
+  try {
+    const cacheTargets = getCacheTargets(period);
+    let updated = false;
 
-        cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
-            const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
-            try {
-                const cacheData = cloneDeep(apolloClient.readQuery({
-                    query,
-                    variables: { date: queryDate },
-                }));
+    cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
+      const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
+      try {
+        const cacheData = cloneDeep(apolloClient.readQuery({
+          query,
+          variables: { date: queryDate },
+        }));
 
-                if (!cacheData || !cacheData[goalsKey]) return;
+        if (!cacheData || !cacheData[goalsKey]) return;
 
-                const periodGoal = cacheData[goalsKey].find((g) => g.period === period);
-                if (!periodGoal) return;
+        const periodGoal = cacheData[goalsKey].find((g) => g.period === period);
+        if (!periodGoal) return;
 
-                const goalItem = periodGoal.goalItems.find((item) => item.id === id);
-                if (!goalItem) return;
+        const goalItem = periodGoal.goalItems.find((item) => item.id === id);
+        if (!goalItem) return;
 
-                goalItem.isComplete = isComplete;
-                if (progress !== undefined) goalItem.progress = progress;
-                if (status) goalItem.status = status;
-                if (completedAt !== undefined) goalItem.completedAt = completedAt;
+        goalItem.isComplete = isComplete;
+        if (progress !== undefined) goalItem.progress = progress;
+        if (status) goalItem.status = status;
+        if (completedAt !== undefined) goalItem.completedAt = completedAt;
 
-                apolloClient.writeQuery({
-                    query,
-                    variables: { date: queryDate },
-                    data: cacheData,
-                });
-                updated = true;
-            } catch (e) {
-                // Cache may not exist for this query yet, skip
-            }
+        apolloClient.writeQuery({
+          query,
+          variables: { date: queryDate },
+          data: cacheData,
         });
+        updated = true;
+      } catch (e) {
+        // Cache may not exist for this query yet, skip
+      }
+    });
 
-        console.log(`[updateGoalItemCompletionInCache] Successfully updated goal item ${id} completion to ${isComplete}`);
-        return updated;
-    } catch (error) {
-        console.error('[updateGoalItemCompletionInCache] Error updating cache:', error);
-        return false;
-    }
+    console.log(`[updateGoalItemCompletionInCache] Successfully updated goal item ${id} completion to ${isComplete}`);
+    return updated;
+  } catch (error) {
+    console.error('[updateGoalItemCompletionInCache] Error updating cache:', error);
+    return false;
+  }
 }
 
 /**
@@ -326,26 +326,26 @@ export function updateGoalItemCompletionInCache(apolloClient, {
  * @returns {string|null} The goalRef (week goal item ID) or null
  */
 export function findGoalRefFromCache(apolloClient, goalItemId, date) {
-    try {
-        const cacheData = apolloClient.readQuery({
-            query: DAILY_GOALS_QUERY,
-            variables: { date },
-        });
+  try {
+    const cacheData = apolloClient.readQuery({
+      query: DAILY_GOALS_QUERY,
+      variables: { date },
+    });
 
-        if (!cacheData || !cacheData.dailyGoals) return null;
+    if (!cacheData || !cacheData.dailyGoals) return null;
 
-        for (const goal of cacheData.dailyGoals) {
-            if (!goal.goalItems) continue;
-            const item = goal.goalItems.find((gi) => gi.id === goalItemId);
-            if (item && item.goalRef) {
-                return item.goalRef;
-            }
-        }
-        return null;
-    } catch (error) {
-        console.warn('[findGoalRefFromCache] Cache read failed:', error);
-        return null;
+    for (const goal of cacheData.dailyGoals) {
+      if (!goal.goalItems) continue;
+      const item = goal.goalItems.find((gi) => gi.id === goalItemId);
+      if (item && item.goalRef) {
+        return item.goalRef;
+      }
     }
+    return null;
+  } catch (error) {
+    console.warn('[findGoalRefFromCache] Cache read failed:', error);
+    return null;
+  }
 }
 
 /**
@@ -360,76 +360,76 @@ export function findGoalRefFromCache(apolloClient, goalItemId, date) {
  * @returns {boolean} Success status
  */
 export function updateWeekGoalProgressInCache(apolloClient, {
-    weekGoalItemId, delta, dayDate,
+  weekGoalItemId, delta, dayDate,
 }) {
+  try {
+    const queryDate = dayDate || getCurrentDayDate();
+    let updated = false;
+
+    // Week goals are stored in AGENDA_GOALS_QUERY cache
     try {
-        const queryDate = dayDate || getCurrentDayDate();
-        let updated = false;
+      const cacheData = cloneDeep(apolloClient.readQuery({
+        query: AGENDA_GOALS_QUERY,
+        variables: { date: queryDate },
+      }));
 
-        // Week goals are stored in AGENDA_GOALS_QUERY cache
-        try {
-            const cacheData = cloneDeep(apolloClient.readQuery({
-                query: AGENDA_GOALS_QUERY,
-                variables: { date: queryDate },
-            }));
+      if (cacheData && cacheData.agendaGoals) {
+        const weekGoal = cacheData.agendaGoals.find((g) => g.period === 'week');
+        if (weekGoal) {
+          const goalItem = weekGoal.goalItems.find((item) => item.id === weekGoalItemId);
+          if (goalItem) {
+            const newProgress = Math.max(0, Math.min(5, (goalItem.progress || 0) + delta));
+            goalItem.progress = newProgress;
 
-            if (cacheData && cacheData.agendaGoals) {
-                const weekGoal = cacheData.agendaGoals.find((g) => g.period === 'week');
-                if (weekGoal) {
-                    const goalItem = weekGoal.goalItems.find((item) => item.id === weekGoalItemId);
-                    if (goalItem) {
-                        const newProgress = Math.max(0, Math.min(5, (goalItem.progress || 0) + delta));
-                        goalItem.progress = newProgress;
-
-                        apolloClient.writeQuery({
-                            query: AGENDA_GOALS_QUERY,
-                            variables: { date: queryDate },
-                            data: cacheData,
-                        });
-                        updated = true;
-                    }
-                }
-            }
-        } catch (e) {
-            // Cache may not exist yet, skip
+            apolloClient.writeQuery({
+              query: AGENDA_GOALS_QUERY,
+              variables: { date: queryDate },
+              data: cacheData,
+            });
+            updated = true;
+          }
         }
-
-        // Also update DAILY_GOALS_QUERY cache (it also contains week goals)
-        try {
-            const dailyCacheData = cloneDeep(apolloClient.readQuery({
-                query: DAILY_GOALS_QUERY,
-                variables: { date: queryDate },
-            }));
-
-            if (dailyCacheData && dailyCacheData.dailyGoals) {
-                const weekGoal = dailyCacheData.dailyGoals.find((g) => g.period === 'week');
-                if (weekGoal) {
-                    const goalItem = weekGoal.goalItems.find((item) => item.id === weekGoalItemId);
-                    if (goalItem) {
-                        const newProgress = Math.max(0, Math.min(5, (goalItem.progress || 0) + delta));
-                        goalItem.progress = newProgress;
-
-                        apolloClient.writeQuery({
-                            query: DAILY_GOALS_QUERY,
-                            variables: { date: queryDate },
-                            data: dailyCacheData,
-                        });
-                        updated = true;
-                    }
-                }
-            }
-        } catch (e) {
-            // Cache may not exist yet, skip
-        }
-
-        if (updated) {
-            console.log(`[updateWeekGoalProgressInCache] Updated week goal ${weekGoalItemId} progress by ${delta}`);
-        }
-        return updated;
-    } catch (error) {
-        console.error('[updateWeekGoalProgressInCache] Error updating cache:', error);
-        return false;
+      }
+    } catch (e) {
+      // Cache may not exist yet, skip
     }
+
+    // Also update DAILY_GOALS_QUERY cache (it also contains week goals)
+    try {
+      const dailyCacheData = cloneDeep(apolloClient.readQuery({
+        query: DAILY_GOALS_QUERY,
+        variables: { date: queryDate },
+      }));
+
+      if (dailyCacheData && dailyCacheData.dailyGoals) {
+        const weekGoal = dailyCacheData.dailyGoals.find((g) => g.period === 'week');
+        if (weekGoal) {
+          const goalItem = weekGoal.goalItems.find((item) => item.id === weekGoalItemId);
+          if (goalItem) {
+            const newProgress = Math.max(0, Math.min(5, (goalItem.progress || 0) + delta));
+            goalItem.progress = newProgress;
+
+            apolloClient.writeQuery({
+              query: DAILY_GOALS_QUERY,
+              variables: { date: queryDate },
+              data: dailyCacheData,
+            });
+            updated = true;
+          }
+        }
+      }
+    } catch (e) {
+      // Cache may not exist yet, skip
+    }
+
+    if (updated) {
+      console.log(`[updateWeekGoalProgressInCache] Updated week goal ${weekGoalItemId} progress by ${delta}`);
+    }
+    return updated;
+  } catch (error) {
+    console.error('[updateWeekGoalProgressInCache] Error updating cache:', error);
+    return false;
+  }
 }
 
 /**
@@ -446,63 +446,63 @@ export function updateWeekGoalProgressInCache(apolloClient, {
  * @returns {boolean} Success status
  */
 export function updateSubTaskCompletionInCache(apolloClient, {
-    goalItemId, subTaskId, isComplete, date, period, dayDate,
+  goalItemId, subTaskId, isComplete, date, period, dayDate,
 }) {
-    try {
-        const cacheTargets = getCacheTargets(period);
-        let updated = false;
+  try {
+    const cacheTargets = getCacheTargets(period);
+    let updated = false;
 
-        cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
-            const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
-            try {
-                const cacheData = cloneDeep(apolloClient.readQuery({
-                    query,
-                    variables: { date: queryDate },
-                }));
+    cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
+      const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
+      try {
+        const cacheData = cloneDeep(apolloClient.readQuery({
+          query,
+          variables: { date: queryDate },
+        }));
 
-                if (!cacheData || !cacheData[goalsKey]) return;
+        if (!cacheData || !cacheData[goalsKey]) return;
 
-                const periodGoal = cacheData[goalsKey].find((g) => g.period === period);
-                if (!periodGoal) return;
+        const periodGoal = cacheData[goalsKey].find((g) => g.period === period);
+        if (!periodGoal) return;
 
-                const goalItem = periodGoal.goalItems.find((item) => item.id === goalItemId);
-                if (!goalItem || !goalItem.subTasks) return;
+        const goalItem = periodGoal.goalItems.find((item) => item.id === goalItemId);
+        if (!goalItem || !goalItem.subTasks) return;
 
-                const subTask = goalItem.subTasks.find((st) => st.id === subTaskId);
-                if (!subTask) return;
+        const subTask = goalItem.subTasks.find((st) => st.id === subTaskId);
+        if (!subTask) return;
 
-                subTask.isComplete = isComplete;
+        subTask.isComplete = isComplete;
 
-                // Recalculate parent goal progress based on completed subtasks
-                const completedSubTasks = goalItem.subTasks.filter((st) => st.isComplete).length;
-                const totalSubTasks = goalItem.subTasks.length;
-                goalItem.progress = totalSubTasks > 0 ? (completedSubTasks / totalSubTasks) * 100 : 0;
+        // Recalculate parent goal progress based on completed subtasks
+        const completedSubTasks = goalItem.subTasks.filter((st) => st.isComplete).length;
+        const totalSubTasks = goalItem.subTasks.length;
+        goalItem.progress = totalSubTasks > 0 ? (completedSubTasks / totalSubTasks) * 100 : 0;
 
-                // Update parent completion status if all subtasks are complete
-                if (completedSubTasks === totalSubTasks) {
-                    goalItem.isComplete = true;
-                    goalItem.status = 'done';
-                } else if (completedSubTasks > 0) {
-                    goalItem.status = 'progress';
-                }
+        // Update parent completion status if all subtasks are complete
+        if (completedSubTasks === totalSubTasks) {
+          goalItem.isComplete = true;
+          goalItem.status = 'done';
+        } else if (completedSubTasks > 0) {
+          goalItem.status = 'progress';
+        }
 
-                apolloClient.writeQuery({
-                    query,
-                    variables: { date: queryDate },
-                    data: cacheData,
-                });
-                updated = true;
-            } catch (e) {
-                // Cache may not exist for this query yet, skip
-            }
+        apolloClient.writeQuery({
+          query,
+          variables: { date: queryDate },
+          data: cacheData,
         });
+        updated = true;
+      } catch (e) {
+        // Cache may not exist for this query yet, skip
+      }
+    });
 
-        console.log(`[updateSubTaskCompletionInCache] Successfully updated subtask ${subTaskId} completion`);
-        return updated;
-    } catch (error) {
-        console.error('[updateSubTaskCompletionInCache] Error updating cache:', error);
-        return false;
-    }
+    console.log(`[updateSubTaskCompletionInCache] Successfully updated subtask ${subTaskId} completion`);
+    return updated;
+  } catch (error) {
+    console.error('[updateSubTaskCompletionInCache] Error updating cache:', error);
+    return false;
+  }
 }
 
 /**
@@ -523,44 +523,44 @@ export function updateSubTaskCompletionInCache(apolloClient, {
  * @returns {boolean} Success status
  */
 export function deleteGoalItemFromCache(apolloClient, {
-    id, date, period, dayDate,
+  id, date, period, dayDate,
 }) {
-    try {
-        const cacheTargets = getCacheTargets(period);
-        let updated = false;
+  try {
+    const cacheTargets = getCacheTargets(period);
+    let updated = false;
 
-        cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
-            const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
-            try {
-                const cacheData = cloneDeep(apolloClient.readQuery({
-                    query,
-                    variables: { date: queryDate },
-                }));
+    cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
+      const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
+      try {
+        const cacheData = cloneDeep(apolloClient.readQuery({
+          query,
+          variables: { date: queryDate },
+        }));
 
-                if (!cacheData || !cacheData[goalsKey]) return;
+        if (!cacheData || !cacheData[goalsKey]) return;
 
-                const periodGoal = cacheData[goalsKey].find((g) => g.period === period);
-                if (!periodGoal) return;
+        const periodGoal = cacheData[goalsKey].find((g) => g.period === period);
+        if (!periodGoal) return;
 
-                periodGoal.goalItems = periodGoal.goalItems.filter((item) => item.id !== id);
+        periodGoal.goalItems = periodGoal.goalItems.filter((item) => item.id !== id);
 
-                apolloClient.writeQuery({
-                    query,
-                    variables: { date: queryDate },
-                    data: cacheData,
-                });
-                updated = true;
-            } catch (e) {
-                // Cache may not exist for this query yet, skip
-            }
+        apolloClient.writeQuery({
+          query,
+          variables: { date: queryDate },
+          data: cacheData,
         });
+        updated = true;
+      } catch (e) {
+        // Cache may not exist for this query yet, skip
+      }
+    });
 
-        console.log(`[deleteGoalItemFromCache] Successfully deleted goal item ${id} from ${period} cache`);
-        return updated;
-    } catch (error) {
-        console.error('[deleteGoalItemFromCache] Error updating cache:', error);
-        return false;
-    }
+    console.log(`[deleteGoalItemFromCache] Successfully deleted goal item ${id} from ${period} cache`);
+    return updated;
+  } catch (error) {
+    console.error('[deleteGoalItemFromCache] Error updating cache:', error);
+    return false;
+  }
 }
 
 /**
@@ -576,56 +576,56 @@ export function deleteGoalItemFromCache(apolloClient, {
  * @returns {boolean} Success status
  */
 export function deleteSubTaskFromCache(apolloClient, {
-    subTaskId, goalItemId, date, period, dayDate,
+  subTaskId, goalItemId, date, period, dayDate,
 }) {
-    try {
-        const cacheTargets = getCacheTargets(period);
-        let updated = false;
+  try {
+    const cacheTargets = getCacheTargets(period);
+    let updated = false;
 
-        cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
-            const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
-            try {
-                const cacheData = cloneDeep(apolloClient.readQuery({
-                    query,
-                    variables: { date: queryDate },
-                }));
+    cacheTargets.forEach(({ query, goalsKey, useDayDate }) => {
+      const queryDate = useDayDate ? (dayDate || getCurrentDayDate()) : date;
+      try {
+        const cacheData = cloneDeep(apolloClient.readQuery({
+          query,
+          variables: { date: queryDate },
+        }));
 
-                if (!cacheData || !cacheData[goalsKey]) return;
+        if (!cacheData || !cacheData[goalsKey]) return;
 
-                const periodGoal = cacheData[goalsKey].find((g) => g.period === period);
-                if (!periodGoal) return;
+        const periodGoal = cacheData[goalsKey].find((g) => g.period === period);
+        if (!periodGoal) return;
 
-                const goalItem = periodGoal.goalItems.find((item) => item.id === goalItemId);
-                if (!goalItem || !goalItem.subTasks) return;
+        const goalItem = periodGoal.goalItems.find((item) => item.id === goalItemId);
+        if (!goalItem || !goalItem.subTasks) return;
 
-                goalItem.subTasks = goalItem.subTasks.filter((st) => st.id !== subTaskId);
+        goalItem.subTasks = goalItem.subTasks.filter((st) => st.id !== subTaskId);
 
-                // Recalculate parent goal progress based on remaining subtasks
-                const totalSubTasks = goalItem.subTasks.length;
-                if (totalSubTasks > 0) {
-                    const completedSubTasks = goalItem.subTasks.filter((st) => st.isComplete).length;
-                    goalItem.progress = (completedSubTasks / totalSubTasks) * 100;
-                } else {
-                    goalItem.progress = 0;
-                }
+        // Recalculate parent goal progress based on remaining subtasks
+        const totalSubTasks = goalItem.subTasks.length;
+        if (totalSubTasks > 0) {
+          const completedSubTasks = goalItem.subTasks.filter((st) => st.isComplete).length;
+          goalItem.progress = (completedSubTasks / totalSubTasks) * 100;
+        } else {
+          goalItem.progress = 0;
+        }
 
-                apolloClient.writeQuery({
-                    query,
-                    variables: { date: queryDate },
-                    data: cacheData,
-                });
-                updated = true;
-            } catch (e) {
-                // Cache may not exist for this query yet, skip
-            }
+        apolloClient.writeQuery({
+          query,
+          variables: { date: queryDate },
+          data: cacheData,
         });
+        updated = true;
+      } catch (e) {
+        // Cache may not exist for this query yet, skip
+      }
+    });
 
-        console.log(`[deleteSubTaskFromCache] Successfully deleted sub-task ${subTaskId} from goal ${goalItemId}`);
-        return updated;
-    } catch (error) {
-        console.error('[deleteSubTaskFromCache] Error updating cache:', error);
-        return false;
-    }
+    console.log(`[deleteSubTaskFromCache] Successfully deleted sub-task ${subTaskId} from goal ${goalItemId}`);
+    return updated;
+  } catch (error) {
+    console.error('[deleteSubTaskFromCache] Error updating cache:', error);
+    return false;
+  }
 }
 
 /**
@@ -647,46 +647,46 @@ export function deleteSubTaskFromCache(apolloClient, {
  * @returns {boolean} Success status
  */
 export function updateRoutineTaskInCache(apolloClient, {
-    taskId, date, ticked, passed, wait,
+  taskId, date, ticked, passed, wait,
 }) {
-    try {
-        // Read current cache (deep clone to avoid mutating Apollo's internal references)
-        const cacheData = cloneDeep(apolloClient.readQuery({
-            query: ROUTINE_DATE_QUERY,
-            variables: { date },
-        }));
+  try {
+    // Read current cache (deep clone to avoid mutating Apollo's internal references)
+    const cacheData = cloneDeep(apolloClient.readQuery({
+      query: ROUTINE_DATE_QUERY,
+      variables: { date },
+    }));
 
-        if (!cacheData || !cacheData.routineDate || !cacheData.routineDate.tasklist) {
-            console.warn(`[updateRoutineTaskInCache] No cache data found for routine on ${date}`);
-            return false;
-        }
-
-        // Find the task
-        const task = cacheData.routineDate.tasklist.find((t) => t.id === taskId);
-
-        if (!task) {
-            console.warn(`[updateRoutineTaskInCache] Task ${taskId} not found`);
-            return false;
-        }
-
-        // Update task properties
-        if (ticked !== undefined) task.ticked = ticked;
-        if (passed !== undefined) task.passed = passed;
-        if (wait !== undefined) task.wait = wait;
-
-        // Write updated cache
-        apolloClient.writeQuery({
-            query: ROUTINE_DATE_QUERY,
-            variables: { date },
-            data: cacheData,
-        });
-
-        console.log(`[updateRoutineTaskInCache] Successfully updated task ${taskId}`);
-        return true;
-    } catch (error) {
-        console.error('[updateRoutineTaskInCache] Error updating cache:', error);
-        return false;
+    if (!cacheData || !cacheData.routineDate || !cacheData.routineDate.tasklist) {
+      console.warn(`[updateRoutineTaskInCache] No cache data found for routine on ${date}`);
+      return false;
     }
+
+    // Find the task
+    const task = cacheData.routineDate.tasklist.find((t) => t.id === taskId);
+
+    if (!task) {
+      console.warn(`[updateRoutineTaskInCache] Task ${taskId} not found`);
+      return false;
+    }
+
+    // Update task properties
+    if (ticked !== undefined) task.ticked = ticked;
+    if (passed !== undefined) task.passed = passed;
+    if (wait !== undefined) task.wait = wait;
+
+    // Write updated cache
+    apolloClient.writeQuery({
+      query: ROUTINE_DATE_QUERY,
+      variables: { date },
+      data: cacheData,
+    });
+
+    console.log(`[updateRoutineTaskInCache] Successfully updated task ${taskId}`);
+    return true;
+  } catch (error) {
+    console.error('[updateRoutineTaskInCache] Error updating cache:', error);
+    return false;
+  }
 }
 
 /**
@@ -700,49 +700,49 @@ export function updateRoutineTaskInCache(apolloClient, {
  * @returns {boolean} Success status
  */
 export function updateRoutineTaskMetricsInCache(apolloClient, { taskId, date, stimuli }) {
-    try {
-        // Read current cache (deep clone to avoid mutating Apollo's internal references)
-        const cacheData = cloneDeep(apolloClient.readQuery({
-            query: ROUTINE_DATE_QUERY,
-            variables: { date },
-        }));
+  try {
+    // Read current cache (deep clone to avoid mutating Apollo's internal references)
+    const cacheData = cloneDeep(apolloClient.readQuery({
+      query: ROUTINE_DATE_QUERY,
+      variables: { date },
+    }));
 
-        if (!cacheData || !cacheData.routineDate || !cacheData.routineDate.tasklist) {
-            console.warn(`[updateRoutineTaskMetricsInCache] No cache data found for routine on ${date}`);
-            return false;
-        }
-
-        // Find the task
-        const task = cacheData.routineDate.tasklist.find((t) => t.id === taskId);
-
-        if (!task) {
-            console.warn(`[updateRoutineTaskMetricsInCache] Task ${taskId} not found`);
-            return false;
-        }
-
-        // Update stimuli with proper typename
-        if (stimuli && Array.isArray(stimuli)) {
-            task.stimuli = stimuli.map((stimulus) => ({
-                __typename: 'Stimulus',
-                name: stimulus.name,
-                splitRate: stimulus.splitRate,
-                earned: stimulus.earned,
-            }));
-        }
-
-        // Write updated cache
-        apolloClient.writeQuery({
-            query: ROUTINE_DATE_QUERY,
-            variables: { date },
-            data: cacheData,
-        });
-
-        console.log(`[updateRoutineTaskMetricsInCache] Successfully updated metrics for task ${taskId}`);
-        return true;
-    } catch (error) {
-        console.error('[updateRoutineTaskMetricsInCache] Error updating cache:', error);
-        return false;
+    if (!cacheData || !cacheData.routineDate || !cacheData.routineDate.tasklist) {
+      console.warn(`[updateRoutineTaskMetricsInCache] No cache data found for routine on ${date}`);
+      return false;
     }
+
+    // Find the task
+    const task = cacheData.routineDate.tasklist.find((t) => t.id === taskId);
+
+    if (!task) {
+      console.warn(`[updateRoutineTaskMetricsInCache] Task ${taskId} not found`);
+      return false;
+    }
+
+    // Update stimuli with proper typename
+    if (stimuli && Array.isArray(stimuli)) {
+      task.stimuli = stimuli.map((stimulus) => ({
+        __typename: 'Stimulus',
+        name: stimulus.name,
+        splitRate: stimulus.splitRate,
+        earned: stimulus.earned,
+      }));
+    }
+
+    // Write updated cache
+    apolloClient.writeQuery({
+      query: ROUTINE_DATE_QUERY,
+      variables: { date },
+      data: cacheData,
+    });
+
+    console.log(`[updateRoutineTaskMetricsInCache] Successfully updated metrics for task ${taskId}`);
+    return true;
+  } catch (error) {
+    console.error('[updateRoutineTaskMetricsInCache] Error updating cache:', error);
+    return false;
+  }
 }
 
 /**
@@ -755,34 +755,34 @@ export function updateRoutineTaskMetricsInCache(apolloClient, { taskId, date, st
  * @returns {boolean} Success status
  */
 export function updateRoutineTasklistInCache(apolloClient, { date, tasklist }) {
-    try {
-        // Read current cache (deep clone to avoid mutating Apollo's internal references)
-        const cacheData = cloneDeep(apolloClient.readQuery({
-            query: ROUTINE_DATE_QUERY,
-            variables: { date },
-        }));
+  try {
+    // Read current cache (deep clone to avoid mutating Apollo's internal references)
+    const cacheData = cloneDeep(apolloClient.readQuery({
+      query: ROUTINE_DATE_QUERY,
+      variables: { date },
+    }));
 
-        if (!cacheData || !cacheData.routineDate) {
-            console.warn(`[updateRoutineTasklistInCache] No cache data found for routine on ${date}`);
-            return false;
-        }
-
-        // Update tasklist
-        cacheData.routineDate.tasklist = tasklist;
-
-        // Write updated cache
-        apolloClient.writeQuery({
-            query: ROUTINE_DATE_QUERY,
-            variables: { date },
-            data: cacheData,
-        });
-
-        console.log('[updateRoutineTasklistInCache] Successfully updated complete tasklist');
-        return true;
-    } catch (error) {
-        console.error('[updateRoutineTasklistInCache] Error updating cache:', error);
-        return false;
+    if (!cacheData || !cacheData.routineDate) {
+      console.warn(`[updateRoutineTasklistInCache] No cache data found for routine on ${date}`);
+      return false;
     }
+
+    // Update tasklist
+    cacheData.routineDate.tasklist = tasklist;
+
+    // Write updated cache
+    apolloClient.writeQuery({
+      query: ROUTINE_DATE_QUERY,
+      variables: { date },
+      data: cacheData,
+    });
+
+    console.log('[updateRoutineTasklistInCache] Successfully updated complete tasklist');
+    return true;
+  } catch (error) {
+    console.error('[updateRoutineTasklistInCache] Error updating cache:', error);
+    return false;
+  }
 }
 
 /**
@@ -800,12 +800,12 @@ export function updateRoutineTasklistInCache(apolloClient, { date, tasklist }) {
  * @returns {boolean} True if cache exists
  */
 export function cacheExists(apolloClient, query, variables) {
-    try {
-        const data = apolloClient.readQuery({ query, variables });
-        return !!data;
-    } catch (error) {
-        return false;
-    }
+  try {
+    const data = apolloClient.readQuery({ query, variables });
+    return !!data;
+  } catch (error) {
+    return false;
+  }
 }
 
 /**
@@ -818,40 +818,40 @@ export function cacheExists(apolloClient, query, variables) {
  * @returns {*} Cache data or fallback
  */
 export function readCacheSafely(apolloClient, query, variables, fallback = null) {
-    try {
-        return apolloClient.readQuery({ query, variables }) || fallback;
-    } catch (error) {
-        console.warn('[readCacheSafely] Cache read failed:', error);
-        return fallback;
-    }
+  try {
+    return apolloClient.readQuery({ query, variables }) || fallback;
+  } catch (error) {
+    console.warn('[readCacheSafely] Cache read failed:', error);
+    return fallback;
+  }
 }
 
 /**
  * Export all cache update functions
  */
 export default {
-    // Goal creation
-    addGoalItemToCache,
-    addMultipleGoalItemsToCache,
+  // Goal creation
+  addGoalItemToCache,
+  addMultipleGoalItemsToCache,
 
-    // Goal completion
-    updateGoalItemCompletionInCache,
-    updateSubTaskCompletionInCache,
+  // Goal completion
+  updateGoalItemCompletionInCache,
+  updateSubTaskCompletionInCache,
 
-    // Optimistic streak updates
-    findGoalRefFromCache,
-    updateWeekGoalProgressInCache,
+  // Optimistic streak updates
+  findGoalRefFromCache,
+  updateWeekGoalProgressInCache,
 
-    // Goal deletion
-    deleteGoalItemFromCache,
-    deleteSubTaskFromCache,
+  // Goal deletion
+  deleteGoalItemFromCache,
+  deleteSubTaskFromCache,
 
-    // Routine tasks
-    updateRoutineTaskInCache,
-    updateRoutineTaskMetricsInCache,
-    updateRoutineTasklistInCache,
+  // Routine tasks
+  updateRoutineTaskInCache,
+  updateRoutineTaskMetricsInCache,
+  updateRoutineTasklistInCache,
 
-    // Helpers
-    cacheExists,
-    readCacheSafely,
+  // Helpers
+  cacheExists,
+  readCacheSafely,
 };

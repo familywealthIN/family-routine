@@ -18,14 +18,14 @@ export const CACHE_TTL = 86400000; // 24 hours in milliseconds
  * @returns {boolean}
  */
 export function isCacheValid(tag) {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY_PREFIX + tag);
-    if (!raw) return false;
-    const entry = JSON.parse(raw);
-    return entry && entry.timestamp && (Date.now() - entry.timestamp < CACHE_TTL);
-  } catch {
-    return false;
-  }
+    try {
+        const raw = localStorage.getItem(CACHE_KEY_PREFIX + tag);
+        if (!raw) return false;
+        const entry = JSON.parse(raw);
+        return entry && entry.timestamp && (Date.now() - entry.timestamp < CACHE_TTL);
+    } catch {
+        return false;
+    }
 }
 
 /**
@@ -34,22 +34,22 @@ export function isCacheValid(tag) {
  * @returns {{ description: string, nextSteps: string } | null}
  */
 export function getCachedDashboard(tag) {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY_PREFIX + tag);
-    if (!raw) return null;
-    const entry = JSON.parse(raw);
-    if (!entry || !entry.timestamp || (Date.now() - entry.timestamp >= CACHE_TTL)) {
-      // Expired — remove it
-      localStorage.removeItem(CACHE_KEY_PREFIX + tag);
-      return null;
+    try {
+        const raw = localStorage.getItem(CACHE_KEY_PREFIX + tag);
+        if (!raw) return null;
+        const entry = JSON.parse(raw);
+        if (!entry || !entry.timestamp || (Date.now() - entry.timestamp >= CACHE_TTL)) {
+            // Expired — remove it
+            localStorage.removeItem(CACHE_KEY_PREFIX + tag);
+            return null;
+        }
+        return {
+            description: entry.description || '',
+            nextSteps: entry.nextSteps || '',
+        };
+    } catch {
+        return null;
     }
-    return {
-      description: entry.description || '',
-      nextSteps: entry.nextSteps || '',
-    };
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -59,16 +59,16 @@ export function getCachedDashboard(tag) {
  * @param {string} nextSteps - AI-generated next steps markdown
  */
 export function setCachedDashboard(tag, description, nextSteps) {
-  try {
-    const entry = {
-      description: description || '',
-      nextSteps: nextSteps || '',
-      timestamp: Date.now(),
-    };
-    localStorage.setItem(CACHE_KEY_PREFIX + tag, JSON.stringify(entry));
-  } catch (err) {
-    console.error('Failed to cache dashboard data for', tag, err);
-  }
+    try {
+        const entry = {
+            description: description || '',
+            nextSteps: nextSteps || '',
+            timestamp: Date.now(),
+        };
+        localStorage.setItem(CACHE_KEY_PREFIX + tag, JSON.stringify(entry));
+    } catch (err) {
+        console.error('Failed to cache dashboard data for', tag, err);
+    }
 }
 
 /**
@@ -78,29 +78,29 @@ export function setCachedDashboard(tag, description, nextSteps) {
  * @returns {{ description: string, nextSteps: string } | null}
  */
 export function getAllCachedDashboards(tags) {
-  const descriptions = [];
-  const nextStepsList = [];
+    const descriptions = [];
+    const nextStepsList = [];
 
-  tags.forEach((tag) => {
-    const cached = getCachedDashboard(tag);
-    if (cached) {
-      if (cached.description) {
-        descriptions.push(`[${tag}]\n${cached.description}`);
-      }
-      if (cached.nextSteps) {
-        nextStepsList.push(`[${tag}]\n${cached.nextSteps}`);
-      }
+    tags.forEach((tag) => {
+        const cached = getCachedDashboard(tag);
+        if (cached) {
+            if (cached.description) {
+                descriptions.push(`[${tag}]\n${cached.description}`);
+            }
+            if (cached.nextSteps) {
+                nextStepsList.push(`[${tag}]\n${cached.nextSteps}`);
+            }
+        }
+    });
+
+    if (descriptions.length === 0 && nextStepsList.length === 0) {
+        return null;
     }
-  });
 
-  if (descriptions.length === 0 && nextStepsList.length === 0) {
-    return null;
-  }
-
-  return {
-    description: descriptions.join('\n\n'),
-    nextSteps: nextStepsList.join('\n\n'),
-  };
+    return {
+        description: descriptions.join('\n\n'),
+        nextSteps: nextStepsList.join('\n\n'),
+    };
 }
 
 /**
@@ -109,7 +109,7 @@ export function getAllCachedDashboards(tags) {
  * @returns {string[]} Tags that have valid cached data
  */
 export function getTagsWithValidCache(tags) {
-  return tags.filter((tag) => isCacheValid(tag));
+    return tags.filter((tag) => isCacheValid(tag));
 }
 
 /**
@@ -118,34 +118,34 @@ export function getTagsWithValidCache(tags) {
  * @returns {string[]} Tags that need to be cached
  */
 export function getTagsMissingCache(tags) {
-  return tags.filter((tag) => !isCacheValid(tag));
+    return tags.filter((tag) => !isCacheValid(tag));
 }
 
 /**
  * Remove all expired cache entries from localStorage
  */
 export function clearExpiredCache() {
-  try {
-    const keysToRemove = [];
-    const len = localStorage.length;
-    Array.from({ length: len }).forEach((_, i) => {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(CACHE_KEY_PREFIX)) {
-        const raw = localStorage.getItem(key);
-        try {
-          const entry = JSON.parse(raw);
-          if (!entry || !entry.timestamp || (Date.now() - entry.timestamp >= CACHE_TTL)) {
-            keysToRemove.push(key);
-          }
-        } catch {
-          keysToRemove.push(key);
-        }
-      }
-    });
-    keysToRemove.forEach((key) => localStorage.removeItem(key));
-  } catch (err) {
-    console.error('Failed to clear expired dashboard cache:', err);
-  }
+    try {
+        const keysToRemove = [];
+        const len = localStorage.length;
+        Array.from({ length: len }).forEach((_, i) => {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(CACHE_KEY_PREFIX)) {
+                const raw = localStorage.getItem(key);
+                try {
+                    const entry = JSON.parse(raw);
+                    if (!entry || !entry.timestamp || (Date.now() - entry.timestamp >= CACHE_TTL)) {
+                        keysToRemove.push(key);
+                    }
+                } catch {
+                    keysToRemove.push(key);
+                }
+            }
+        });
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
+    } catch (err) {
+        console.error('Failed to clear expired dashboard cache:', err);
+    }
 }
 
 /**
@@ -154,8 +154,8 @@ export function clearExpiredCache() {
  * @returns {string[]} Filtered array of area/project tags only
  */
 export function filterAreaProjectTags(tags) {
-  if (!tags || !Array.isArray(tags)) return [];
-  return tags.filter(
-    (t) => t && (t.startsWith('area:') || t.startsWith('project:')),
-  );
+    if (!tags || !Array.isArray(tags)) return [];
+    return tags.filter(
+        (t) => t && (t.startsWith('area:') || t.startsWith('project:')),
+    );
 }
