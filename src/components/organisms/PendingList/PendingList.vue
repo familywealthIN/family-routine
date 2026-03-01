@@ -1,213 +1,180 @@
 <template>
-  <v-layout row wrap>
-    <v-flex xs12>
-      <v-card class="pt-3 ma-3 modern-card">
-        <v-list subheader>
-          <v-spacer></v-spacer>
-          <v-subheader
+  <AtomLayout row wrap>
+    <AtomFlex xs12>
+      <AtomCard class="pt-3 ma-3 modern-card">
+        <AtomList subheader>
+          <AtomSpacer />
+          <AtomSubheader
             class="subheading"
             v-if="pending && pending.length == 0"
           >
             You have 0 Pending tasks.
-          </v-subheader>
-          <v-list-tile
+          </AtomSubheader>
+          <AtomListTile
             v-for="(mott, i) in pending"
             :key="mott.id"
           >
-            <v-list-tile-content>
-              <v-list-tile-title>{{ mott.mottoItem }}</v-list-tile-title>
-            </v-list-tile-content>
-            <v-list-tile-action>
-              <v-btn
+            <AtomListTileContent>
+              <AtomListTileTitle>{{ mott.mottoItem }}</AtomListTileTitle>
+            </AtomListTileContent>
+            <AtomListTileAction>
+              <AtomButton
                 flat
                 icon
                 @click="openGoalItemDialog(mott.mottoItem, i)"
               >
-                <v-icon>exit_to_app</v-icon>
-              </v-btn>
-            </v-list-tile-action>
-            <v-list-tile-action>
-              <v-btn
+                <AtomIcon>exit_to_app</AtomIcon>
+              </AtomButton>
+            </AtomListTileAction>
+            <AtomListTileAction>
+              <AtomButton
                 flat
                 icon
-                @click="deletePendingItem(i)"
+                @click="$emit('delete-pending-item', i)"
               >
-                <v-icon>delete</v-icon>
-              </v-btn>
-            </v-list-tile-action>
-          </v-list-tile>
-        </v-list>
-      </v-card>
-    </v-flex>
-    <v-flex xs12 d-flex>
+                <AtomIcon>delete</AtomIcon>
+              </AtomButton>
+            </AtomListTileAction>
+          </AtomListTile>
+        </AtomList>
+      </AtomCard>
+    </AtomFlex>
+    <AtomFlex xs12 d-flex>
       <div class="pl-3 pr-3 formPending mt-3 mb-2">
-        <v-text-field
+        <AtomTextField
           clearable
           v-model="newPendingItem.mottoItem"
           id="newPendingItem"
           name="newPendingItem"
           label="Type your unplanned task"
           class="inputPending"
-          @keyup.enter="addPendingItem"
-        >
-        </v-text-field>
-        <v-btn
+          @keyup.enter="handleAddPendingItem"
+        />
+        <AtomButton
           icon
           color="success"
           fab
           class="ml-3 mr-0"
           :loading="buttonLoading"
-          @click="addPendingItem(newPendingItem)"
+          @click="handleAddPendingItem"
         >
-          <v-icon dark>send</v-icon>
-        </v-btn>
+          <AtomIcon dark>send</AtomIcon>
+        </AtomButton>
       </div>
-    </v-flex>
-    <!-- <v-dialog v-model="addGoalItemDialog" fullscreen hide-overlay transition="dialog-bottom-transition"> -->
-   <!-- <v-card> -->
-    <v-dialog
+    </AtomFlex>
+    <AtomDialog
     v-model="addGoalItemDialog"
     fullscreen
     hide-overlay
     transition="dialog-bottom-transition"
   >
-    <v-card class="modern-card-elevated">
-      <v-toolbar dark color="primary">
-        <v-btn icon dark @click="closeGoalItemDialog()">
-          <v-icon>close</v-icon>
-        </v-btn>
-        <v-toolbar-title>Sort Goal</v-toolbar-title>
-        <v-spacer></v-spacer>
-      </v-toolbar>
-      <v-card class="modern-card">
-        <v-card-text class="pa-0">
+    <AtomCard class="modern-card-elevated">
+      <AtomToolbar dark color="primary">
+        <AtomButton icon dark @click="closeGoalItemDialog()">
+          <AtomIcon>close</AtomIcon>
+        </AtomButton>
+        <AtomToolbarTitle>Sort Goal</AtomToolbarTitle>
+        <AtomSpacer />
+      </AtomToolbar>
+      <AtomCard class="modern-card">
+        <AtomCardText class="pa-0">
           <goal-creation :newGoalItem="newGoalItem" v-on:add-update-goal-entry="addUpdateGoalEntry" />
-        </v-card-text>
-      </v-card>
-    </v-card>
-  </v-dialog>
-  </v-layout>
+        </AtomCardText>
+      </AtomCard>
+    </AtomCard>
+  </AtomDialog>
+  </AtomLayout>
 </template>
 <script>
-import gql from 'graphql-tag';
-import GoalCreation from '../GoalCreation/GoalCreation.vue';
+import {
+  AtomButton,
+  AtomCard,
+  AtomCardText,
+  AtomDialog,
+  AtomFlex,
+  AtomIcon,
+  AtomLayout,
+  AtomList,
+  AtomListTile,
+  AtomListTileAction,
+  AtomListTileContent,
+  AtomListTileTitle,
+  AtomSpacer,
+  AtomSubheader,
+  AtomTextField,
+  AtomToolbar,
+  AtomToolbarTitle,
+} from '@/components/atoms';
+import GoalCreation from '../../../containers/GoalCreationContainer.vue';
 import { defaultGoalItem } from '../../../constants/goals';
 
 export default {
-  props: [],
+  name: 'OrganismPendingList',
+
   components: {
+    AtomButton,
+    AtomCard,
+    AtomCardText,
+    AtomDialog,
+    AtomFlex,
+    AtomIcon,
+    AtomLayout,
+    AtomList,
+    AtomListTile,
+    AtomListTileAction,
+    AtomListTileContent,
+    AtomListTileTitle,
+    AtomSpacer,
+    AtomSubheader,
+    AtomTextField,
+    AtomToolbar,
+    AtomToolbarTitle,
     GoalCreation,
   },
-  apollo: {
+
+  props: {
     pending: {
-      query: gql`
-        query motto {
-          motto {
-            id
-            mottoItem
-          }
-        }
-      `,
-      skip() {
-        // Skip query if user is not authenticated
-        return !this.$root.$data.email;
-      },
-      update(data) {
-        this.loading = false;
-        return data.motto !== null
-          ? data.motto
-          : [];
-      },
-      error() {
-        this.loading = false;
-      },
+      type: Array,
+      default: () => [],
+    },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
+    buttonLoading: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {
     return {
       show: true,
-      buttonLoading: false,
       addGoalItemDialog: false,
       newPendingItem: {
-        pendingItem: '',
+        mottoItem: '',
       },
       defaultPendingItem: {
-        pendingItem: '',
+        mottoItem: '',
       },
       newGoalItem: {
-        body: '',
-        index: undefined,
+        ...defaultGoalItem, // Use defaultGoalItem as base
+        index: undefined, // Add index for pending list tracking
       },
       defaultGoalItem,
       addGoalItemDialog: false, 
     };
   },
-  watch: {
-    // Watch for user email changes (indicates login/logout)
-    '$root.$data.email': function watchUserEmail(newEmail, oldEmail) {
-      // If email changes from null/undefined to a value, or from one user to another
-      if ((!oldEmail && newEmail) || (oldEmail && newEmail && oldEmail !== newEmail)) {
-        this.refreshApolloQueries();
-      }
-    },
-  },
   methods: {
-    refreshApolloQueries() {
-      // Refresh all Apollo queries in this component when user logs in
-      try {
-        if (this.$apollo.queries.pending) {
-          this.$apollo.queries.pending.refetch();
-        }
-        console.log('PendingList: Apollo queries refreshed successfully');
-      } catch (error) {
-        console.warn('PendingList: Error refreshing Apollo queries:', error);
-      }
-    },
-    addPendingItem() {
+    handleAddPendingItem() {
       const value = this.newPendingItem.mottoItem && this.newPendingItem.mottoItem.trim();
-
       if (!value) {
         return;
       }
-
-      this.buttonLoading = true;
-
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation addMottoItem(
-            $mottoItem: String!
-          ) {
-            addMottoItem(
-              mottoItem: $mottoItem
-            ) {
-              id
-              mottoItem
-            }
-          }
-        `,
-        variables: {
-          mottoItem: this.newPendingItem.mottoItem,
-        },
-        update: (scope, { data: { addMottoItem } }) => {
-          this.pending.push({
-            id: addMottoItem.id,
-            mottoItem: this.newPendingItem.mottoItem,
-          });
-          this.newPendingItem = { ...this.defaultPendingItem };
-          this.buttonLoading = false;
-        },
-      }).catch(() => {
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
-      });
+      this.$emit('add-pending-item', this.newPendingItem.mottoItem);
+      this.newPendingItem = { ...this.defaultPendingItem };
     },
     addUpdateGoalEntry(newGoalItem) {
-      this.deletePendingItem(newGoalItem.index);
+      this.$emit('goal-entry-added', newGoalItem.index);
       this.addGoalItemDialog = false;
       this.newGoalItem = { ...this.defaultGoalItem };
     },
@@ -218,35 +185,6 @@ export default {
     closeGoalItemDialog() {
       this.newGoalItem = { ...this.defaultGoalItem };
       this.addGoalItemDialog = false;
-    },
-    deletePendingItem(index) {
-      const { id } = this.pending[index];
-      this.pending.splice(index, 1);
-
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation deleteMottoItem(
-            $id: ID!
-          ) {
-            deleteMottoItem(
-              id: $id
-            ) {
-              id
-            }
-          }
-        `,
-        variables: {
-          id,
-        },
-      }).catch(() => {
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
-      });
     },
   },
 };

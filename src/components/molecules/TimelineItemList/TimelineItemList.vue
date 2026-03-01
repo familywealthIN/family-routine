@@ -1,42 +1,58 @@
 <template>
   <div class="timeline-item-list">
     <template v-for="(goalItem, i) in goal.goalItems">
-      <v-timeline-item
+      <AtomTimelineItem
         :class="`${periodPadding(period)} mb-0 pb-0`"
         :color="goalItem.isComplete ? 'green' : 'grey'"
         v-bind:key="goalItem.id"
         align-middle
         small
       >
-        <v-layout align-center justify-space-between>
-          <v-flex> {{ goalItem.body }} {{ progressText(goal.period, goalItem.progress) }} </v-flex>
-          <v-flex xs5 text-xs-right>
+        <AtomLayout align-center justify-space-between>
+          <AtomFlex> {{ goalItem.body }} {{ progressText(goal.period, goalItem.progress) }} </AtomFlex>
+          <AtomFlex xs5 text-xs-right>
             <span v-if="editMode">
-              <v-btn flat icon @click="editGoalItem(goalItem, goal.period, goal.date)">
-                <v-icon>edit</v-icon>
-              </v-btn>
+              <AtomButton flat icon @click="editGoalItem(goalItem, goal.period, goal.date)">
+                <AtomIcon>edit</AtomIcon>
+              </AtomButton>
             </span>
             <span>
-              <v-btn flat icon @click="deleteGoalItem(i, goal.period, goal.date)">
-                <v-icon>delete</v-icon>
-              </v-btn>
+              <AtomButton flat icon @click="deleteGoalItem(i, goal.period, goal.date)">
+                <AtomIcon>delete</AtomIcon>
+              </AtomButton>
             </span>
-          </v-flex>
-        </v-layout>
-        <v-progress-linear
+          </AtomFlex>
+        </AtomLayout>
+        <AtomProgressLinear
           color="success"
           v-if="goal.period !== 'day' && goalItem.progress !== null"
           :value="progressPercent(goal.period, goalItem.progress)"
-        ></v-progress-linear>
-      </v-timeline-item>
+        />
+      </AtomTimelineItem>
     </template>
   </div>
 </template>
 <script>
-import gql from 'graphql-tag';
 import { threshold } from '../../../utils/getDates';
+import {
+  AtomButton,
+  AtomFlex,
+  AtomIcon,
+  AtomLayout,
+  AtomProgressLinear,
+  AtomTimelineItem,
+} from '../../atoms';
 
 export default {
+  name: 'MoleculeTimelineItemList',
+  components: {
+    AtomButton,
+    AtomFlex,
+    AtomIcon,
+    AtomLayout,
+    AtomProgressLinear,
+    AtomTimelineItem,
+  },
   props: ['goal', 'editMode', 'newGoalItem', 'period'],
   data() {
     return {
@@ -85,32 +101,8 @@ export default {
     deleteGoalItem(index, period, date) {
       const { id } = this.goal.goalItems[index];
       this.goal.goalItems.splice(index, 1);
-      this.$emit('delete-task-goal', id);
-
-      this.$apollo
-        .mutate({
-          mutation: gql`
-            mutation deleteGoalItem($id: ID!, $period: String!, $date: String!) {
-              deleteGoalItem(id: $id, period: $period, date: $date) {
-                id
-              }
-            }
-          `,
-          variables: {
-            id,
-            period,
-            date,
-          },
-        })
-        .catch(() => {
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
+      // Emit event with all data needed for mutation - parent container handles GraphQL
+      this.$emit('delete-task-goal', { id, period, date });
     },
     editGoalItem(goalItem, period, date) {
       this.$emit('update-new-goal-item', goalItem, period, date);

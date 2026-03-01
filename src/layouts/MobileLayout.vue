@@ -97,7 +97,8 @@
 </template>
 
 <script>
-import PendingList from '../components/organisms/PendingList/PendingList.vue';
+import localforage from 'localforage';
+import PendingList from '../containers/PendingListContainer.vue';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
@@ -144,7 +145,7 @@ export default {
       bottomNav: [
         { title: 'Home', icon: 'home', route: '/home' },
         { title: 'Priority', icon: 'dashboard', route: '/priority' },
-        { title: 'Progress', icon: 'pie_chart', route: '/progress' },
+        { title: 'Routine', icon: 'history', route: '/settings' },
         { title: 'Goals', icon: 'assignment', route: '/goals' },
       ],
     };

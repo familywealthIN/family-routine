@@ -4,6 +4,8 @@ export default {};
 
 export const defaultGoalItem = {
   body: '',
+  period: '', // Period type: day, week, month, year, lifetime
+  date: '', // Date in DD-MM-YYYY format
   deadline: '',
   contribution: '',
   reward: '',

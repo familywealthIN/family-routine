@@ -2,11 +2,14 @@ import { StatusBar } from '@capacitor/status-bar';
 import 'babel-polyfill';
 import 'isomorphic-unfetch';
 import Vue from 'vue';
+import VueCompositionAPI from '@vue/composition-api';
 import { ApolloClient } from 'apollo-client';
 import { ApolloLink } from 'apollo-link';
 import { onError } from 'apollo-link-error';
 import { createHttpLink } from 'apollo-link-http';
 import { InMemoryCache } from 'apollo-cache-inmemory';
+import { persistCache } from 'apollo-cache-persist';
+import localforage from 'localforage';
 import 'firebase/messaging';
 import { Capacitor } from '@capacitor/core';
 import { graphQLUrl } from './blob/config';
@@ -19,6 +22,9 @@ import './styles/android-safe-area.css';
 import './utils/androidSafeArea'; // Initialize Android safe area manager
 import currentTaskPlugin from './plugins/currentTask';
 import { SplashScreen } from '@capacitor/splash-screen';
+import routinePlugin from './plugins/routine';
+import goalPlugin from './plugins/goal';
+// routineStore import removed - using Apollo cache persistence instead
 import App from './App.vue';
 // Load Google Identity Services script
 const script = document.createElement('script');
@@ -36,6 +42,9 @@ import redirectOnError from './utils/redirectOnError';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
+
+// Register Vue Composition API (must be before other plugins that use it)
+Vue.use(VueCompositionAPI);
 
 Vue.config.productionTip = false;
 if (Capacitor.isNativePlatform()) {
@@ -112,8 +121,14 @@ loadData().then(() => {
     fetch:Capacitor.isNativePlatform() ?  undefined : fetch
   });
 
-  // Cache implementation
+  // Cache implementation with persistence
   const cache = new InMemoryCache();
+
+  // Configure localforage for Apollo cache persistence
+  localforage.config({
+    name: 'routine-notes',
+    storeName: 'apollo-cache',
+  });
 
   const errorLink = onError(({
     graphQLErrors, networkError, operation,
@@ -157,6 +172,22 @@ loadData().then(() => {
   });
 
   const normalLink = authMiddleware.concat(httpLink);
+
+  // Persist Apollo cache to localforage before creating client
+  const setupCachePersistence = async () => {
+    try {
+      await persistCache({
+        cache,
+        storage: localforage,
+        maxSize: false, // Disable max size limit
+        debug: process.env.NODE_ENV === 'development',
+      });
+      console.log('[Main] Apollo cache restored from localforage');
+    } catch (error) {
+      console.warn('[Main] Failed to restore Apollo cache:', error);
+    }
+  };
+
   // Create the apollo client
   const apolloClient = new ApolloClient({
     link: errorLink.concat(normalLink),
@@ -169,11 +200,11 @@ loadData().then(() => {
   }),
     defaultOptions: {
       watchQuery: {
-        fetchPolicy: 'no-cache',
+        fetchPolicy: 'cache-and-network',
         errorPolicy: 'ignore',
       },
       query: {
-        fetchPolicy: 'no-cache',
+        fetchPolicy: 'cache-and-network',
         errorPolicy: 'all',
       },
     },
@@ -190,19 +221,23 @@ loadData().then(() => {
   // Install the currentTask plugin
   Vue.use(currentTaskPlugin);
 
-  new Vue({
-    router,
-    apolloProvider,
-    data: {
-      name,
-      email,
-      picture,
-    },
-    render: (h) => h(App),
-  }).$mount('#app');
-  if (Capacitor.isNativePlatform()) {
-    setTimeout(() => {
-      SplashScreen.hide();
-    }, 1000);
-  }
+  // Install routine and goal plugins for shared state
+  Vue.use(routinePlugin);
+  Vue.use(goalPlugin);
+
+  // Initialize Apollo cache persistence before mounting app
+  setupCachePersistence().then(() => {
+    const app = new Vue({
+      router,
+      apolloProvider,
+      data: {
+        name,
+        email,
+        picture,
+      },
+      render: (h) => h(App),
+    }).$mount('#app');
+
+    console.log('[Main] App mounted with Apollo cache persistence');
+  });
 });

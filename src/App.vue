@@ -27,7 +27,8 @@ import DesktopLayout from './layouts/DesktopLayout.vue';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
-import AiSearchModal from './components/organisms/AiSearchModal/AiSearchModal.vue';
+// import AiSearchModal from './components/organisms/AiSearchModal/AiSearchModal.vue';
+import AiSearchModal from './containers/AiSearchModalContainer.vue';
 import eventBus, { EVENTS } from './utils/eventBus';
 
 export default {

@@ -17,11 +17,11 @@
         Work on your daily agenda to bring you closer to your lifetime goal.
       </p>
       <template v-if="goals && goals.find((goal) => goal.period === 'lifetime')">
-        <v-card class="modern-card">
-          <v-card-title>
+        <atom-card class="modern-card">
+          <atom-card-title>
             <h3>Remember your Lifetime Goals</h3>
-          </v-card-title>
-          <v-card-text class="pt-0">
+          </atom-card-title>
+          <atom-card-text class="pt-0">
             <ul>
               <li
                 v-for="goalItem in goals.find((goal) => goal.period === 'lifetime').goalItems"
@@ -30,15 +30,15 @@
                 {{ goalItem.body }}
               </li>
             </ul>
-          </v-card-text>
-        </v-card>
+          </atom-card-text>
+        </atom-card>
       </template>
     </div>
     <div
       class="text-xs-center date-navigation"
       hidden
     >
-      <v-btn
+      <atom-button
         fab
         outline
         small
@@ -48,11 +48,9 @@
         :disabled="disablePrevious()"
         @click="previousDate()"
       >
-        <v-icon dark>
-          keyboard_arrow_left
-        </v-icon>
-      </v-btn>
-      <v-btn
+        <atom-icon dark>keyboard_arrow_left</atom-icon>
+      </atom-button>
+      <atom-button
         fab
         outline
         small
@@ -61,63 +59,59 @@
         color="primary"
         @click="nextDate()"
       >
-        <v-icon
-          dark
-        >
-          keyboard_arrow_right
-        </v-icon>
-      </v-btn>
+        <atom-icon dark>keyboard_arrow_right</atom-icon>
+      </atom-button>
       <div class="date-today">
         {{ today }}
       </div>
     </div>
     <div v-if="tasklist && tasklist.length">
-      <v-timeline
+      <atom-timeline
         dense
         clipped
       >
         <template v-for="task in tasklist">
           <span :key="task.id">
-            <v-timeline-item
+            <atom-timeline-item
               fill-dot
               class="pb-4 pt-4 routine-item"
               :color="getButtonColor(task)"
               medium
             >
               <template #icon>
-                <v-icon class="white--text">{{ getButtonIcon(task) }}</v-icon>
+                <atom-icon class="white--text">{{ getButtonIcon(task) }}</atom-icon>
               </template>
-              <v-layout>
-                <v-flex xs2>
+              <atom-layout>
+                <atom-flex xs2>
                   <strong>{{ task.time }}</strong>
-                </v-flex>
-                <v-flex>
+                </atom-flex>
+                <atom-flex>
                   <strong>{{ task.name }}</strong>
                   <br />
                   <a @click="() => $router.push(`/agenda/tree/${task.id}`)">Go to Month Planner</a>
                   <div class="caption"><pre>{{ task.description }}</pre></div>
-                </v-flex>
-              </v-layout>
-            </v-timeline-item>
+                </atom-flex>
+              </atom-layout>
+            </atom-timeline-item>
             <template v-for="period in periods">
-              <v-timeline-item
+              <atom-timeline-item
                 :key="period + task.id"
                 hide-dot
                 class="pb-0 pt-2"
               >
-                <v-layout
+                <atom-layout
                   class="period-separator"
                   align-center
                   justify-space-between
                 >
-                  <v-flex xs7>
+                  <atom-flex xs7>
                     <span style="text-transform: uppercase">{{ period }}</span>
-                  </v-flex>
-                  <v-flex
+                  </atom-flex>
+                  <atom-flex
                     xs5
                     text-xs-right
                   >
-                    <!-- <v-btn
+                    <!-- <atom-button
                       flat
                       icon
                       color="primary"
@@ -127,39 +121,39 @@
                         currentGoalPeriod = period;
                         goalDetailsDialog = true"
                       >
-                      <v-icon>content_copy</v-icon>
-                      <v-icon class="overlay-icon">arrow_back</v-icon>
-                    </v-btn> -->
-                    <v-btn
+                      <atom-icon>content_copy</atom-icon>
+                      <atom-icon class="overlay-icon">arrow_back</atom-icon>
+                    </atom-button> -->
+                    <atom-button
                       v-if="isEditable && period !== 'year'"
                       flat
                       icon
                       color="primary"
                       @click="clonePeriodGoalItem(task, period)"
                     >
-                      <v-icon>content_copy</v-icon>
-                      <v-icon class="overlay-icon">arrow_upward</v-icon>
-                    </v-btn>
-                    <v-btn
+                      <atom-icon>content_copy</atom-icon>
+                      <atom-icon class="overlay-icon">arrow_upward</atom-icon>
+                    </atom-button>
+                    <atom-button
                       v-if="isEditable"
                       flat
                       icon
                       color="primary"
                       @click="newGoalItem(task, period)"
                     >
-                      <v-icon>add</v-icon>
-                    </v-btn>
-                    <v-btn
+                      <atom-icon>add</atom-icon>
+                    </atom-button>
+                    <atom-button
                       v-else
                       flat
                       icon
                       color="primary"
                     >
-                      <v-icon />
-                    </v-btn>
-                  </v-flex>
-                </v-layout>
-              </v-timeline-item>
+                      <atom-icon />
+                    </atom-button>
+                  </atom-flex>
+                </atom-layout>
+              </atom-timeline-item>
               <template v-if="filterTaskGoalsPeriod(task.id, period).length">
                 <template
                   v-for="(taskGoals, i) in filterTaskGoalsPeriod(task.id, period)"
@@ -173,47 +167,47 @@
                 </template>
               </template>
               <template v-else>
-                <v-timeline-item
+                <atom-timeline-item
                   :key="period"
                   class="mb-0 pb-3 pt-3"
                   hide-dot
                 >
                   <span>No goal or activity set.</span>
-                </v-timeline-item>
+                </atom-timeline-item>
               </template>
             </template>
           </span>
         </template>
-      </v-timeline>
+      </atom-timeline>
     </div>
     <div v-if="tasklist && tasklist.length === 0">
-      <v-card class="modern-card">
-        <v-card-text class="text-xs-center">
+      <atom-card class="modern-card">
+        <atom-card-text class="text-xs-center">
           <p>No items to display. Please go to Routine Settings and add routine items.</p>
-        </v-card-text>
-      </v-card>
+        </atom-card-text>
+      </atom-card>
     </div>
-    <v-dialog
+    <atom-dialog
       v-model="goalDetailsDialog"
       fullscreen
       hide-overlay
       transition="dialog-bottom-transition"
     >
-      <v-card class="modern-card-elevated">
-        <v-toolbar
+      <atom-card class="modern-card-elevated">
+        <atom-toolbar
           dark
           color="primary"
         >
-          <v-btn
+          <atom-button
             icon
             dark
             @click="goalDetailsDialog = false"
           >
-            <v-icon>close</v-icon>
-          </v-btn>
-          <v-toolbar-title>Add Goal</v-toolbar-title>
-          <v-spacer />
-        </v-toolbar>
+            <atom-icon>close</atom-icon>
+          </atom-button>
+          <atom-toolbar-title>Add Goal</atom-toolbar-title>
+          <atom-spacer />
+        </atom-toolbar>
         <goal-list
           :goals="goals"
           :date="date"
@@ -223,7 +217,7 @@
           :selected-task-ref="selectedTaskRef"
           @toggle-goal-details-dialog="toggleGoalDetailsDialog"
         />
-        <v-alert
+        <atom-alert
           :value="true"
           color="success"
           icon="ev_station"
@@ -231,49 +225,61 @@
           class="ml-3 mr-3"
         >
           It's better to set Month and Weekly goals first to better guide daily milestones.
-        </v-alert>
-      </v-card>
-    </v-dialog>
+        </atom-alert>
+      </atom-card>
+    </atom-dialog>
   </container-box>
 </template>
 
 <script>
 /* eslint-disable no-param-reassign */
 import moment from 'moment';
-import gql from 'graphql-tag';
 
 import GoalList from '../components/organisms/GoalList/GoalList.vue';
 import TimelineItemList from '../components/molecules/TimelineItemList/TimelineItemList.vue';
 import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
 import { stepupMilestonePeriodDate } from '../utils/getDates';
+import { ROUTINE_DATE_QUERY, AGENDA_GOALS_QUERY } from '../composables/graphql/queries';
+import {
+  AtomAlert,
+  AtomButton,
+  AtomCard,
+  AtomCardText,
+  AtomCardTitle,
+  AtomDialog,
+  AtomFlex,
+  AtomIcon,
+  AtomLayout,
+  AtomSpacer,
+  AtomTimeline,
+  AtomTimelineItem,
+  AtomToolbar,
+  AtomToolbarTitle,
+} from '../components/atoms';
 
 export default {
   components: {
     GoalList,
     TimelineItemList,
     ContainerBox,
+    AtomAlert,
+    AtomButton,
+    AtomCard,
+    AtomCardText,
+    AtomCardTitle,
+    AtomDialog,
+    AtomFlex,
+    AtomIcon,
+    AtomLayout,
+    AtomSpacer,
+    AtomTimeline,
+    AtomTimelineItem,
+    AtomToolbar,
+    AtomToolbarTitle,
   },
   apollo: {
     tasklist: {
-      query: gql`
-        query getRoutineDate($date: String!) {
-          routineDate(date: $date) {
-            id
-            date
-            skip
-            tasklist {
-              id
-              name
-              description
-              time
-              points
-              ticked
-              passed
-              wait
-            }
-          }
-        }
-      `,
+      query: ROUTINE_DATE_QUERY,
       update(data) {
         this.isLoading = false;
         this.tasklist = data.routineDate && data.routineDate.date
@@ -297,23 +303,7 @@ export default {
       },
     },
     goals: {
-      query: gql`
-        query agendaGoals($date: String!) {
-          agendaGoals(date: $date) {
-            id
-            date
-            period
-            goalItems {
-              id
-              body
-              progress
-              isComplete
-              taskRef
-              goalRef
-            }
-          }
-        }
-      `,
+      query: AGENDA_GOALS_QUERY,
       update(data) {
         return data.agendaGoals;
       },
@@ -405,12 +395,20 @@ export default {
           });
         });
     },
-    deleteTaskGoal(id) {
-      this.goals.forEach((goal) => {
-        goal.goalItems = goal
-        && goal.goalItems
-        && goal.goalItems.filter((goalItem) => goalItem.id !== id);
-      });
+    deleteTaskGoal({ id, period, date }) {
+      // Apollo cache optimistic update handles instant UI removal
+      this.$goals.deleteGoalItem({
+        id, period, date, dayDate: this.date,
+      })
+        .catch(() => {
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+        });
     },
     updateSelectedTaskRef(id) {
       this.selectedTaskRef = id;

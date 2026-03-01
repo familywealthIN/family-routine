@@ -1,5 +1,21 @@
 /* Modern Box Shadow Utilities */
 
+/* Consistent border-radius for labeled buttons with background */
+.v-btn:not(.v-btn--icon):not(.v-btn--fab):not(.v-btn--floating) {
+    border-radius: 16px;
+}
+
+/* Exclude buttons inside button groups (toggle groups) */
+.v-btn-toggle .v-btn {
+    border-radius: 0 !important;
+}
+.v-btn-toggle .v-btn:first-child {
+    border-radius: 16px 0 0 16px !important;
+}
+.v-btn-toggle .v-btn:last-child {
+    border-radius: 0 16px 16px 0 !important;
+}
+
 /* Base card styling with modern shadows */
 .v-card {
     border-radius: 16px;

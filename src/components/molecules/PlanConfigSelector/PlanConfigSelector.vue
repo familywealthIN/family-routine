@@ -1,17 +1,15 @@
 <template>
   <v-row class="mb-4">
     <v-col cols="6">
-      <v-select
+      <GoalTaskSelector
         :value="selectedRoutine"
         @input="$emit('update:selectedRoutine', $event)"
         :items="routines"
-        item-text="name"
-        item-value="taskId"
-        label="Routine Task"
+        item-value="id"
         prepend-icon="schedule"
         filled
         :disabled="disabled"
-      ></v-select>
+      />
     </v-col>
     <v-col cols="6">
       <v-select
@@ -28,8 +26,13 @@
 </template>
 
 <script>
+import GoalTaskSelector from '../GoalTaskSelector/GoalTaskSelector.vue';
+
 export default {
   name: 'MoleculePlanConfigSelector',
+  components: {
+    GoalTaskSelector,
+  },
   props: {
     routines: {
       type: Array,

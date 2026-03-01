@@ -108,7 +108,13 @@ export default new Router({
       props: true,
     },
     {
-      path: '/year-goals/:tag?',
+      path: '/year-goals/:id',
+      name: 'yearGoal',
+      component: YearGoals,
+      props: true,
+    },
+    {
+      path: '/year-goals',
       name: 'yearGoals',
       component: YearGoals,
       props: true,

@@ -1,9 +1,9 @@
 <template>
-  <v-card class="elevation-0">
-    <v-card-text class="pa-2">
-      <v-layout row wrap>
+  <AtomCard class="elevation-0">
+    <AtomCardText class="pa-2">
+      <AtomLayout row wrap>
         <!-- Top Left: DO (Important + Urgent) -->
-        <v-flex xs12 md6>
+        <AtomFlex xs12 md6>
           <priority-quadrant
             title="DO"
             subtitle="Important + Urgent"
@@ -15,10 +15,10 @@
             @toggle-complete="handleToggleComplete"
             @edit-item="handleEditItem"
           />
-        </v-flex>
+        </AtomFlex>
 
         <!-- Top Right: PLAN (Important + Not Urgent) -->
-        <v-flex xs12 md6>
+        <AtomFlex xs12 md6>
           <priority-quadrant
             title="PLAN"
             subtitle="Important + Not Urgent"
@@ -30,10 +30,10 @@
             @toggle-complete="handleToggleComplete"
             @edit-item="handleEditItem"
           />
-        </v-flex>
+        </AtomFlex>
 
         <!-- Bottom Left: DELEGATE (Not Important + Urgent) -->
-        <v-flex xs12 md6>
+        <AtomFlex xs12 md6>
           <priority-quadrant
             title="DELEGATE"
             subtitle="Not Important + Urgent"
@@ -45,10 +45,10 @@
             @toggle-complete="handleToggleComplete"
             @edit-item="handleEditItem"
           />
-        </v-flex>
+        </AtomFlex>
 
         <!-- Bottom Right: AUTOMATE (Not Important + Not Urgent) -->
-        <v-flex xs12 md6>
+        <AtomFlex xs12 md6>
           <priority-quadrant
             title="AUTOMATE"
             subtitle="Not Important + Not Urgent"
@@ -60,18 +60,28 @@
             @toggle-complete="handleToggleComplete"
             @edit-item="handleEditItem"
           />
-        </v-flex>
-      </v-layout>
-    </v-card-text>
-  </v-card>
+        </AtomFlex>
+      </AtomLayout>
+    </AtomCardText>
+  </AtomCard>
 </template>
 
 <script>
 import PriorityQuadrant from '../../molecules/PriorityQuadrant/PriorityQuadrant.vue';
+import {
+  AtomCard,
+  AtomCardText,
+  AtomFlex,
+  AtomLayout,
+} from '../../atoms';
 
 export default {
   name: 'OrganismPriorityMatrix',
   components: {
+    AtomCard,
+    AtomCardText,
+    AtomFlex,
+    AtomLayout,
     PriorityQuadrant,
   },
   props: {

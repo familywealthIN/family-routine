@@ -32,3 +32,6 @@ secrets.json
 
 ios
 android
+storybook-static
+coverage
+nohup.out

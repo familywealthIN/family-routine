@@ -18,10 +18,10 @@
             @click="$emit('item-click', item)"
             class="quadrant-item"
           >
-            <v-list-tile-action>
+            <v-list-tile-action @click.stop>
               <v-checkbox
                 :input-value="item.isComplete"
-                @click.stop="$emit('toggle-complete', item)"
+                @change="$emit('toggle-complete', item)"
                 dark
                 color="white"
               />
@@ -90,7 +90,7 @@ export default {
     },
     getTaskName(taskRef) {
       if (!taskRef || !this.tasklist) return '';
-      const task = this.tasklist.find((t) => t.id === taskRef);
+      const task = this.tasklist.find((t) => t.id === taskRef || t.taskId === taskRef);
       return task ? task.name : '';
     },
   },

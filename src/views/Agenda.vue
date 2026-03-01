@@ -6,7 +6,7 @@
 
 <script>
 // @ is an alias to /src
-import AgendaTime from '@/containers/AgendaTime.vue';
+import AgendaTime from '@/pages/AgendaTime.vue';
 
 export default {
   name: 'agenda',

@@ -54,6 +54,7 @@ provider:
   runtime: nodejs18.x
   stage: dev
   region: ap-south-1
+  timeout: 120 # increase default lambda timeout from 6s to 120s
   environment:
     MONGDO_DB: ${self:custom.secrets.MONGDO_DB}
     MONGDO_DEBUG: ${self:custom.secrets.MONGDO_DEBUG}
@@ -65,6 +66,8 @@ provider:
     DOMAIN: ${self:custom.secrets.DOMAIN}
     ENCRYPTION_KEY: ${self:custom.secrets.ENCRYPTION_KEY}
     GEMINI_API_KEY: ${self:custom.secrets.GEMINI_API_KEY}
+    OPENROUTER_API_KEY: ${self:custom.secrets.OPENROUTER_API_KEY}
+    MCP_BASE_URL: ${self:custom.secrets.MCP_BASE_URL}
 
 functions:
   query:

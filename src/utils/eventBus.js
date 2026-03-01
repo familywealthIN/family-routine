@@ -13,4 +13,5 @@ export const EVENTS = {
   GOAL_ITEM_CREATED: 'goal-item-created',
   TIME_FORMAT_CHANGED: 'time-format-changed', // Added for time format preference changes
   OPEN_AI_SEARCH: 'open-ai-search',
+  DASHBOARD_CACHING_STATUS: 'dashboard-caching-status', // Emitted during dashboard cache population
 };
