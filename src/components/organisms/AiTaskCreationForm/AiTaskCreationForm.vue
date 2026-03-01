@@ -17,16 +17,8 @@
         solo
         flat
         hide-details
-        class="task-title-input mb-2"
+        class="task-title-input"
       />
-
-      <!--Tags (Move above description) -->
-      <goal-tags-input
-        :goalTags="taskData.tags"
-        :userTags="userTags"
-        @update-new-tag-items="updateField('tags', $event)"
-        class="mb-3"
-      ></goal-tags-input>
 
       <!-- Editable Task Description -->
       <AtomTextarea
@@ -50,10 +42,7 @@
 </template>
 
 <script>
-import GoalTagsInput from '../../molecules/GoalTagsInput/GoalTagsInput.vue';
 import RelatedTasksTimeline from '../../molecules/RelatedTasksTimeline/RelatedTasksTimeline.vue';
-import { USER_TAGS } from '../../../constants/settings';
-import getJSON from '../../../utils/getJSON';
 import {
   AtomAlert,
   AtomDivider,
@@ -70,7 +59,6 @@ export default {
     AtomFlex,
     AtomTextarea,
     AtomTextField,
-    GoalTagsInput,
     RelatedTasksTimeline,
   },
   props: {
@@ -123,11 +111,6 @@ export default {
       type: Array,
       default: () => [],
     },
-  },
-  data() {
-    return {
-      userTags: getJSON(localStorage.getItem(USER_TAGS), []),
-    };
   },
   computed: {
     relatedTasks() {
@@ -203,9 +186,10 @@ export default {
 .task-title-input >>> .v-input__control .v-input__slot {
   font-size: 18px !important;
   font-weight: 600 !important;
-  padding: 8px 0 !important;
+  padding: 0 0 8px 0 !important;
   box-shadow: none !important;
   background: transparent !important;
+  border-bottom: 1px solid #e8e8e8 !important;
 }
 
 .task-title-input >>> input {
@@ -220,7 +204,7 @@ export default {
 }
 
 .task-description-input >>> .v-input__control .v-input__slot {
-  padding: 8px 0 !important;
+  padding: 0 0 8px 0 !important;
   box-shadow: none !important;
   background: transparent !important;
 }

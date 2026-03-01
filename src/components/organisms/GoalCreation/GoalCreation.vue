@@ -2,7 +2,7 @@
   <AtomForm ref="form" v-model="valid">
     <AtomContainer style="max-width: 900px;" fill-height>
       <AtomLayout wrap class="goal-creation">
-        <AtomFlex xs12 d-flex>
+        <AtomFlex xs12 d-flex class="pb-0">
           <AtomTextField
             v-model="localGoalItem.body"
             id="newGoalItemBody"
@@ -14,7 +14,7 @@
             required
           />
         </AtomFlex>
-        <AtomFlex xs12>
+        <AtomFlex xs12 class="pt-0">
           <GoalTaskToolbar
             :period.sync="localGoalItem.period"
             :date.sync="localGoalItem.date"
@@ -425,8 +425,11 @@ export default {
       }, 2000);
     },
 
-    // Watch for taskRef changes to auto-fill tags
+    // Watch for taskRef changes to auto-fill tags (only for new goals, not edits)
     'newGoalItem.taskRef': function watchTaskRef(newTaskRef, oldTaskRef) {
+      // Skip auto-fill in edit mode — keep only server-saved tags
+      if (this.localGoalItem.id) return;
+
       if (newTaskRef !== oldTaskRef && newTaskRef && this.tasklist && this.tasklist.length > 0) {
         const selectedTask = this.tasklist.find((task) => task.id === newTaskRef || task.taskId === newTaskRef);
         if (selectedTask && selectedTask.tags && selectedTask.tags.length > 0) {
@@ -478,6 +481,25 @@ export default {
     max-height: 42px;
     font-size: 36px;
     font-weight: 700;
+  }
+
+  /* Reduce extra space below title input */
+  .goal-creation .inputGoal .v-text-field__details {
+    min-height: 0;
+    margin-bottom: 0;
+    padding: 0;
+  }
+
+  .goal-creation .inputGoal .v-messages {
+    min-height: 0;
+  }
+
+  .goal-creation .no-shadow {
+    margin-top: 0;
+  }
+
+  .goal-creation .no-shadow > .v-card__text.pt-0 {
+    padding-top: 0 !important;
   }
 
   .status-chip {

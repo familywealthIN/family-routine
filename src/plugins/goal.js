@@ -76,7 +76,10 @@ export default {
 
     const getGoalMutationsComposable = (vm) => {
       if (!goalMutationsComposable && vm.$apollo) {
-        goalMutationsComposable = useGoalMutations(vm.$apollo);
+        // Pass the actual Apollo Client (not the DollarApollo wrapper)
+        // so cache functions like readQuery/writeQuery are available
+        const client = vm.$apollo.provider.defaultClient;
+        goalMutationsComposable = useGoalMutations(client);
       }
       return goalMutationsComposable;
     };
@@ -342,7 +345,9 @@ export default {
         return null;
       },
 
-      async addSubTaskItem({ taskId, body, period, date, isComplete }, options) {
+      async addSubTaskItem({
+        taskId, body, period, date, isComplete,
+      }, options) {
         const composable = getGoalMutationsComposable(vm);
         if (composable) {
           return composable.addSubTaskItem(
@@ -353,14 +358,16 @@ export default {
               date,
               isComplete,
             },
-            options
+            options,
           );
         }
         console.warn('Apollo client not available for addSubTaskItem');
         return null;
       },
 
-      async deleteSubTaskItem({ id, taskId, date, period }, options) {
+      async deleteSubTaskItem({
+        id, taskId, date, period,
+      }, options) {
         const composable = getGoalMutationsComposable(vm);
         if (composable) {
           return composable.deleteSubTaskItem(
@@ -370,7 +377,7 @@ export default {
               date,
               period,
             },
-            options
+            options,
           );
         }
         console.warn('Apollo client not available for deleteSubTaskItem');

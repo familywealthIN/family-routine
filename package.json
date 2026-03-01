@@ -17,7 +17,6 @@
     "test:watch": "cross-env NODE_OPTIONS=--openssl-legacy-provider jest --watch"
   },
   "dependencies": {
-    "@johmun/vue-tags-input": "^2.1.0",
     "@types/node": "^24.0.10",
     "@vue/composition-api": "^1.7.2",
     "apollo-cache-inmemory": "^1.6.5",

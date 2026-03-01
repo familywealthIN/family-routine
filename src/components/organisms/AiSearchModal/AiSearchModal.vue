@@ -138,18 +138,11 @@
                 class="prompt-toolbar"
               />
               <div class="prompt-send-group">
-                <!-- Settings Dropdown -->
-                <AtomMenu
-                  v-model="settingsMenuOpen"
-                  :close-on-content-click="false"
-                  offset-y
-                  top
-                >
-                  <template #activator="{ on }">
-                    <AtomButton icon small class="settings-btn" v-on="on">
-                      <AtomIcon small>tune</AtomIcon>
-                    </AtomButton>
-                  </template>
+                <!-- Settings Button (opens sub-drawer on mobile) -->
+                <AtomButton icon small class="settings-btn" @click="openSettingsDrawer">
+                  <AtomIcon small>tune</AtomIcon>
+                </AtomButton>
+                <MobileSubDrawer v-model="settingsDrawerOpen" title="Settings">
                   <AtomList dense class="settings-menu-list">
                     <!-- Task Mode: AI Enhanced Task toggle -->
                     <AtomListTile v-if="isTaskMode">
@@ -174,8 +167,22 @@
                         />
                       </AtomListTileAction>
                     </AtomListTile>
+                    <!-- Build on Next Steps toggle (area/project tags) -->
+                    <AtomListTile v-if="hasAreaOrProjectTag">
+                      <AtomListTileContent>
+                        <AtomListTileTitle>Build on Next Steps</AtomListTileTitle>
+                      </AtomListTileContent>
+                      <AtomListTileAction>
+                        <AtomSwitch
+                          v-model="buildOnNextSteps"
+                          :disabled="!canBuildOnNextSteps"
+                          color="success"
+                          hide-details
+                        />
+                      </AtomListTileAction>
+                    </AtomListTile>
                   </AtomList>
-                </AtomMenu>
+                </MobileSubDrawer>
                 <!-- Send Button -->
                 <AtomButton
                   :loading="loading"
@@ -207,12 +214,14 @@
             :selectedTaskRef="toolbarTaskRef"
             :selectedGoalRef="toolbarGoalRef"
             :promptTags="promptTags"
+            :dashboardContext="dashboardContextData"
             :loading.sync="loading"
             @error="error = $event"
             @update:loading="loading = $event"
             @update:saving="saving = $event"
             @update:valid="isFormValid = $event"
             @task-created="handleTaskCreated"
+            @update-prompt-tags="mergeAiTags"
             @success="handleSuccess"
           />
 
@@ -228,6 +237,7 @@
             :selectedTaskRef="toolbarTaskRef"
             :selectedGoalRef="toolbarGoalRef"
             :parentGoalContext="selectedParentGoalData"
+            :dashboardContext="dashboardContextData"
             :promptTags="promptTags"
             :loading.sync="loading"
             @error="error = $event"
@@ -420,6 +430,20 @@
                         />
                       </AtomListTileAction>
                     </AtomListTile>
+                    <!-- Build on Next Steps toggle (area/project tags) -->
+                    <AtomListTile v-if="hasAreaOrProjectTag">
+                      <AtomListTileContent>
+                        <AtomListTileTitle>Build on Next Steps</AtomListTileTitle>
+                      </AtomListTileContent>
+                      <AtomListTileAction>
+                        <AtomSwitch
+                          v-model="buildOnNextSteps"
+                          :disabled="!canBuildOnNextSteps"
+                          color="success"
+                          hide-details
+                        />
+                      </AtomListTileAction>
+                    </AtomListTile>
                   </AtomList>
                 </AtomMenu>
                 <!-- Send Button -->
@@ -453,12 +477,14 @@
             :selectedTaskRef="toolbarTaskRef"
             :selectedGoalRef="toolbarGoalRef"
             :promptTags="promptTags"
+            :dashboardContext="dashboardContextData"
             :loading.sync="loading"
             @error="error = $event"
             @update:loading="loading = $event"
             @update:saving="saving = $event"
             @update:valid="isFormValid = $event"
             @task-created="handleTaskCreated"
+            @update-prompt-tags="mergeAiTags"
             @success="handleSuccess"
           />
 
@@ -474,6 +500,7 @@
             :selectedTaskRef="toolbarTaskRef"
             :selectedGoalRef="toolbarGoalRef"
             :parentGoalContext="selectedParentGoalData"
+            :dashboardContext="dashboardContextData"
             :promptTags="promptTags"
             :loading.sync="loading"
             @error="error = $event"
@@ -566,11 +593,15 @@ import {
   AtomSwitch,
   AtomTextarea,
 } from '@/components/atoms';
-import { USER_TAGS } from '@/constants/settings';
+import { USER_TAGS, AI_SEARCH_SETTINGS } from '@/constants/settings';
 import getJSON from '@/utils/getJSON';
+import { blurActiveElement } from '@/utils/blurActiveElement';
+import { getAllCachedDashboards, filterAreaProjectTags } from '@/utils/dashboardCache';
+import eventBus, { EVENTS } from '@/utils/eventBus';
 import AiTaskCreationForm from '../../../containers/AiTaskCreationFormContainer.vue';
 import AiGoalPlanForm from '../../../containers/AiGoalPlanFormContainer.vue';
 import GoalTaskToolbar from '../GoalTaskToolbar/GoalTaskToolbar.vue';
+import MobileSubDrawer from '../../molecules/MobileSubDrawer/MobileSubDrawer.vue';
 import { stepupMilestonePeriodDate } from '../../../utils/getDates';
 
 export default {
@@ -580,13 +611,13 @@ export default {
     AiTaskCreationForm,
     AiGoalPlanForm,
     GoalTaskToolbar,
+    MobileSubDrawer,
     AtomAlert,
     AtomBottomSheet,
     AtomButton,
     AtomCard,
     AtomCardActions,
     AtomCardText,
-    AtomCardTitle,
     AtomChip,
     AtomDialog,
     AtomIcon,
@@ -641,8 +672,11 @@ export default {
       manualMode: null, // Track user's manual toggle selection: 'task' or 'goal'
       // Settings dropdown
       settingsMenuOpen: false,
+      settingsDrawerOpen: false,
       aiEnhancedTask: false, // Task mode: use AI extraction vs direct creation
       associateParentGoal: false, // Goal mode: inject parent goal context into AI prompt
+      buildOnNextSteps: false, // Inject cached area/project dashboard context as system prompt
+      isDashboardCaching: false, // Whether dashboard caching is in progress
       // GoalTaskToolbar data
       toolbarPeriod: 'day',
       toolbarDate: '',
@@ -750,6 +784,40 @@ export default {
     },
 
     /**
+     * Whether any of the prompt tags are area or project tags.
+     */
+    hasAreaOrProjectTag() {
+      return filterAreaProjectTags(this.promptTags).length > 0;
+    },
+
+    /**
+     * Whether the "Build on Next Steps" toggle can be enabled.
+     * - Visible when area/project tags exist in promptTags
+     * - In task mode: also requires aiEnhancedTask to be ON
+     * - Disabled while dashboard caching is in progress
+     * - Disabled if no valid cache exists for matched tags
+     */
+    canBuildOnNextSteps() {
+      if (this.isDashboardCaching) return false;
+      if (!this.hasAreaOrProjectTag) return false;
+      if (this.isTaskMode && !this.aiEnhancedTask) return false;
+      // Check if at least one matched tag has a valid cache
+      const matchedTags = filterAreaProjectTags(this.promptTags);
+      const cachedData = getAllCachedDashboards(matchedTags);
+      return !!cachedData;
+    },
+
+    /**
+     * Get the dashboard context data to pass as system prompt.
+     * Returns null if "Build on Next Steps" is off or no cached data.
+     */
+    dashboardContextData() {
+      if (!this.buildOnNextSteps || !this.hasAreaOrProjectTag) return null;
+      const matchedTags = filterAreaProjectTags(this.promptTags);
+      return getAllCachedDashboards(matchedTags);
+    },
+
+    /**
      * Get the selected parent goal's data (body + contribution) for AI context.
      * Returns null if no goal is selected or toggle is off.
      */
@@ -810,11 +878,17 @@ export default {
         this.resetForm();
         this.initializeToolbar();
 
+        // Listen for dashboard caching status
+        eventBus.$on(EVENTS.DASHBOARD_CACHING_STATUS, this.handleDashboardCachingStatus);
+
         // Initialize scroll shadows and focus the input after modal opens
         this.$nextTick(() => {
           this.checkScrollShadows();
           this.focusPromptInput();
         });
+      } else {
+        // Clean up event listener when dialog closes
+        eventBus.$off(EVENTS.DASHBOARD_CACHING_STATUS, this.handleDashboardCachingStatus);
       }
     },
 
@@ -833,6 +907,16 @@ export default {
       // Only in goal mode and for week/month/year periods
       if (!this.isTaskMode && ['week', 'month', 'year'].includes(newPeriod)) {
         this.fetchGoalsForPeriod(newPeriod);
+      }
+    },
+
+    // Watch for date changes and re-fetch goals for the selected period
+    // This ensures goalItemsRef updates when user picks a different date
+    // (e.g., selecting a date from next week should fetch next week's parent goals)
+    // Fires in both Task and Goal modes since GoalRef dropdown can be visible in either
+    toolbarDate(newDate, oldDate) {
+      if (newDate && newDate !== oldDate) {
+        this.fetchGoalsForPeriod(this.toolbarPeriod);
       }
     },
 
@@ -855,6 +939,20 @@ export default {
         }
       },
       immediate: true,
+    },
+
+    // Persist settings to localStorage on change
+    aiEnhancedTask() {
+      this.saveSettings();
+    },
+    manualMode() {
+      this.saveSettings();
+    },
+    associateParentGoal() {
+      this.saveSettings();
+    },
+    buildOnNextSteps() {
+      this.saveSettings();
     },
 
     // Auto-disable "Associate Parent Goal" when no GoalRef is selected
@@ -1181,6 +1279,12 @@ export default {
       this.resetForm();
     },
 
+    // --- Mobile Settings Sub-Drawer ---
+    async openSettingsDrawer() {
+      await blurActiveElement();
+      this.settingsDrawerOpen = true;
+    },
+
     // --- Drag-to-close handlers ---
     onHandleTouchStart(e) {
       this.isDragging = true;
@@ -1244,6 +1348,19 @@ export default {
     },
 
     /**
+     * Merge AI-extracted tags into promptTags (avoids duplicates).
+     */
+    mergeAiTags(aiTags) {
+      if (!aiTags || !aiTags.length) return;
+      const existing = new Set(this.promptTags);
+      aiTags.forEach((tag) => {
+        if (!existing.has(tag)) {
+          this.promptTags.push(tag);
+        }
+      });
+    },
+
+    /**
      * Handle keydown in the inline tag input.
      * Enter or comma adds the tag.
      * Backspace on empty input removes the last tag.
@@ -1279,10 +1396,10 @@ export default {
       this.isFormValid = false;
       this.showTopShadow = false;
       this.showBottomShadow = false;
-      // Reset settings dropdown
-      this.aiEnhancedTask = false;
-      this.associateParentGoal = false;
+      // Restore saved settings from localStorage
+      this.loadSettings();
       this.settingsMenuOpen = false;
+      this.settingsDrawerOpen = false;
       // Reset tags
       this.promptTags = [];
       this.routineTagsSet = [];
@@ -1301,6 +1418,40 @@ export default {
           this.$refs.goalForm.resetForm();
         }
       });
+    },
+
+    /**
+     * Handle dashboard caching progress events from event bus.
+     * Updates isDashboardCaching state to disable Build on Next Steps during caching.
+     */
+    handleDashboardCachingStatus({ isCaching }) {
+      this.isDashboardCaching = isCaching;
+    },
+
+    /**
+     * Save AI Search modal settings to localStorage.
+     * Persists user preferences (mode, toggles) across modal open/close cycles.
+     */
+    saveSettings() {
+      const settings = {
+        aiEnhancedTask: this.aiEnhancedTask,
+        manualMode: this.manualMode,
+        associateParentGoal: this.associateParentGoal,
+        buildOnNextSteps: this.buildOnNextSteps,
+      };
+      localStorage.setItem(AI_SEARCH_SETTINGS, JSON.stringify(settings));
+    },
+
+    /**
+     * Load AI Search modal settings from localStorage.
+     * Falls back to defaults if no saved settings exist.
+     */
+    loadSettings() {
+      const saved = getJSON(localStorage.getItem(AI_SEARCH_SETTINGS), {});
+      this.aiEnhancedTask = saved.aiEnhancedTask || false;
+      this.manualMode = saved.manualMode || null;
+      this.associateParentGoal = saved.associateParentGoal || false;
+      this.buildOnNextSteps = saved.buildOnNextSteps || false;
     },
   },
 };
@@ -1443,6 +1594,10 @@ export default {
   margin: 0 !important;
 }
 
+.prompt-tag-chip.v-chip--removable >>> .v-chip__content {
+  padding-left: 0 !important;
+}
+
 .prompt-tag-chip.v-chip--outline {
   border-color: #bdbdbd !important;
   color: #555 !important;
@@ -1454,10 +1609,6 @@ export default {
   color: #999 !important;
   margin-right: 1px !important;
   margin-left: -4px !important;
-}
-
-.prompt-tag-chip >>> .v-chip__content {
-  padding: 0 6px !important;
 }
 
 /* Colon-separated tag segments with divider borders */
@@ -1510,10 +1661,6 @@ export default {
     margin-left: 2px !important;
     margin-right: -10px !important;
     font-size: 14px !important;
-  }
-
-  .prompt-tag-chip >>> .v-chip__content {
-    padding-right: 2px !important;
   }
 }
 
@@ -1688,6 +1835,7 @@ export default {
 .prompt-toolbar >>> .v-toolbar {
   min-height: 32px !important;
   height: auto !important;
+  padding-bottom: 6px !important;
 }
 
 .prompt-toolbar >>> .v-toolbar__content {
@@ -1874,7 +2022,6 @@ export default {
   .prompt-toolbar {
     order: 1;
     flex-basis: 100%;
-    padding-bottom: 6px;
   }
 
   .prompt-send-btn {
@@ -1889,6 +2036,23 @@ export default {
 
   .prompt-toolbar >>> .selector-item {
     max-width: 120px;
+  }
+
+  /* Prevent iOS Safari auto-zoom on input focus (requires font-size >= 16px) */
+  .prompt-textarea >>> textarea {
+    font-size: 16px !important;
+  }
+
+  .prompt-textarea >>> textarea::placeholder {
+    font-size: 16px !important;
+  }
+
+  .prompt-tag-input {
+    font-size: 16px !important;
+  }
+
+  .prompt-tag-input::placeholder {
+    font-size: 16px !important;
   }
 }
 </style>
