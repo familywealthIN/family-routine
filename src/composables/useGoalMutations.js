@@ -25,6 +25,8 @@ import {
   updateSubTaskCompletionInCache,
   deleteGoalItemFromCache,
   deleteSubTaskFromCache,
+  findGoalRefFromCache,
+  updateWeekGoalProgressInCache,
 } from './useApolloCacheUpdates';
 
 // ============================================================================
@@ -449,6 +451,34 @@ export function useGoalMutations(apolloClient, options = {}) {
       localIsCompletingGoal.value = true;
     }
 
+    // --- Optimistic pre-mutation cache update (instant UI) ---
+    const optimisticStatus = isComplete ? 'done' : 'todo';
+    const optimisticCompletedAt = isComplete ? new Date().toISOString() : null;
+
+    // 1. Immediately update the day goal item in cache
+    updateGoalItemCompletionInCache(apolloClient, {
+      id,
+      isComplete,
+      date,
+      period,
+      status: optimisticStatus,
+      completedAt: optimisticCompletedAt,
+      dayDate: params.dayDate,
+    });
+
+    // 2. Optimistically update linked week goal streak progress
+    let goalRef = null;
+    if (period === 'day') {
+      goalRef = findGoalRefFromCache(apolloClient, id, params.dayDate || date);
+      if (goalRef) {
+        updateWeekGoalProgressInCache(apolloClient, {
+          weekGoalItemId: goalRef,
+          delta: isComplete ? 1 : -1,
+          dayDate: params.dayDate,
+        });
+      }
+    }
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: COMPLETE_GOAL_ITEM_MUTATION,
@@ -460,8 +490,8 @@ export function useGoalMutations(apolloClient, options = {}) {
       const result = data?.completeGoalItem;
       handleSuccess(result, 'completeGoalItem');
 
-      // Update Apollo cache optimistically
-      if (result) {
+      // Server response validates optimistic update — reconcile if needed
+      if (result && result.status !== optimisticStatus) {
         updateGoalItemCompletionInCache(apolloClient, {
           id,
           isComplete,
@@ -480,6 +510,25 @@ export function useGoalMutations(apolloClient, options = {}) {
 
       return result;
     } catch (err) {
+      // --- Rollback optimistic updates on error ---
+      updateGoalItemCompletionInCache(apolloClient, {
+        id,
+        isComplete: !isComplete,
+        date,
+        period,
+        status: isComplete ? 'todo' : 'done',
+        completedAt: isComplete ? null : new Date().toISOString(),
+        dayDate: params.dayDate,
+      });
+
+      if (goalRef) {
+        updateWeekGoalProgressInCache(apolloClient, {
+          weekGoalItemId: goalRef,
+          delta: isComplete ? -1 : 1,
+          dayDate: params.dayDate,
+        });
+      }
+
       handleError(err, 'completeGoalItem');
 
       if (onError) {

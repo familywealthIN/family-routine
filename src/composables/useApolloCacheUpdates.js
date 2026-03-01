@@ -318,6 +318,121 @@ export function updateGoalItemCompletionInCache(apolloClient, {
 }
 
 /**
+ * Find the goalRef (week goal item ID) for a given day goal item from the cache.
+ *
+ * @param {Object} apolloClient - Apollo client instance
+ * @param {string} goalItemId - The day goal item ID
+ * @param {string} date - Date in DD-MM-YYYY format
+ * @returns {string|null} The goalRef (week goal item ID) or null
+ */
+export function findGoalRefFromCache(apolloClient, goalItemId, date) {
+    try {
+        const cacheData = apolloClient.readQuery({
+            query: DAILY_GOALS_QUERY,
+            variables: { date },
+        });
+
+        if (!cacheData || !cacheData.dailyGoals) return null;
+
+        for (const goal of cacheData.dailyGoals) {
+            if (!goal.goalItems) continue;
+            const item = goal.goalItems.find((gi) => gi.id === goalItemId);
+            if (item && item.goalRef) {
+                return item.goalRef;
+            }
+        }
+        return null;
+    } catch (error) {
+        console.warn('[findGoalRefFromCache] Cache read failed:', error);
+        return null;
+    }
+}
+
+/**
+ * Optimistically update a week goal item's progress in the Apollo cache.
+ * Used before the completeGoalItem mutation fires so the streak UI updates instantly.
+ *
+ * @param {Object} apolloClient - Apollo client instance
+ * @param {Object} params - Update parameters
+ * @param {string} params.weekGoalItemId - The week goal item ID (goalRef from the day goal)
+ * @param {number} params.delta - Progress change (+1 or -1)
+ * @param {string} [params.dayDate] - Day date for cache lookups (defaults to today)
+ * @returns {boolean} Success status
+ */
+export function updateWeekGoalProgressInCache(apolloClient, {
+    weekGoalItemId, delta, dayDate,
+}) {
+    try {
+        const queryDate = dayDate || getCurrentDayDate();
+        let updated = false;
+
+        // Week goals are stored in AGENDA_GOALS_QUERY cache
+        try {
+            const cacheData = cloneDeep(apolloClient.readQuery({
+                query: AGENDA_GOALS_QUERY,
+                variables: { date: queryDate },
+            }));
+
+            if (cacheData && cacheData.agendaGoals) {
+                const weekGoal = cacheData.agendaGoals.find((g) => g.period === 'week');
+                if (weekGoal) {
+                    const goalItem = weekGoal.goalItems.find((item) => item.id === weekGoalItemId);
+                    if (goalItem) {
+                        const newProgress = Math.max(0, Math.min(5, (goalItem.progress || 0) + delta));
+                        goalItem.progress = newProgress;
+
+                        apolloClient.writeQuery({
+                            query: AGENDA_GOALS_QUERY,
+                            variables: { date: queryDate },
+                            data: cacheData,
+                        });
+                        updated = true;
+                    }
+                }
+            }
+        } catch (e) {
+            // Cache may not exist yet, skip
+        }
+
+        // Also update DAILY_GOALS_QUERY cache (it also contains week goals)
+        try {
+            const dailyCacheData = cloneDeep(apolloClient.readQuery({
+                query: DAILY_GOALS_QUERY,
+                variables: { date: queryDate },
+            }));
+
+            if (dailyCacheData && dailyCacheData.dailyGoals) {
+                const weekGoal = dailyCacheData.dailyGoals.find((g) => g.period === 'week');
+                if (weekGoal) {
+                    const goalItem = weekGoal.goalItems.find((item) => item.id === weekGoalItemId);
+                    if (goalItem) {
+                        const newProgress = Math.max(0, Math.min(5, (goalItem.progress || 0) + delta));
+                        goalItem.progress = newProgress;
+
+                        apolloClient.writeQuery({
+                            query: DAILY_GOALS_QUERY,
+                            variables: { date: queryDate },
+                            data: dailyCacheData,
+                        });
+                        updated = true;
+                    }
+                }
+            }
+        } catch (e) {
+            // Cache may not exist yet, skip
+        }
+
+        if (updated) {
+            console.log(`[updateWeekGoalProgressInCache] Updated week goal ${weekGoalItemId} progress by ${delta}`);
+        }
+        return updated;
+    } catch (error) {
+        console.error('[updateWeekGoalProgressInCache] Error updating cache:', error);
+        return false;
+    }
+}
+
+/**
  * Update subtask completion status in Apollo cache
  *
  * @param {Object} apolloClient - Apollo client instance
@@ -722,6 +837,10 @@ export default {
     // Goal completion
     updateGoalItemCompletionInCache,
     updateSubTaskCompletionInCache,
+
+    // Optimistic streak updates
+    findGoalRefFromCache,
+    updateWeekGoalProgressInCache,
 
     // Goal deletion
     deleteGoalItemFromCache,

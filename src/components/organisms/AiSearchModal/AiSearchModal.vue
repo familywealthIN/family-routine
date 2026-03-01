@@ -618,7 +618,6 @@ export default {
     AtomCard,
     AtomCardActions,
     AtomCardText,
-    AtomCardTitle,
     AtomChip,
     AtomDialog,
     AtomIcon,
@@ -908,6 +907,16 @@ export default {
       // Only in goal mode and for week/month/year periods
       if (!this.isTaskMode && ['week', 'month', 'year'].includes(newPeriod)) {
         this.fetchGoalsForPeriod(newPeriod);
+      }
+    },
+
+    // Watch for date changes and re-fetch goals for the selected period
+    // This ensures goalItemsRef updates when user picks a different date
+    // (e.g., selecting a date from next week should fetch next week's parent goals)
+    // Fires in both Task and Goal modes since GoalRef dropdown can be visible in either
+    toolbarDate(newDate, oldDate) {
+      if (newDate && newDate !== oldDate) {
+        this.fetchGoalsForPeriod(this.toolbarPeriod);
       }
     },
 
@@ -1583,6 +1592,10 @@ export default {
   border-radius: 12px !important;
   padding: 0 8px !important;
   margin: 0 !important;
+}
+
+.prompt-tag-chip.v-chip--removable >>> .v-chip__content {
+  padding-left: 0 !important;
 }
 
 .prompt-tag-chip.v-chip--outline {
