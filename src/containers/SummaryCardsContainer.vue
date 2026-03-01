@@ -10,6 +10,7 @@
 <script>
 import gql from 'graphql-tag';
 import SummaryCards from '../components/organisms/SummaryCards/SummaryCards.vue';
+import { getCachedDashboard, setCachedDashboard } from '../utils/dashboardCache';
 
 export default {
   name: 'SummaryCardsContainer',
@@ -20,6 +21,10 @@ export default {
     goalItems: {
       type: Array,
       required: true,
+    },
+    tag: {
+      type: String,
+      default: '',
     },
   },
   data() {
@@ -38,6 +43,15 @@ export default {
       }));
     },
     async refreshSummary() {
+      // Check dashboard cache first if tag is provided
+      if (this.tag) {
+        const cached = getCachedDashboard(this.tag);
+        if (cached && cached.description) {
+          this.summary = cached.description;
+          return;
+        }
+      }
+
       this.loading = true;
       this.error = '';
       try {
@@ -55,6 +69,16 @@ export default {
           fetchPolicy: 'network-only',
         });
         this.summary = data.getGoalsSummary.description;
+
+        // Write to dashboard cache if tag provided
+        if (this.tag && this.summary) {
+          const existingCache = getCachedDashboard(this.tag);
+          setCachedDashboard(
+            this.tag,
+            this.summary,
+            existingCache ? existingCache.nextSteps : '',
+          );
+        }
       } catch (err) {
         this.error = 'Failed to generate summary. Please try again.';
         console.error(this.error, err);

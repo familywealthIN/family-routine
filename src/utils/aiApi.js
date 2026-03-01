@@ -428,7 +428,7 @@ async function generateMilestonePlan(userQuery, systemPrompt = null) {
     const responseText = await fetchFromAi(prompt, true);
 
     try {
-      const parsedJson = JSON.parse(responseText);
+      const parsedJson = JSON.parse(cleanJsonResponse(responseText));
 
       // Basic validation
       if (!parsedJson.period || !parsedJson.title || !parsedJson.entries) {
@@ -447,11 +447,14 @@ async function generateMilestonePlan(userQuery, systemPrompt = null) {
   }
 }
 
-async function extractTaskFromNaturalLanguage(naturalLanguageText) {
+async function extractTaskFromNaturalLanguage(naturalLanguageText, systemPrompt) {
   console.log('Extracting task data from natural language:', naturalLanguageText);
 
-  const prompt = `
-Convert this natural language text into a structured todo item:
+  const contextPrefix = systemPrompt
+    ? `Context from area/project dashboard:\n${systemPrompt}\n\nUse the above context to align the task with ongoing progress and next steps.\n\n`
+    : '';
+
+  const prompt = `${contextPrefix}Convert this natural language text into a structured todo item:
 "${naturalLanguageText}"
 
 Extract and provide the following information in a JSON object:
@@ -472,7 +475,7 @@ Respond ONLY with a valid JSON object in this exact format:
 
   try {
     const responseText = await fetchFromAi(prompt, true);
-    const extractedData = JSON.parse(responseText);
+    const extractedData = JSON.parse(cleanJsonResponse(responseText));
 
     if (!extractedData.title || !extractedData.description) {
       throw new Error('Incomplete task data extracted from AI response');
@@ -502,7 +505,7 @@ Please respond with ONLY a JSON object in this exact format:
 
   try {
     const responseText = await fetchFromAi(prompt, true);
-    const enhancement = JSON.parse(responseText);
+    const enhancement = JSON.parse(cleanJsonResponse(responseText));
 
     return {
       ...routineItem,

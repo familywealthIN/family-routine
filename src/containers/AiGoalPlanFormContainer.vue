@@ -81,6 +81,15 @@ export default {
       type: Object,
       default: null,
     },
+    /**
+     * Dashboard context from cached area/project Description + Next Steps.
+     * When provided, injected as additional system prompt context.
+     * Expected: { description: string, nextSteps: string } or null
+     */
+    dashboardContext: {
+      type: Object,
+      default: null,
+    },
     promptTags: {
       type: Array,
       default: () => [],
@@ -184,6 +193,24 @@ export default {
           }
           if (parts.length > 0) {
             systemPrompt = parts.join('\n');
+          }
+        }
+
+        // Merge dashboard context (cached area/project Description + Next Steps)
+        if (this.dashboardContext) {
+          const dashboardParts = [];
+          if (this.dashboardContext.description) {
+            dashboardParts.push(`Area/Project Description:\n${this.dashboardContext.description}`);
+          }
+          if (this.dashboardContext.nextSteps) {
+            dashboardParts.push(`Area/Project Next Steps:\n${this.dashboardContext.nextSteps}`);
+          }
+          if (dashboardParts.length > 0) {
+            const dashboardPrompt = `${dashboardParts.join('\n\n')
+            }\n\nUse the above area/project context to align the plan with ongoing progress and next steps.`;
+            systemPrompt = systemPrompt
+              ? `${systemPrompt}\n\n${dashboardPrompt}`
+              : dashboardPrompt;
           }
         }
 

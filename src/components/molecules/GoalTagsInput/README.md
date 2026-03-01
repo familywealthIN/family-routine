@@ -30,9 +30,10 @@ A molecule component that provides a tag input interface with autocomplete funct
 * Tag autocomplete from user's existing tags
 * Support for hierarchical tags (area:work, project:name)
 * Visual display of hierarchical tags with separators
-* Tag editing on click
-* Tag removal functionality
+* Tag removal functionality (close button, backspace on empty input)
+* Keyboard navigation for autocomplete (arrow keys, enter, escape)
+* Consistent pill-shaped outlined chip design (matches AiSearchModal)
 
 ## Dependencies
 
-* `@johmun/vue-tags-input` - Tag input component library
+* `AtomChip` - Atom wrapper around Vuetify's `v-chip`
