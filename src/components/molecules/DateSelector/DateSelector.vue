@@ -1,6 +1,8 @@
 <template>
   <div class="molecule-date-selector">
+    <!-- Desktop: standard AtomMenu dropdown -->
     <AtomMenu
+      v-if="!mobile"
       v-model="menuOpen"
       :close-on-content-click="false"
       :nudge-right="40"
@@ -227,11 +229,167 @@
         </v-card-actions>
       </v-card>
     </AtomMenu>
+
+    <!-- Mobile: read-only trigger + sub-drawer -->
+    <template v-if="mobile">
+      <div class="mobile-selector-trigger" :class="{ disabled }" @click="openMobileDrawer">
+        <v-icon small class="trigger-icon">{{ prependInnerIcon || computedPrependIcon || 'event' }}</v-icon>
+        <span class="trigger-text" :class="{ 'trigger-placeholder': !displayValue }">
+          {{ displayValue || placeholder || 'Select date' }}
+        </span>
+        <v-icon small class="trigger-arrow">arrow_drop_down</v-icon>
+      </div>
+
+      <MobileSubDrawer v-model="mobileDrawerOpen" :title="taskMode ? 'Select Date' : 'Select Period & Date'">
+        <div class="mobile-date-content">
+          <!-- Period Toggle - hidden in task mode -->
+          <template v-if="!taskMode">
+            <div class="period-toggle-container">
+              <v-btn-toggle
+                v-model="internalPeriod"
+                mandatory
+                class="period-toggle"
+                @change="handlePeriodChange"
+              >
+                <v-btn small value="day" :disabled="disabled">Day</v-btn>
+                <v-btn small value="week" :disabled="disabled">Week</v-btn>
+                <v-btn small value="month" :disabled="disabled">Month</v-btn>
+                <v-btn small value="year" :disabled="disabled">Year</v-btn>
+                <v-btn small value="lifetime" :disabled="disabled">Lifetime</v-btn>
+              </v-btn-toggle>
+            </div>
+            <v-divider />
+          </template>
+
+          <!-- Day Mode -->
+          <template v-if="internalPeriod === 'day'">
+            <AtomDatePicker
+              :value="isoValue"
+              :min="minDate"
+              :max="maxDate"
+              :allowed-dates="allowedDates"
+              no-title
+              scrollable
+              full-width
+              color="primary"
+              @input="handleMobileDaySelect"
+            />
+          </template>
+
+          <!-- Week Mode -->
+          <template v-else-if="internalPeriod === 'week'">
+            <div class="week-selector">
+              <div class="year-nav d-flex align-center justify-center pa-2">
+                <v-btn icon small @click="navigateYear(-1)"><v-icon>chevron_left</v-icon></v-btn>
+                <span class="year-title font-weight-medium flex-grow-1 text-center">{{ displayYear }}</span>
+                <v-btn icon small @click="navigateYear(1)"><v-icon>chevron_right</v-icon></v-btn>
+              </div>
+              <v-divider />
+              <div class="week-list">
+                <v-list dense class="pa-0">
+                  <v-list-tile
+                    v-for="week in weekOptions"
+                    :key="week.value"
+                    :class="{ 'v-list__tile--active primary--text': week.value === internalWeekValue }"
+                    @click="handleMobileWeekSelect(week.value)"
+                  >
+                    <v-list-tile-content>
+                      <v-list-tile-title class="d-flex justify-space-between">
+                        <span class="week-number">W{{ week.weekNum }}</span>
+                        <span class="week-range caption grey--text">{{ week.range }}</span>
+                      </v-list-tile-title>
+                    </v-list-tile-content>
+                    <v-list-tile-action v-if="week.isCurrent">
+                      <v-chip small color="primary" text-color="white">Current</v-chip>
+                    </v-list-tile-action>
+                  </v-list-tile>
+                </v-list>
+              </div>
+            </div>
+          </template>
+
+          <!-- Month Mode -->
+          <template v-else-if="internalPeriod === 'month'">
+            <div class="month-selector">
+              <div class="year-nav d-flex align-center justify-center pa-2">
+                <v-btn icon small @click="navigateYear(-1)"><v-icon>chevron_left</v-icon></v-btn>
+                <span class="year-title font-weight-medium flex-grow-1 text-center">{{ displayYear }}</span>
+                <v-btn icon small @click="navigateYear(1)"><v-icon>chevron_right</v-icon></v-btn>
+              </div>
+              <v-divider />
+              <div class="month-grid pa-3">
+                <v-btn
+                  v-for="month in monthOptions"
+                  :key="month.value"
+                  :color="month.value === internalMonthValue ? 'primary' : ''"
+                  :outline="month.value !== internalMonthValue"
+                  :flat="month.value !== internalMonthValue"
+                  small
+                  class="month-btn ma-1"
+                  @click="handleMobileMonthSelect(month.value)"
+                >
+                  {{ month.shortName }}
+                  <v-chip v-if="month.isCurrent" x-small color="primary" text-color="white" class="current-chip ml-1">•</v-chip>
+                </v-btn>
+              </div>
+            </div>
+          </template>
+
+          <!-- Year Mode -->
+          <template v-else-if="internalPeriod === 'year'">
+            <div class="year-selector">
+              <div class="decade-nav d-flex align-center justify-center pa-2">
+                <v-btn icon small @click="navigateDecade(-1)"><v-icon>chevron_left</v-icon></v-btn>
+                <span class="year-title font-weight-medium flex-grow-1 text-center">{{ decadeRange }}</span>
+                <v-btn icon small @click="navigateDecade(1)"><v-icon>chevron_right</v-icon></v-btn>
+              </div>
+              <v-divider />
+              <div class="year-grid pa-3">
+                <v-btn
+                  v-for="year in yearOptions"
+                  :key="year.value"
+                  :color="year.value === internalYearValue ? 'primary' : ''"
+                  :outline="year.value !== internalYearValue"
+                  :flat="year.value !== internalYearValue"
+                  small
+                  class="year-btn ma-1"
+                  @click="handleMobileYearSelect(year.value)"
+                >
+                  {{ year.label }}
+                  <v-icon v-if="year.isCurrent" x-small color="primary" class="ml-1">fiber_manual_record</v-icon>
+                </v-btn>
+              </div>
+            </div>
+          </template>
+
+          <!-- Lifetime Mode -->
+          <template v-else-if="internalPeriod === 'lifetime'">
+            <div class="lifetime-selector pa-4 text-center">
+              <v-icon large color="primary">nature</v-icon>
+              <p class="mt-2 mb-0 subtitle-1 font-weight-medium">Legacy Goal</p>
+              <p class="caption grey--text">Lifetime goals have no specific date</p>
+            </div>
+          </template>
+
+          <!-- Quick actions -->
+          <v-card-actions v-if="showActions" class="pa-2">
+            <v-spacer />
+            <v-btn flat small @click="handleMobileToday" v-if="internalPeriod === 'day'">Today</v-btn>
+            <v-btn flat small @click="handleMobileThisWeek" v-if="internalPeriod === 'week'">This Week</v-btn>
+            <v-btn flat small @click="handleMobileThisMonth" v-if="internalPeriod === 'month'">This Month</v-btn>
+            <v-btn flat small @click="handleMobileThisYear" v-if="internalPeriod === 'year'">This Year</v-btn>
+            <v-btn color="primary" flat small @click="mobileDrawerOpen = false">Done</v-btn>
+          </v-card-actions>
+        </div>
+      </MobileSubDrawer>
+    </template>
   </div>
 </template>
 
 <script>
 import { AtomMenu, AtomTextField, AtomDatePicker } from '@/components/atoms';
+import { blurActiveElement } from '@/utils/blurActiveElement';
+import MobileSubDrawer from '../MobileSubDrawer/MobileSubDrawer.vue';
 
 /**
  * MoleculeDateSelector - Airbnb-style date selector with support for
@@ -251,6 +409,7 @@ export default {
     AtomMenu,
     AtomTextField,
     AtomDatePicker,
+    MobileSubDrawer,
   },
 
   props: {
@@ -388,6 +547,14 @@ export default {
       type: Boolean,
       default: false,
     },
+    /**
+     * Mobile mode — renders as a trigger button + sub-drawer
+     * instead of a floating AtomMenu dropdown
+     */
+    mobile: {
+      type: Boolean,
+      default: false,
+    },
   },
 
   data() {
@@ -405,6 +572,7 @@ export default {
 
     return {
       menuOpen: false,
+      mobileDrawerOpen: false,
       displayYear: new Date().getFullYear(),
       decadeStart: Math.floor(new Date().getFullYear() / 10) * 10,
       internalPeriod: this.period,
@@ -1198,6 +1366,67 @@ export default {
 
       return `${formatDate(firstDay)} - ${formatDate(lastDay)}`;
     },
+
+    /**
+     * Open the mobile sub-drawer after dismissing the keyboard
+     */
+    async openMobileDrawer() {
+      if (this.disabled) return;
+      await blurActiveElement();
+      this.mobileDrawerOpen = true;
+    },
+
+    /**
+     * Mobile-specific day select — closes sub-drawer instead of menu
+     */
+    handleMobileDaySelect(isoDate) {
+      this.handleDaySelect(isoDate);
+      this.mobileDrawerOpen = false;
+    },
+
+    /**
+     * Mobile-specific week select — closes sub-drawer instead of menu
+     */
+    handleMobileWeekSelect(weekValue) {
+      this.handleWeekSelect(weekValue);
+      this.mobileDrawerOpen = false;
+    },
+
+    /**
+     * Mobile-specific month select — closes sub-drawer instead of menu
+     */
+    handleMobileMonthSelect(monthValue) {
+      this.handleMonthSelect(monthValue);
+      this.mobileDrawerOpen = false;
+    },
+
+    /**
+     * Mobile-specific year select — closes sub-drawer instead of menu
+     */
+    handleMobileYearSelect(yearValue) {
+      this.handleYearSelect(yearValue);
+      this.mobileDrawerOpen = false;
+    },
+
+    handleMobileToday() {
+      this.handleToday();
+      this.mobileDrawerOpen = false;
+    },
+
+    handleMobileThisWeek() {
+      this.handleThisWeek();
+      this.mobileDrawerOpen = false;
+    },
+
+    handleMobileThisMonth() {
+      this.handleThisMonth();
+      this.mobileDrawerOpen = false;
+    },
+
+    handleMobileThisYear() {
+      this.handleThisYear();
+      this.mobileDrawerOpen = false;
+    },
   },
 };
 </script>
@@ -1344,5 +1573,58 @@ export default {
 }
 .molecule-date-selector .v-input {
   padding-top: 0px;
+}
+
+/* Mobile trigger styles */
+.mobile-selector-trigger {
+  display: flex;
+  align-items: center;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  padding: 8px 12px;
+  min-height: 40px;
+  max-height: 40px;
+  cursor: pointer;
+  user-select: none;
+  overflow: hidden;
+}
+
+.mobile-selector-trigger.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.trigger-icon {
+  color: #666;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.trigger-text {
+  flex: 1;
+  font-size: 14px;
+  line-height: 24px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trigger-placeholder {
+  color: #999;
+}
+
+.trigger-arrow {
+  color: #666;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.mobile-date-content {
+  width: 100%;
+}
+
+.mobile-date-content .week-list {
+  max-height: 50vh;
 }
 </style>

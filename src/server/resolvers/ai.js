@@ -94,13 +94,16 @@ const mutation = {
       query: {
         type: new GraphQLNonNull(GraphQLString),
       },
+      systemPrompt: {
+        type: GraphQLString,
+      },
     },
-    resolve: async (root, { query: text }, context) => {
+    resolve: async (root, { query: text, systemPrompt }, context) => {
       // Require authentication even for AI operations
       getEmailfromSession(context);
 
       try {
-        const extractedTask = await extractTaskFromNaturalLanguage(text);
+        const extractedTask = await extractTaskFromNaturalLanguage(text, systemPrompt);
         return extractedTask;
       } catch (error) {
         console.error('Error extracting task from text:', error);

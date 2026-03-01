@@ -69,6 +69,15 @@ export default {
       type: Array,
       default: () => [],
     },
+    /**
+     * Dashboard context from cached area/project Description + Next Steps.
+     * When provided, injected as systemPrompt in extractDayTask mutation.
+     * Expected: { description: string, nextSteps: string } or null
+     */
+    dashboardContext: {
+      type: Object,
+      default: null,
+    },
   },
   data() {
     return {
@@ -128,10 +137,25 @@ export default {
       this.loading = true;
 
       try {
+        // Build system prompt from dashboard context if available
+        let systemPrompt = null;
+        if (this.dashboardContext) {
+          const parts = [];
+          if (this.dashboardContext.description) {
+            parts.push(`Area/Project Description:\n${this.dashboardContext.description}`);
+          }
+          if (this.dashboardContext.nextSteps) {
+            parts.push(`Area/Project Next Steps:\n${this.dashboardContext.nextSteps}`);
+          }
+          if (parts.length > 0) {
+            systemPrompt = parts.join('\n\n');
+          }
+        }
+
         const result = await this.$apollo.mutate({
           mutation: gql`
-            mutation extractDayTask($query: String!) {
-              extractDayTask(query: $query) {
+            mutation extractDayTask($query: String!, $systemPrompt: String) {
+              extractDayTask(query: $query, systemPrompt: $systemPrompt) {
                 title
                 description
                 dueDate
@@ -142,6 +166,7 @@ export default {
           `,
           variables: {
             query: this.searchQuery,
+            systemPrompt,
           },
         });
 
@@ -151,9 +176,11 @@ export default {
             dueDate: result.data.extractDayTask.dueDate || moment().format('YYYY-MM-DD'),
           };
 
-          // Merge prompt-level tags with AI-extracted tags
+          // Emit AI-extracted tags up to AiSearchModal to merge into promptTags
           const aiTags = result.data.extractDayTask.tags || [];
-          this.taskData.tags = [...new Set([...aiTags, ...this.promptTags])];
+          if (aiTags.length > 0) {
+            this.$emit('update-prompt-tags', aiTags);
+          }
         } else {
           this.$emit('error', 'Failed to extract task information from your query');
         }
@@ -179,13 +206,13 @@ export default {
         contribution: this.taskData.description,
         taskRef: this.selectedTaskRef || '',
         goalRef: this.selectedGoalRef || null,
-        tags: this.taskData.tags || [],
+        tags: this.promptTags || [],
         isMilestone: !!this.selectedGoalRef,
       };
 
       // Close modal immediately — optimistic cache update shows item instantly
       this.taskSuccess = true;
-      this.setLocalUserTag(this.taskData.tags || []);
+      this.setLocalUserTag(this.promptTags || []);
       this.saving = false;
       this.$emit('task-created', goalItemData);
       this.$emit('success');

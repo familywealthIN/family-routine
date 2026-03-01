@@ -10,6 +10,7 @@
 <script>
 import gql from 'graphql-tag';
 import NextSteps from '../components/organisms/NextSteps/NextSteps.vue';
+import { getCachedDashboard, setCachedDashboard } from '../utils/dashboardCache';
 
 export default {
   name: 'NextStepsContainer',
@@ -20,6 +21,10 @@ export default {
     goalItems: {
       type: Array,
       required: true,
+    },
+    tag: {
+      type: String,
+      default: '',
     },
   },
   data() {
@@ -38,6 +43,15 @@ export default {
       }));
     },
     async refreshNextSteps() {
+      // Check dashboard cache first if tag is provided
+      if (this.tag) {
+        const cached = getCachedDashboard(this.tag);
+        if (cached && cached.nextSteps) {
+          this.nextSteps = cached.nextSteps;
+          return;
+        }
+      }
+
       this.loading = true;
       this.error = '';
       try {
@@ -55,6 +69,16 @@ export default {
           fetchPolicy: 'network-only',
         });
         this.nextSteps = data.getGoalsNextSteps.nextSteps;
+
+        // Write to dashboard cache if tag provided
+        if (this.tag && this.nextSteps) {
+          const existingCache = getCachedDashboard(this.tag);
+          setCachedDashboard(
+            this.tag,
+            existingCache ? existingCache.description : '',
+            this.nextSteps,
+          );
+        }
       } catch (err) {
         this.error = 'Failed to generate next steps. Please try again.';
         console.error(err);

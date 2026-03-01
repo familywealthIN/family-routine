@@ -148,7 +148,7 @@
           <atom-toolbar-title>{{ goalActionText || 'Add Goal'}}</atom-toolbar-title>
           <atom-spacer></atom-spacer>
         </atom-toolbar>
-        <atom-card>
+        <atom-card class="no-shadow">
           <atom-card-text class="pa-0">
             <goal-creation :newGoalItem="newGoalItem" v-on:add-update-goal-entry="addUpdateGoalEntry" />
           </atom-card-text>

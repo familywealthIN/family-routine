@@ -6,6 +6,21 @@
       @refresh="handlePullToRefresh"
     >
       <container-box transparent="true" >
+      <atom-card v-if="isDashboardCaching" class="mb-3 mx-3 mt-3 pa-3 dashboard-caching-card">
+        <div class="d-flex align-center mb-2">
+          <atom-icon class="mr-2" color="warning" small>cached</atom-icon>
+          <span class="caching-label">Building Projects and Areas context. <strong>{{ currentCachingTag }}</strong></span>
+        </div>
+        <atom-progress-linear
+          :value="dashboardCachingProgress"
+          color="warning"
+          height="6"
+          class="ma-0 caching-progress"
+        />
+        <div class="caching-counter mt-1 text-right caption grey--text">
+          {{ dashboardCachingCompleted }}/{{ dashboardCachingTotal }}
+        </div>
+      </atom-card>
       <weekday-selector
         :selectedDate="date"
         :class="$vuetify.breakpoint.xsOnly ? 'mr-3 mb-2 ml-3 mt-3' : 'mr-3 mb-3 ml-3'"
@@ -685,6 +700,7 @@ import WakeCheck from '../components/atoms/WakeCheck/WakeCheck.vue';
 import WeekdaySelector from '../components/organisms/WeekdaySelector/WeekdaySelector.vue';
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
 import { TimeFormatMixin } from '../utils/timeFormat';
+import { initDashboardCaching } from '../composables/useDashboardCaching';
 
 import {
   AtomAlert,
@@ -711,6 +727,7 @@ import {
   AtomListTileSubTitle,
   AtomListTileTitle,
   AtomProgressCircular,
+  AtomProgressLinear,
   AtomSpacer,
   AtomSwitch,
   AtomTab,
@@ -771,6 +788,7 @@ export default {
     AtomListTileSubTitle,
     AtomListTileTitle,
     AtomProgressCircular,
+    AtomProgressLinear,
     AtomSpacer,
     AtomSwitch,
     AtomTab,
@@ -894,6 +912,12 @@ export default {
       now: moment(),
       // Timer ID for current task auto-update
       currentTaskTimerId: null,
+      // Dashboard caching state
+      isDashboardCaching: false,
+      dashboardCachingProgress: 0,
+      currentCachingTag: '',
+      dashboardCachingCompleted: 0,
+      dashboardCachingTotal: 0,
     };
   },
   watch: {
@@ -1010,7 +1034,13 @@ export default {
     eventBus.$on(EVENTS.GOALS_SAVED, this.handleGoalsSaved);
     eventBus.$on(EVENTS.GOAL_ITEM_CREATED, this.handleGoalItemCreated);
 
+    // Listen for dashboard caching progress
+    eventBus.$on(EVENTS.DASHBOARD_CACHING_STATUS, this.handleDashboardCachingStatus);
+
     console.log('DashBoard: Event listeners registered');
+
+    // Start dashboard caching for area/project tags
+    this.startDashboardCaching();
 
     // Start intelligent refresh system
     this.startIntelligentRefresh({
@@ -1036,6 +1066,7 @@ export default {
     eventBus.$off(EVENTS.TASK_CREATED, this.handleTaskCreated);
     eventBus.$off(EVENTS.GOALS_SAVED, this.handleGoalsSaved);
     eventBus.$off(EVENTS.GOAL_ITEM_CREATED, this.handleGoalItemCreated);
+    eventBus.$off(EVENTS.DASHBOARD_CACHING_STATUS, this.handleDashboardCachingStatus);
 
     // Clean up timer
     this.stopEventExecutionTimer();
@@ -1050,6 +1081,24 @@ export default {
     }
   },
   methods: {
+    // Start dashboard caching for area/project tags
+    startDashboardCaching() {
+      if (this.$root.$data.email) {
+        initDashboardCaching(this);
+      }
+    },
+
+    // Handle dashboard caching progress updates
+    handleDashboardCachingStatus({
+      isCaching, progress, total, completed, currentTag,
+    }) {
+      this.isDashboardCaching = isCaching;
+      this.dashboardCachingProgress = progress;
+      this.currentCachingTag = currentTag || '';
+      this.dashboardCachingCompleted = completed || 0;
+      this.dashboardCachingTotal = total || 0;
+    },
+
     // Refetch routine data via Apollo
     async refetchRoutine() {
       try {
@@ -2347,6 +2396,23 @@ export default {
     margin-left: -60px;
     width: calc(100% + 60px);
   }
+}
+</style>
+
+<style scoped>
+.dashboard-caching-card {
+  background: #fff8e1 !important;
+  border-left: 4px solid #ffc107;
+}
+.caching-label {
+  font-size: 13px;
+  color: #5d4037;
+}
+.caching-progress {
+  border-radius: 3px;
+}
+.caching-counter {
+  font-size: 11px;
 }
 </style>
 

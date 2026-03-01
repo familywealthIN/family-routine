@@ -10,6 +10,7 @@
         :disabled="disabled"
         :min-date="minDate"
         :task-mode="taskMode"
+        :mobile="isMobile"
         label=""
         :placeholder="taskMode ? 'Select date' : 'Select period'"
         prepend-icon=""
@@ -42,6 +43,7 @@
         hide-details
         solo
         flat
+        :mobile="isMobile"
       />
       <template v-if="showMilestoneOption || isMilestone">
         <GoalRefSelector
@@ -58,6 +60,7 @@
           hide-details
           solo
           flat
+          :mobile="isMobile"
         />
       </template>
     </AtomToolbar>
@@ -123,6 +126,13 @@ export default {
     };
   },
   computed: {
+    /**
+     * Whether to render child selectors in mobile sub-drawer mode
+     */
+    isMobile() {
+      return this.$vuetify && this.$vuetify.breakpoint && this.$vuetify.breakpoint.xsOnly;
+    },
+
     showMilestoneOption() {
       const hasPeriod = !!this.period;
       const hasDate = !!this.date;

@@ -7,6 +7,7 @@ export const USER_TAGS = 'USER_TAGS';
 export const TIMES_UP_TIME = 30;
 export const PROACTIVE_START_TIME = 60;
 export const ONBOARDING_COMPLETE = 'ONBOARDING_COMPLETE';
+export const AI_SEARCH_SETTINGS = 'AI_SEARCH_SETTINGS';
 
 // Profile Settings Constants
 export const PROFILE_SETTINGS = {

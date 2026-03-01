@@ -10,6 +10,7 @@
         <atom-flex xs12 md6 class="d-flex pa-2">
           <summary-cards
             :goal-items="getFlattenedGoalItems()"
+            :tag="tag"
             class="flex-grow-1"
           />
         </atom-flex>
@@ -82,6 +83,7 @@
         <atom-flex xs12 md6>
           <next-steps
             :goal-items="getFlattenedGoalItems()"
+            :tag="tag"
             class="ma-2"
           />
         </atom-flex>
