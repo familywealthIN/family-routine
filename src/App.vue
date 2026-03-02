@@ -27,8 +27,8 @@ import DesktopLayout from './layouts/DesktopLayout.vue';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
-// import AiSearchModal from './components/organisms/AiSearchModal/AiSearchModal.vue';
-import AiSearchModal from './containers/AiSearchModalContainer.vue';
+import AiSearchModal from './components/organisms/AiSearchModal/AiSearchModal.vue';
+// import AiSearchModal from './containers/AiSearchModalContainer.vue';
 import eventBus, { EVENTS } from './utils/eventBus';
 
 export default {
@@ -73,7 +73,19 @@ export default {
       this.initPwaFCM();
     }
   },
+   mounted() {
+    eventBus.$on(EVENTS.OPEN_AI_SEARCH, this.handleOpenAiSearch);
+  },
+  beforeDestroy() {
+    eventBus.$off(EVENTS.OPEN_AI_SEARCH, this.handleOpenAiSearch);
+  },
   methods: {
+     handleOpenAiSearch(data) {
+      console.log('App.vue: Received OPEN_AI_SEARCH event', data);
+      console.log('App.vue: Current aiSearchModal value:', this.aiSearchModal);
+      this.aiSearchModal = true;
+      console.log('App.vue: Set aiSearchModal to:', this.aiSearchModal);
+    },
     async initPwaFCM() {
       if (isDevelopment || netlify) {
         firebase.initializeApp(config);
