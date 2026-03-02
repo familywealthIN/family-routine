@@ -125,6 +125,11 @@ export default new Router({
       component: () => import(/* webpackChunkName: "priority" */ './views/Priority.vue'),
     },
     {
+      path: '/search',
+      name: 'search',
+      component: () => import(/* webpackChunkName: "search" */ './views/Search.vue'),
+    },
+    {
       path: '/',
       name: 'login',
       component: Login,

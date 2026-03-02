@@ -755,4 +755,105 @@ export default {
   useGoalsByGoalRef,
   useAgendaGoals,
   useMonthTaskGoals,
+  useSearchGoals,
 };
+
+// ============================================================================
+// SEARCH GOALS QUERY
+// ============================================================================
+
+export const SEARCH_GOALS_QUERY = gql`
+  query searchGoals($query: String!, $taskRef: String, $tags: String) {
+    searchGoals(query: $query, taskRef: $taskRef, tags: $tags) {
+      id
+      date
+      period
+      goalItems {
+        ${GOAL_ITEM_FULL_FIELDS_STRING}
+        routine {
+          id
+          name
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * useSearchGoals Composable
+ *
+ * Provides server-side search across goal items' body and contribution fields.
+ *
+ * Usage:
+ *   import { useSearchGoals } from '@/composables/useGoalQueries';
+ *   const { results, isLoading, error, searchGoals } = useSearchGoals(this.$apollo);
+ *   searchGoals('my search term');
+ */
+export function useSearchGoals(apolloClient) {
+  const results = ref([]);
+  const isLoading = ref(false);
+  const error = ref(null);
+
+  async function searchGoals(query, options = {}) {
+    if (!query || query.trim().length < 2) {
+      results.value = [];
+      return [];
+    }
+
+    isLoading.value = true;
+    error.value = null;
+
+    const variables = { query: query.trim() };
+    if (options.taskRef) {
+      variables.taskRef = options.taskRef;
+    }
+    if (options.tags) {
+      variables.tags = options.tags;
+    }
+
+    try {
+      const { data } = await apolloClient.query({
+        query: SEARCH_GOALS_QUERY,
+        variables,
+        fetchPolicy: 'network-only',
+      });
+
+      const searchResults = data?.searchGoals || [];
+
+      // Flatten goals into individual result items with parent context
+      const flatResults = [];
+      searchResults.forEach((goal) => {
+        (goal.goalItems || []).forEach((item) => {
+          flatResults.push({
+            ...item,
+            date: goal.date,
+            period: goal.period,
+            goalId: goal.id,
+          });
+        });
+      });
+
+      results.value = flatResults;
+      return flatResults;
+    } catch (err) {
+      error.value = err;
+      results.value = [];
+      return [];
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  function clearResults() {
+    results.value = [];
+    error.value = null;
+  }
+
+  return {
+    results,
+    isLoading,
+    error,
+    searchGoals,
+    clearResults,
+  };
+}

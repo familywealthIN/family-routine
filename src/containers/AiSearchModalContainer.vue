@@ -1,6 +1,7 @@
 <template>
   <AiSearchModal
     :value="value"
+    :open-mode="openMode"
     :goalItemsRef="goalItemsRef"
     :relatedGoalsData="relatedGoalsData"
     :routines="routines"
@@ -29,6 +30,10 @@ export default {
     value: {
       type: Boolean,
       required: true,
+    },
+    openMode: {
+      type: String,
+      default: 'add',
     },
   },
   data() {

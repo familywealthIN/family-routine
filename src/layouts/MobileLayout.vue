@@ -188,7 +188,7 @@ export default {
   },
   methods: {
     openAiSearch() {
-      eventBus.$emit(EVENTS.OPEN_AI_SEARCH);
+      eventBus.$emit(EVENTS.OPEN_AI_SEARCH, { mode: 'search' });
     },
     handleClickSignOut() {
       this.$gAuth
