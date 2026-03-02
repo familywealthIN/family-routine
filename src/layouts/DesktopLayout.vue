@@ -96,10 +96,11 @@
     </v-navigation-drawer>
     <v-toolbar v-if="$route.name !== 'login'" color="white" app style="border-bottom: 1px solid rgba(0,0,0,0.12) !important;">
       <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
-      <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>      <div class="ai-search-box" @click="openAiSearch">
-          <span>Build your routine goals with AI</span>
-          <v-icon class="search-icon">search</v-icon>
-        </div>
+      <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>
+      <div class="ai-search-box" @click="openAiSearch">
+        <span>Build your routine goals with AI</span>
+        <v-icon class="search-icon">search</v-icon>
+      </div>
       <v-spacer></v-spacer>
       <v-btn icon @click="pendingDialog = true">
         <v-icon>checklist</v-icon>
@@ -129,12 +130,14 @@
 
 <script>
 import gql from 'graphql-tag';
+import moment from 'moment';
 import ProjectSidebar from '@/components/molecules/ProjectSidebar/ProjectSidebar.vue';
 import AreaSidebar from '@/components/molecules/AreaSidebar/AreaSidebar.vue';
 import YearGoalSidebar from '@/components/molecules/YearGoalSidebar/YearGoalSidebar.vue';
 import localforage from 'localforage';
 import PendingList from '../containers/PendingListContainer.vue';
 import eventBus, { EVENTS } from '../utils/eventBus';
+import { ROUTINE_DATE_QUERY } from '../composables/graphql/queries';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
@@ -151,6 +154,7 @@ export default {
     return {
       drawer: null,
       pendingDialog: false,
+      toolbarRoutine: null,
       items: [
         { title: 'Home', icon: 'home', route: '/home' },
         { title: 'Priority', icon: 'view_module', route: '/priority' },
@@ -210,6 +214,20 @@ export default {
         return !this.$root.$data.email;
       },
     },
+    toolbarRoutineData: {
+      query: ROUTINE_DATE_QUERY,
+      variables() {
+        return {
+          date: moment().format('DD-MM-YYYY'),
+        };
+      },
+      update(data) {
+        return data.routineDate || {};
+      },
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
   },
   computed: {
     name() {
@@ -228,10 +246,34 @@ export default {
       return (this.$route.name && this.$route.name[0].toUpperCase() + this.$route.name.substr(1))
       || 'Routine Notes';
     },
+    toolbarRoutineItems() {
+      if (this.toolbarRoutineData && this.toolbarRoutineData.tasklist) {
+        return this.toolbarRoutineData.tasklist;
+      }
+      return [];
+    },
+  },
+  watch: {
+    '$route.query.taskRef': {
+      immediate: true,
+      handler(val) {
+        this.toolbarRoutine = val || null;
+      },
+    },
   },
   methods: {
     openAiSearch() {
-      eventBus.$emit(EVENTS.OPEN_AI_SEARCH);
+      eventBus.$emit(EVENTS.OPEN_AI_SEARCH, { mode: 'search' });
+    },
+    onToolbarRoutineChange(value) {
+      if (this.$route.name !== 'search') return;
+      const query = { ...this.$route.query };
+      if (value) {
+        query.taskRef = value;
+      } else {
+        delete query.taskRef;
+      }
+      this.$router.replace({ query }).catch(() => {});
     },
     handleClickSignOut() {
       this.$gAuth
@@ -303,6 +345,12 @@ export default {
     left: 256px;
     margin: 0;
     padding: 0;
+  }
+
+  .toolbar-routine-select {
+    max-width: 400px;
+    margin-left: 24px;
+    border-radius: 8px;
   }
 
 .v-list__group__header  {

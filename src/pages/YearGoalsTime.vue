@@ -395,7 +395,7 @@ export default {
             goalRef
             routine {
               id
-              body
+              name
             }
             milestones {
               id
@@ -409,7 +409,7 @@ export default {
               goalRef
               routine {
                 id
-                body
+                name
               }
               milestones {
                 id
@@ -478,7 +478,7 @@ export default {
       const tree = {
         ...goalItem,
         isComplete: goalItem.isComplete !== undefined ? goalItem.isComplete : this.isGoalComplete(goalItem),
-        routineName: goalItem.routine ? goalItem.routine.body : null,
+        routineName: goalItem.routine ? goalItem.routine.name : null,
         monthGoals: [],
         expanded: false,
         expandedMonthIndex: null,

@@ -10,7 +10,7 @@
     <!-- <v-footer app></v-footer> -->
 
     <!-- Global AI Search Modal -->
-    <ai-search-modal v-model="aiSearchModal" />
+    <ai-search-modal v-model="aiSearchModal" :open-mode="aiSearchOpenMode" />
   </v-app>
 </template>
 
@@ -42,6 +42,7 @@ export default {
       drawer: null,
       mottoDialog: false,
       aiSearchModal: false,
+      aiSearchOpenMode: 'add',
     };
   },
   computed: {
@@ -73,22 +74,27 @@ export default {
       this.initPwaFCM();
     }
   },
-   mounted() {
-    eventBus.$on(EVENTS.OPEN_AI_SEARCH, this.handleOpenAiSearch);
-  },
-  beforeDestroy() {
-    eventBus.$off(EVENTS.OPEN_AI_SEARCH, this.handleOpenAiSearch);
-  },
+  //  mounted() {
+  //   eventBus.$on(EVENTS.OPEN_AI_SEARCH, this.handleOpenAiSearch);
+  // },
+  // beforeDestroy() {
+  //   eventBus.$off(EVENTS.OPEN_AI_SEARCH, this.handleOpenAiSearch);
+  // },
   methods: {
-     handleOpenAiSearch(data) {
-      console.log('App.vue: Received OPEN_AI_SEARCH event', data);
-      console.log('App.vue: Current aiSearchModal value:', this.aiSearchModal);
-      this.aiSearchModal = true;
-      console.log('App.vue: Set aiSearchModal to:', this.aiSearchModal);
-    },
+    //  handleOpenAiSearch(data) {
+    //   console.log('App.vue: Received OPEN_AI_SEARCH event', data);
+    //   console.log('App.vue: Current aiSearchModal value:', this.aiSearchModal);
+    //   this.aiSearchModal = true;
+    //   console.log('App.vue: Set aiSearchModal to:', this.aiSearchModal);
+    // },
     async initPwaFCM() {
       if (isDevelopment || netlify) {
         firebase.initializeApp(config);
+    // Listen for AI search open event
+    eventBus.$on(EVENTS.OPEN_AI_SEARCH, (payload) => {
+      this.aiSearchModal = true;
+      this.aiSearchOpenMode = (payload && payload.mode) || 'add';
+    });
 
         const messaging = firebase.messaging();
         messaging.usePublicVapidKey(publicKey);

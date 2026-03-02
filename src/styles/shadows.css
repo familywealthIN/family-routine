@@ -6,6 +6,10 @@
 }
 
 /* Exclude buttons inside button groups (toggle groups) */
+.v-btn-toggle {
+    border-radius: 16px;
+    overflow: hidden;
+}
 .v-btn-toggle .v-btn {
     border-radius: 0 !important;
 }
