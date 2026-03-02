@@ -34,7 +34,7 @@
         </div>
       </a>
     </div>
-    <footer>
+    <!-- <footer> -->
       <div class="text-xs-center text-muted">
         <small>
           By using
@@ -45,7 +45,7 @@
           <a href="https://familywealth.in/privacy-policy">Privacy Policy</a>.
         </small>
       </div>
-    </footer>
+    <!-- </footer> -->
   </container-box>
 
 </template>
@@ -484,7 +484,7 @@ export default {
 }
 
 /* Ensure content doesn't overlap with footer */
-.login-box {
+/* .login-box {
   margin-bottom: 80px;
-}
+} */
 </style>

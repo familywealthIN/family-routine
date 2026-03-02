@@ -106,3 +106,95 @@ db.once('open', () => {
 });
 
 setTimeout(() => exitProcess(), 59 * 1000);
+
+
+
+
+
+
+
+/* eslint-disable quote-props */
+// require('dotenv').config();
+
+// const admin = require('firebase-admin');
+// const serviceAccount = require('../serviceAccountKey.json');
+
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+//   databaseURL: 'https://groutine-21c1b.firebaseio.com',
+// });
+
+// function sendNotification(token, name, description) {
+//   if (!token) {
+//     console.log('No device token provided.');
+//     return Promise.resolve();
+//   }
+
+//   const payload = {
+//     token: token,
+//     notification: {
+//       title: name,
+//       body: description,
+//     },
+//   };
+
+//   return admin.messaging().send(payload)
+//     .then((response) => console.log('Successfully sent message:', response))
+//     .catch((error) => console.log('Error sending message:', error));
+// }
+
+// function calcTime(offset) {
+//   const d = new Date();
+//   const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+//   const nd = new Date(utc + (3710000 * offset));
+//   return nd.toTimeString().substring(0, 5);
+// }
+
+// // Test data instead of MongoDB
+// const testData = [
+//   {
+//     name: 'Morning Exercise',
+//     description: 'Time for your morning workout!',
+//     email: 'test@example.com',
+//     ticked: false,
+//     notificationId: 'cgVmd60pQ-erks_DnF8rKw:APA91bFBK6kB2H_pyQ7sPLI_jJ00yK6DfhfB_I53lwDMEAOFLiTuAbu9eHXw-e6X1lkl__vxIrlBR_pXk8LoXstd1jbXogEJ5FNTtAEulmIAf-cAL-wfIYQ'
+//   }
+// ];
+
+// function runNotificationCheck() {
+//   const time = calcTime('+5.5');
+//   console.log(`\n--- Checking notifications at ${new Date().toLocaleString()} (${time}) ---`);
+
+//   const notificationList = [];
+
+//   testData.forEach((user) => {
+//     const { name, email, description, notificationId, ticked } = user;
+    
+//     if (!ticked && notificationId) {
+//       console.log(`Sending notification to ${email}: ${name}`);
+//       notificationList.push(sendNotification(notificationId, name, description));
+//     }
+//   });
+
+//   if (notificationList.length === 0) {
+//     console.log('No notifications to send');
+//     return;
+//   }
+
+//   Promise.all(notificationList)
+//     .then(() => console.log('All notifications sent successfully'))
+//     .catch((error) => console.error('Error sending notifications:', error));
+// }
+
+// // Run immediately
+// console.log('Notification service started...');
+// runNotificationCheck();
+
+// // Run every minute (60000ms)
+// setInterval(runNotificationCheck, 60000);
+
+// // Keep the process running
+// process.on('SIGINT', () => {
+//   console.log('\nNotification service stopped');
+//   process.exit(0);
+// });

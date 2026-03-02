@@ -56,8 +56,8 @@ function sendNotification(token, name, description) {
   console.log('Sending notification to token:', token);
 
   const payload = {
-    token: 'fb5vyFhTq03XjnCzcTfqAt:APA91bEQCkuR9Wb2_571vY2P0S3KoZ8_SCRzy7h_r2n8PJLC_UqZt_tJmPFyKzGGGEzGDFIkpo_HNEzjSoBeXQ2iekzEb-31ikhbtzXgH9vOoZMsUYe9FvI',
-    notification: {
+    token: "cgVmd60pQ-erks_DnF8rKw:APA91bFBK6kB2H_pyQ7sPLI_jJ00yK6DfhfB_I53lwDMEAOFLiTuAbu9eHXw-e6X1lkl__vxIrlBR_pXk8LoXstd1jbXogEJ5FNTtAEulmIAf-cAL-wfIYQ",
+     notification: {
       title: name,
       body: description,
      // icon: 'https://yourdomain.com/img/512.png', // Must be HTTPS
