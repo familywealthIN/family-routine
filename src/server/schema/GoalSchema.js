@@ -165,7 +165,7 @@ const GoalItemType = new GraphQLObjectType({
         name: 'RoutineItemRef',
         fields: {
           id: { type: GraphQLID },
-          body: { type: GraphQLString },
+          name: { type: GraphQLString },
         },
       }),
       resolve: async (parent) => {
@@ -174,7 +174,7 @@ const GoalItemType = new GraphQLObjectType({
           const RoutineItemModelInstance = getRoutineItemModel();
           const routine = await RoutineItemModelInstance.findById(parent.taskRef).exec();
           // eslint-disable-next-line no-underscore-dangle
-          return routine ? { id: routine._id, body: routine.body } : null;
+          return routine ? { id: routine._id, name: routine.name } : null;
         } catch (error) {
           return null;
         }

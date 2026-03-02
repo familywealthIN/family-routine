@@ -792,6 +792,76 @@ const query = {
       };
     },
   },
+  searchGoals: {
+    type: new GraphQLList(GoalType),
+    args: {
+      query: { type: GraphQLNonNull(GraphQLString) },
+      limit: { type: GraphQLString },
+      taskRef: { type: GraphQLString },
+      tags: { type: GraphQLString },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const searchQuery = args.query.toLowerCase().trim();
+      const limit = args.limit ? parseInt(args.limit, 10) : 50;
+
+      if (!searchQuery || searchQuery.length < 2) {
+        return [];
+      }
+
+      // Fetch all goals for the user — post-find middleware auto-decrypts body/contribution
+      const goals = await GoalModel.find({ email }).exec();
+
+      // Track seen goalItem IDs to deduplicate
+      const seenIds = new Set();
+
+      // Filter in-memory after decryption
+      const matchedGoals = goals
+        .map((goal) => {
+          const matchingItems = goal.goalItems.filter((item) => {
+            // Deduplicate by goalItem._id
+            const itemId = item._id.toString();
+            if (seenIds.has(itemId)) return false;
+
+            const bodyMatch = item.body && item.body.toLowerCase().includes(searchQuery);
+            const contributionMatch = item.contribution
+              && item.contribution.toLowerCase().includes(searchQuery);
+            if (!bodyMatch && !contributionMatch) return false;
+
+            // Filter by taskRef if provided
+            if (args.taskRef && item.taskRef !== args.taskRef) return false;
+
+            // Filter by tags if provided
+            if (args.tags && !(item.tags && item.tags.includes(args.tags))) return false;
+
+            seenIds.add(itemId);
+            return true;
+          });
+
+          if (matchingItems.length === 0) return null;
+
+          return {
+            ...goal.toObject(),
+            id: goal._id,
+            goalItems: matchingItems,
+          };
+        })
+        .filter(Boolean);
+
+      // Flatten to count total items and apply limit
+      let totalItems = 0;
+      const limitedGoals = [];
+      for (let i = 0; i < matchedGoals.length && totalItems < limit; i++) {
+        const goal = matchedGoals[i];
+        const remainingSlots = limit - totalItems;
+        const items = goal.goalItems.slice(0, remainingSlots);
+        limitedGoals.push({ ...goal, goalItems: items });
+        totalItems += items.length;
+      }
+
+      return limitedGoals;
+    },
+  },
 };
 
 const mutation = {

@@ -10,7 +10,7 @@
     <!-- <v-footer app></v-footer> -->
 
     <!-- Global AI Search Modal -->
-    <ai-search-modal v-model="aiSearchModal" />
+    <ai-search-modal v-model="aiSearchModal" :open-mode="aiSearchOpenMode" />
   </v-app>
 </template>
 
@@ -38,6 +38,7 @@ export default {
       drawer: null,
       mottoDialog: false,
       aiSearchModal: false,
+      aiSearchOpenMode: 'add',
     };
   },
   computed: {
@@ -60,8 +61,9 @@ export default {
   },
   created() {
     // Listen for AI search open event
-    eventBus.$on(EVENTS.OPEN_AI_SEARCH, () => {
+    eventBus.$on(EVENTS.OPEN_AI_SEARCH, (payload) => {
       this.aiSearchModal = true;
+      this.aiSearchOpenMode = (payload && payload.mode) || 'add';
     });
 
     if (!isDevelopment || netlify) {

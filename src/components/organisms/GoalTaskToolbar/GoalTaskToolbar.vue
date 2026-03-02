@@ -2,6 +2,7 @@
   <AtomCard class="no-shadow goal-task-toolbar">
     <AtomToolbar dense class="toolbar" flat>
       <MoleculeDateSelector
+        v-if="!searchMode"
         class="selector-item"
         :value="date"
         @input="$emit('update:date', $event)"
@@ -45,7 +46,7 @@
         flat
         :mobile="isMobile"
       />
-      <template v-if="showMilestoneOption || isMilestone">
+      <template v-if="!searchMode && (showMilestoneOption || isMilestone)">
         <GoalRefSelector
           class="selector-item"
           :items="goalItemsRef"
@@ -116,6 +117,10 @@ export default {
       default: '',
     },
     taskMode: {
+      type: Boolean,
+      default: false,
+    },
+    searchMode: {
       type: Boolean,
       default: false,
     },
