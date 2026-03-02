@@ -34,13 +34,17 @@
                 mandatory
                 class="mode-toggle"
               >
-                <v-btn value="task" class="mode-btn mode-btn--task">
+                <v-btn v-if="!searchOnlyMode" value="task" class="mode-btn mode-btn--task">
                   <AtomIcon left small>task_alt</AtomIcon>
                   <span>Task</span>
                 </v-btn>
-                <v-btn value="goal" class="mode-btn mode-btn--goal">
+                <v-btn v-if="!searchOnlyMode" value="goal" class="mode-btn mode-btn--goal">
                   <AtomIcon left small>timeline</AtomIcon>
                   <span>Goal</span>
+                </v-btn>
+                <v-btn v-if="showSearchTab" value="search" class="mode-btn mode-btn--search">
+                  <AtomIcon left small>search</AtomIcon>
+                  <span>Search</span>
                 </v-btn>
               </v-btn-toggle>
             </div>
@@ -135,11 +139,12 @@
                 :goalItemsRef="goalItemsRef"
                 :minDate="toolbarMinDate"
                 :task-mode="isTaskMode"
+                :search-mode="isSearchMode"
                 class="prompt-toolbar"
               />
               <div class="prompt-send-group">
                 <!-- Settings Button (opens sub-drawer on mobile) -->
-                <AtomButton icon small class="settings-btn" @click="openSettingsDrawer">
+                <AtomButton v-if="!isSearchMode" icon small class="settings-btn" @click="openSettingsDrawer">
                   <AtomIcon small>tune</AtomIcon>
                 </AtomButton>
                 <MobileSubDrawer v-model="settingsDrawerOpen" title="Settings">
@@ -186,25 +191,25 @@
                 <!-- Send Button -->
                 <AtomButton
                   :loading="loading"
-                  :color="isTaskMode ? 'primary' : 'warning'"
+                  :color="isSearchMode ? 'teal' : (isTaskMode ? 'primary' : 'warning')"
                   :class="['prompt-send-btn', { 'prompt-send-btn--inactive': !searchQuery || loading }]"
                   icon
                   @click="handleSubmit"
                 >
-                  <AtomIcon>send</AtomIcon>
+                  <AtomIcon>{{ isSearchMode ? 'search' : 'send' }}</AtomIcon>
                 </AtomButton>
               </div>
             </div>
           </div>
 
           <!-- Error Display -->
-          <AtomAlert v-if="error" type="error" dismissible @input="error = ''">
+          <AtomAlert v-if="error && !isSearchMode" type="error" dismissible @input="error = ''">
             {{ error }}
           </AtomAlert>
 
           <!-- Task Creation Form (Task Mode) -->
           <AiTaskCreationForm
-            v-if="hasSubmitted && isTaskMode"
+            v-if="hasSubmitted && isTaskMode && !isSearchMode"
             ref="taskForm"
             :searchQuery="searchQuery"
             :goalItemsRef="goalItemsRef"
@@ -227,7 +232,7 @@
 
           <!-- Goal Planning Form (Goals Mode) -->
           <AiGoalPlanForm
-            v-if="hasSubmitted && !isTaskMode"
+            v-if="hasSubmitted && !isTaskMode && !isSearchMode"
             ref="goalForm"
             :searchQuery="searchQuery"
             :goalItemsRef="goalItemsRef"
@@ -253,7 +258,7 @@
         <div v-show="showBottomShadow" class="scroll-shadow scroll-shadow--bottom"></div>
 
         <!-- Sticky Footer with Save Button -->
-        <AtomCardActions v-if="hasSubmitted" class="sticky-footer">
+        <AtomCardActions v-if="hasSubmitted && !isSearchMode" class="sticky-footer">
           <AtomSpacer />
           <AtomButton text @click="closeModal">Cancel</AtomButton>
           <AtomButton
@@ -290,13 +295,17 @@
                 mandatory
                 class="mode-toggle"
               >
-                <v-btn value="task" class="mode-btn mode-btn--task">
+                <v-btn v-if="!searchOnlyMode" value="task" class="mode-btn mode-btn--task">
                   <AtomIcon left small>task_alt</AtomIcon>
                   <span>Task</span>
                 </v-btn>
-                <v-btn value="goal" class="mode-btn mode-btn--goal">
+                <v-btn v-if="!searchOnlyMode" value="goal" class="mode-btn mode-btn--goal">
                   <AtomIcon left small>timeline</AtomIcon>
                   <span>Goal</span>
+                </v-btn>
+                <v-btn v-if="showSearchTab" value="search" class="mode-btn mode-btn--search">
+                  <AtomIcon left small>search</AtomIcon>
+                  <span>Search</span>
                 </v-btn>
               </v-btn-toggle>
             </div>
@@ -391,11 +400,13 @@
                 :goalItemsRef="goalItemsRef"
                 :minDate="toolbarMinDate"
                 :task-mode="isTaskMode"
+                :search-mode="isSearchMode"
                 class="prompt-toolbar"
               />
               <div class="prompt-send-group">
                 <!-- Settings Dropdown -->
                 <AtomMenu
+                  v-if="!isSearchMode"
                   v-model="settingsMenuOpen"
                   :close-on-content-click="false"
                   offset-y
@@ -449,25 +460,25 @@
                 <!-- Send Button -->
                 <AtomButton
                   :loading="loading"
-                  :color="isTaskMode ? 'primary' : 'warning'"
+                  :color="isSearchMode ? 'teal' : (isTaskMode ? 'primary' : 'warning')"
                   :class="['prompt-send-btn', { 'prompt-send-btn--inactive': !searchQuery || loading }]"
                   icon
                   @click="handleSubmit"
                 >
-                  <AtomIcon>send</AtomIcon>
+                  <AtomIcon>{{ isSearchMode ? 'search' : 'send' }}</AtomIcon>
                 </AtomButton>
               </div>
             </div>
           </div>
 
           <!-- Error Display -->
-          <AtomAlert v-if="error" type="error" dismissible @input="error = ''">
+          <AtomAlert v-if="error && !isSearchMode" type="error" dismissible @input="error = ''">
             {{ error }}
           </AtomAlert>
 
           <!-- Task Creation Form (Task Mode) -->
           <AiTaskCreationForm
-            v-if="hasSubmitted && isTaskMode"
+            v-if="hasSubmitted && isTaskMode && !isSearchMode"
             ref="taskForm"
             :searchQuery="searchQuery"
             :goalItemsRef="goalItemsRef"
@@ -490,7 +501,7 @@
 
           <!-- Goal Planning Form (Goals Mode) -->
           <AiGoalPlanForm
-            v-if="hasSubmitted && !isTaskMode"
+            v-if="hasSubmitted && !isTaskMode && !isSearchMode"
             ref="goalForm"
             :searchQuery="searchQuery"
             :goalItemsRef="goalItemsRef"
@@ -516,7 +527,7 @@
         <div v-show="showBottomShadow" class="scroll-shadow scroll-shadow--bottom"></div>
 
         <!-- Sticky Footer with Save Button -->
-        <AtomCardActions v-if="hasSubmitted" class="sticky-footer">
+        <AtomCardActions v-if="hasSubmitted && !isSearchMode" class="sticky-footer">
           <AtomSpacer />
           <AtomButton text @click="closeModal">Cancel</AtomButton>
           <AtomButton
@@ -657,6 +668,13 @@ export default {
       type: Array,
       default: () => [],
     },
+    /**
+     * How the modal was opened: 'search' (from search bar) or 'add' (from add button)
+     */
+    openMode: {
+      type: String,
+      default: 'add',
+    },
   },
 
   data() {
@@ -719,7 +737,7 @@ export default {
     isTaskMode() {
       // Manual toggle takes precedence
       if (this.manualMode === 'task') return true;
-      if (this.manualMode === 'goal') return false;
+      if (this.manualMode === 'goal' || this.manualMode === 'search') return false;
 
       // Fall back to intelligent detection if no manual selection
       if (!this.searchQuery) return true;
@@ -744,6 +762,7 @@ export default {
     // Two-way binding for the toggle button
     toggleMode: {
       get() {
+        if (this.manualMode === 'search') return 'search';
         return this.isTaskMode ? 'task' : 'goal';
       },
       set(value) {
@@ -756,7 +775,33 @@ export default {
       },
     },
 
+    /**
+     * Whether to show the Search tab.
+     * Visible when opened from search bar (openMode === 'search') or on non-dashboard pages.
+     */
+    showSearchTab() {
+      const isDashboard = this.$route && this.$route.name === 'home';
+      return this.openMode === 'search' || !isDashboard;
+    },
+
+    /**
+     * Whether search is the only visible tab.
+     * On non-dashboard pages when not explicitly opened via add button.
+     */
+    searchOnlyMode() {
+      const isDashboard = this.$route && this.$route.name === 'home';
+      return this.showSearchTab && this.openMode !== 'add' && !isDashboard;
+    },
+
+    /**
+     * Whether we are in search mode (toggleMode is 'search')
+     */
+    isSearchMode() {
+      return this.toggleMode === 'search';
+    },
+
     dynamicTitle() {
+      if (this.isSearchMode) return 'Search Goals';
       return this.isTaskMode ? 'Add Task with AI' : 'Build Goals with AI';
     },
 
@@ -1120,8 +1165,20 @@ export default {
     handleSubmit() {
       if (!this.searchQuery) return;
 
+      // Search mode: navigate to search page
+      if (this.isSearchMode) {
+        this.handleSearchNavigate();
+        return;
+      }
+
       // Task mode with AI Enhanced OFF: create task directly without AI
       if (this.isTaskMode && !this.aiEnhancedTask) {
+        // Auto-add default priority tag if none present
+        const tags = [...this.promptTags];
+        const hasPriorityTag = tags.some((t) => t.startsWith('priority:'));
+        if (!hasPriorityTag) {
+          tags.push('priority:do');
+        }
         const goalItemData = {
           date: this.toolbarDate || this.todayFormatted,
           period: 'day',
@@ -1129,7 +1186,7 @@ export default {
           contribution: '',
           taskRef: this.toolbarTaskRef || '',
           goalRef: this.toolbarGoalRef || null,
-          tags: [...this.promptTags],
+          tags,
           isMilestone: !!this.toolbarGoalRef,
         };
         this.$emit('direct-task-create', goalItemData);
@@ -1200,13 +1257,37 @@ export default {
         }
         // Enter without modifier: submit
         e.preventDefault();
-        this.handleSubmit();
+        if (this.isSearchMode) {
+          this.handleSearchNavigate();
+        } else {
+          this.handleSubmit();
+        }
       }
     },
 
     handleTaskCreated(data) {
       // Task was created successfully
       console.log('Orchestrator: Task created', data);
+    },
+
+    /**
+     * Navigate to search page with current filters when in search mode.
+     */
+    handleSearchNavigate() {
+      const query = (this.searchQuery || '').trim();
+      if (!query) return;
+
+      const routeQuery = { q: query };
+      if (this.toolbarTaskRef) {
+        routeQuery.taskRef = this.toolbarTaskRef;
+      }
+      const tagString = this.promptTags.join(',');
+      if (tagString) {
+        routeQuery.tags = tagString;
+      }
+
+      this.$router.push({ name: 'search', query: routeQuery }).catch(() => {});
+      this.closeModal();
     },
 
     handleGoalsSaved(data) {
@@ -1398,6 +1479,10 @@ export default {
       this.showBottomShadow = false;
       // Restore saved settings from localStorage
       this.loadSettings();
+      // If opened from search bar, default to search mode
+      if (this.openMode === 'search') {
+        this.manualMode = 'search';
+      }
       this.settingsMenuOpen = false;
       this.settingsDrawerOpen = false;
       // Reset tags
@@ -2054,5 +2139,23 @@ export default {
   .prompt-tag-input::placeholder {
     font-size: 16px !important;
   }
+}
+
+/* Search Button - Teal when selected */
+.mode-btn--search.v-btn--active {
+  background-color: #009688 !important;
+  color: white !important;
+}
+
+.mode-btn--search.v-btn--active .v-icon {
+  color: white !important;
+}
+
+.mode-btn--search:not(.v-btn--active) {
+  color: #757575 !important;
+}
+
+.mode-btn--search:not(.v-btn--active) .v-icon {
+  color: #757575 !important;
 }
 </style>

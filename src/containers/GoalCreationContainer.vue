@@ -1,7 +1,7 @@
 <template>
   <GoalCreation
     :newGoalItem="newGoalItem"
-    :tasklist="tasklist"
+    :tasklist="augmentedTasklist"
     :goalItemsRef="safeGoalItemsRef"
     :loading="$apollo.loading"
     :buttonLoading="buttonLoading"
@@ -112,6 +112,15 @@ export default {
     // Ensure goalItemsRef is always an array (Apollo may return undefined when query is skipped)
     safeGoalItemsRef() {
       return Array.isArray(this.goalItemsRef) ? this.goalItemsRef : [];
+    },
+    // Ensure tasklist contains the current taskRef for display even if it's not in today's routine
+    augmentedTasklist() {
+      const list = Array.isArray(this.tasklist) ? this.tasklist : [];
+      const { taskRef, routineName } = this.newGoalItem || {};
+      if (taskRef && routineName && !list.find((t) => t.id === taskRef)) {
+        return [{ id: taskRef, name: routineName }, ...list];
+      }
+      return list;
     },
   },
   watch: {
