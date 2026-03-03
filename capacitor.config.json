@@ -1,6 +1,6 @@
 {
   "appId": "com.routine.note",
-  "appName": "routine-notes",
+  "appName": "Routine Notes",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "plugins": {
