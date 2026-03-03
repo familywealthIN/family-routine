@@ -151,6 +151,31 @@ export const MONTH_TASK_GOALS_QUERY = gql`
   }
 `;
 
+/**
+ * Priority goals query - gets all priority-tagged goals for a specific day
+ */
+export const PRIORITY_GOALS_QUERY = gql`
+  query priorityGoals($date: String!) {
+    priorityGoals(date: $date) {
+      goalId
+      date
+      period
+      do {
+        ${GOAL_ITEM_STANDARD_FIELDS_STRING}
+      }
+      plan {
+        ${GOAL_ITEM_STANDARD_FIELDS_STRING}
+      }
+      delegate {
+        ${GOAL_ITEM_STANDARD_FIELDS_STRING}
+      }
+      automate {
+        ${GOAL_ITEM_STANDARD_FIELDS_STRING}
+      }
+    }
+  }
+`;
+
 // ============================================================================
 // QUERY VARIANTS
 // ============================================================================
@@ -340,7 +365,7 @@ export function useGoalsByTag(apolloClient, options = {}) {
       const { data } = await apolloClient.query({
         query: GOALS_BY_TAG_QUERY,
         variables: { tag },
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'no-cache',
       });
 
       const goalsData = data?.goalsByTag || [];
@@ -664,6 +689,95 @@ export function useMonthTaskGoals(apolloClient, options = {}) {
 }
 
 // ============================================================================
+// PRIORITY GOALS COMPOSABLE
+// ============================================================================
+
+/**
+ * Composable for priorityGoals query
+ *
+ * Fetches all priority-tagged goal items for a specific day in a single query,
+ * grouped by priority quadrant (do, plan, delegate, automate).
+ *
+ * @param {Object} apolloClient - Apollo client instance
+ * @returns {Object} Composable state and methods
+ */
+export function usePriorityGoals(apolloClient) {
+  const priorityGoals = ref({
+    do: [], plan: [], delegate: [], automate: [],
+  });
+  const isLoading = ref(false);
+  const error = ref(null);
+
+  /**
+   * Fetch priority goals for a specific date
+   * @param {string} date - Date in DD-MM-YYYY format
+   * @param {Object} fetchOptions - Options (e.g. { useCache })
+   * @returns {Object} { goalId, date, period, do, plan, delegate, automate }
+   */
+  const fetchPriorityGoals = async (date, fetchOptions = {}) => {
+    const { useCache = true } = fetchOptions;
+
+    // Check cache
+    if (useCache) {
+      const cached = goalStore.getCacheEntry('priorityGoals', { date });
+      if (cached) {
+        priorityGoals.value = cached;
+        return cached;
+      }
+    }
+
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      const { data } = await apolloClient.query({
+        query: PRIORITY_GOALS_QUERY,
+        variables: { date },
+        fetchPolicy: 'network-only',
+      });
+
+      const result = data?.priorityGoals || {
+        do: [], plan: [], delegate: [], automate: [],
+      };
+
+      // Enrich items with goalId from the response
+      const { goalId } = result;
+      const enrichItem = (item) => ({
+        ...item, goalId, date: result.date, period: result.period,
+      });
+
+      const enriched = {
+        goalId,
+        date: result.date,
+        period: result.period,
+        do: (result.do || []).map(enrichItem),
+        plan: (result.plan || []).map(enrichItem),
+        delegate: (result.delegate || []).map(enrichItem),
+        automate: (result.automate || []).map(enrichItem),
+      };
+
+      priorityGoals.value = enriched;
+      goalStore.setCacheEntry('priorityGoals', { date }, enriched);
+
+      return enriched;
+    } catch (err) {
+      error.value = err;
+      console.error('Error fetching priority goals:', err);
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  return {
+    priorityGoals,
+    isLoading,
+    error,
+    fetchPriorityGoals,
+  };
+}
+
+// ============================================================================
 // APOLLO OPTIONS FACTORIES (for gradual migration)
 // ============================================================================
 
@@ -744,19 +858,6 @@ export function createGoalsByTagApolloOptions(options = {}) {
     },
   };
 }
-
-// ============================================================================
-// DEFAULT EXPORT
-// ============================================================================
-
-export default {
-  useGoalDatePeriod,
-  useGoalsByTag,
-  useGoalsByGoalRef,
-  useAgendaGoals,
-  useMonthTaskGoals,
-  useSearchGoals,
-};
 
 // ============================================================================
 // SEARCH GOALS QUERY
@@ -857,3 +958,17 @@ export function useSearchGoals(apolloClient) {
     clearResults,
   };
 }
+
+// ============================================================================
+// DEFAULT EXPORT
+// ============================================================================
+
+export default {
+  useGoalDatePeriod,
+  useGoalsByTag,
+  useGoalsByGoalRef,
+  useAgendaGoals,
+  useMonthTaskGoals,
+  usePriorityGoals,
+  useSearchGoals,
+};
