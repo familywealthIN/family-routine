@@ -273,6 +273,19 @@ const GoalType = new GraphQLObjectType({
   },
 });
 
+const PriorityGoalsType = new GraphQLObjectType({
+  name: 'PriorityGoals',
+  fields: {
+    goalId: { type: GraphQLID },
+    date: { type: GraphQLString },
+    period: { type: GraphQLString },
+    do: { type: new GraphQLList(GoalItemType) },
+    plan: { type: new GraphQLList(GoalItemType) },
+    delegate: { type: new GraphQLList(GoalItemType) },
+    automate: { type: new GraphQLList(GoalItemType) },
+  },
+});
+
 const SubTaskItemModel = mongoose.model('SubTaskItem', SubTaskItemSchema);
 const GoalItemModel = mongoose.model('GoalItem', GoalItemSchema);
 const GoalModel = mongoose.model('Goal', GoalSchema);
@@ -288,4 +301,5 @@ module.exports = {
   GoalType,
   GoalItemType,
   GoalMilestoneType,
+  PriorityGoalsType,
 };

@@ -1,10 +1,5 @@
 <template>
   <div>
-    <!-- Pull-to-refresh wrapper (handles mobile/tablet condition internally) -->
-    <pull-to-refresh-container
-      ref="pullToRefreshWrapper"
-      @refresh="handlePullToRefresh"
-    >
       <container-box transparent="true" >
       <atom-card v-if="isDashboardCaching" class="mb-3 mx-3 mt-3 pa-3 dashboard-caching-card">
         <div class="d-flex align-center mb-2">
@@ -27,13 +22,18 @@
         @date-selected="handleDateSelected"
       />
     <div v-if="isTodaySelected">
-      <div class="d-flex pr-3 pl-3 title-options">
+      <div class="d-flex pr-3 pl-3 pb-1 pt-2 title-options">
         <h2>
           {{ this.today }}
         </h2>
         <div class="action-box">
           <div><wake-check></wake-check></div>
-          <div><atom-switch v-model="skipDay" label="Skip Day" @change="skipClick()"></atom-switch></div>
+          <div class="d-flex align-center">
+            <atom-switch v-model="skipDay" label="Skip Day" @change="skipClick()" hide-details class="mt-0 pt-0"></atom-switch>
+            <atom-button icon small @click="refreshData" :loading="isRefreshing" class="ml-2">
+              <atom-icon color="rgba(0,0,0,0.57)" size="24">refresh</atom-icon>
+            </atom-button>
+          </div>
         </div>
       </div>
       <template v-if="skipDay">
@@ -474,8 +474,13 @@
       </template>
     </div>
     <div class="non-current-day" v-else>
-      <div class="pl-3 pr-3 pt-3">
-        <h2 class="mb-3">{{ today }}</h2>
+      <div class="pa-3">
+        <div class="d-flex align-center mb-3">
+          <h2 class="mb-0" style="flex: 1">{{ today }}</h2>
+          <atom-button class="ml-4" icon small @click="refreshData" :loading="isRefreshing">
+            <atom-icon color="rgba(0,0,0,0.87)" size="20">refresh</atom-icon>
+          </atom-button>
+        </div>
 
         <!-- Loading state -->
         <atom-card v-if="$apollo.queries.agendaGoals.loading" class="modern-card">
@@ -649,7 +654,6 @@
       </atom-card>
     </atom-dialog>
     </container-box>
-    </pull-to-refresh-container>
 
     <!-- Dashboard FAB for AI Search -->
     <atom-fab-transition>
@@ -691,7 +695,6 @@ import {
 import GoalList from '../containers/GoalListContainer.vue';
 import GoalItemList from '../components/organisms/GoalItemList/GoalItemList.vue';
 import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
-import PullToRefreshContainer from '../components/molecules/PullToRefreshContainer/PullToRefreshContainer.vue';
 import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
 import QuickGoalCreation from '../containers/QuickGoalCreationContainer.vue';
 import StreakChecks from '../components/molecules/StreakChecks/StreakChecks.vue';
@@ -758,7 +761,6 @@ export default {
     GoalList,
     GoalItemList,
     ContainerBox,
-    PullToRefreshContainer,
     QuickGoalCreation,
     StreakChecks,
     GoalCreation,
@@ -871,6 +873,7 @@ export default {
   data() {
     return {
       isLoading: false,
+      isRefreshing: false,
       goalDetailsDialog: false,
       goalDisplayDialog: false,
       quickTaskDialog: false,
@@ -1181,20 +1184,16 @@ export default {
       }
     },
 
-    // Handle pull to refresh from wrapper
-    handlePullToRefresh() {
-      this.trackUserInteraction('pull_to_refresh', 'gesture', {
+    // Handle refresh button click
+    async refreshData() {
+      this.isRefreshing = true;
+      this.trackUserInteraction('refresh_button', 'click', {
         date: this.date,
         is_today: this.isTodaySelected,
       });
 
-      // Refresh all data
-      Promise.all([
-        this.refreshApolloQueries(),
-        new Promise((resolve) => setTimeout(resolve, 1000)), // Minimum refresh time for UX
-      ]).then(() => {
-        this.$refs.pullToRefreshWrapper.endRefresh();
-
+      try {
+        await this.refreshApolloQueries();
         this.$notify({
           title: 'Refreshed',
           text: 'Dashboard data has been updated',
@@ -1202,10 +1201,8 @@ export default {
           type: 'success',
           duration: 2000,
         });
-      }).catch((error) => {
-        console.error('Pull to refresh error:', error);
-        this.$refs.pullToRefreshWrapper.endRefresh();
-
+      } catch (error) {
+        console.error('Refresh error:', error);
         this.$notify({
           title: 'Refresh Failed',
           text: 'Could not refresh data. Please try again.',
@@ -1213,7 +1210,9 @@ export default {
           type: 'error',
           duration: 3000,
         });
-      });
+      } finally {
+        this.isRefreshing = false;
+      }
     },
 
     // Global event handlers
@@ -1497,9 +1496,11 @@ export default {
     },
 
     // Check event execution for a specific task (used after user interactions)
-    checkEventExecutionForTask(taskId, stimulusName) {
-      // Find the task in displayTasklist (Apollo data that includes stimuli, startEvent, endEvent)
-      const task = this.displayTasklist.find((t) => t.id === taskId);
+    // freshTasklist: optional array from refetch result to avoid stale Apollo cache
+    checkEventExecutionForTask(taskId, stimulusName, freshTasklist) {
+      // Use fresh tasklist from refetch if provided, otherwise fall back to displayTasklist
+      const tasklist = freshTasklist || this.displayTasklist;
+      const task = tasklist.find((t) => t.id === taskId);
 
       if (!task || !task.stimuli || !Array.isArray(task.stimuli)) {
         console.log(`DashBoard: No task or stimuli found for taskId ${taskId}`);
@@ -1874,8 +1875,17 @@ export default {
                 tickRoutineItem(id: $id, taskId: $taskId, ticked: $ticked) {
                   id
                   tasklist {
+                    id
                     name
                     ticked
+                    points
+                    startEvent
+                    endEvent
+                    stimuli {
+                      name
+                      splitRate
+                      earned
+                    }
                   }
                 }
               }
@@ -1908,10 +1918,11 @@ export default {
           })
           // Refetch Apollo routineDate query (includes stimuli) before checking events
           .then(() => this.$apollo.queries.routineDate.refetch())
-          .then(() => {
-            // Check for event execution after task state changes and refetch completes
+          .then((result) => {
+            // Check for event execution using fresh refetch data to avoid stale cache
             console.log('DashBoard: Tasklist refetch completed, checking events for task:', task.id);
-            this.checkEventExecutionForTask(task.id, 'D');
+            const freshTasklist = result?.data?.routineDate?.tasklist;
+            this.checkEventExecutionForTask(task.id, 'D', freshTasklist);
             return this.$apollo.queries.goals.refetch();
           })
           .catch(() => {
@@ -2335,52 +2346,6 @@ export default {
 </script>
 
 <style scoped>
-.pull-to-refresh-container {
-  position: relative;
-  height: 100vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.pull-to-refresh-indicator {
-  position: absolute;
-  top: -80px;
-  left: 0;
-  right: 0;
-  height: 80px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
-  z-index: 1000;
-  opacity: 0;
-}
-
-.pull-to-refresh-indicator.visible {
-  opacity: 1;
-}
-
-.pull-to-refresh-indicator.refreshing {
-  transform: translateY(80px) !important;
-}
-
-.refresh-text {
-  margin-top: 8px;
-  font-size: 14px;
-  color: #666;
-  font-weight: 500;
-}
-
-/* Ensure proper touch handling on mobile */
-@media (max-width: 768px) {
-  .pull-to-refresh-container {
-    touch-action: pan-y;
-  }
-}
-
 /* Mobile: task-goals full width */
 @media (max-width: 600px) {
   .concentrated-view .active .v-list__tile--avatar {
@@ -2720,6 +2685,7 @@ export default {
 .action-box {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
 }
 
 /* Skeleton loading styles */

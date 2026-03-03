@@ -15,6 +15,7 @@ const {
   GoalType,
   GoalItemType,
   GoalMilestoneType,
+  PriorityGoalsType,
 } = require('../schema/GoalSchema');
 const { GoalItemInput } = require('../schema/AiSchema');
 const { UserModel } = require('../schema/UserSchema');
@@ -629,6 +630,56 @@ const query = {
         .sort({ date: -1 })
         .limit(7)
         .exec();
+    },
+  },
+  priorityGoals: {
+    type: PriorityGoalsType,
+    args: {
+      date: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      const goal = await GoalModel.findOne({
+        date: args.date,
+        period: 'day',
+        email,
+      }).exec();
+
+      const result = {
+        goalId: null,
+        date: args.date,
+        period: 'day',
+        do: [],
+        plan: [],
+        delegate: [],
+        automate: [],
+      };
+
+      if (!goal || !goal.goalItems) return result;
+
+      // eslint-disable-next-line no-underscore-dangle
+      result.goalId = goal._id;
+
+      goal.goalItems.forEach((item) => {
+        const itemObj = item.toObject ? item.toObject() : item;
+        // eslint-disable-next-line no-underscore-dangle
+        const enriched = {
+          ...itemObj, id: itemObj._id || itemObj.id, date: args.date, period: 'day',
+        };
+
+        if (itemObj.tags && itemObj.tags.includes('priority:do')) {
+          result.do.push(enriched);
+        } else if (itemObj.tags && itemObj.tags.includes('priority:plan')) {
+          result.plan.push(enriched);
+        } else if (itemObj.tags && itemObj.tags.includes('priority:delegate')) {
+          result.delegate.push(enriched);
+        } else if (itemObj.tags && itemObj.tags.includes('priority:automate')) {
+          result.automate.push(enriched);
+        }
+      });
+
+      return result;
     },
   },
   goalsByTag: {
