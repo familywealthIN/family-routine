@@ -1,3 +1,5 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: grvpanchal
 service: familywealth-graphql-api
 
 plugins:
@@ -47,7 +49,7 @@ package:
     - node_modules/storybook/**
   include:
     - src/server/**
-    - serverless.js
+    - handler.js
     - serverless-mcp.js
 provider:
   name: aws
@@ -71,7 +73,7 @@ provider:
 
 functions:
   query:
-    handler: serverless.handler
+    handler: handler.handler
     events:
       - http:
           path: graphql
