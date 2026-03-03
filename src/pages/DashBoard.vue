@@ -1498,8 +1498,8 @@ export default {
 
     // Check event execution for a specific task (used after user interactions)
     checkEventExecutionForTask(taskId, stimulusName) {
-      // Find the task in the current tasklist (from store)
-      const task = this.$routineTasklist.find((t) => t.id === taskId);
+      // Find the task in displayTasklist (Apollo data that includes stimuli, startEvent, endEvent)
+      const task = this.displayTasklist.find((t) => t.id === taskId);
 
       if (!task || !task.stimuli || !Array.isArray(task.stimuli)) {
         console.log(`DashBoard: No task or stimuli found for taskId ${taskId}`);
@@ -1906,6 +1906,8 @@ export default {
 
             return this.$routine.fetchRoutine(this.date, { useCache: false });
           })
+          // Refetch Apollo routineDate query (includes stimuli) before checking events
+          .then(() => this.$apollo.queries.routineDate.refetch())
           .then(() => {
             // Check for event execution after task state changes and refetch completes
             console.log('DashBoard: Tasklist refetch completed, checking events for task:', task.id);
@@ -2544,17 +2546,29 @@ export default {
   justify-content: start;
 }
 
+.concentrated-view .v-list__tile {
+  overflow: hidden;
+}
+
+.concentrated-view .v-list__tile__content {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.concentrated-view .v-list__tile__title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
 .concentrated-view .active .v-list__tile__content {
   justify-content: start;
-  min-width: 0;
 }
 
 .concentrated-view .active .v-list__tile__title {
   font-size: 24px;
   height: 28px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .concentrated-view .active .goal-list .v-list__tile__title {
