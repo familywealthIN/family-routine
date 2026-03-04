@@ -812,10 +812,10 @@ export default {
           console.log('DashBoard: Current task changed:', newTask, oldTask);
           const isComplete = this.countTaskCompleted(newTask) >= this.countTaskTotal(newTask);
           const isOldComplete = this.countTaskCompleted(oldTask) >= this.countTaskTotal(oldTask);
-          const taskKey = `${this.date}-${newTask.id}`;
 
           // Execute endEvent if task is complete and endEvent hasn't been executed yet
-          if (isComplete && !isOldComplete && !this.executedEndEvents.has(taskKey)) {
+          // Use just task.id as key to match checkEventExecutionForTask which adds task.id to the Set
+          if (isComplete && !isOldComplete && !this.executedEndEvents.has(newTask.id)) {
             this.checkEventExecutionForTask(newTask.id, 'K');
           }
         }
@@ -1761,6 +1761,7 @@ export default {
             console.log('DashBoard: Tasklist refetch completed, checking events for task:', task.id);
             const freshTasklist = result?.data?.routineDate?.tasklist;
             this.checkEventExecutionForTask(task.id, 'D', freshTasklist);
+            this.checkEventExecutionForTask(task.id, 'K', freshTasklist);
             return this.$apollo.queries.goals.refetch();
           })
           .catch(() => {
