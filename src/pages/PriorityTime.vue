@@ -159,16 +159,16 @@ export default {
       return moment(this.currentDate, 'DD-MM-YYYY').format('MMMM D, YYYY');
     },
     doItems() {
-      return this.flattenAndFilterGoals(this.doGoals);
+      return this.doGoals;
     },
     planItems() {
-      return this.flattenAndFilterGoals(this.planGoals);
+      return this.planGoals;
     },
     delegateItems() {
-      return this.flattenAndFilterGoals(this.delegateGoals);
+      return this.delegateGoals;
     },
     automateItems() {
-      return this.flattenAndFilterGoals(this.automateGoals);
+      return this.automateGoals;
     },
     isLoading() {
       return this.isFirstLoad && !this.doGoals.length;
@@ -190,46 +190,27 @@ export default {
   },
   methods: {
     /**
-     * Load all priority goals using shared composable
+     * Load all priority goals using single priorityGoals query
      */
     async loadAllGoals() {
       this.isFirstLoad = true;
       try {
-        // Load all priority tags in parallel
-        const [doData, planData, delegateData, automateData, routineData] = await Promise.all([
-          this.$goals.fetchGoalsByTag('priority:do', { useCache: true }),
-          this.$goals.fetchGoalsByTag('priority:plan', { useCache: true }),
-          this.$goals.fetchGoalsByTag('priority:delegate', { useCache: true }),
-          this.$goals.fetchGoalsByTag('priority:automate', { useCache: true }),
+        // Single query for all priority goals + routine fetch in parallel
+        const [priorityData, routineData] = await Promise.all([
+          this.$goals.fetchPriorityGoals(this.currentDate, { useCache: true }),
           this.$routine.fetchRoutine(this.currentDate, { useCache: true }),
         ]);
 
-        this.doGoals = doData || [];
-        this.planGoals = planData || [];
-        this.delegateGoals = delegateData || [];
-        this.automateGoals = automateData || [];
+        this.doGoals = priorityData?.do || [];
+        this.planGoals = priorityData?.plan || [];
+        this.delegateGoals = priorityData?.delegate || [];
+        this.automateGoals = priorityData?.automate || [];
         this.tasklist = routineData?.tasklist || [];
       } catch (error) {
         console.error('Error loading goals:', error);
       } finally {
         this.isFirstLoad = false;
       }
-    },
-    flattenAndFilterGoals(goals) {
-      const today = moment(this.currentDate, 'DD-MM-YYYY');
-
-      return goals
-        .filter((goal) => {
-          // Filter to current day only
-          const goalDate = moment(goal.date, 'DD-MM-YYYY');
-          return goalDate.isSame(today, 'day');
-        })
-        .flatMap((goal) => goal.goalItems.map((item) => ({
-          ...item,
-          period: goal.period,
-          date: goal.date,
-          goalId: goal.id,
-        })));
     },
     handleItemClick(item) {
       // Open edit dialog

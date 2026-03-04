@@ -531,7 +531,6 @@ import {
 import GoalList from '../containers/GoalListContainer.vue';
 import GoalItemList from '../components/organisms/GoalItemList/GoalItemList.vue';
 import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
-import PullToRefreshContainer from '../components/molecules/PullToRefreshContainer/PullToRefreshContainer.vue';
 import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
 import QuickGoalCreation from '../containers/QuickGoalCreationContainer.vue';
 import StreakChecks from '../components/molecules/StreakChecks/StreakChecks.vue';
@@ -598,7 +597,6 @@ export default {
     GoalList,
     GoalItemList,
     ContainerBox,
-    PullToRefreshContainer,
     QuickGoalCreation,
     StreakChecks,
     GoalCreation,
@@ -711,6 +709,7 @@ export default {
   data() {
     return {
       isLoading: false,
+      isRefreshing: false,
       goalDetailsDialog: false,
       goalDisplayDialog: false,
       quickTaskDialog: false,
@@ -1023,20 +1022,16 @@ export default {
       }
     },
 
-    // Handle pull to refresh from wrapper
-    handlePullToRefresh() {
-      this.trackUserInteraction('pull_to_refresh', 'gesture', {
+    // Handle refresh button click
+    async refreshData() {
+      this.isRefreshing = true;
+      this.trackUserInteraction('refresh_button', 'click', {
         date: this.date,
         is_today: this.isTodaySelected,
       });
 
-      // Refresh all data
-      Promise.all([
-        this.refreshApolloQueries(),
-        new Promise((resolve) => setTimeout(resolve, 1000)), // Minimum refresh time for UX
-      ]).then(() => {
-        this.$refs.pullToRefreshWrapper.endRefresh();
-
+      try {
+        await this.refreshApolloQueries();
         this.$notify({
           title: 'Refreshed',
           text: 'Dashboard data has been updated',
@@ -1044,10 +1039,8 @@ export default {
           type: 'success',
           duration: 2000,
         });
-      }).catch((error) => {
-        console.error('Pull to refresh error:', error);
-        this.$refs.pullToRefreshWrapper.endRefresh();
-
+      } catch (error) {
+        console.error('Refresh error:', error);
         this.$notify({
           title: 'Refresh Failed',
           text: 'Could not refresh data. Please try again.',
@@ -1055,7 +1048,9 @@ export default {
           type: 'error',
           duration: 3000,
         });
-      });
+      } finally {
+        this.isRefreshing = false;
+      }
     },
 
     // Global event handlers
@@ -1339,9 +1334,11 @@ export default {
     },
 
     // Check event execution for a specific task (used after user interactions)
-    checkEventExecutionForTask(taskId, stimulusName) {
-      // Find the task in the current tasklist (from store)
-      const task = this.$routineTasklist.find((t) => t.id === taskId);
+    // freshTasklist: optional array from refetch result to avoid stale Apollo cache
+    checkEventExecutionForTask(taskId, stimulusName, freshTasklist) {
+      // Use fresh tasklist from refetch if provided, otherwise fall back to displayTasklist
+      const tasklist = freshTasklist || this.displayTasklist;
+      const task = tasklist.find((t) => t.id === taskId);
 
       if (!task || !task.stimuli || !Array.isArray(task.stimuli)) {
         console.log(`DashBoard: No task or stimuli found for taskId ${taskId}`);
@@ -1716,8 +1713,17 @@ export default {
                 tickRoutineItem(id: $id, taskId: $taskId, ticked: $ticked) {
                   id
                   tasklist {
+                    id
                     name
                     ticked
+                    points
+                    startEvent
+                    endEvent
+                    stimuli {
+                      name
+                      splitRate
+                      earned
+                    }
                   }
                 }
               }
@@ -1748,10 +1754,13 @@ export default {
 
             return this.$routine.fetchRoutine(this.date, { useCache: false });
           })
-          .then(() => {
-            // Check for event execution after task state changes and refetch completes
+          // Refetch Apollo routineDate query (includes stimuli) before checking events
+          .then(() => this.$apollo.queries.routineDate.refetch())
+          .then((result) => {
+            // Check for event execution using fresh refetch data to avoid stale cache
             console.log('DashBoard: Tasklist refetch completed, checking events for task:', task.id);
-            this.checkEventExecutionForTask(task.id, 'D');
+            const freshTasklist = result?.data?.routineDate?.tasklist;
+            this.checkEventExecutionForTask(task.id, 'D', freshTasklist);
             return this.$apollo.queries.goals.refetch();
           })
           .catch(() => {
@@ -2175,52 +2184,6 @@ export default {
 </script>
 
 <style scoped>
-.pull-to-refresh-container {
-  position: relative;
-  height: 100vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.pull-to-refresh-indicator {
-  position: absolute;
-  top: -80px;
-  left: 0;
-  right: 0;
-  height: 80px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
-  z-index: 1000;
-  opacity: 0;
-}
-
-.pull-to-refresh-indicator.visible {
-  opacity: 1;
-}
-
-.pull-to-refresh-indicator.refreshing {
-  transform: translateY(80px) !important;
-}
-
-.refresh-text {
-  margin-top: 8px;
-  font-size: 14px;
-  color: #666;
-  font-weight: 500;
-}
-
-/* Ensure proper touch handling on mobile */
-@media (max-width: 768px) {
-  .pull-to-refresh-container {
-    touch-action: pan-y;
-  }
-}
-
 /* Mobile: task-goals full width */
 @media (max-width: 600px) {
   .concentrated-view .active .v-list__tile--avatar {
@@ -2426,17 +2389,29 @@ export default {
   justify-content: start;
 }
 
+.concentrated-view .v-list__tile {
+  overflow: hidden;
+}
+
+.concentrated-view .v-list__tile__content {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.concentrated-view .v-list__tile__title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
 .concentrated-view .active .v-list__tile__content {
   justify-content: start;
-  min-width: 0;
 }
 
 .concentrated-view .active .v-list__tile__title {
   font-size: 24px;
   height: 28px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .concentrated-view .active .goal-list .v-list__tile__title {
@@ -2604,6 +2579,7 @@ export default {
 .action-box {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
 }
 
 /* Skeleton loading styles */

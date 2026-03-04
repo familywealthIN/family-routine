@@ -22,6 +22,7 @@ import {
   useGoalsByGoalRef,
   useAgendaGoals,
   useMonthTaskGoals,
+  usePriorityGoals,
   GOAL_QUERY_VARIANTS,
 } from '../composables/useGoalQueries';
 import { useGoalMutations } from '../composables/useGoalMutations';
@@ -34,6 +35,7 @@ export default {
     let goalsByGoalRefComposable = null;
     let agendaGoalsComposable = null;
     let monthTaskGoalsComposable = null;
+    let priorityGoalsComposable = null;
     let goalMutationsComposable = null;
 
     /**
@@ -72,6 +74,13 @@ export default {
         monthTaskGoalsComposable = useMonthTaskGoals(vm.$apollo);
       }
       return monthTaskGoalsComposable;
+    };
+
+    const getPriorityGoalsComposable = (vm) => {
+      if (!priorityGoalsComposable && vm.$apollo) {
+        priorityGoalsComposable = usePriorityGoals(vm.$apollo);
+      }
+      return priorityGoalsComposable;
     };
 
     const getGoalMutationsComposable = (vm) => {
@@ -284,6 +293,17 @@ export default {
         }
         console.warn('Apollo client not available for fetchMonthTaskGoals');
         return [];
+      },
+
+      async fetchPriorityGoals(date, options) {
+        const composable = getPriorityGoalsComposable(vm);
+        if (composable) {
+          return composable.fetchPriorityGoals(date, options);
+        }
+        console.warn('Apollo client not available for fetchPriorityGoals');
+        return {
+          do: [], plan: [], delegate: [], automate: [],
+        };
       },
 
       // Mutation methods (lazy initialized)

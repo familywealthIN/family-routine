@@ -48,11 +48,31 @@
         gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
       >
         <atom-container fill-height>
-          <atom-layout align-center>
-            <strong class="display-4 font-weight-regular mr-4">{{getLifetimeGoalsCount()}}</strong>
-            <atom-layout column justify-end>
-              <div class="headline font-weight-light">Lifetime Goals</div>
-            </atom-layout>
+          <atom-layout align-center justify-center class="goal-stats-row">
+            <div class="goal-stat-item text-xs-center">
+              <div class="overline white--text stat-label">Day</div>
+              <div class="display-3 white--text font-weight-medium">{{ getDayGoalsCount() }}</div>
+            </div>
+            <v-divider vertical dark class="goal-stat-divider"></v-divider>
+            <div class="goal-stat-item text-xs-center">
+              <div class="overline white--text stat-label">Week</div>
+              <div class="display-3 white--text font-weight-medium">{{ getWeekGoalsCount() }}</div>
+            </div>
+            <v-divider vertical dark class="goal-stat-divider"></v-divider>
+            <div class="goal-stat-item text-xs-center">
+              <div class="overline white--text stat-label">Month</div>
+              <div class="display-3 white--text font-weight-medium">{{ getMonthGoalsCount() }}</div>
+            </div>
+            <v-divider vertical dark class="goal-stat-divider"></v-divider>
+            <div class="goal-stat-item text-xs-center">
+              <div class="overline white--text stat-label">Year</div>
+              <div class="display-3 white--text font-weight-medium">{{ getYearGoalsCount() }}</div>
+            </div>
+            <v-divider vertical dark class="goal-stat-divider"></v-divider>
+            <div class="goal-stat-item text-xs-center">
+              <div class="overline white--text stat-label">Life</div>
+              <div class="display-3 white--text font-weight-medium">{{ getLifetimeGoalsCount() }}</div>
+            </div>
           </atom-layout>
         </atom-container>
       </atom-img>
@@ -504,6 +524,30 @@ export default {
       const lifetimeGoals = this.allGoals && this.allGoals.find((goal) => goal && goal.period === 'lifetime');
       return lifetimeGoals && lifetimeGoals.goalItems && lifetimeGoals.goalItems.length || 0
     },
+    getMonthGoalsCount() {
+      if (!this.allGoals) return 0;
+      return this.allGoals
+        .filter((goal) => goal && goal.period === 'month')
+        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
+    },
+    getWeekGoalsCount() {
+      if (!this.allGoals) return 0;
+      return this.allGoals
+        .filter((goal) => goal && goal.period === 'week')
+        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
+    },
+    getDayGoalsCount() {
+      if (!this.allGoals) return 0;
+      return this.allGoals
+        .filter((goal) => goal && goal.period === 'day')
+        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
+    },
+    getYearGoalsCount() {
+      if (!this.allGoals) return 0;
+      return this.allGoals
+        .filter((goal) => goal && goal.period === 'year')
+        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
+    },
     updateNewGoalItem(goalItem, period, date) {
       this.newGoalItem = {
         ...goalItem,
@@ -572,6 +616,28 @@ export default {
 </script>
 
 <style>
+  .image-card-img {
+    height: 180px;
+    border-radius: 12px 12px 0 0;
+  }
+  .goal-stats-row {
+    gap: 0;
+  }
+  .goal-stat-item {
+    flex: 1;
+    padding: 4px 8px;
+  }
+  .goal-stat-divider.v-divider--vertical {
+    margin: 8px 0;
+    min-height: 48px;
+    opacity: 0.5;
+  }
+  .stat-label {
+    letter-spacing: 2px !important;
+    font-size: 11px !important;
+    margin-bottom: 4px;
+    opacity: 0.85;
+  }
   .second-right-btn {
    right: 84px;
   }
