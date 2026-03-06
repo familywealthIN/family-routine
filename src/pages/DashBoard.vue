@@ -1,673 +1,510 @@
 <template>
   <div>
-      <container-box transparent="true" >
-      <atom-card v-if="isDashboardCaching" class="mb-3 mx-3 mt-3 pa-3 dashboard-caching-card">
-        <div class="d-flex align-center mb-2">
-          <atom-icon class="mr-2" color="warning" small>cached</atom-icon>
-          <span class="caching-label">Building Projects and Areas context. <strong>{{ currentCachingTag }}</strong></span>
-        </div>
-        <atom-progress-linear
-          :value="dashboardCachingProgress"
-          color="warning"
-          height="6"
-          class="ma-0 caching-progress"
-        />
-        <div class="caching-counter mt-1 text-right caption grey--text">
-          {{ dashboardCachingCompleted }}/{{ dashboardCachingTotal }}
-        </div>
-      </atom-card>
-      <weekday-selector
-        :selectedDate="date"
-        :class="$vuetify.breakpoint.xsOnly ? 'mr-3 mb-2 ml-3 mt-3' : 'mr-3 mb-3 ml-3'"
-        @date-selected="handleDateSelected"
-      />
-    <div v-if="isTodaySelected">
-      <div class="d-flex pr-3 pl-3 pb-1 pt-2 title-options">
-        <h2>
-          {{ this.today }}
-        </h2>
-        <div class="action-box">
-          <div><wake-check></wake-check></div>
-          <div class="d-flex align-center">
-            <atom-switch v-model="skipDay" label="Skip Day" @change="skipClick()" hide-details class="mt-0 pt-0"></atom-switch>
-            <atom-button icon small @click="refreshData" :loading="isRefreshing" class="ml-2">
-              <atom-icon color="rgba(0,0,0,0.57)" size="24">refresh</atom-icon>
-            </atom-button>
+    <!-- Pull-to-refresh wrapper (handles mobile/tablet condition internally) -->
+    <pull-to-refresh-container ref="pullToRefreshWrapper" @refresh="handlePullToRefresh">
+      <container-box transparent="true">
+        <atom-card v-if="isDashboardCaching" class="mb-3 mx-3 mt-3 pa-3 dashboard-caching-card">
+          <div class="d-flex align-center mb-2">
+            <atom-icon class="mr-2" color="warning" small>cached</atom-icon>
+            <span class="caching-label">Building Projects and Areas context. <strong>{{ currentCachingTag
+            }}</strong></span>
           </div>
-        </div>
-      </div>
-      <template v-if="skipDay">
-        <div class="skip-box">
-          <img src="/img/relax.jpg" />
-          <h1>Relax, Detox and Enjoy the Day</h1>
-        </div>
-      </template>
-      <template v-else>
-        <atom-layout wrap>
-          <atom-flex xs12 sm10 d-flex class="pl-3 pr-3">
-            <div style="width:100%">
-              <atom-card class="mb-3 pb-3 current-task">
-                <atom-list
-                  v-if="currentTask && currentTask.id"
-                  class="concentrated-view elevation-0"
-                >
-                  <atom-list-tile
-                    @click="updateSelectedTaskRef(currentTask.id)"
-                    class="active"
-                    avatar
-                  >
-                    <atom-progress-circular
-                      :value="countTaskPercentage(currentTask)"
-                      :size="48"
-                      :rotate="-90"
-                      class="mr-3 circular-task"
-                      width="2"
-                      color="warning"
-                    >
-                      <atom-list-tile-avatar>
-                        <atom-button
-                          fab
-                          small
-                          class="elevation-0"
-                          :disabled="getButtonDisabled(currentTask)"
-                          :color="getCurrentButtonColor(currentTask)"
-                          @click="checkDialogClick($event, currentTask)"
-                        >
-                          <atom-icon>{{ getButtonIcon(currentTask) }}</atom-icon>
-                        </atom-button>
-                      </atom-list-tile-avatar>
-                    </atom-progress-circular>
-                    <atom-list-tile-content>
-                      <atom-list-tile-title>
-                        <span>{{ currentTask.name }}</span>
-                        <div class="step-info" @click="toggleStepModal = true"><atom-icon>info</atom-icon></div>
-                      </atom-list-tile-title>
-                      <atom-list-tile-sub-title class="pt-2">
-                        <div class="time-text">
-                          {{ displayTime(currentTask.time) }} - {{ countTaskCompleted(currentTask) }}/{{ countTaskTotal(currentTask) }}
-                        </div>
-                        <div>
-                          <atom-btn-toggle v-model="currentGoalPeriod" mandatory>
-                            <atom-button flat value="day">
-                              Today
-                            </atom-button>
-                            <atom-button flat value="week">
-                              Week
-                            </atom-button>
-                            <atom-button flat value="month">
-                              Month
-                            </atom-button>
-                            <atom-button flat value="year">
-                              Year
-                            </atom-button>
-                          </atom-btn-toggle>
-                        </div>
-                      </atom-list-tile-sub-title>
-                      <!-- Skeleton loading state for daily goals -->
-                      <template v-if="showGoalsSkeleton">
-                        <div class="pt-2 pb-2" style="width: 100%;">
-                          <!-- Chip skeletons -->
-                          <atom-layout class="mb-3" row wrap>
-                            <atom-flex xs6>
-                              <div class="skeleton skeleton-chip mr-2" style="width: 120px; height: 28px;"></div>
-                            </atom-flex>
-                            <atom-flex xs6>
-                              <div class="skeleton skeleton-chip" style="width: 120px; height: 28px;"></div>
-                            </atom-flex>
-                          </atom-layout>
-                            <!-- Title skeleton -->
-                          <div class="skeleton skeleton-text mb-3" style="width: 60%; height: 20px;"></div>
-                          <!-- Subtitle skeleton -->
-                          <div class="skeleton skeleton-text mb-3" style="width: 40%; height: 16px;"></div>
-                        </div>
-                      </template>
-                      <!-- Actual content when loaded -->
-                      <div v-else class="pt-2 pb-2 task-goals">
-                        <atom-layout
-                          class="mb-3"
-                          row
-                          wrap
-                          v-if="
-                            filterTaskGoalsPeriod(currentTask.id, displayGoals, 'week').length &&
-                              filterTaskGoalsPeriod(currentTask.id, displayGoals, 'month').length
-                          "
-                        >
-                          <atom-flex xs12>
-                            <atom-alert :value="true" color="success" icon="check_circle" outline>
-                              You are all set.
-                              Do daily milestones to complete weekly and monthly goals.
-                            </atom-alert>
-                          </atom-flex>
-                        </atom-layout>
-                        <atom-layout class="mb-3" row wrap v-else>
-                          <atom-flex xs6 v-if="!filterTaskGoalsPeriod(currentTask.id, displayGoals, 'month').length">
-                            <atom-chip small
-                              @click="(currentGoalPeriod = 'month'), (goalDetailsDialog = true)"
-                            >
-                              <atom-avatar class="red text-white"><atom-icon>close</atom-icon></atom-avatar>
-                              Set Month's Goal
-                            </atom-chip>
-                          </atom-flex>
-                          <atom-flex xs6 v-if="filterTaskGoalsPeriod(currentTask.id, displayGoals, 'month').length">
-                            <atom-chip small>
-                              <atom-avatar class="success text-white"><atom-icon>check</atom-icon></atom-avatar>
-                              Set Month's Goal
-                            </atom-chip>
-                          </atom-flex>
-                          <atom-flex xs6 v-if="!filterTaskGoalsPeriod(currentTask.id, displayGoals, 'week').length">
-                            <atom-chip small @click="(currentGoalPeriod = 'week'), (goalDetailsDialog = true)">
-                              <atom-avatar class="red text-white"><atom-icon>close</atom-icon></atom-avatar>
-                              Set Week's Goal
-                            </atom-chip>
-                          </atom-flex>
-                          <atom-flex xs6 v-if="filterTaskGoalsPeriod(currentTask.id, displayGoals, 'week').length">
-                            <atom-chip small>
-                              <atom-avatar class="success text-white"><atom-icon>check</atom-icon></atom-avatar>
-                              Set Week's Goal
-                            </atom-chip>
-                          </atom-flex>
-                        </atom-layout>
-                        <!-- Event execution timer alert -->
-                        <atom-layout class="mb-3" row wrap v-if="eventExecutionInProgress">
-                          <atom-flex xs12>
-                            <atom-alert :value="true" color="info" icon="timer" outline>
-                              <div class="d-flex align-center">
-                                <div class="flex-grow-1">
-                                  <div class="caption">Refreshing goals in {{ eventExecutionTimeLeft }} seconds...</div>
-                                </div>
-                                <div>
-                                  <atom-progress-circular
-                                    :value="((60 - eventExecutionTimeLeft) / 60) * 100"
-                                    size="32"
-                                    width="3"
-                                    color="info"
-                                  >
-                                    {{ eventExecutionTimeLeft }}
-                                  </atom-progress-circular>
-                                </div>
-                              </div>
-                            </atom-alert>
-                          </atom-flex>
-                        </atom-layout>
-                        <div v-if="filterTaskGoalsPeriod(currentTask.id, displayGoals, currentGoalPeriod).length">
-                          <div
-                            :key="taskGoals.id"
-                            v-for="taskGoals in filterTaskGoalsPeriod(currentTask.id, displayGoals, currentGoalPeriod)"
-                          >
-                            <atom-list two-line subheader>
-                              <goal-item-list
-                                :key="`goal-${taskGoals.id}-${currentGoalPeriod}`"
-                                :goal="taskGoals"
-                                :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
-                                :passive="showGoalsSkeleton"
-                                @delete-task-goal="deleteTaskGoal"
-                                @refresh-task-goal="refreshTaskGoal"
-                                @toggle-goal-display-dialog="toggleGoalDisplayDialog"
-                                @complete-goal-item="completeGoalItem"
-                                @complete-sub-task="completeSubTask"
-                              />
-                            </atom-list>
-                          </div>
-                        </div>
-                        <small class="no-goals-text" v-else>
-                          No goal or activity logged.
-                        </small>
-                      </div>
-                    </atom-list-tile-content>
-                  </atom-list-tile>
-                </atom-list>
-                <div v-else-if="!$apollo.queries.goals.loading">
-                  <atom-card-text class="text-xs-center">
-                    <p>No current items to display. Please go to Routine Settings and add routine items.</p>
-                  </atom-card-text>
-                </div>
-              </atom-card>
-            </div>
-          </atom-flex>
-          <atom-flex hidden-xs sm2 d-flex class="pl-2 pr-3 hidden-xs">
-            <div style="display: flex; flex-direction: column; justify-content: space-between;">
-              <atom-card class="mb-3 pb-3">
-                <div class="text-xs-center">
-                  <atom-progress-circular
-                    :value="countTotal('D')"
-                    :size="50"
-                    :rotate="-90"
-                    class="mt-3"
-                    width="6"
-                    color="primary"
-                    >D</atom-progress-circular
-                  >
-                </div>
-              </atom-card>
-              <atom-card class="mb-3 pb-3">
-                <div class="text-xs-center">
-                  <atom-progress-circular
-                    :value="countTotal('K')"
-                    :size="50"
-                    :rotate="-90"
-                    class="mt-3"
-                    width="6"
-                    color="primary"
-                    >K</atom-progress-circular
-                  >
-                </div>
-              </atom-card>
-              <atom-card class="mb-3 pb-3">
-                <div class="text-xs-center">
-                  <atom-progress-circular
-                    :value="countTotal('G')"
-                    :size="50"
-                    :rotate="-90"
-                    class="mt-3"
-                    width="6"
-                    color="primary"
-                    >G</atom-progress-circular
-                  >
-                </div>
-              </atom-card>
-            </div>
-          </atom-flex>
-          <!-- <atom-flex xs6 d-flex>goal time left </atom-flex> -->
-          <!-- <atom-flex xs6 d-flex>Routine time left</atom-flex> -->
-          <atom-flex
-            xs12
-            class="pr-3 pl-3 mb-3"
-            d-flex
-            v-if="!!countTaskTotal(currentTask) &&
-                  currentGoalPeriod === 'day' &&
-                  filterTaskGoalsPeriod(currentTask.id, displayGoals, 'week').length > 0"
-          >
-            <atom-card>
-              <atom-card-title>
-                <b>Week Goal Streak</b>
-              </atom-card-title>
-              <div
-                :key="weekGoal.id"
-                v-for="weekGoal in filterTaskGoalsPeriod(currentTask.id, displayGoals, 'week')"
-                class="pb-3 pl-3 pr-3"
-              >
-                <!-- Show each goal item in the week goal -->
-                <div
-                  v-for="(goalItem, index) in weekGoal.goalItems"
-                  :key="goalItem.id"
-                  class="mb-2"
-                >
-                  <div class="caption text--secondary" v-if="weekGoal.goalItems.length > 1">
-                    Goal {{ index + 1 }} of {{ weekGoal.goalItems.length }}
-                  </div>
-                  <div class="body-1">{{ goalItem.body }}</div>
-                  <streak-checks :progress="goalItem.progress || 0"></streak-checks>
-                </div>
-
-                <!-- Fallback for when no goal items exist -->
-                <div v-if="!weekGoal.goalItems || weekGoal.goalItems.length === 0" class="mb-2">
-                  <div class="body-1 text--secondary">No week goal items</div>
-                  <streak-checks :progress="0"></streak-checks>
-                </div>
-              </div>
-            </atom-card>
-          </atom-flex>
-          <atom-flex xs12 class="pl-3 pr-3 pb-3" d-flex>
-            <atom-card>
-              <atom-tabs
-                v-model="tabs"
-                right
-              >
-                <atom-tab>
-                  Upcoming
-                </atom-tab>
-                <atom-tab>
-                  Past
-                </atom-tab>
-              </atom-tabs>
-              <atom-list
-                subheader
-                style="width:100%"
-                v-if="filterUpcomingPastTask(tabs, displayTasklist) && filterUpcomingPastTask(tabs, displayTasklist).length > 0"
-                class="concentrated-view elevation-0"
-              >
-                <div v-for="(task, index) in filterUpcomingPastTask(tabs, displayTasklist)" :key="`task-${task.id}`">
-                  <atom-divider v-if="index != 0" :key="`divider-${task.id}`" :inset="task.inset"></atom-divider>
-                  <atom-list-tile
-                    :key="`tile-${task.id}`"
-                    @click="updateSelectedTaskRef(task.id)"
-                    :class="task.id === selectedTaskRef ? 'active' : ''"
-                    avatar
-                  >
-                    <atom-progress-circular
-                      :value="countTaskPercentage(task)"
-                      :size="48"
-                      :rotate="-90"
-                      class="mr-3 circular-task"
-                      width="2"
-                      color="warning"
-                    >
-                      <atom-list-tile-avatar>
-                        <atom-button
-                          fab
-                          small
-                          class="elevation-0"
-                          :disabled="getButtonDisabled(task)"
-                          :color="getCurrentButtonColor(task)"
-                          @click="checkDialogClick($event, task)"
-                        >
-                          <atom-icon>{{ getButtonIcon(task) }}</atom-icon>
-                        </atom-button>
-                      </atom-list-tile-avatar>
-                    </atom-progress-circular>
-                    <atom-list-tile-content>
-                      <atom-list-tile-title>
-                        <span>{{ task.name }}</span>
-                      </atom-list-tile-title>
-                      <atom-list-tile-sub-title v-if="task.id === selectedTaskRef">
-                        <div class="time-text">
-                          {{ displayTime(task.time) }} - {{ countTaskCompleted(task) }}/{{ countTaskTotal(task) }}
-                        </div>
-                        <div>
-                          <atom-btn-toggle v-model="currentGoalPeriod" mandatory>
-                            <atom-button flat value="day">
-                              Today
-                            </atom-button>
-                            <atom-button flat value="week">
-                              Week
-                            </atom-button>
-                            <atom-button flat value="month">
-                              Month
-                            </atom-button>
-                            <atom-button flat value="year">
-                              Year
-                            </atom-button>
-                          </atom-btn-toggle>
-                        </div>
-                      </atom-list-tile-sub-title>
-                      <atom-list-tile-sub-title v-else>
-                        {{ displayTime(task.time) }}
-                      </atom-list-tile-sub-title>
-                      <div v-if="task.id === selectedTaskRef" class="pt-2 pb-2 task-goals">
-                        <atom-layout
-                          class="mb-3"
-                          row
-                          wrap
-                          v-if="
-                            filterTaskGoalsPeriod(task.id, displayGoals, 'week').length &&
-                              filterTaskGoalsPeriod(task.id, displayGoals, 'month').length
-                          "
-                        >
-                          <atom-flex xs12>
-                            <atom-alert :value="true" color="success" icon="check_circle" outline>
-                              You are all set.
-                              Do daily milestones to complete weekly and monthly goals.
-                            </atom-alert>
-                          </atom-flex>
-                        </atom-layout>
-                        <atom-layout class="mb-3" row wrap v-else>
-                          <atom-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, displayGoals, 'month').length">
-                            <atom-chip small
-                              @click="(currentGoalPeriod = 'month'), (goalDetailsDialog = true)"
-                            >
-                              <atom-avatar class="red text-white"><atom-icon>close</atom-icon></atom-avatar>
-                              Set Month's Goal
-                            </atom-chip>
-                          </atom-flex>
-                          <atom-flex xs6 v-if="filterTaskGoalsPeriod(task.id, displayGoals, 'month').length">
-                            <atom-chip small>
-                              <atom-avatar class="success text-white"><atom-icon>check</atom-icon></atom-avatar>
-                              Set Month's Goal
-                            </atom-chip>
-                          </atom-flex>
-                          <atom-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, displayGoals, 'week').length">
-                            <atom-chip small @click="(currentGoalPeriod = 'week'), (goalDetailsDialog = true)">
-                              <atom-avatar class="red text-white"><atom-icon>close</atom-icon></atom-avatar>
-                              Set Week's Goal
-                            </atom-chip>
-                          </atom-flex>
-                          <atom-flex xs6 v-if="filterTaskGoalsPeriod(task.id, displayGoals, 'week').length">
-                            <atom-chip small>
-                              <atom-avatar class="success text-white"><atom-icon>check</atom-icon></atom-avatar>
-                              Set Week's Goal
-                            </atom-chip>
-                          </atom-flex>
-                        </atom-layout>
-                        <div v-if="filterTaskGoalsPeriod(task.id, displayGoals, currentGoalPeriod).length">
-                          <div
-                            :key="taskGoals.id"
-                            v-for="taskGoals in filterTaskGoalsPeriod(task.id, displayGoals, currentGoalPeriod)"
-                          >
-                            <atom-list two-line subheader>
-                              <goal-item-list
-                                :key="`goal-${taskGoals.id}-${currentGoalPeriod}-${task.id}`"
-                                :goal="taskGoals"
-                                :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
-                                :passive="showGoalsSkeleton"
-                                @delete-task-goal="deleteTaskGoal"
-                                @refresh-task-goal="refreshTaskGoal"
-                                @toggle-goal-display-dialog="toggleGoalDisplayDialog"
-                                @complete-goal-item="completeGoalItem"
-                                @complete-sub-task="completeSubTask"
-                              />
-                            </atom-list>
-                          </div>
-                        </div>
-                        <small class="no-goals-text" v-else>
-                          No goal or activity logged.
-                        </small>
-                      </div>
-                    </atom-list-tile-content>
-                    <atom-list-tile-action v-if="task.id !== selectedTaskRef">
-                      <atom-list-tile-action-text>
-                        <b>{{ countTaskCompleted(task) }}</b
-                        >/{{ countTaskTotal(task) }}
-                      </atom-list-tile-action-text>
-                      <atom-list-tile-action-text>tasks</atom-list-tile-action-text>
-                    </atom-list-tile-action>
-                  </atom-list-tile>
-                </div>
-              </atom-list>
-              <div v-if="filterUpcomingPastTask(tabs, displayTasklist) && filterUpcomingPastTask(tabs, displayTasklist).length === 0">
-                  <atom-card-text class="text-xs-center">
-                    <p>No upcoming routine items.</p>
-                  </atom-card-text>
-              </div>
-            </atom-card>
-          </atom-flex>
-        </atom-layout>
-      </template>
-    </div>
-    <div class="non-current-day" v-else>
-      <div class="pa-3">
-        <div class="d-flex align-center mb-3">
-          <h2 class="mb-0" style="flex: 1">{{ today }}</h2>
-          <atom-button class="ml-4" icon small @click="refreshData" :loading="isRefreshing">
-            <atom-icon color="rgba(0,0,0,0.87)" size="20">refresh</atom-icon>
-          </atom-button>
-        </div>
-
-        <!-- Loading state -->
-        <atom-card v-if="$apollo.queries.agendaGoals.loading" class="modern-card">
-          <atom-card-text class="text-xs-center pa-5">
-            <atom-progress-circular
-              indeterminate
-              color="primary"
-              size="40"
-              class="mb-3"
-            ></atom-progress-circular>
-            <p class="mb-0">Loading day tasks...</p>
-          </atom-card-text>
+          <atom-progress-linear :value="dashboardCachingProgress" color="warning" height="6"
+            class="ma-0 caching-progress" />
+          <div class="caching-counter mt-1 text-right caption grey--text">
+            {{ dashboardCachingCompleted }}/{{ dashboardCachingTotal }}
+          </div>
         </atom-card>
-
-        <template v-else-if="displayTasklist && displayTasklist.length">
-          <template v-for="task in displayTasklist">
-            <div :key="task.id" class="mb-4">
-              <!-- Day tasks for this routine -->
-              <template v-if="filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length">
-                <atom-list two-line class="modern-card pa-0">
-                  <template v-for="(taskGoals, i) in filterTaskGoalsPeriod(task.id, agendaGoals, 'day')">
-                    <atom-list-tile
-                      v-for="goalItem in taskGoals.goalItems"
-                      :key="goalItem.id"
-                    >
-                      <atom-list-tile-content @click="openEditGoalDialog(goalItem, taskGoals)">
-                        <atom-list-tile-sub-title class="text--primary caption">{{ task.name }}</atom-list-tile-sub-title>
-                        <atom-list-tile-title>{{ goalItem.body }}</atom-list-tile-title>
-                      </atom-list-tile-content>
-                      <atom-list-tile-action>
-                        <div class="d-flex">
-                          <atom-button icon small @click="openEditGoalDialog(goalItem, taskGoals)">
-                            <atom-icon color="primary" size="20">edit</atom-icon>
-                          </atom-button>
-                          <atom-button icon small @click="deleteAgendaGoalItem(goalItem.id, taskGoals.date, taskGoals.period)" class="ml-1">
-                            <atom-icon color="error" size="20">delete</atom-icon>
-                          </atom-button>
-                        </div>
-                      </atom-list-tile-action>
-                    </atom-list-tile>
-                    <atom-divider v-if="i < filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length - 1" :key="`divider-${i}`"></atom-divider>
-                  </template>
-                </atom-list>
-              </template>
+        <weekday-selector :selectedDate="date"
+          :class="$vuetify.breakpoint.xsOnly ? 'mr-3 mb-2 ml-3 mt-3' : 'mr-3 mb-3 ml-3'"
+          @date-selected="handleDateSelected" />
+        <div v-if="isTodaySelected">
+          <div class="d-flex pr-3 pl-3 title-options">
+            <h2>
+              {{ this.today }}
+            </h2>
+            <div class="action-box">
+              <div><wake-check></wake-check></div>
+              <div><atom-switch v-model="skipDay" label="Skip Day" @change="skipClick()"></atom-switch></div>
+            </div>
+          </div>
+          <template v-if="skipDay">
+            <div class="skip-box">
+              <img src="/img/relax.jpg" />
+              <h1>Relax, Detox and Enjoy the Day</h1>
             </div>
           </template>
+          <template v-else>
+            <atom-layout wrap>
+              <atom-flex xs12 sm10 d-flex class="pl-3 pr-3">
+                <div style="width:100%">
+                  <atom-card class="mb-3 pb-3 current-task">
+                    <atom-list v-if="currentTask && currentTask.id" class="concentrated-view elevation-0">
+                      <atom-list-tile @click="updateSelectedTaskRef(currentTask.id)" class="active" avatar>
+                        <atom-progress-circular :value="countTaskPercentage(currentTask)" :size="48" :rotate="-90"
+                          class="mr-3 circular-task" width="2" color="warning">
+                          <atom-list-tile-avatar>
+                            <atom-button fab small class="elevation-0" :disabled="getButtonDisabled(currentTask)"
+                              :color="getCurrentButtonColor(currentTask)"
+                              @click="checkDialogClick($event, currentTask)">
+                              <atom-icon>{{ getButtonIcon(currentTask) }}</atom-icon>
+                            </atom-button>
+                          </atom-list-tile-avatar>
+                        </atom-progress-circular>
+                        <atom-list-tile-content>
+                          <atom-list-tile-title>
+                            <span>{{ currentTask.name }}</span>
+                            <div class="step-info" @click="toggleStepModal = true"><atom-icon>info</atom-icon></div>
+                          </atom-list-tile-title>
+                          <atom-list-tile-sub-title class="pt-2">
+                            <div class="time-text">
+                              {{ displayTime(currentTask.time) }} - {{ countTaskCompleted(currentTask) }}/{{
+                                countTaskTotal(currentTask) }}
+                            </div>
+                            <div>
+                              <atom-btn-toggle v-model="currentGoalPeriod" mandatory>
+                                <atom-button flat value="day">
+                                  Today
+                                </atom-button>
+                                <atom-button flat value="week">
+                                  Week
+                                </atom-button>
+                                <atom-button flat value="month">
+                                  Month
+                                </atom-button>
+                                <atom-button flat value="year">
+                                  Year
+                                </atom-button>
+                              </atom-btn-toggle>
+                            </div>
+                          </atom-list-tile-sub-title>
+                          <!-- Skeleton loading state for daily goals -->
+                          <template v-if="showGoalsSkeleton">
+                            <div class="pt-2 pb-2" style="width: 100%;">
+                              <!-- Chip skeletons -->
+                              <atom-layout class="mb-3" row wrap>
+                                <atom-flex xs6>
+                                  <div class="skeleton skeleton-chip mr-2" style="width: 120px; height: 28px;"></div>
+                                </atom-flex>
+                                <atom-flex xs6>
+                                  <div class="skeleton skeleton-chip" style="width: 120px; height: 28px;"></div>
+                                </atom-flex>
+                              </atom-layout>
+                              <!-- Title skeleton -->
+                              <div class="skeleton skeleton-text mb-3" style="width: 60%; height: 20px;"></div>
+                              <!-- Subtitle skeleton -->
+                              <div class="skeleton skeleton-text mb-3" style="width: 40%; height: 16px;"></div>
+                            </div>
+                          </template>
+                          <!-- Actual content when loaded -->
+                          <div v-else class="pt-2 pb-2 task-goals">
+                            <atom-layout class="mb-3" row wrap v-if="
+                              filterTaskGoalsPeriod(currentTask.id, displayGoals, 'week').length &&
+                              filterTaskGoalsPeriod(currentTask.id, displayGoals, 'month').length
+                            ">
+                              <atom-flex xs12>
+                                <atom-alert :value="true" color="success" icon="check_circle" outline>
+                                  You are all set.
+                                  Do daily milestones to complete weekly and monthly goals.
+                                </atom-alert>
+                              </atom-flex>
+                            </atom-layout>
+                            <atom-layout class="mb-3" row wrap v-else>
+                              <atom-flex xs6
+                                v-if="!filterTaskGoalsPeriod(currentTask.id, displayGoals, 'month').length">
+                                <atom-chip small @click="(currentGoalPeriod = 'month'), (goalDetailsDialog = true)">
+                                  <atom-avatar class="red text-white"><atom-icon>close</atom-icon></atom-avatar>
+                                  Set Month's Goal
+                                </atom-chip>
+                              </atom-flex>
+                              <atom-flex xs6 v-if="filterTaskGoalsPeriod(currentTask.id, displayGoals, 'month').length">
+                                <atom-chip small>
+                                  <atom-avatar class="success text-white"><atom-icon>check</atom-icon></atom-avatar>
+                                  Set Month's Goal
+                                </atom-chip>
+                              </atom-flex>
+                              <atom-flex xs6 v-if="!filterTaskGoalsPeriod(currentTask.id, displayGoals, 'week').length">
+                                <atom-chip small @click="(currentGoalPeriod = 'week'), (goalDetailsDialog = true)">
+                                  <atom-avatar class="red text-white"><atom-icon>close</atom-icon></atom-avatar>
+                                  Set Week's Goal
+                                </atom-chip>
+                              </atom-flex>
+                              <atom-flex xs6 v-if="filterTaskGoalsPeriod(currentTask.id, displayGoals, 'week').length">
+                                <atom-chip small>
+                                  <atom-avatar class="success text-white"><atom-icon>check</atom-icon></atom-avatar>
+                                  Set Week's Goal
+                                </atom-chip>
+                              </atom-flex>
+                            </atom-layout>
+                            <!-- Event execution timer alert -->
+                            <atom-layout class="mb-3" row wrap v-if="eventExecutionInProgress">
+                              <atom-flex xs12>
+                                <atom-alert :value="true" color="info" icon="timer" outline>
+                                  <div class="d-flex align-center">
+                                    <div class="flex-grow-1">
+                                      <div class="caption">Refreshing goals in {{ eventExecutionTimeLeft }} seconds...
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <atom-progress-circular :value="((60 - eventExecutionTimeLeft) / 60) * 100"
+                                        size="32" width="3" color="info">
+                                        {{ eventExecutionTimeLeft }}
+                                      </atom-progress-circular>
+                                    </div>
+                                  </div>
+                                </atom-alert>
+                              </atom-flex>
+                            </atom-layout>
+                            <div v-if="filterTaskGoalsPeriod(currentTask.id, displayGoals, currentGoalPeriod).length">
+                              <div :key="taskGoals.id"
+                                v-for="taskGoals in filterTaskGoalsPeriod(currentTask.id, displayGoals, currentGoalPeriod)">
+                                <atom-list two-line subheader>
+                                  <goal-item-list :key="`goal-${taskGoals.id}-${currentGoalPeriod}`" :goal="taskGoals"
+                                    :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
+                                    :passive="showGoalsSkeleton" @delete-task-goal="deleteTaskGoal"
+                                    @refresh-task-goal="refreshTaskGoal"
+                                    @toggle-goal-display-dialog="toggleGoalDisplayDialog"
+                                    @complete-goal-item="completeGoalItem" @complete-sub-task="completeSubTask" />
+                                </atom-list>
+                              </div>
+                            </div>
+                            <small class="no-goals-text" v-else>
+                              No goal or activity logged.
+                            </small>
+                          </div>
+                        </atom-list-tile-content>
+                      </atom-list-tile>
+                    </atom-list>
+                    <div v-else-if="!$apollo.queries.goals.loading">
+                      <atom-card-text class="text-xs-center">
+                        <p>No current items to display. Please go to Routine Settings and add routine items.</p>
+                      </atom-card-text>
+                    </div>
+                  </atom-card>
+                </div>
+              </atom-flex>
+              <atom-flex hidden-xs sm2 d-flex class="pl-2 pr-3 hidden-xs">
+                <div style="display: flex; flex-direction: column; justify-content: space-between;">
+                  <atom-card class="mb-3 pb-3">
+                    <div class="text-xs-center">
+                      <atom-progress-circular :value="countTotal('D')" :size="50" :rotate="-90" class="mt-3" width="6"
+                        color="primary">D</atom-progress-circular>
+                    </div>
+                  </atom-card>
+                  <atom-card class="mb-3 pb-3">
+                    <div class="text-xs-center">
+                      <atom-progress-circular :value="countTotal('K')" :size="50" :rotate="-90" class="mt-3" width="6"
+                        color="primary">K</atom-progress-circular>
+                    </div>
+                  </atom-card>
+                  <atom-card class="mb-3 pb-3">
+                    <div class="text-xs-center">
+                      <atom-progress-circular :value="countTotal('G')" :size="50" :rotate="-90" class="mt-3" width="6"
+                        color="primary">G</atom-progress-circular>
+                    </div>
+                  </atom-card>
+                </div>
+              </atom-flex>
+              <!-- <atom-flex xs6 d-flex>goal time left </atom-flex> -->
+              <!-- <atom-flex xs6 d-flex>Routine time left</atom-flex> -->
+              <atom-flex xs12 class="pr-3 pl-3 mb-3" d-flex v-if="!!countTaskTotal(currentTask) &&
+                currentGoalPeriod === 'day' &&
+                filterTaskGoalsPeriod(currentTask.id, displayGoals, 'week').length > 0">
+                <atom-card>
+                  <atom-card-title>
+                    <b>Week Goal Streak</b>
+                  </atom-card-title>
+                  <div :key="weekGoal.id"
+                    v-for="weekGoal in filterTaskGoalsPeriod(currentTask.id, displayGoals, 'week')"
+                    class="pb-3 pl-3 pr-3">
+                    <!-- Show each goal item in the week goal -->
+                    <div v-for="(goalItem, index) in weekGoal.goalItems" :key="goalItem.id" class="mb-2">
+                      <div class="caption text--secondary" v-if="weekGoal.goalItems.length > 1">
+                        Goal {{ index + 1 }} of {{ weekGoal.goalItems.length }}
+                      </div>
+                      <div class="body-1">{{ goalItem.body }}</div>
+                      <streak-checks :progress="goalItem.progress || 0"></streak-checks>
+                    </div>
 
-          <!-- Show placeholder if no day tasks exist -->
-          <atom-card v-if="!tasklist.some(task => filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length)" class="modern-card">
-            <atom-card-text class="text-xs-center">
-              <p>No Day Tasks</p>
+                    <!-- Fallback for when no goal items exist -->
+                    <div v-if="!weekGoal.goalItems || weekGoal.goalItems.length === 0" class="mb-2">
+                      <div class="body-1 text--secondary">No week goal items</div>
+                      <streak-checks :progress="0"></streak-checks>
+                    </div>
+                  </div>
+                </atom-card>
+              </atom-flex>
+              <atom-flex xs12 class="pl-3 pr-3 pb-3" d-flex>
+                <atom-card>
+                  <!-- <atom-tabs v-model="tabs" right> -->
+                  <atom-tabs :value="tabs" @change="tabs = $event" right>
+                    <atom-tab>
+                      Upcoming
+                    </atom-tab>
+                    <atom-tab>
+                      Past
+                    </atom-tab>
+                  </atom-tabs>
+                  <atom-list subheader style="width:100%"
+                    v-if="filterUpcomingPastTask(tabs, displayTasklist) && filterUpcomingPastTask(tabs, displayTasklist).length > 0"
+                    class="concentrated-view elevation-0">
+                    <div v-for="(task, index) in filterUpcomingPastTask(tabs, displayTasklist)"
+                      :key="`task-${task.id}`">
+                      <atom-divider v-if="index != 0" :key="`divider-${task.id}`" :inset="task.inset"></atom-divider>
+                      <atom-list-tile :key="`tile-${task.id}`" @click="updateSelectedTaskRef(task.id)"
+                        :class="task.id === selectedTaskRef ? 'active' : ''" avatar>
+                        <atom-progress-circular :value="countTaskPercentage(task)" :size="48" :rotate="-90"
+                          class="mr-3 circular-task" width="2" color="warning">
+                          <atom-list-tile-avatar>
+                            <atom-button fab small class="elevation-0" :disabled="getButtonDisabled(task)"
+                              :color="getCurrentButtonColor(task)" @click="checkDialogClick($event, task)">
+                              <atom-icon>{{ getButtonIcon(task) }}</atom-icon>
+                            </atom-button>
+                          </atom-list-tile-avatar>
+                        </atom-progress-circular>
+                        <atom-list-tile-content>
+                          <atom-list-tile-title>
+                            <span>{{ task.name }}</span>
+                          </atom-list-tile-title>
+                          <atom-list-tile-sub-title v-if="task.id === selectedTaskRef">
+                            <div class="time-text">
+                              {{ displayTime(task.time) }} - {{ countTaskCompleted(task) }}/{{ countTaskTotal(task) }}
+                            </div>
+                            <div>
+                              <atom-btn-toggle v-model="currentGoalPeriod" mandatory>
+                                <atom-button flat value="day">
+                                  Today
+                                </atom-button>
+                                <atom-button flat value="week">
+                                  Week
+                                </atom-button>
+                                <atom-button flat value="month">
+                                  Month
+                                </atom-button>
+                                <atom-button flat value="year">
+                                  Year
+                                </atom-button>
+                              </atom-btn-toggle>
+                            </div>
+                          </atom-list-tile-sub-title>
+                          <atom-list-tile-sub-title v-else>
+                            {{ displayTime(task.time) }}
+                          </atom-list-tile-sub-title>
+                          <div v-if="task.id === selectedTaskRef" class="pt-2 pb-2 task-goals">
+                            <atom-layout class="mb-3" row wrap v-if="
+                              filterTaskGoalsPeriod(task.id, displayGoals, 'week').length &&
+                              filterTaskGoalsPeriod(task.id, displayGoals, 'month').length
+                            ">
+                              <atom-flex xs12>
+                                <atom-alert :value="true" color="success" icon="check_circle" outline>
+                                  You are all set.
+                                  Do daily milestones to complete weekly and monthly goals.
+                                </atom-alert>
+                              </atom-flex>
+                            </atom-layout>
+                            <atom-layout class="mb-3" row wrap v-else>
+                              <atom-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, displayGoals, 'month').length">
+                                <atom-chip small @click="(currentGoalPeriod = 'month'), (goalDetailsDialog = true)">
+                                  <atom-avatar class="red text-white"><atom-icon>close</atom-icon></atom-avatar>
+                                  Set Month's Goal
+                                </atom-chip>
+                              </atom-flex>
+                              <atom-flex xs6 v-if="filterTaskGoalsPeriod(task.id, displayGoals, 'month').length">
+                                <atom-chip small>
+                                  <atom-avatar class="success text-white"><atom-icon>check</atom-icon></atom-avatar>
+                                  Set Month's Goal
+                                </atom-chip>
+                              </atom-flex>
+                              <atom-flex xs6 v-if="!filterTaskGoalsPeriod(task.id, displayGoals, 'week').length">
+                                <atom-chip small @click="(currentGoalPeriod = 'week'), (goalDetailsDialog = true)">
+                                  <atom-avatar class="red text-white"><atom-icon>close</atom-icon></atom-avatar>
+                                  Set Week's Goal
+                                </atom-chip>
+                              </atom-flex>
+                              <atom-flex xs6 v-if="filterTaskGoalsPeriod(task.id, displayGoals, 'week').length">
+                                <atom-chip small>
+                                  <atom-avatar class="success text-white"><atom-icon>check</atom-icon></atom-avatar>
+                                  Set Week's Goal
+                                </atom-chip>
+                              </atom-flex>
+                            </atom-layout>
+                            <div v-if="filterTaskGoalsPeriod(task.id, displayGoals, currentGoalPeriod).length">
+                              <div :key="taskGoals.id"
+                                v-for="taskGoals in filterTaskGoalsPeriod(task.id, displayGoals, currentGoalPeriod)">
+                                <atom-list two-line subheader>
+                                  <goal-item-list :key="`goal-${taskGoals.id}-${currentGoalPeriod}-${task.id}`"
+                                    :goal="taskGoals" :progress="getWeekProgress(currentGoalPeriod, taskGoals)"
+                                    :passive="showGoalsSkeleton" @delete-task-goal="deleteTaskGoal"
+                                    @refresh-task-goal="refreshTaskGoal"
+                                    @toggle-goal-display-dialog="toggleGoalDisplayDialog"
+                                    @complete-goal-item="completeGoalItem" @complete-sub-task="completeSubTask" />
+                                </atom-list>
+                              </div>
+                            </div>
+                            <small class="no-goals-text" v-else>
+                              No goal or activity logged.
+                            </small>
+                          </div>
+                        </atom-list-tile-content>
+                        <atom-list-tile-action v-if="task.id !== selectedTaskRef">
+                          <atom-list-tile-action-text>
+                            <b>{{ countTaskCompleted(task) }}</b>/{{ countTaskTotal(task) }}
+                          </atom-list-tile-action-text>
+                          <atom-list-tile-action-text>tasks</atom-list-tile-action-text>
+                        </atom-list-tile-action>
+                      </atom-list-tile>
+                    </div>
+                  </atom-list>
+                  <div
+                    v-if="filterUpcomingPastTask(tabs, displayTasklist) && filterUpcomingPastTask(tabs, displayTasklist).length === 0">
+                    <atom-card-text class="text-xs-center">
+                      <p>No upcoming routine items.</p>
+                    </atom-card-text>
+                  </div>
+                </atom-card>
+              </atom-flex>
+            </atom-layout>
+          </template>
+        </div>
+        <div class="non-current-day" v-else>
+          <div class="pl-3 pr-3 pt-3">
+            <h2 class="mb-3">{{ today }}</h2>
+
+            <!-- Loading state -->
+            <atom-card v-if="$apollo.queries.agendaGoals.loading" class="modern-card">
+              <atom-card-text class="text-xs-center pa-5">
+                <atom-progress-circular indeterminate color="primary" size="40" class="mb-3"></atom-progress-circular>
+                <p class="mb-0">Loading day tasks...</p>
+              </atom-card-text>
+            </atom-card>
+
+            <template v-else-if="displayTasklist && displayTasklist.length">
+              <template v-for="task in displayTasklist">
+                <div :key="task.id" class="mb-4">
+                  <!-- Day tasks for this routine -->
+                  <template v-if="filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length">
+                    <atom-list two-line class="modern-card pa-0">
+                      <template v-for="(taskGoals, i) in filterTaskGoalsPeriod(task.id, agendaGoals, 'day')">
+                        <atom-list-tile v-for="goalItem in taskGoals.goalItems" :key="goalItem.id">
+                          <atom-list-tile-content @click="openEditGoalDialog(goalItem, taskGoals)">
+                            <atom-list-tile-sub-title class="text--primary caption">{{ task.name
+                            }}</atom-list-tile-sub-title>
+                            <atom-list-tile-title>{{ goalItem.body }}</atom-list-tile-title>
+                          </atom-list-tile-content>
+                          <atom-list-tile-action>
+                            <div class="d-flex">
+                              <atom-button icon small @click="openEditGoalDialog(goalItem, taskGoals)">
+                                <atom-icon color="primary" size="20">edit</atom-icon>
+                              </atom-button>
+                              <atom-button icon small
+                                @click="deleteAgendaGoalItem(goalItem.id, taskGoals.date, taskGoals.period)"
+                                class="ml-1">
+                                <atom-icon color="error" size="20">delete</atom-icon>
+                              </atom-button>
+                            </div>
+                          </atom-list-tile-action>
+                        </atom-list-tile>
+                        <atom-divider v-if="i < filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length - 1"
+                          :key="`divider-${i}`"></atom-divider>
+                      </template>
+                    </atom-list>
+                  </template>
+                </div>
+              </template>
+
+              <!-- Show placeholder if no day tasks exist -->
+              <atom-card v-if="!tasklist.some(task => filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length)"
+                class="modern-card">
+                <atom-card-text class="text-xs-center">
+                  <p>No Day Tasks</p>
+                </atom-card-text>
+              </atom-card>
+            </template>
+
+            <atom-card v-else class="modern-card">
+              <atom-card-text class="text-xs-center">
+                <p>No items to display. Please go to Routine Settings and add routine items.</p>
+              </atom-card-text>
+            </atom-card>
+          </div>
+        </div>
+        <atom-dialog v-model="goalDetailsDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
+          <atom-card>
+            <atom-toolbar dark color="primary">
+              <atom-button icon dark @click="goalDetailsDialog = false">
+                <atom-icon>close</atom-icon>
+              </atom-button>
+              <atom-toolbar-title>Add Goal</atom-toolbar-title>
+              <atom-spacer></atom-spacer>
+            </atom-toolbar>
+            <goal-list :goals="isTodaySelected ? goals : agendaGoals" :date="date" :period="currentGoalPeriod"
+              :selectedBody="selectedBody" :tasklist="displayTasklist" :selectedTaskRef="selectedTaskRef"
+              @toggle-goal-details-dialog="toggleGoalDetailsDialog" />
+            <atom-alert :value="true" color="success" icon="ev_station" outline class="ml-3 mr-3">
+              It's better to set Month and Weekly goals first to better guide daily
+              milestones.
+            </atom-alert>
+          </atom-card>
+        </atom-dialog>
+        <atom-dialog v-model="goalDisplayDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
+          <atom-card>
+            <atom-toolbar color="white">
+              <atom-spacer></atom-spacer>
+              <atom-button icon @click="toggleGoalDisplayDialog(null, false)">
+                <atom-icon>close</atom-icon>
+              </atom-button>
+            </atom-toolbar>
+            <atom-card class="no-shadow">
+              <atom-card-text class="pa-0">
+                <goal-creation :newGoalItem="selectedGoalItem" v-on:add-update-goal-entry="toggleGoalDisplayDialog" />
+              </atom-card-text>
+            </atom-card>
+          </atom-card>
+        </atom-dialog>
+        <atom-dialog v-model="quickTaskDialog" max-width="600px">
+          <atom-card>
+            <atom-card-title>
+              <span class="headline">{{ quickTaskTitle }}</span>
+            </atom-card-title>
+            <atom-card-text>
+              <p>
+                {{ quickTaskDescription }}
+              </p>
+              <quick-goal-creation :goals="displayGoals" :date="date" period="day" :tasklist="displayTasklist"
+                :selectedTaskRef="selectedTaskRef" @start-quick-goal-task="checkClick" />
             </atom-card-text>
           </atom-card>
-        </template>
+        </atom-dialog>
+        <atom-dialog v-model="toggleStepModal" width="500">
+          <atom-card>
+            <atom-card-title class="headline grey lighten-2" primary-title>
+              Routine Steps
+            </atom-card-title>
 
-        <atom-card v-else class="modern-card">
-          <atom-card-text class="text-xs-center">
-            <p>No items to display. Please go to Routine Settings and add routine items.</p>
-          </atom-card-text>
-        </atom-card>
-      </div>
-    </div>
-    <atom-dialog
-      v-model="goalDetailsDialog"
-      fullscreen
-      hide-overlay
-      transition="dialog-bottom-transition"
-    >
-      <atom-card>
-        <atom-toolbar dark color="primary">
-          <atom-button icon dark @click="goalDetailsDialog = false">
-            <atom-icon>close</atom-icon>
-          </atom-button>
-          <atom-toolbar-title>Add Goal</atom-toolbar-title>
-          <atom-spacer></atom-spacer>
-        </atom-toolbar>
-        <goal-list
-          :goals="isTodaySelected ? goals : agendaGoals"
-          :date="date"
-          :period="currentGoalPeriod"
-          :selectedBody="selectedBody"
-          :tasklist="displayTasklist"
-          :selectedTaskRef="selectedTaskRef"
-          @toggle-goal-details-dialog="toggleGoalDetailsDialog"
-        />
-        <atom-alert
-          :value="true"
-          color="success"
-          icon="ev_station"
-          outline
-          class="ml-3 mr-3"
-        >
-          It's better to set Month and Weekly goals first to better guide daily
-          milestones.
-        </atom-alert>
-      </atom-card>
-    </atom-dialog>
-    <atom-dialog
-      v-model="goalDisplayDialog"
-      fullscreen
-      hide-overlay
-      transition="dialog-bottom-transition"
-    >
-      <atom-card>
-        <atom-toolbar color="white">
-          <atom-spacer></atom-spacer>
-          <atom-button icon @click="toggleGoalDisplayDialog(null, false)">
-            <atom-icon>close</atom-icon>
-          </atom-button>
-        </atom-toolbar>
-        <atom-card class="no-shadow">
-          <atom-card-text class="pa-0">
-            <goal-creation
-              :newGoalItem="selectedGoalItem"
-              v-on:add-update-goal-entry="toggleGoalDisplayDialog"
-            />
-          </atom-card-text>
-        </atom-card>
-      </atom-card>
-    </atom-dialog>
-    <atom-dialog v-model="quickTaskDialog" max-width="600px">
-      <atom-card>
-        <atom-card-title>
-          <span class="headline">{{ quickTaskTitle }}</span>
-        </atom-card-title>
-        <atom-card-text>
-          <p>
-            {{ quickTaskDescription }}
-          </p>
-          <quick-goal-creation
-            :goals="displayGoals"
-            :date="date"
-            period="day"
-            :tasklist="displayTasklist"
-            :selectedTaskRef="selectedTaskRef"
-            @start-quick-goal-task="checkClick"
-          />
-        </atom-card-text>
-      </atom-card>
-    </atom-dialog>
-    <atom-dialog
-      v-model="toggleStepModal"
-      width="500"
-    >
-      <atom-card>
-        <atom-card-title
-          class="headline grey lighten-2"
-          primary-title
-        >
-          Routine Steps
-        </atom-card-title>
+            <atom-card-text v-if="currentTask && currentTask.steps">
+              <ul>
+                <li v-for="step in currentTask.steps" v-bind:key="step.name">{{ step.name }}</li>
+              </ul>
+            </atom-card-text>
 
-        <atom-card-text v-if="currentTask && currentTask.steps">
-          <ul>
-            <li v-for="step in currentTask.steps" v-bind:key="step.name">{{ step.name }}</li>
-          </ul>
-        </atom-card-text>
+            <atom-divider></atom-divider>
 
-        <atom-divider></atom-divider>
-
-        <atom-card-actions>
-          <atom-spacer></atom-spacer>
-          <atom-button
-            color="primary"
-            flat
-            @click="toggleStepModal = false"
-          >
-            Close
-          </atom-button>
-        </atom-card-actions>
-      </atom-card>
-    </atom-dialog>
-    </container-box>
+            <atom-card-actions>
+              <atom-spacer></atom-spacer>
+              <atom-button color="primary" flat @click="toggleStepModal = false">
+                Close
+              </atom-button>
+            </atom-card-actions>
+          </atom-card>
+        </atom-dialog>
+      </container-box>
+    </pull-to-refresh-container>
 
     <!-- Dashboard FAB for AI Search -->
     <atom-fab-transition>
-      <atom-button
-        key="ai-search-fab-dashboard"
-        fab
-        bottom
-        right
-        color="primary"
-        dark
-        fixed
+      <atom-button key="ai-search-fab-dashboard" fab bottom right color="primary" dark fixed
         :style="$vuetify.breakpoint.xsOnly ? 'z-index: 4; margin-bottom: 72px;' : 'z-index: 1000; margin-bottom: 16px; margin-right: 16px;'"
-        @click.stop="openAiSearchModal"
-      >
+        @click.stop="openAiSearchModal">
         <atom-icon>add</atom-icon>
       </atom-button>
     </atom-fab-transition>
@@ -1123,7 +960,9 @@ export default {
 
     // Open AI Search Modal
     openAiSearchModal() {
+      console.log('FAB clicked! Emitting event...');
       eventBus.$emit(EVENTS.OPEN_AI_SEARCH, { date: this.date });
+      console.log('Event emitted:', EVENTS.OPEN_AI_SEARCH);
     },
 
     // Open edit goal dialog for day tasks
@@ -1541,8 +1380,8 @@ export default {
 
       // Check startEvent condition: D stimulus earned = D target
       if (task.startEvent
-          && dStimulus.earned === dTarget
-          && !this.executedStartEvents.has(task.id) && stimulusName === 'D') {
+        && dStimulus.earned === dTarget
+        && !this.executedStartEvents.has(task.id) && stimulusName === 'D') {
         console.log(`DashBoard: ✅ StartEvent condition met for task ${task.name}: D earned (${dStimulus.earned}) = D target (${dTarget})`);
         this.executeEvent(task.startEvent, 'startEvent', task.id);
         this.executedStartEvents.add(task.id);
@@ -1554,8 +1393,8 @@ export default {
 
       // Check endEvent condition: K stimulus earned = K target
       if (task.endEvent
-          && kStimulus.earned === kTarget
-          && !this.executedEndEvents.has(task.id) && stimulusName === 'K') {
+        && kStimulus.earned === kTarget
+        && !this.executedEndEvents.has(task.id) && stimulusName === 'K') {
         console.log(`DashBoard: ✅ EndEvent condition met for task ${task.name}: K earned (${kStimulus.earned}) = K target (${kTarget})`);
         this.executeEvent(task.endEvent, 'endEvent', task.id);
         this.executedEndEvents.add(task.id);
@@ -1644,8 +1483,8 @@ export default {
         stepUpPeriod.period,
       );
       this.selectedBody = (filteredPeriodGoals
-          && filteredPeriodGoals.length
-          && filteredPeriodGoals[0].goalItems[0].body)
+        && filteredPeriodGoals.length
+        && filteredPeriodGoals[0].goalItems[0].body)
         || '';
       this.selectedTaskRef = task.id;
       this.currentGoalPeriod = period;
@@ -2249,6 +2088,39 @@ export default {
         console.log(`Next routine item "${nextItem.name}" starts in ${nextItem.minutesToStart} minutes`);
       }
     },
+    handlePullToRefresh() {
+      this.trackUserInteraction('pull_to_refresh', 'gesture', {
+        date: this.date,
+        is_today: this.isTodaySelected,
+      });
+
+      // Refresh all data
+      Promise.all([
+        this.refreshApolloQueries(),
+        new Promise((resolve) => setTimeout(resolve, 1000)), // Minimum refresh time for UX
+      ]).then(() => {
+        this.$refs.pullToRefreshWrapper.endRefresh();
+
+        this.$notify({
+          title: 'Refreshed',
+          text: 'Dashboard data has been updated',
+          group: 'notify',
+          type: 'success',
+          duration: 2000,
+        });
+      }).catch((error) => {
+        console.error('Pull to refresh error:', error);
+        this.$refs.pullToRefreshWrapper.endRefresh();
+
+        this.$notify({
+          title: 'Refresh Failed',
+          text: 'Could not refresh data. Please try again.',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+      });
+    },
   },
   computed: {
     /**
@@ -2352,10 +2224,12 @@ export default {
   .concentrated-view .active .v-list__tile--avatar {
     height: auto;
   }
+
   .concentrated-view .active .v-list__tile__content {
     overflow: visible;
     min-width: 0;
   }
+
   .concentrated-view .active .task-goals {
     height: auto;
     max-height: 300px;
@@ -2372,13 +2246,16 @@ export default {
   background: #fff8e1 !important;
   border-left: 4px solid #ffc107;
 }
+
 .caching-label {
   font-size: 13px;
   color: #5d4037;
 }
+
 .caching-progress {
   border-radius: 3px;
 }
+
 .caching-counter {
   font-size: 11px;
 }
@@ -2388,28 +2265,31 @@ export default {
 .current-task {
   overflow: hidden;
 }
+
 .current-task .active .v-list__tile--avatar:hover {
   background-color: #fff;
 }
+
 .v-timeline-item {
   padding-left: 16px;
   padding-right: 16px;
 }
+
 .routine-item.v-timeline-item {
   display: flex;
   border-bottom: 1px solid #ccc;
 }
 
-.routine-item.v-timeline-item ~ .v-timeline-item,
-.routine-item.v-timeline-item ~ .timeline-item-list {
+.routine-item.v-timeline-item~.v-timeline-item,
+.routine-item.v-timeline-item~.timeline-item-list {
   display: none;
 }
 
-.routine-item.v-timeline-item.active ~ .v-timeline-item {
+.routine-item.v-timeline-item.active~.v-timeline-item {
   display: flex;
 }
 
-.routine-item.v-timeline-item.active ~ .timeline-item-list {
+.routine-item.v-timeline-item.active~.timeline-item-list {
   display: block;
 }
 
@@ -2449,23 +2329,54 @@ export default {
   font-weight: bold;
 }
 
+.weekdays {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  gap: 4px;
+}
+
+.weekdays .day {
+  flex: 1;
+  padding: 12px 4px;
+  border-radius: 4px;
+  text-align: center;
+  min-width: 0;
+  /* font-size: 12px; */
+}
+
+#mobileLayout .weekdays .day {
+  border-radius: 16px;
+}
+
+.weekdays .day.active {
+  background-color: #288bd5;
+  color: #fff;
+}
+
 .overlay-icon {
   position: absolute;
   font-size: 14px;
   padding: 2px 0 0 3px;
 }
+
 /* ======== */
 
 .text-white {
   color: #fff;
 }
+
 .inline-goals {
   padding: 8px 16px;
   background-color: antiquewhite;
 }
+
 .inline-goals summary {
   outline: none;
 }
+
 .inline-goals ul {
   list-style: none;
   padding-left: 4px;
@@ -2477,7 +2388,7 @@ export default {
   align-items: center;
 }
 
-.title-options > .sub-header {
+.title-options>.sub-header {
   flex: 12 !important;
 }
 
@@ -2508,6 +2419,7 @@ export default {
   padding-top: 16px;
   padding-bottom: 16px;
 }
+
 .concentrated-view .active .v-list__tile__avatar {
   justify-content: start;
 }
@@ -2563,12 +2475,15 @@ export default {
   height: 24px;
   border-radius: 0;
 }
+
 .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn:first-child {
   border-radius: 20px 0 0 20px;
 }
+
 .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn:last-child {
   border-radius: 0 20px 20px 0;
 }
+
 .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn__content {
   font-size: 10px;
   color: #000;
@@ -2588,10 +2503,12 @@ export default {
   overflow-x: hidden;
   overflow-y: auto;
 }
+
 .concentrated-view .task-goals .v-list__tile {
   padding: 4px 0;
   height: 32px;
 }
+
 .concentrated-view .task-goals .v-input--selection-controls__ripple,
 .concentrated-view .task-goals .v-list__tile__action .v-btn,
 .concentrated-view .task-goals .v-list__tile__title {
@@ -2606,43 +2523,49 @@ export default {
   color: rgba(0, 0, 0, 0.54);
   padding-left: 8px;
 }
+
 .concentrated-view .task-goals .v-list {
   background: transparent;
 }
+
 .concentrated-view .task-goals .v-list__tile__action {
   min-width: 36px;
 }
-.concentrated-view
-  .task-goals
-  .v-input--selection-controls:not(.v-input--hide-details)
-  .v-input__slot {
+
+.concentrated-view .task-goals .v-input--selection-controls:not(.v-input--hide-details) .v-input__slot {
   margin-bottom: 3px;
 }
+
 .concentrated-view .task-goals .v-list__tile__title {
   font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .concentrated-view .task-goals .v-chip {
   cursor: pointer;
   font-size: 11px;
   margin: 0 2px 0 0;
 }
+
 .concentrated-view .task-goals .no-goals-text {
   /* text-align: center; */
   display: block;
   padding: 20px 0 20px 36px;
   color: #777;
 }
+
 .concentrated-view .task-goals .v-alert.v-alert--outline {
   padding: 4px;
   font-size: 11px;
 }
+
 .concentrated-view .task-goals .add-new {
   border-top: 1px solid #ccc;
   padding-top: 8px;
 }
+
 .concentrated-view .task-goals .add-new .v-btn {
   padding: 0;
   margin: 0;
@@ -2652,16 +2575,20 @@ export default {
   font-size: 14px;
   font-weight: 400;
 }
+
 .concentrated-view .task-goals .add-new .v-btn .v-icon {
   padding-right: 12px;
 }
+
 .concentrated-view .task-goals .add-new .v-btn .v-btn__content {
   justify-content: initial;
 }
+
 .skip-box {
   text-align: center;
   padding: 32px 16px;
 }
+
 .skip-box img {
   max-width: 100%;
   width: auto;
@@ -2683,6 +2610,7 @@ export default {
     display: none !important;
   }
 }
+
 .action-box {
   display: flex;
   justify-content: flex-end;
@@ -2712,6 +2640,7 @@ export default {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
