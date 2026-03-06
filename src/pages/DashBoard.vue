@@ -7,7 +7,7 @@
           <div class="d-flex align-center mb-2">
             <atom-icon class="mr-2" color="warning" small>cached</atom-icon>
             <span class="caching-label">Building Projects and Areas context. <strong>{{ currentCachingTag
-                }}</strong></span>
+            }}</strong></span>
           </div>
           <atom-progress-linear :value="dashboardCachingProgress" color="warning" height="6"
             class="ma-0 caching-progress" />
@@ -59,7 +59,7 @@
                           <atom-list-tile-sub-title class="pt-2">
                             <div class="time-text">
                               {{ displayTime(currentTask.time) }} - {{ countTaskCompleted(currentTask) }}/{{
-                              countTaskTotal(currentTask) }}
+                                countTaskTotal(currentTask) }}
                             </div>
                             <div>
                               <atom-btn-toggle v-model="currentGoalPeriod" mandatory>
@@ -236,7 +236,8 @@
               </atom-flex>
               <atom-flex xs12 class="pl-3 pr-3 pb-3" d-flex>
                 <atom-card>
-                  <atom-tabs v-model="tabs" right>
+                  <!-- <atom-tabs v-model="tabs" right> -->
+                  <atom-tabs :value="tabs" @change="tabs = $event" right>
                     <atom-tab>
                       Upcoming
                     </atom-tab>
@@ -387,7 +388,7 @@
                         <atom-list-tile v-for="goalItem in taskGoals.goalItems" :key="goalItem.id">
                           <atom-list-tile-content @click="openEditGoalDialog(goalItem, taskGoals)">
                             <atom-list-tile-sub-title class="text--primary caption">{{ task.name
-                              }}</atom-list-tile-sub-title>
+                            }}</atom-list-tile-sub-title>
                             <atom-list-tile-title>{{ goalItem.body }}</atom-list-tile-title>
                           </atom-list-tile-content>
                           <atom-list-tile-action>
@@ -2086,6 +2087,39 @@ export default {
       if (nextItem && nextItem.isStartingSoon) {
         console.log(`Next routine item "${nextItem.name}" starts in ${nextItem.minutesToStart} minutes`);
       }
+    },
+    handlePullToRefresh() {
+      this.trackUserInteraction('pull_to_refresh', 'gesture', {
+        date: this.date,
+        is_today: this.isTodaySelected,
+      });
+
+      // Refresh all data
+      Promise.all([
+        this.refreshApolloQueries(),
+        new Promise((resolve) => setTimeout(resolve, 1000)), // Minimum refresh time for UX
+      ]).then(() => {
+        this.$refs.pullToRefreshWrapper.endRefresh();
+
+        this.$notify({
+          title: 'Refreshed',
+          text: 'Dashboard data has been updated',
+          group: 'notify',
+          type: 'success',
+          duration: 2000,
+        });
+      }).catch((error) => {
+        console.error('Pull to refresh error:', error);
+        this.$refs.pullToRefreshWrapper.endRefresh();
+
+        this.$notify({
+          title: 'Refresh Failed',
+          text: 'Could not refresh data. Please try again.',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+      });
     },
   },
   computed: {

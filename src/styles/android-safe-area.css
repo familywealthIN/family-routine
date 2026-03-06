@@ -69,7 +69,7 @@ body {
 }
 
 .header {
-  padding-top: max(var(--status-bar-height, 40px), env(safe-area-inset-top)) !important;
+  /* padding-top: max(var(--status-bar-height, 40px), env(safe-area-inset-top)) !important; */
 }
 
 @media (max-width: 600px) {
