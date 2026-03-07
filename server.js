@@ -1,3 +1,4 @@
+require('./src/server/utils/suppressMongooseWarnings')();
 require('dotenv').config();
 const connectDatabase = require('./src/server/db');
 const { startServer } = require('./src/server/graphql');

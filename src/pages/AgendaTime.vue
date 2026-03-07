@@ -309,7 +309,7 @@ export default {
       },
       variables() {
         return {
-          date: this.date,
+          date: this.goalsDate,
         };
       },
       error() {
@@ -328,6 +328,7 @@ export default {
       selectedBody: '',
       selectedTaskRef: '',
       date: moment().format('DD-MM-YYYY'),
+      goalsDate: moment().format('DD-MM-YYYY'),
       weekDays: this.buildWeekdays(),
       periods: ['year', 'month', 'week', 'day'],
       isEditable: true,
@@ -342,9 +343,14 @@ export default {
     date(newVal, oldVal) {
       if (newVal !== oldVal) {
         this.$apollo.queries.tasklist.refetch();
-        const date = moment(this.date, 'DD-MM-YYYY');
+        const newDate = moment(newVal, 'DD-MM-YYYY');
+        const oldDate = moment(oldVal, 'DD-MM-YYYY');
         const todayDate = moment(new Date(), 'DD-MM-YYYY');
-        this.isEditable = moment(date).isSameOrAfter(todayDate, 'day');
+        this.isEditable = moment(newDate).isSameOrAfter(todayDate, 'day');
+        // Only refetch goals when the week changes
+        if (!newDate.isSame(oldDate, 'week')) {
+          this.goalsDate = newVal;
+        }
       }
     },
   },

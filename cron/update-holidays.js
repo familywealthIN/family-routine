@@ -1,4 +1,5 @@
 /* eslint-disable quote-props */
+require('../src/server/utils/suppressMongooseWarnings')();
 require('dotenv').config();
 
 const mongoose = require('mongoose');

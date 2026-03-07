@@ -1,3 +1,6 @@
+// Suppress Mongoose 5.x warnings before anything else
+require('./src/server/utils/suppressMongooseWarnings')();
+
 // Load environment variables for local development
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config(); // eslint-disable-line global-require

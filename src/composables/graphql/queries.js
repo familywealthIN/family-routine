@@ -55,6 +55,21 @@ export const ROUTINE_DATE_QUERY = gql`
   }
 `;
 
+/**
+ * Get aggregated D/K/G stimulus totals for each day of the week
+ * Used in: WeekdaySelectorContainer.vue
+ */
+export const WEEK_STIMULI_QUERY = gql`
+  query weekStimuli($date: String!) {
+    weekStimuli(date: $date) {
+      date
+      D
+      K
+      G
+    }
+  }
+`;
+
 // ============================================================================
 // GOAL QUERIES
 // ============================================================================
@@ -74,8 +89,16 @@ export const AGENDA_GOALS_QUERY = gql`
         body
         progress
         isComplete
+        isMilestone
         taskRef
         goalRef
+        status
+        completedAt
+        subTasks {
+          id
+          body
+          isComplete
+        }
       }
     }
   }
