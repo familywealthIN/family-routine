@@ -16,9 +16,9 @@
           {{ dashboardCachingCompleted }}/{{ dashboardCachingTotal }}
         </div>
       </atom-card>
-      <weekday-selector
+      <weekday-selector-container
         :selectedDate="date"
-        :class="$vuetify.breakpoint.xsOnly ? 'mr-3 mb-2 ml-3 mt-3' : 'mr-3 mb-3 ml-3'"
+        :class="$vuetify.breakpoint.xsOnly ? 'mr-3 mb-1 ml-3 mt-2' : 'mr-3 mb-3 ml-3'"
         @date-selected="handleDateSelected"
       />
     <div v-if="isTodaySelected">
@@ -229,12 +229,12 @@
               <atom-card class="mb-3 pb-3">
                 <div class="text-xs-center">
                   <atom-progress-circular
-                    :value="countTotal('D')"
+                    :value="totalD"
                     :size="50"
                     :rotate="-90"
                     class="mt-3"
                     width="6"
-                    color="primary"
+                    color="#4caf50"
                     >D</atom-progress-circular
                   >
                 </div>
@@ -242,12 +242,12 @@
               <atom-card class="mb-3 pb-3">
                 <div class="text-xs-center">
                   <atom-progress-circular
-                    :value="countTotal('K')"
+                    :value="totalK"
                     :size="50"
                     :rotate="-90"
                     class="mt-3"
                     width="6"
-                    color="primary"
+                    color="#E53935"
                     >K</atom-progress-circular
                   >
                 </div>
@@ -255,12 +255,12 @@
               <atom-card class="mb-3 pb-3">
                 <div class="text-xs-center">
                   <atom-progress-circular
-                    :value="countTotal('G')"
+                    :value="totalG"
                     :size="50"
                     :rotate="-90"
                     class="mt-3"
                     width="6"
-                    color="primary"
+                    color="#2196F3"
                     >G</atom-progress-circular
                   >
                 </div>
@@ -474,14 +474,15 @@
       </template>
     </div>
     <div class="non-current-day" v-else>
-      <div class="pa-3">
-        <div class="d-flex align-center mb-3">
-          <h2 class="mb-0" style="flex: 1">{{ today }}</h2>
-          <atom-button class="ml-4" icon small @click="refreshData" :loading="isRefreshing">
-            <atom-icon color="rgba(0,0,0,0.87)" size="20">refresh</atom-icon>
+      <div class="d-flex pr-3 pl-3 pb-1 pt-2 title-options">
+        <h2>{{ today }}</h2>
+        <div class="action-box">
+          <atom-button icon small @click="refreshData" :loading="isRefreshing">
+            <atom-icon color="rgba(0,0,0,0.57)" size="24">refresh</atom-icon>
           </atom-button>
         </div>
-
+      </div>
+      <div class="pa-3 pt-0">
         <!-- Loading state -->
         <atom-card v-if="$apollo.queries.agendaGoals.loading" class="modern-card">
           <atom-card-text class="text-xs-center pa-5">
@@ -495,50 +496,34 @@
           </atom-card-text>
         </atom-card>
 
-        <template v-else-if="displayTasklist && displayTasklist.length">
-          <template v-for="task in displayTasklist">
-            <div :key="task.id" class="mb-4">
-              <!-- Day tasks for this routine -->
-              <template v-if="filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length">
-                <atom-list two-line class="modern-card pa-0">
-                  <template v-for="(taskGoals, i) in filterTaskGoalsPeriod(task.id, agendaGoals, 'day')">
-                    <atom-list-tile
-                      v-for="goalItem in taskGoals.goalItems"
-                      :key="goalItem.id"
-                    >
-                      <atom-list-tile-content @click="openEditGoalDialog(goalItem, taskGoals)">
-                        <atom-list-tile-sub-title class="text--primary caption">{{ task.name }}</atom-list-tile-sub-title>
-                        <atom-list-tile-title>{{ goalItem.body }}</atom-list-tile-title>
-                      </atom-list-tile-content>
-                      <atom-list-tile-action>
-                        <div class="d-flex">
-                          <atom-button icon small @click="openEditGoalDialog(goalItem, taskGoals)">
-                            <atom-icon color="primary" size="20">edit</atom-icon>
-                          </atom-button>
-                          <atom-button icon small @click="deleteAgendaGoalItem(goalItem.id, taskGoals.date, taskGoals.period)" class="ml-1">
-                            <atom-icon color="error" size="20">delete</atom-icon>
-                          </atom-button>
-                        </div>
-                      </atom-list-tile-action>
-                    </atom-list-tile>
-                    <atom-divider v-if="i < filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length - 1" :key="`divider-${i}`"></atom-divider>
-                  </template>
-                </atom-list>
-              </template>
+        <template v-else-if="nonTodayGoalItems.length">
+          <div v-for="group in nonTodayGoalItems" :key="group.taskId">
+            <atom-subheader class="caption text--primary">
+              {{ group.taskName }}
+            </atom-subheader>
+            <div
+              v-for="taskGoals in group.goals"
+              :key="taskGoals.id"
+            >
+              <atom-list two-line subheader>
+                <goal-item-list
+                  :key="`agenda-goal-${taskGoals.id}-${taskGoals.period}`"
+                  :goal="taskGoals"
+                  :edit-mode="true"
+                  @delete-task-goal="deleteAgendaGoalFromList"
+                  @refresh-task-goal="refreshAgendaGoals"
+                  @toggle-goal-display-dialog="toggleGoalDisplayDialog"
+                  @complete-goal-item="completeAgendaGoalItem"
+                  @complete-sub-task="completeAgendaSubTask"
+                />
+              </atom-list>
             </div>
-          </template>
-
-          <!-- Show placeholder if no day tasks exist -->
-          <atom-card v-if="!tasklist.some(task => filterTaskGoalsPeriod(task.id, agendaGoals, 'day').length)" class="modern-card">
-            <atom-card-text class="text-xs-center">
-              <p>No Day Tasks</p>
-            </atom-card-text>
-          </atom-card>
+          </div>
         </template>
 
         <atom-card v-else class="modern-card">
           <atom-card-text class="text-xs-center">
-            <p>No items to display. Please go to Routine Settings and add routine items.</p>
+            <p>No Day Tasks</p>
           </atom-card-text>
         </atom-card>
       </div>
@@ -700,7 +685,7 @@ import QuickGoalCreation from '../containers/QuickGoalCreationContainer.vue';
 import StreakChecks from '../components/molecules/StreakChecks/StreakChecks.vue';
 import GoalCreation from '../containers/GoalCreationContainer.vue';
 import WakeCheck from '../components/atoms/WakeCheck/WakeCheck.vue';
-import WeekdaySelector from '../components/organisms/WeekdaySelector/WeekdaySelector.vue';
+import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue';
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
 import { TimeFormatMixin } from '../utils/timeFormat';
 import { initDashboardCaching } from '../composables/useDashboardCaching';
@@ -732,6 +717,7 @@ import {
   AtomProgressCircular,
   AtomProgressLinear,
   AtomSpacer,
+  AtomSubheader,
   AtomSwitch,
   AtomTab,
   AtomTabs,
@@ -765,7 +751,7 @@ export default {
     StreakChecks,
     GoalCreation,
     WakeCheck,
-    WeekdaySelector,
+    WeekdaySelectorContainer,
     AtomAlert,
     AtomAvatar,
     AtomBtnToggle,
@@ -792,6 +778,7 @@ export default {
     AtomProgressCircular,
     AtomProgressLinear,
     AtomSpacer,
+    AtomSubheader,
     AtomSwitch,
     AtomTab,
     AtomTabs,
@@ -836,8 +823,9 @@ export default {
     agendaGoals: {
       query: AGENDA_GOALS_QUERY,
       skip() {
-        // Skip query if user is not authenticated
-        return !this.$root.$data.email;
+        // Skip query if user is not authenticated or if today is selected
+        // (dailyGoals query already covers the same data for today)
+        return !this.$root.$data.email || this.isTodaySelected;
       },
       update(data) {
         return data.agendaGoals;
@@ -976,10 +964,10 @@ export default {
           console.log('DashBoard: Current task changed:', newTask, oldTask);
           const isComplete = this.countTaskCompleted(newTask) >= this.countTaskTotal(newTask);
           const isOldComplete = this.countTaskCompleted(oldTask) >= this.countTaskTotal(oldTask);
-          const taskKey = `${this.date}-${newTask.id}`;
 
           // Execute endEvent if task is complete and endEvent hasn't been executed yet
-          if (isComplete && !isOldComplete && !this.executedEndEvents.has(taskKey)) {
+          // Use just task.id as key to match checkEventExecutionForTask which adds task.id to the Set
+          if (isComplete && !isOldComplete && !this.executedEndEvents.has(newTask.id)) {
             this.checkEventExecutionForTask(newTask.id, 'K');
           }
         }
@@ -1160,8 +1148,8 @@ export default {
           id: goalItemId, date, period, dayDate: this.date,
         });
 
-        // Refetch agenda goals
-        if (this.$apollo.queries.agendaGoals) {
+        // Refetch agenda goals only when viewing a non-today date
+        if (!this.isTodaySelected && this.$apollo.queries.agendaGoals) {
           await this.$apollo.queries.agendaGoals.refetch();
         }
 
@@ -1181,6 +1169,84 @@ export default {
           type: 'error',
           duration: 3000,
         });
+      }
+    },
+
+    // Delete goal from agenda list (via GoalItemList event)
+    deleteAgendaGoalFromList({ id, period, date }) {
+      this.$goals.deleteGoalItem({
+        id, period, date, dayDate: this.date,
+      })
+        .then(() => {
+          if (this.$apollo.queries.agendaGoals) {
+            this.$apollo.queries.agendaGoals.refetch();
+          }
+        })
+        .catch(() => {
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+        });
+    },
+
+    // Complete goal item in agenda view (past days)
+    completeAgendaGoalItem(payload) {
+      const {
+        id, period, date, taskRef, isComplete, isMilestone, onSuccess,
+      } = payload;
+
+      this.$goals.completeGoalItem({
+        id, period, date, taskRef, isComplete, isMilestone, dayDate: this.date,
+      })
+        .then(() => {
+          if (onSuccess) onSuccess();
+          if (this.$apollo.queries.agendaGoals) {
+            this.$apollo.queries.agendaGoals.refetch();
+          }
+        })
+        .catch(() => {
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occured',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+        });
+    },
+
+    // Complete subtask in agenda view (past days)
+    completeAgendaSubTask(payload) {
+      const {
+        id, taskId, period, date, isComplete, onSuccess, onError,
+      } = payload;
+
+      this.$goals.completeSubTaskItem({
+        id, taskId, period, date, isComplete, dayDate: this.date,
+      })
+        .then((result) => {
+          if (onSuccess) onSuccess(result);
+        })
+        .catch(() => {
+          if (onError) onError();
+          this.$notify({
+            title: 'Error',
+            text: 'An unexpected error occurred while updating subtask',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+        });
+    },
+
+    // Refetch agenda goals (used after completing items in past days)
+    refreshAgendaGoals() {
+      if (this.$apollo.queries.agendaGoals) {
+        this.$apollo.queries.agendaGoals.refetch();
       }
     },
 
@@ -1343,7 +1409,9 @@ export default {
         // Refetch routine via $routine plugin
         refreshPromises.push(this.$routine.fetchRoutine(this.date, { useCache: false }));
 
-        if (this.$apollo.queries.agendaGoals) {
+        // Only refetch agendaGoals when viewing a non-today date
+        // (for today, dailyGoals covers the same data)
+        if (!this.isTodaySelected && this.$apollo.queries.agendaGoals) {
           refreshPromises.push(this.$apollo.queries.agendaGoals.refetch());
         }
         if (this.$apollo.queries.goals) {
@@ -1923,6 +1991,7 @@ export default {
             console.log('DashBoard: Tasklist refetch completed, checking events for task:', task.id);
             const freshTasklist = result?.data?.routineDate?.tasklist;
             this.checkEventExecutionForTask(task.id, 'D', freshTasklist);
+            this.checkEventExecutionForTask(task.id, 'K', freshTasklist);
             return this.$apollo.queries.goals.refetch();
           })
           .catch(() => {
@@ -2116,7 +2185,7 @@ export default {
       });
     },
     countTotal(stimulus = 'D') {
-      const tasklist = this.$routineTasklist || [];
+      const tasklist = this.tasklist || [];
       const aggregatePoints = tasklist.reduce((total, num) => {
         const currentStimulus = num.stimuli && num.stimuli.find((st) => st.name === stimulus);
         if (currentStimulus && currentStimulus.earned) {
@@ -2304,11 +2373,46 @@ export default {
     displayGoals() {
       return this.goals || [];
     },
+    /**
+     * Total D stimulus score (computed for reactivity)
+     */
+    totalD() {
+      return this.countTotal('D');
+    },
+    /**
+     * Total K stimulus score (computed for reactivity)
+     */
+    totalK() {
+      return this.countTotal('K');
+    },
+    /**
+     * Total G stimulus score (computed for reactivity)
+     */
+    totalG() {
+      return this.countTotal('G');
+    },
     today() {
       return moment(this.date, 'DD-MM-YYYY').format('DD MMMM YYYY');
     },
     isTodaySelected() {
       return this.todayDate === this.date;
+    },
+    /**
+     * Grouped goal items for non-today view.
+     * Groups goals by routine task, showing the task name once per group.
+     */
+    nonTodayGoalItems() {
+      if (!this.displayTasklist || !this.agendaGoals) return [];
+      const groups = [];
+      this.displayTasklist.forEach((task) => {
+        const goals = this.filterTaskGoalsPeriod(
+          task.id, this.agendaGoals, 'day',
+        );
+        if (goals.length) {
+          groups.push({ taskId: task.id, taskName: task.name, goals });
+        }
+      });
+      return groups;
     },
     currentTask() {
       // Use displayTasklist to show cached data while API loads

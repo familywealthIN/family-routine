@@ -1,3 +1,4 @@
+require('./src/server/utils/suppressMongooseWarnings')();
 const connectDatabase = require('./src/server/db');
 const { startServerless } = require('./src/server/graphql');
 

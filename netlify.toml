@@ -4,7 +4,8 @@
 
 [build.environment]
   NODE_OPTIONS = "--openssl-legacy-provider"
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--force"
 
 [[headers]]
   # Define which paths this specific [[headers]] block will cover.
