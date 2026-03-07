@@ -280,9 +280,6 @@ export default {
   apollo: {
     tasklist: {
       query: ROUTINE_DATE_QUERY,
-      skip() {
-        return !this.$root.$data.email;
-      },
       update(data) {
         this.isLoading = false;
         this.tasklist = data.routineDate && data.routineDate.date
@@ -307,9 +304,6 @@ export default {
     },
     goals: {
       query: AGENDA_GOALS_QUERY,
-      skip() {
-        return !this.$root.$data.email;
-      },
       update(data) {
         return data.agendaGoals;
       },

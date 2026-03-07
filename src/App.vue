@@ -136,6 +136,7 @@ try {
         console.warn('Local notification permission not granted');
         return;
       }
+if (Capacitor.getPlatform() === 'android') {
 
       // Create notification channel for Android
       await LocalNotifications.createChannel({
@@ -149,6 +150,7 @@ try {
         lightColor: '#4285f4',
         vibration: true
       });
+    }
 
       PushNotifications.requestPermissions().then(result => {
       console.log('pust notification result', result)

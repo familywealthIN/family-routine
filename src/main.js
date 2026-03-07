@@ -118,7 +118,6 @@ loadData().then(() => {
   const httpLink = createHttpLink({
     // You should use an absolute URL here
     uri: graphQLUrl || 'https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com/dev/graphql',
-    fetch:Capacitor.isNativePlatform() ?  undefined : fetch
   });
 
   // Cache implementation with persistence
@@ -192,12 +191,6 @@ loadData().then(() => {
   const apolloClient = new ApolloClient({
     link: errorLink.concat(normalLink),
     cache,
-    ...(Capacitor.isNativePlatform()?{} :{
-    fetchOptions: {
-      fetch,
-      mode: 'no-cors',
-    }
-  }),
     defaultOptions: {
       watchQuery: {
         fetchPolicy: 'cache-and-network',

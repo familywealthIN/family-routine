@@ -174,21 +174,41 @@ export default {
     recentActivity() {
       if (!Array.isArray(this.goals)) return [];
 
+      // Flatten all goal items with their metadata
+      const allGoalItems = this.goals.flatMap((goal) => (goal.goalItems || []).map((item) => ({
+        ...item,
+        period: goal.period,
+        goalDate: goal.date,
+      })));
+
       const last7Days = Array.from({ length: 7 }, (_, i) => {
         const date = moment().subtract(i, 'days');
-        const dateStr = date.format('DD-MM-YYYY');
+        const dateStr = date.format('YYYY-MM-DD');
+        const altDateStr = date.format('DD-MM-YYYY');
 
-        const dayGoals = this.goals.map((item) => {
-          if (item.date === dateStr && item.period === 'day') {
-            return item.goalItems.map((goal) => ({
-              ...goal,
-              date: item.date,
-              isComplete: goal.isComplete || false,
-              progress: goal.progress || 0,
-            }));
+        // Find goals with activity on this date (created or completed)
+        const dayGoals = allGoalItems.filter((goal) => {
+          // Check createdAt
+          if (goal.createdAt) {
+            const createdDate = moment(goal.createdAt).format('YYYY-MM-DD');
+            if (createdDate === dateStr) return true;
           }
-          return null;
-        }).filter(Boolean).flat();
+          // Check completedAt
+          if (goal.completedAt) {
+            const completedDate = moment(goal.completedAt).format('YYYY-MM-DD');
+            if (completedDate === dateStr) return true;
+          }
+          // Fallback: check if goal date matches (for day period goals)
+          if (goal.goalDate === altDateStr && goal.period === 'day') {
+            return true;
+          }
+          return false;
+        }).map((goal) => ({
+          ...goal,
+          date: goal.goalDate,
+          isComplete: goal.isComplete || false,
+          progress: goal.progress || 0,
+        }));
 
         return {
           date: date.format('MMM DD'),
@@ -206,7 +226,7 @@ export default {
     async fetchGoalsByTag() {
       this.loading = true;
       try {
-        const goals = await this.$goals.fetchGoalsByTag(this.tag, { useCache: false });
+        const goals = await this.$goals.fetchGoalsByTag(this.tag, { useCache: true });
         console.log('Fetch goals - received goals:', goals);
         this.goals = goals || [];
         this.updatePeriodGoals(this.goals);

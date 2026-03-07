@@ -3,6 +3,9 @@
   "appName": "Routine Notes",
   "webDir": "dist",
   "bundledWebRuntime": false,
+  "ios": {
+    "minVersion": "15.0"
+  },
   "plugins": {
        "LocalNotifications": {
       "smallIcon": "ic_stat_icon_config_sample",
@@ -22,13 +25,13 @@
       "overlaysWebView": true
     },
     "SplashScreen": {
-      "launchShowDuration": 3000,
+      "launchShowDuration": 2000,
       "launchAutoHide": true,
-      "launchFadeOutDuration": 3000,
+      "launchFadeOutDuration": 2000,
       "backgroundColor": "#ffffffff",
       "androidSplashResourceName": "splash",
       "androidScaleType": "FIT_CENTER",
-      "showSpinner": true,
+      "showSpinner": false,
       "androidSpinnerStyle": "large",
       "iosSpinnerStyle": "small",
       "spinnerColor": "#999999",

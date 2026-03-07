@@ -179,7 +179,7 @@ export default {
           const platform = Capacitor.getPlatform();
           const clientId = platform === 'ios'
             ? '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com'
-            : '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com';
+            : '350952942983-6h4a30scu81ra204ndpe1md2sccukrhv.apps.googleusercontent.com';
 
           await GoogleAuth.initialize({
             clientId: clientId,
@@ -313,7 +313,7 @@ body.android15 .safe-area-bottom {
   overflow-x: hidden;
   width: 100%;
   box-sizing: border-box;
-  padding-top: 60px;
+  /* padding-top: 20px; */
   /* height of toolbar */
   padding-bottom: 100px;
   min-height: 0;
@@ -399,7 +399,7 @@ body.android15 .safe-area-content {
 }
 
 .v-bottom-nav {
-  height: 100px !important;
+  height: 80px !important;
 }
 
 .login-content-wrapper {
