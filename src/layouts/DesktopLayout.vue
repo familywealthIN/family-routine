@@ -20,6 +20,13 @@
           </v-list-tile-content>
         </v-list-tile>
       </v-list>
+      <v-divider></v-divider>
+      <task-timing-bar
+        :inTimeCount="tasksInTimeCount"
+        :outOfTimeCount="tasksOutOfTimeCount"
+        vertical
+      />
+      <v-divider></v-divider>
       <v-list class="pt-0" dense id="desktopLayoutList">
         <v-divider></v-divider>
 
@@ -136,8 +143,10 @@ import AreaSidebar from '@/components/molecules/AreaSidebar/AreaSidebar.vue';
 import YearGoalSidebar from '@/components/molecules/YearGoalSidebar/YearGoalSidebar.vue';
 import localforage from 'localforage';
 import PendingList from '../containers/PendingListContainer.vue';
+import TaskTimingBar from '../components/atoms/TaskTimingBar/TaskTimingBar.vue';
+import { taskTimingMixin } from '../mixins/taskTimingMixin';
 import eventBus, { EVENTS } from '../utils/eventBus';
-import { ROUTINE_DATE_QUERY } from '../composables/graphql/queries';
+import { ROUTINE_DATE_QUERY, AGENDA_GOALS_QUERY } from '../composables/graphql/queries';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
@@ -149,7 +158,9 @@ export default {
     ProjectSidebar,
     AreaSidebar,
     YearGoalSidebar,
+    TaskTimingBar,
   },
+  mixins: [taskTimingMixin],
   data() {
     return {
       drawer: null,
@@ -214,6 +225,18 @@ export default {
         return !this.$root.$data.email;
       },
     },
+    timingGoals: {
+      query: AGENDA_GOALS_QUERY,
+      variables() {
+        return { date: moment().format('DD-MM-YYYY') };
+      },
+      update(data) {
+        return data.agendaGoals || [];
+      },
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
     toolbarRoutineData: {
       query: ROUTINE_DATE_QUERY,
       variables() {
@@ -243,14 +266,23 @@ export default {
       return this.$root.$data.picture || '/img/default-user.png';
     },
     pageTitle() {
-      return (this.$route.name && this.$route.name[0].toUpperCase() + this.$route.name.substr(1))
-      || 'Routine Notes';
+      if (this.$route.name) {
+        const spaced = this.$route.name.replace(/([a-z])([A-Z])/g, '$1 $2');
+        return spaced[0].toUpperCase() + spaced.substr(1);
+      }
+      return 'Routine Notes';
     },
     toolbarRoutineItems() {
       if (this.toolbarRoutineData && this.toolbarRoutineData.tasklist) {
         return this.toolbarRoutineData.tasklist;
       }
       return [];
+    },
+    dayGoalItemsForTiming() {
+      const goals = this.timingGoals || [];
+      return goals
+        .filter((g) => g.period === 'day')
+        .flatMap((g) => g.goalItems || []);
     },
   },
   watch: {

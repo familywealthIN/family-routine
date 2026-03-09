@@ -1,6 +1,6 @@
 const moment = require('moment');
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_MODEL = 'google/gemini-2.0-flash-001'; // Using a free model from OpenRouter
 
@@ -401,7 +401,13 @@ async function generateMilestonePlan(userQuery, systemPrompt = null) {
       ? `Context from parent goal:\n${systemPrompt}\n\nUsing the above parent goal as context, generate a plan that aligns with and supports it.\n\n`
       : '';
 
-    const prompt = `${contextPrefix}Generate a detailed plan in JSON format for: "${userQuery}".
+    const insightStepsRule = systemPrompt
+      ? '7. At the END of each entry\'s description, append a section titled "**Insight Steps:**" with exactly 3 brief bullet lines (using "- ") that suggest concrete next actions the user can create as follow-up AI tasks, based on the area/project context provided.'
+      : '';
+
+    const prompt = `${contextPrefix}
+    
+    Generate a detailed plan in JSON format for: "${userQuery}".
     Use this structure:
     {
         "period": "${timeframe}",
@@ -418,12 +424,7 @@ async function generateMilestonePlan(userQuery, systemPrompt = null) {
     4. Use newline characters (\\n) and bullet points in descriptions for readability.
     5. DO NOT use any placeholders like $ or {}. Fill in all details with actual content.
     6. Ensure the response is a single, valid JSON object.
-    
-    Based on the plan type, include specific details in the description:
-    - Fitness: Exercises, sets, reps, rest.
-    - Diet: Meals, portions, calories.
-    - Study: Topics, objectives, resources.
-    - Project: Tasks, deadlines, deliverables.`;
+    ${insightStepsRule}`;
 
     const responseText = await fetchFromAi(prompt, true);
 
@@ -454,7 +455,12 @@ async function extractTaskFromNaturalLanguage(naturalLanguageText, systemPrompt)
     ? `Context from area/project dashboard:\n${systemPrompt}\n\nUse the above context to align the task with ongoing progress and next steps.\n\n`
     : '';
 
-  const prompt = `${contextPrefix}Convert this natural language text into a structured todo item:
+  const insightStepsInstruction = systemPrompt
+    ? '5. At the END of the description, append a section titled "**Insight Steps:**" with exactly 3 brief bullet lines (using "- ") that suggest concrete next actions the user can create as follow-up AI tasks, based on the area/project context provided.'
+    : '';
+
+  const prompt = `${contextPrefix}
+  Convert this natural language text into a structured todo item:
 "${naturalLanguageText}"
 
 Extract and provide the following information in a JSON object:
@@ -462,14 +468,13 @@ Extract and provide the following information in a JSON object:
 2. A detailed description explaining what needs to be done
 3. 2-3 relevant tags using prefixes like priority:, category:, type:, context:, etc.
    - A 'priority:' tag is mandatory (do, plan, delegate, automate).
-4. Due date if mentioned (ISO format YYYY-MM-DD) or null if not specified.
+${insightStepsInstruction}
 
 Respond ONLY with a valid JSON object in this exact format:
 {
   "title": "Clear actionable title",
   "description": "Detailed description of what needs to be done",
   "tags": ["priority:do", "category:work", "type:task"],
-  "dueDate": "2025-06-30",
   "priority": "do"
 }`;
 

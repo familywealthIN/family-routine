@@ -1,13 +1,13 @@
 <template>
   <AtomCard class="flex-column" style="width: 100%;">
-    <AtomCardTitle class="headline">
+    <AtomCardTitle class="headline pb-0">
       Description
       <AtomSpacer />
       <AtomButton icon @click="$emit('refresh')">
         <AtomIcon>mdi-refresh</AtomIcon>
       </AtomButton>
     </AtomCardTitle>
-    <AtomCardText class="flex-grow-1 d-flex align-center">
+    <AtomCardText class="flex-grow-1 d-flex align-center pt-1">
       <div v-if="loading" class="text-center w-100">
         <AtomProgressCircular indeterminate color="primary" />
       </div>
