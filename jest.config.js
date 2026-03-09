@@ -22,6 +22,7 @@ module.exports = {
   collectCoverage: false,
   collectCoverageFrom: [
     'src/composables/**/*.js',
+    'src/mixins/**/*.js',
     '!src/composables/index.js',
     '!src/composables/graphql/**',
     '!**/node_modules/**',

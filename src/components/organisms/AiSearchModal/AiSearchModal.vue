@@ -929,7 +929,13 @@ export default {
         // Initialize scroll shadows and focus the input after modal opens
         this.$nextTick(() => {
           this.checkScrollShadows();
-          this.focusPromptInput();
+          // Delay focus to wait for the dialog/bottom-sheet transition (300ms) to complete.
+          // Mobile needs a longer delay so the keyboard doesn't overlap the input.
+          const isMobile = this.$vuetify && this.$vuetify.breakpoint.xsOnly;
+          const focusDelay = isMobile ? 450 : 350;
+          setTimeout(() => {
+            this.focusPromptInput();
+          }, focusDelay);
         });
       } else {
         // Clean up event listener when dialog closes
@@ -976,6 +982,19 @@ export default {
       }
     },
 
+    // Handle search mode transitions:
+    // - Entering search mode: remove auto-added routine tags
+    // - Leaving search mode: auto-populate routine tags
+    isSearchMode(newVal, oldVal) {
+      if (newVal === true && oldVal === false) {
+        // Entering search mode — clear auto-populated routine tags
+        this.removeRoutineTags();
+      } else if (oldVal === true && newVal === false) {
+        // Leaving search mode — restore routine tags
+        this.populateRoutineTags();
+      }
+    },
+
     // Auto-select current routine in toolbar
     $currentTaskData: {
       handler(newVal) {
@@ -988,9 +1007,6 @@ export default {
 
     // Persist settings to localStorage on change
     aiEnhancedTask() {
-      this.saveSettings();
-    },
-    manualMode() {
       this.saveSettings();
     },
     associateParentGoal() {
@@ -1065,6 +1081,9 @@ export default {
 
     // Auto-swap routine tags when routine dropdown selection changes
     toolbarTaskRef(newTaskRef) {
+      // In search mode, do not auto-populate routine tags
+      if (this.isSearchMode) return;
+
       if (!newTaskRef) {
         // Routine cleared — remove auto-added routine tags only
         this.removeRoutineTags();
@@ -1126,8 +1145,10 @@ export default {
      * Populate promptTags from the currently selected routine's tags.
      * Called on modal open to ensure tags are always populated,
      * even when the toolbarTaskRef watcher doesn't fire.
+     * Skipped in search mode — search should start with no auto-populated tags.
      */
     populateRoutineTags() {
+      if (this.isSearchMode) return;
       if (!this.toolbarTaskRef || !this.routines || this.routines.length === 0) return;
       const routine = this.routines.find((r) => r.id === this.toolbarTaskRef);
       const routineTags = (routine && routine.tags) || [];
@@ -1520,7 +1541,6 @@ export default {
     saveSettings() {
       const settings = {
         aiEnhancedTask: this.aiEnhancedTask,
-        manualMode: this.manualMode,
         associateParentGoal: this.associateParentGoal,
         buildOnNextSteps: this.buildOnNextSteps,
       };
@@ -1532,9 +1552,8 @@ export default {
      * Falls back to defaults if no saved settings exist.
      */
     loadSettings() {
-      const saved = getJSON(localStorage.getItem(AI_SEARCH_SETTINGS), {});
+      const saved = getJSON(localStorage.getItem(AI_SEARCH_SETTINGS), {}) || {};
       this.aiEnhancedTask = saved.aiEnhancedTask || false;
-      this.manualMode = saved.manualMode || null;
       this.associateParentGoal = saved.associateParentGoal || false;
       this.buildOnNextSteps = saved.buildOnNextSteps || false;
     },

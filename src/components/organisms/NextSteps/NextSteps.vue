@@ -1,13 +1,13 @@
 <template>
   <v-card>
-    <v-card-title class="headline">
+    <v-card-title class="headline pb-0">
       Next Steps
       <v-spacer></v-spacer>
       <v-btn icon @click="$emit('refresh')">
         <v-icon>mdi-refresh</v-icon>
       </v-btn>
     </v-card-title>
-    <v-card-text>
+    <v-card-text class="pt-1">
       <div v-if="loading" class="text-center">
         <v-progress-circular indeterminate color="primary"></v-progress-circular>
       </div>

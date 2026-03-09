@@ -98,8 +98,26 @@ export default {
   },
   watch: {
     selectedDate: {
-      handler() {
-        this.updateWeekdays();
+      handler(newDate, oldDate) {
+        if (!oldDate) {
+          // Initial load — full build
+          this.weekDays = this.buildWeekdays();
+          return;
+        }
+        const newMoment = moment(newDate, 'DD-MM-YYYY');
+        const oldMoment = moment(oldDate, 'DD-MM-YYYY');
+
+        if (newMoment.isoWeek() === oldMoment.isoWeek() && newMoment.year() === oldMoment.year()) {
+          // Same week — only toggle active flag (optimistic, no rebuild)
+          const selectedWeekday = newMoment.weekday();
+          this.weekDays = this.weekDays.map((day, i) => ({
+            ...day,
+            isActive: selectedWeekday === i,
+          }));
+        } else {
+          // Different week — full rebuild needed
+          this.weekDays = this.buildWeekdays();
+        }
       },
       immediate: true,
     },
@@ -124,17 +142,17 @@ export default {
 
       return weekDays;
     },
-    updateWeekdays() {
-      this.weekDays = this.buildWeekdays();
-    },
     handleDateSelect(index) {
-      const currentDate = moment(this.selectedDate, 'DD-MM-YYYY');
-      const weekStart = currentDate.clone().startOf('week');
-      const newDate = moment(weekStart).add(index, 'days').format('DD-MM-YYYY');
+      if (this.weekDays[index] && this.weekDays[index].isActive) {
+        return; // Already selected — no-op
+      }
 
+      const newDate = this.weekDays[index].fullDate;
+
+      // Optimistic: immediately update active state
       this.weekDays = this.weekDays.map((weekDay, i) => ({
         ...weekDay,
-        isActive: Number(index) === i,
+        isActive: i === index,
       }));
 
       this.$emit('date-selected', newDate);
@@ -165,7 +183,7 @@ export default {
   flex-direction: column;
   align-items: center;
   cursor: pointer;
-  padding: 4px 2px;
+  padding: 12px 2px;
   border-radius: 12px;
   transition: background-color 0.2s ease;
   flex: 1;
@@ -248,7 +266,7 @@ export default {
   }
 
   .day-column {
-    padding: 3px 1px;
+    padding: 8px 1px;
   }
 }
 </style>

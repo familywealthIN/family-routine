@@ -73,6 +73,11 @@ export default {
         console.log('Day changed detected:', this.lastRefreshDate, '→', currentDate);
         this.lastRefreshDate = currentDate;
 
+        // Update component todayDate if it exists (keeps isTodaySelected in sync)
+        if (this.todayDate !== undefined) {
+          this.todayDate = currentDate;
+        }
+
         // Update component date if it exists
         if (this.date && this.date !== currentDate) {
           this.date = currentDate;

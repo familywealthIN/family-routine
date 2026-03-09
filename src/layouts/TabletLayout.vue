@@ -92,8 +92,11 @@ export default {
       return this.$root.$data.picture || '/img/default-user.png';
     },
     pageTitle() {
-      return (this.$route.name && this.$route.name[0].toUpperCase() + this.$route.name.substr(1))
-      || 'Routine Notes';
+      if (this.$route.name) {
+        const spaced = this.$route.name.replace(/([a-z])([A-Z])/g, '$1 $2');
+        return spaced[0].toUpperCase() + spaced.substr(1);
+      }
+      return 'Routine Notes';
     },
   },
   methods: {

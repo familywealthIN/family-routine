@@ -2296,9 +2296,11 @@ export default {
      */
     handleDayChange(newDate) {
       console.log('DashBoard: Day changed to', newDate);
+      // Update both date and todayDate so isTodaySelected stays true
+      this.todayDate = newDate;
       this.date = newDate;
 
-      // Add new routine if needed
+      // Add new routine for the new day
       this.addNewDayRoutine();
     },
 
