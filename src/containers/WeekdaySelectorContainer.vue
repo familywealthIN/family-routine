@@ -38,7 +38,6 @@ export default {
   data() {
     return {
       weekStimuli: [],
-      lastQueriedWeekStart: null,
     };
   },
 
@@ -61,26 +60,17 @@ export default {
   apollo: {
     weekStimuli: {
       query: WEEK_STIMULI_QUERY,
+      fetchPolicy: 'cache-and-network',
       variables() {
-        return { date: this.selectedDate };
+        // Use week start so same-week date changes don't trigger refetches
+        return { date: this.currentWeekStart };
       },
       skip() {
         return !this.$root.$data.email;
       },
       update(data) {
-        this.lastQueriedWeekStart = this.currentWeekStart;
         return data.weekStimuli || [];
       },
-    },
-  },
-
-  watch: {
-    selectedDate(newDate) {
-      const newWeekStart = moment(newDate, 'DD-MM-YYYY').startOf('week').format('DD-MM-YYYY');
-      // Only refetch when the week boundary changes
-      if (newWeekStart !== this.lastQueriedWeekStart) {
-        this.$apollo.queries.weekStimuli.refetch({ date: newDate });
-      }
     },
   },
 };

@@ -20,18 +20,14 @@
         class="task-title-input"
       />
 
-      <!-- Editable Task Description -->
-      <AtomTextarea
-        :value="taskData.description"
-        @input="updateField('description', $event)"
-        placeholder="Description"
-        solo
-        flat
-        auto-grow
-        rows="2"
-        hide-details
-        class="task-description-input"
-      />
+      <!-- Editable Task Description with Markdown -->
+      <div class="task-description-editor">
+        <vue-easymde
+          :value="taskData.description"
+          @input="updateField('description', $event)"
+          :configs="editorConfig"
+        />
+      </div>
     </div>
 
     <!-- Related tasks timeline -->
@@ -42,12 +38,12 @@
 </template>
 
 <script>
+import VueEasymde from 'vue-easymde';
 import RelatedTasksTimeline from '../../molecules/RelatedTasksTimeline/RelatedTasksTimeline.vue';
 import {
   AtomAlert,
   AtomDivider,
   AtomFlex,
-  AtomTextarea,
   AtomTextField,
 } from '../../atoms';
 
@@ -57,9 +53,9 @@ export default {
     AtomAlert,
     AtomDivider,
     AtomFlex,
-    AtomTextarea,
     AtomTextField,
     RelatedTasksTimeline,
+    VueEasymde,
   },
   props: {
     taskData: {
@@ -111,6 +107,26 @@ export default {
       type: Array,
       default: () => [],
     },
+  },
+  data() {
+    return {
+      editorConfig: {
+        toolbar: false,
+        status: false,
+        spellChecker: false,
+        hideIcons: ['side-by-side', 'fullscreen'],
+        minHeight: '80px',
+        maxHeight: '200px',
+        placeholder: 'Description',
+        renderingConfig: {
+          singleLineBreaks: true,
+          markedOptions: {
+            breaks: true,
+            gfm: true,
+          },
+        },
+      },
+    };
   },
   computed: {
     relatedTasks() {
@@ -170,6 +186,8 @@ export default {
 </script>
 
 <style scoped>
+@import '~easymde/dist/easymde.min.css';
+
 .task-creation-form {
   width: 100%;
 }
@@ -203,20 +221,28 @@ export default {
   font-weight: 500 !important;
 }
 
-.task-description-input >>> .v-input__control .v-input__slot {
-  padding: 0 0 8px 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
+/* EasyMDE markdown editor styles */
+.task-description-editor >>> .EasyMDEContainer {
+  background: transparent;
 }
 
-.task-description-input >>> textarea {
-  font-size: 14px !important;
-  line-height: 1.5 !important;
-  color: #666 !important;
+.task-description-editor >>> .EasyMDEContainer .CodeMirror {
+  border: none;
+  border-top: 1px solid #e8e8e8;
+  border-radius: 0;
+  font-size: 14px;
+  color: #666;
+  background: transparent;
+  padding: 0;
 }
 
-.task-description-input >>> textarea::placeholder {
-  color: #aaa !important;
+.task-description-editor >>> .EasyMDEContainer .CodeMirror-scroll {
+  min-height: 80px;
+  max-height: 200px;
+}
+
+.task-description-editor >>> .EasyMDEContainer .CodeMirror .CodeMirror-placeholder {
+  color: #aaa;
 }
 
 /* Mobile responsive */
@@ -230,8 +256,8 @@ export default {
     font-size: 16px !important;
   }
 
-  .task-description-input >>> textarea {
-    font-size: 13px !important;
+  .task-description-editor >>> .EasyMDEContainer .CodeMirror {
+    font-size: 13px;
   }
 }
 </style>
