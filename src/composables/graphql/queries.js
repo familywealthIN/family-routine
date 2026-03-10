@@ -105,12 +105,12 @@ export const AGENDA_GOALS_QUERY = gql`
 `;
 
 /**
- * Get daily goals with full details
+ * Get daily goals with full details (optimized: scoped fetch + parallel queries)
  * Used in: DashBoard.vue
  */
 export const DAILY_GOALS_QUERY = gql`
-  query dailyGoals($date: String!) {
-    dailyGoals(date: $date) {
+  query optimizedDailyGoals($date: String!) {
+    optimizedDailyGoals(date: $date) {
       id
       date
       period
