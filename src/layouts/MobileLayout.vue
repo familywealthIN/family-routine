@@ -225,7 +225,6 @@ export default {
           header: 'App',
           items: [
             // { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
-            { title: 'Priority', icon: 'view_module', route: '/priority' },
             { title: 'Progress', icon: 'pie_chart', route: '/progress' },
             { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
           ],

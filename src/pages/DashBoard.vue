@@ -308,7 +308,7 @@
             </atom-card>
           </atom-flex>
           <atom-flex xs12 class="pl-3 pr-3 pb-3" d-flex>
-            <atom-card>
+            <atom-card class="upcoming-past-card">
               <atom-tabs
                 v-model="tabs"
                 right
@@ -849,7 +849,7 @@ export default {
         // Mark first load as complete
         this.goalsFirstLoad = false;
 
-        return data.dailyGoals;
+        return data.optimizedDailyGoals;
       },
       variables() {
         return {
@@ -2491,6 +2491,9 @@ export default {
 
 <style>
 .current-task {
+  overflow: hidden;
+}
+.upcoming-past-card {
   overflow: hidden;
 }
 .current-task .active .v-list__tile--avatar:hover {

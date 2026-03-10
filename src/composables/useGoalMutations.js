@@ -19,6 +19,8 @@
 import { ref, computed } from '@vue/composition-api';
 import gql from 'graphql-tag';
 import goalStore from '../store/goalStore';
+import currentTaskStore from '../store/currentTask';
+import { updateTaskStatusOnComplete } from '../utils/taskStatus';
 import {
   addGoalItemToCache,
   updateGoalItemCompletionInCache,
@@ -111,6 +113,7 @@ export const COMPLETE_GOAL_ITEM_MUTATION = gql`
       id
       isComplete
       status
+      completedAt
     }
   }
 `;
@@ -452,8 +455,28 @@ export function useGoalMutations(apolloClient, options = {}) {
     }
 
     // --- Optimistic pre-mutation cache update (instant UI) ---
-    const optimisticStatus = isComplete ? 'done' : 'todo';
-    const optimisticCompletedAt = isComplete ? new Date().toISOString() : null;
+    let optimisticStatus = 'todo';
+    let optimisticCompletedAt = null;
+
+    if (isComplete) {
+      // Use task timing context to determine correct status (done vs missed)
+      const currentTask = currentTaskStore.currentTask;
+      const { tasklist } = currentTaskStore;
+
+      if (currentTask && tasklist && tasklist.length && taskRef) {
+        const result = updateTaskStatusOnComplete({
+          taskItem: { taskRef },
+          currentTask,
+          tasklist,
+        });
+        optimisticStatus = result.status;
+        optimisticCompletedAt = result.completedAt.toISOString();
+      } else {
+        // Fallback when no task timing context available
+        optimisticStatus = 'done';
+        optimisticCompletedAt = new Date().toISOString();
+      }
+    }
 
     // 1. Immediately update the day goal item in cache
     updateGoalItemCompletionInCache(apolloClient, {
@@ -490,18 +513,27 @@ export function useGoalMutations(apolloClient, options = {}) {
       const result = data?.completeGoalItem;
       handleSuccess(result, 'completeGoalItem');
 
-      // Server response validates optimistic update — reconcile if needed
-      if (result && result.status !== optimisticStatus) {
-        updateGoalItemCompletionInCache(apolloClient, {
-          id,
-          isComplete,
-          date,
-          period,
-          progress: result.progress,
-          status: result.status,
-          completedAt: result.completedAt,
-          dayDate: params.dayDate,
-        });
+      // Server response reconciliation:
+      // If the server returns a more specific status (e.g. 'missed'), use it.
+      // If the frontend already calculated a timing-based status (e.g. 'missed')
+      // and the server returns generic 'done', keep the frontend's status.
+      if (result) {
+        const serverStatus = result.status;
+        const shouldReconcile = serverStatus !== optimisticStatus
+          && !(optimisticStatus === 'missed' && serverStatus === 'done');
+
+        if (shouldReconcile) {
+          updateGoalItemCompletionInCache(apolloClient, {
+            id,
+            isComplete,
+            date,
+            period,
+            progress: result.progress,
+            status: serverStatus,
+            completedAt: result.completedAt,
+            dayDate: params.dayDate,
+          });
+        }
       }
 
       if (onSuccess) {
