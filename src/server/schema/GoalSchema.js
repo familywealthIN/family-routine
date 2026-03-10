@@ -58,6 +58,8 @@ const GoalSchema = new mongoose.Schema({
   goalItems: [GoalItemSchema],
 });
 
+GoalSchema.index({ email: 1, period: 1, date: 1 });
+
 // Encryption middleware for GoalSchema
 GoalSchema.pre('save', function encryptGoal(next) {
   if (this.goalItems && this.goalItems.length > 0) {

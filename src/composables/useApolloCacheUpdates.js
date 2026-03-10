@@ -81,7 +81,7 @@ function getCurrentDayDate() {
  */
 function getCacheTargets(period) {
   if (period === 'day') {
-    return [{ query: DAILY_GOALS_QUERY, goalsKey: 'dailyGoals', useDayDate: false }];
+    return [{ query: DAILY_GOALS_QUERY, goalsKey: 'optimizedDailyGoals', useDayDate: false }];
   }
   // Non-day periods (week, month, year) should only update AGENDA_GOALS_QUERY
   // because DAILY_GOALS_QUERY already fetches them from the database via autoCheckTaskPeriod
@@ -332,9 +332,9 @@ export function findGoalRefFromCache(apolloClient, goalItemId, date) {
       variables: { date },
     });
 
-    if (!cacheData || !cacheData.dailyGoals) return null;
+    if (!cacheData || !cacheData.optimizedDailyGoals) return null;
 
-    for (const goal of cacheData.dailyGoals) {
+    for (const goal of cacheData.optimizedDailyGoals) {
       if (!goal.goalItems) continue;
       const item = goal.goalItems.find((gi) => gi.id === goalItemId);
       if (item && item.goalRef) {
@@ -401,8 +401,8 @@ export function updateWeekGoalProgressInCache(apolloClient, {
         variables: { date: queryDate },
       }));
 
-      if (dailyCacheData && dailyCacheData.dailyGoals) {
-        const weekGoal = dailyCacheData.dailyGoals.find((g) => g.period === 'week');
+      if (dailyCacheData && dailyCacheData.optimizedDailyGoals) {
+        const weekGoal = dailyCacheData.optimizedDailyGoals.find((g) => g.period === 'week');
         if (weekGoal) {
           const goalItem = weekGoal.goalItems.find((item) => item.id === weekGoalItemId);
           if (goalItem) {
