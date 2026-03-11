@@ -675,6 +675,7 @@ import {
 } from '../composables/graphql/queries';
 import {
   updateRoutineTaskInCache,
+  updateRoutineTaskKEarnedInCache,
 } from '../composables/useApolloCacheUpdates';
 
 import GoalList from '../containers/GoalListContainer.vue';
@@ -1820,6 +1821,15 @@ export default {
         id, period, date, taskRef, isComplete, isMilestone, onSuccess,
       } = payload;
 
+      // Optimistically update K.earned for the linked routine task so .time-text
+      // and .circular-task reflect the change immediately before server responds
+      if (taskRef) {
+        updateRoutineTaskKEarnedInCache(
+          this.$apollo.provider.defaultClient,
+          { date: this.date, taskId: taskRef, isComplete },
+        );
+      }
+
       this.$goals.completeGoalItem({
         id, period, date, taskRef, isComplete, isMilestone, dayDate: this.date,
       })
@@ -1935,6 +1945,16 @@ export default {
       if (!task.passed && !task.wait && !task.ticked) {
         task.ticked = true;
 
+        // Optimistic update: immediately reflect ticked + D.earned in Apollo cache
+        updateRoutineTaskInCache(
+          this.$apollo.provider.defaultClient,
+          {
+            date: this.date,
+            taskId: task.id,
+            ticked: true,
+          },
+        );
+
         const mutationStartTime = Date.now();
         this.$apollo
           .mutate({
@@ -1972,16 +1992,6 @@ export default {
               ticked: task.ticked,
             }, mutationStartTime);
 
-            // Update Apollo cache immediately for instant UI update
-            updateRoutineTaskInCache(
-              this.$apollo.provider.defaultClient,
-              {
-                date: this.date,
-                taskId: task.id,
-                ticked: task.ticked,
-              },
-            );
-
             return this.$routine.fetchRoutine(this.date, { useCache: false });
           })
           // Refetch Apollo routineDate query (includes stimuli) before checking events
@@ -1993,6 +2003,9 @@ export default {
             this.checkEventExecutionForTask(task.id, 'D', freshTasklist);
             this.checkEventExecutionForTask(task.id, 'K', freshTasklist);
             return this.$apollo.queries.goals.refetch();
+          })
+          .then(() => {
+            eventBus.$emit(EVENTS.ROUTINE_TICKED);
           })
           .catch(() => {
             task.ticked = false;
@@ -2267,13 +2280,13 @@ export default {
         return 0;
       }
       const dStimulus = task.stimuli.find((st) => st.name === 'D');
-      const stimulus = task.stimuli.find((st) => st.name === 'K');
-      if (!dStimulus || !stimulus) {
+      const kStimulus = task.stimuli.find((st) => st.name === 'K');
+      if (!dStimulus || !kStimulus) {
         return 0;
       }
-      const count = Number((dStimulus.splitRate / stimulus.splitRate).toFixed(0));
+      const count = Number((dStimulus.splitRate / kStimulus.splitRate).toFixed(0));
       const completed = Number(
-        (count * (Number(stimulus.earned) / Number(task.points))).toFixed(0),
+        (count * (Number(kStimulus.earned) / Number(task.points))).toFixed(0),
       );
       return isNaN(completed) ? 0 : completed;
     },
