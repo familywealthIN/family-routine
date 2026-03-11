@@ -674,6 +674,14 @@ export function updateRoutineTaskInCache(apolloClient, {
     if (passed !== undefined) task.passed = passed;
     if (wait !== undefined) task.wait = wait;
 
+    // Optimistically update D stimulus earned when ticking — mirrors server updateStimulusEarnedPoint('D')
+    if (ticked === true && task.stimuli && Array.isArray(task.stimuli) && task.points) {
+      const dStim = task.stimuli.find((s) => s.name === 'D');
+      if (dStim && dStim.earned < task.points) {
+        dStim.earned = task.points;
+      }
+    }
+
     // Write updated cache
     apolloClient.writeQuery({
       query: ROUTINE_DATE_QUERY,
@@ -685,6 +693,57 @@ export function updateRoutineTaskInCache(apolloClient, {
     return true;
   } catch (error) {
     console.error('[updateRoutineTaskInCache] Error updating cache:', error);
+    return false;
+  }
+}
+
+/**
+ * Optimistically update K stimulus earned when a goal item linked to a routine task is completed/uncompleted.
+ * Mirrors server-side updateStimulusEarnedPoint('K', task).
+ *
+ * @param {Object} apolloClient - Apollo client instance
+ * @param {Object} params - Update parameters
+ * @param {string} params.taskId - Routine task ID (taskRef)
+ * @param {string} params.date - Date in DD-MM-YYYY format
+ * @param {boolean} params.isComplete - Whether the goal item is being completed (true) or uncompleted (false)
+ * @returns {boolean} Success status
+ */
+export function updateRoutineTaskKEarnedInCache(apolloClient, { taskId, date, isComplete }) {
+  try {
+    const cacheData = cloneDeep(apolloClient.readQuery({
+      query: ROUTINE_DATE_QUERY,
+      variables: { date },
+    }));
+
+    if (!cacheData || !cacheData.routineDate || !cacheData.routineDate.tasklist) {
+      return false;
+    }
+
+    const task = cacheData.routineDate.tasklist.find((t) => t.id === taskId);
+    if (!task || !task.stimuli || !task.points) return false;
+
+    const dStim = task.stimuli.find((s) => s.name === 'D');
+    const kStim = task.stimuli.find((s) => s.name === 'K');
+    if (!dStim || !kStim) return false;
+
+    const count = Number((dStim.splitRate / kStim.splitRate).toFixed(0)) || 1;
+    const kIncrement = task.points / count;
+
+    if (isComplete) {
+      kStim.earned = Math.min(task.points, kStim.earned + kIncrement);
+    } else {
+      kStim.earned = Math.max(0, kStim.earned - kIncrement);
+    }
+
+    apolloClient.writeQuery({
+      query: ROUTINE_DATE_QUERY,
+      variables: { date },
+      data: cacheData,
+    });
+
+    return true;
+  } catch (error) {
+    console.error('[updateRoutineTaskKEarnedInCache] Error updating cache:', error);
     return false;
   }
 }
@@ -848,6 +907,7 @@ export default {
 
   // Routine tasks
   updateRoutineTaskInCache,
+  updateRoutineTaskKEarnedInCache,
   updateRoutineTaskMetricsInCache,
   updateRoutineTasklistInCache,
 

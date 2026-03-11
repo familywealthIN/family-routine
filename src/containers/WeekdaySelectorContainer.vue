@@ -12,6 +12,7 @@
 import moment from 'moment';
 import WeekdaySelector from '../components/organisms/WeekdaySelector/WeekdaySelector.vue';
 import { WEEK_STIMULI_QUERY } from '../composables/graphql/queries';
+import eventBus, { EVENTS } from '../utils/eventBus';
 
 export default {
   name: 'WeekdaySelectorContainer',
@@ -71,6 +72,20 @@ export default {
       update(data) {
         return data.weekStimuli || [];
       },
+    },
+  },
+
+  mounted() {
+    eventBus.$on(EVENTS.ROUTINE_TICKED, this.handleRoutineTicked);
+  },
+
+  beforeDestroy() {
+    eventBus.$off(EVENTS.ROUTINE_TICKED, this.handleRoutineTicked);
+  },
+
+  methods: {
+    handleRoutineTicked() {
+      this.$apollo.queries.weekStimuli.refetch();
     },
   },
 };
