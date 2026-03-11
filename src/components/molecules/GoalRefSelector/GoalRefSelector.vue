@@ -254,24 +254,28 @@ export default {
      * Otherwise, items are returned as-is (may already be grouped by container)
      */
     displayItems() {
+      const NO_GOAL_TASK_OPTION = [{ id: null, body: '— No Goal Task —' }];
+
       if (!this.items || this.items.length === 0) {
-        return [];
+        return NO_GOAL_TASK_OPTION;
       }
 
       // If tasklist is provided, apply grouping
       if (this.tasklist && this.tasklist.length > 0) {
-        return groupGoalItemsByTaskRef(this.items, this.tasklist);
+        return [...NO_GOAL_TASK_OPTION, ...groupGoalItemsByTaskRef(this.items, this.tasklist)];
       }
 
       // Return items as-is (may already include header objects from container)
-      return this.items;
+      return [...NO_GOAL_TASK_OPTION, ...this.items];
     },
 
     /**
      * Display text for the currently selected goal (mobile trigger)
      */
     selectedDisplayText() {
-      if (!this.value) return '';
+      if (this.value === null || this.value === undefined || this.value === '') {
+        return this.value === null ? '\u2014 No Goal Task \u2014' : '';
+      }
       // Search in raw items (not display items which include headers)
       const selected = this.items.find(
         (item) => item[this.itemValue] === this.value,
