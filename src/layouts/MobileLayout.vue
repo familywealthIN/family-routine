@@ -169,7 +169,7 @@ import ProjectSidebar from '../components/molecules/ProjectSidebar/ProjectSideba
 import { taskTimingMixin } from '../mixins/taskTimingMixin';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import { threshold } from '../utils/getDates';
-import { AGENDA_GOALS_QUERY } from '../composables/graphql/queries';
+import { AGENDA_GOALS_QUERY, ROUTINE_DATE_QUERY } from '../composables/graphql/queries';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
@@ -186,6 +186,12 @@ export default {
   watch: {
     $route() {
       this.drawer = false;
+    },
+    'toolbarRoutineData.tasklist': {
+      handler(newTasklist) {
+        this.$currentTask.setTasklist(newTasklist || []);
+      },
+      immediate: true,
     },
   },
   apollo: {
@@ -208,6 +214,18 @@ export default {
       },
       update(data) {
         return data.agendaGoals || [];
+      },
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
+    toolbarRoutineData: {
+      query: ROUTINE_DATE_QUERY,
+      variables() {
+        return { date: moment().format('DD-MM-YYYY') };
+      },
+      update(data) {
+        return data.routineDate || {};
       },
       skip() {
         return !this.$root.$data.email;

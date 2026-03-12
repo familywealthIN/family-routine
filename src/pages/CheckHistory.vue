@@ -86,6 +86,10 @@ export default {
               points
               ticked
               passed
+              stimuli {
+                name
+                earned
+              }
             }
           }
         }

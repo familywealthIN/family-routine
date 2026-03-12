@@ -3,7 +3,7 @@
       <atom-container fluid grid-list-lg>
         <atom-layout row wrap class="mb-4">
           <atom-flex d-flex xs7>
-            <h1>{{ progress && progress.progressStatement }}</h1>
+            <h1>{{ capitalize(period || 'week') }} Progress</h1>
           </atom-flex>
           <atom-flex d-flex xs5>
             <div class="text-xs-right">
@@ -55,10 +55,10 @@
           <atom-flex d-flex xs12>
             <tasks-completed-card :details="getCard('task-activities')"></tasks-completed-card>
           </atom-flex>
-          <atom-flex d-flex xs6>
+          <atom-flex d-flex xs12 sm6>
             <table-card :details="getCard('good')"></table-card>
           </atom-flex>
-          <atom-flex d-flex xs6>
+          <atom-flex d-flex xs12 sm6>
             <table-card :details="getCard('bad')"></table-card>
           </atom-flex>
           <atom-flex d-flex xs12>
@@ -219,6 +219,9 @@ export default {
         value: 0,
       };
     },
+    capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    },
     getStartOf(p) {
       return moment(this.date, 'DD-MM-YYYY').startOf(p).format('DD-MM-YYYY');
     },
@@ -229,6 +232,11 @@ export default {
         }
         return total;
       }, 0);
+    },
+  },
+  watch: {
+    period() {
+      this.isLoading = true;
     },
   },
   computed: {
