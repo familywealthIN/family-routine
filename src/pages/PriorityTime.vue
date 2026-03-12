@@ -23,41 +23,41 @@
           <!-- Summary Stats -->
           <atom-layout row wrap class="mr-2 ml-2 mb-4">
             <atom-flex xs6 sm3 class="pa-2">
-              <atom-card class="pa-3" color="error" dark>
-                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1;">
+              <atom-card class="pa-3" style="border-top: 3px solid #F44336;">
+                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1; color: #F44336;">
                   {{ doItems.length }}
                 </h1>
-                <div class="text-xs-center caption mt-2">
+                <div class="text-xs-center caption mt-2 grey--text">
                   DO NOW
                 </div>
               </atom-card>
             </atom-flex>
             <atom-flex xs6 sm3 class="pa-2">
-              <atom-card class="pa-3" color="primary" dark>
-                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1;">
+              <atom-card class="pa-3" style="border-top: 3px solid #1976D2;">
+                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1; color: #1976D2;">
                   {{ planItems.length }}
                 </h1>
-                <div class="text-xs-center caption mt-2">
+                <div class="text-xs-center caption mt-2 grey--text">
                   PLAN
                 </div>
               </atom-card>
             </atom-flex>
             <atom-flex xs6 sm3 class="pa-2">
-              <atom-card class="pa-3" color="warning" dark>
-                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1;">
+              <atom-card class="pa-3" style="border-top: 3px solid #FF9800;">
+                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1; color: #FF9800;">
                   {{ delegateItems.length }}
                 </h1>
-                <div class="text-xs-center caption mt-2">
+                <div class="text-xs-center caption mt-2 grey--text">
                   DELEGATE
                 </div>
               </atom-card>
             </atom-flex>
             <atom-flex xs6 sm3 class="pa-2">
-              <atom-card class="pa-3" color="grey darken-1" dark>
-                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1;">
+              <atom-card class="pa-3" style="border-top: 3px solid #757575;">
+                <h1 class="text-xs-center" style="font-size: 48px; line-height: 1; color: #757575;">
                   {{ automateItems.length }}
                 </h1>
-                <div class="text-xs-center caption mt-2">
+                <div class="text-xs-center caption mt-2 grey--text">
                   AUTOMATE
                 </div>
               </atom-card>

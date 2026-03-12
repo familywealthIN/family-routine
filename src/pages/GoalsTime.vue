@@ -2,7 +2,7 @@
 /* eslint-disable max-len */
 </script>
 <template>
-  <container-box :isLoading="false">
+  <container-box :isLoading="!firstLoadDone">
     <atom-card
       dark
       flat
@@ -50,27 +50,27 @@
         <atom-container fill-height>
           <atom-layout align-center justify-center class="goal-stats-row">
             <div class="goal-stat-item text-xs-center">
-              <div class="overline white--text stat-label">Day</div>
+              <div class="overline white--text stat-label">Total Day Tasks</div>
               <div class="display-3 white--text font-weight-medium">{{ getDayGoalsCount() }}</div>
             </div>
             <v-divider vertical dark class="goal-stat-divider"></v-divider>
             <div class="goal-stat-item text-xs-center">
-              <div class="overline white--text stat-label">Week</div>
+              <div class="overline white--text stat-label">Total Week Tasks</div>
               <div class="display-3 white--text font-weight-medium">{{ getWeekGoalsCount() }}</div>
             </div>
             <v-divider vertical dark class="goal-stat-divider"></v-divider>
             <div class="goal-stat-item text-xs-center">
-              <div class="overline white--text stat-label">Month</div>
+              <div class="overline white--text stat-label">Total Month Tasks</div>
               <div class="display-3 white--text font-weight-medium">{{ getMonthGoalsCount() }}</div>
             </div>
             <v-divider vertical dark class="goal-stat-divider"></v-divider>
             <div class="goal-stat-item text-xs-center">
-              <div class="overline white--text stat-label">Year</div>
+              <div class="overline white--text stat-label">Total Year Tasks</div>
               <div class="display-3 white--text font-weight-medium">{{ getYearGoalsCount() }}</div>
             </div>
             <v-divider vertical dark class="goal-stat-divider"></v-divider>
             <div class="goal-stat-item text-xs-center">
-              <div class="overline white--text stat-label">Life</div>
+              <div class="overline white--text stat-label">Total Life Tasks</div>
               <div class="display-3 white--text font-weight-medium">{{ getLifetimeGoalsCount() }}</div>
             </div>
           </atom-layout>
@@ -125,7 +125,7 @@
               </atom-button>
             </atom-flex>
           </atom-layout>
-          <div class="text-xs-center pt-3 pb-3" >
+          <div class="text-xs-center pt-3 pb-3" style="display: none;">
             <atom-btn-toggle v-model="rangeType" >
               <atom-button flat value="upcoming">
                 Upcoming
@@ -288,6 +288,9 @@ export default {
       skip() {
         return !this.$root.$data.email;
       },
+      result() {
+        this.firstLoadDone = true;
+      },
       update(data) {
         console.log('[GoalsTime] goals query update:', data);
         return data.goalsOptimized || [];
@@ -405,6 +408,7 @@ export default {
     addGoalItemDialog: false,
     buttonLoading: false,
     isNavigating: false,
+    firstLoadDone: false,
     goalActionText: 'Add Goal',
     groupId: '',
     defaultGoalItem,
@@ -619,6 +623,11 @@ export default {
   .image-card-img {
     height: 180px;
     border-radius: 12px 12px 0 0;
+  }
+  @media (max-width: 600px) {
+    .image-card-img {
+      height: 260px;
+    }
   }
   .goal-stats-row {
     gap: 0;

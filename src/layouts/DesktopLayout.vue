@@ -292,6 +292,12 @@ export default {
         this.toolbarRoutine = val || null;
       },
     },
+    'toolbarRoutineData.tasklist': {
+      handler(newTasklist) {
+        this.$currentTask.setTasklist(newTasklist || []);
+      },
+      immediate: true,
+    },
   },
   methods: {
     openAiSearch() {

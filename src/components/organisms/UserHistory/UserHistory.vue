@@ -15,18 +15,37 @@
                 :type="type"
                 :end="end"
                 color="primary"
-                @change="updateRange"
                 @click:date="showTaskDialog"
+                @change="updateRange"
               >
                 <template v-slot:day="{ date }">
-                  <template v-for="routine in routinesMap[date]">
-                    <AtomProgressCircular
-                      :key="routine.id"
-                      rotate="-90"
-                      :value="countTotal((routine && routine.tasklist) || [])"
-                      color="primary"
-                    />
-                  </template>
+                  <div v-if="routineStimuliMap[date]" class="cal-ring-container">
+                    <svg viewBox="0 0 48 48" class="cal-rings-svg">
+                      <!-- Track circles (background) -->
+                      <circle cx="24" cy="24" r="22" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="2"/>
+                      <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="2"/>
+                      <circle cx="24" cy="24" r="18" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="2"/>
+                      <!-- Value circles (filled progress) -->
+                      <circle
+                        cx="24" cy="24" r="22" fill="none" stroke="#2196F3" stroke-width="2"
+                        :stroke-dasharray="138.23"
+                        :stroke-dashoffset="getRingOffset(date, 'G', 138.23)"
+                        stroke-linecap="round" class="cal-ring-value"
+                      />
+                      <circle
+                        cx="24" cy="24" r="20" fill="none" stroke="#E53935" stroke-width="2"
+                        :stroke-dasharray="125.66"
+                        :stroke-dashoffset="getRingOffset(date, 'K', 125.66)"
+                        stroke-linecap="round" class="cal-ring-value"
+                      />
+                      <circle
+                        cx="24" cy="24" r="18" fill="none" stroke="#4caf50" stroke-width="2"
+                        :stroke-dasharray="113.10"
+                        :stroke-dashoffset="getRingOffset(date, 'D', 113.10)"
+                        stroke-linecap="round" class="cal-ring-value"
+                      />
+                    </svg>
+                  </div>
                 </template>
               </AtomCalendar>
             </AtomSheet>
@@ -114,7 +133,6 @@ import {
   AtomListTileAction,
   AtomListTileContent,
   AtomListTileTitle,
-  AtomProgressCircular,
   AtomSheet,
   AtomSpacer,
   AtomSubheader,
@@ -139,7 +157,6 @@ export default {
     AtomListTileAction,
     AtomListTileContent,
     AtomListTileTitle,
-    AtomProgressCircular,
     AtomSheet,
     AtomSpacer,
     AtomSubheader,
@@ -168,6 +185,24 @@ export default {
       });
       return map;
     },
+    // Build stimuli map keyed by calendar date — matches weekStimuliMap structure { D, K, G }
+    routineStimuliMap() {
+      const map = {};
+      this.routines.forEach((routine) => {
+        const date = this.formatCalendarDate(routine.date);
+        const result = { D: 0, K: 0, G: 0 };
+        if (routine.tasklist) {
+          ['D', 'K', 'G'].forEach((name) => {
+            result[name] = routine.tasklist.reduce((sum, task) => {
+              const stim = task.stimuli && task.stimuli.find((s) => s.name === name);
+              return sum + (stim ? (stim.earned || 0) : 0);
+            }, 0);
+          });
+        }
+        map[date] = result;
+      });
+      return map;
+    },
   },
   methods: {
     updateRange({ start }) {
@@ -193,6 +228,22 @@ export default {
         return 'alarm';
       }
       return 'more_horiz';
+    },
+    getRoutineEfficiency(date) {
+      const routines = this.routinesMap[date];
+      if (!routines || !routines.length) return 0;
+      const tasklist = routines[0].tasklist || [];
+      const total = tasklist.reduce((sum, t) => sum + (t.points || 1), 0);
+      if (!total) return 0;
+      const ticked = tasklist.reduce((sum, t) => sum + (t.ticked ? (t.points || 1) : 0), 0);
+      return Math.min(100, Math.ceil((ticked / total) * 100));
+    },
+    getRingOffset(date, stimulus, circumference) {
+      const stimuli = this.routineStimuliMap[date];
+      if (!stimuli) return circumference;
+      const value = stimuli[stimulus] || 0;
+      const pct = Math.min(Math.max(value, 0), 100);
+      return circumference * (1 - pct / 100);
     },
     getButtonColor(task) {
       if (task.ticked) {
@@ -241,14 +292,24 @@ export default {
     line-height: 1;
   }
 
-  .history .v-calendar-weekly__day .v-progress-circular {
+  .cal-ring-container {
     position: absolute;
-    top: 3px;
+    top: 1px;
     left: 50%;
-    margin-left: -16px;
+    transform: translateX(-50%);
+    width: 34px;
+    height: 34px;
+    pointer-events: none;
+    z-index: 4;
   }
 
-  .history .v-outside .v-progress-circular {
-    color: #ccc !important;
+  .cal-rings-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .cal-ring-value {
+    transition: stroke-dashoffset 0.5s ease;
   }
 </style>

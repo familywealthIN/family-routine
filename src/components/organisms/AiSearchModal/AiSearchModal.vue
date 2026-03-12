@@ -1500,9 +1500,11 @@ export default {
       this.showBottomShadow = false;
       // Restore saved settings from localStorage
       this.loadSettings();
-      // If opened from search bar, default to search mode
+      // If opened from search bar, default to search mode; otherwise always reset to task mode
       if (this.openMode === 'search') {
         this.manualMode = 'search';
+      } else {
+        this.manualMode = null;
       }
       this.settingsMenuOpen = false;
       this.settingsDrawerOpen = false;
@@ -1835,6 +1837,7 @@ export default {
 .prompt-textarea >>> textarea {
   max-height: 72px; /* ~3 rows */
   overflow-y: auto !important;
+  font-size: 16px; /* Prevent iOS zoom on focus */
   line-height: 1.6;
   color: #333;
 }

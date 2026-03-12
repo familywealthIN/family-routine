@@ -497,27 +497,47 @@
         </atom-card>
 
         <template v-else-if="nonTodayGoalItems.length">
-          <div v-for="group in nonTodayGoalItems" :key="group.taskId">
-            <atom-subheader class="caption text--primary">
-              {{ group.taskName }}
-            </atom-subheader>
-            <div
-              v-for="taskGoals in group.goals"
-              :key="taskGoals.id"
-            >
-              <atom-list two-line subheader>
-                <goal-item-list
-                  :key="`agenda-goal-${taskGoals.id}-${taskGoals.period}`"
-                  :goal="taskGoals"
-                  :edit-mode="true"
-                  @delete-task-goal="deleteAgendaGoalFromList"
-                  @refresh-task-goal="refreshAgendaGoals"
-                  @toggle-goal-display-dialog="toggleGoalDisplayDialog"
-                  @complete-goal-item="completeAgendaGoalItem"
-                  @complete-sub-task="completeAgendaSubTask"
-                />
-              </atom-list>
-            </div>
+          <div v-for="group in nonTodayGoalItems" :key="group.taskId" class="mb-3">
+            <v-card class="pb-2">
+              <v-card-title class="pb-1 pt-2">
+                <span class="subheading">{{ group.taskName }}</span>
+              </v-card-title>
+              <v-divider></v-divider>
+              <v-card-text class="pa-0">
+                <v-list dense class="transparent pa-0">
+                  <template v-for="taskGoals in group.goals">
+                    <v-list-tile
+                      v-for="goalItem in taskGoals.goalItems"
+                      :key="goalItem.id"
+                      class="agenda-day-item"
+                    >
+                      <v-list-tile-action v-if="!isFutureDateSelected" @click.stop>
+                        <v-checkbox
+                          :input-value="goalItem.isComplete"
+                          color="primary"
+                          @change="completeAgendaGoalItem({ id: goalItem.id, period: taskGoals.period, date: taskGoals.date, taskRef: goalItem.taskRef, isComplete: $event, isMilestone: goalItem.isMilestone })"
+                        />
+                      </v-list-tile-action>
+                      <v-list-tile-content>
+                        <v-list-tile-title :class="{ 'agenda-item-completed': goalItem.isComplete }">
+                          {{ goalItem.body }}
+                        </v-list-tile-title>
+                      </v-list-tile-content>
+                      <v-list-tile-action>
+                        <v-btn icon small @click.stop="toggleGoalDisplayDialog({ ...goalItem, period: taskGoals.period, date: taskGoals.date }, true)">
+                          <v-icon size="18">edit</v-icon>
+                        </v-btn>
+                      </v-list-tile-action>
+                      <v-list-tile-action>
+                        <v-btn icon small @click.stop="deleteAgendaGoalFromList({ id: goalItem.id, period: taskGoals.period, date: taskGoals.date })">
+                          <v-icon size="18">delete</v-icon>
+                        </v-btn>
+                      </v-list-tile-action>
+                    </v-list-tile>
+                  </template>
+                </v-list>
+              </v-card-text>
+            </v-card>
           </div>
         </template>
 
@@ -2412,6 +2432,9 @@ export default {
     isTodaySelected() {
       return this.todayDate === this.date;
     },
+    isFutureDateSelected() {
+      return moment(this.date, 'DD-MM-YYYY').isAfter(moment(), 'day');
+    },
     /**
      * Grouped goal items for non-today view.
      * Groups goals by routine task, showing the task name once per group.
@@ -2836,5 +2859,22 @@ export default {
   100% {
     background-position: -200% 0;
   }
+}
+
+.agenda-day-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.agenda-day-item:last-child {
+  border-bottom: none;
+}
+
+.agenda-day-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.agenda-item-completed {
+  text-decoration: line-through;
+  opacity: 0.6;
 }
 </style>
