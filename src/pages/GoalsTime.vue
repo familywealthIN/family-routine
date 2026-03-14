@@ -596,8 +596,6 @@ export default {
 </script>
 
 <style>
-<<<<<<< HEAD
-=======
   .image-card-img {
     height: 180px;
     border-radius: 12px 12px 0 0;
@@ -625,7 +623,6 @@ export default {
     margin-bottom: 4px;
     opacity: 0.85;
   }
->>>>>>> upstream/master
   .second-right-btn {
    right: 84px;
   }
