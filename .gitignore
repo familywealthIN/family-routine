@@ -27,7 +27,7 @@ yarn-error.log*
 .firebaserc
 serviceAccountKey.json
 GoogleService-info.plist
-google-service.json
+google-services.json
 .env
 .serverless
 secrets.json
