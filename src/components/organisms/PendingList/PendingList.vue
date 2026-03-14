@@ -1,7 +1,8 @@
 <template>
   <AtomLayout row wrap>
     <AtomFlex xs12>
-      <AtomCard class="pt-3 ma-3 modern-card">
+      <AtomContainer style="max-width: 900px;">
+        <AtomCard class="modern-card">
         <AtomList subheader>
           <AtomSpacer />
           <AtomSubheader
@@ -38,6 +39,7 @@
           </AtomListTile>
         </AtomList>
       </AtomCard>
+      </AtomContainer>
     </AtomFlex>
     <AtomFlex xs12 d-flex>
       <div class="pl-3 pr-3 formPending mt-3 mb-2">
@@ -90,6 +92,7 @@ import {
   AtomButton,
   AtomCard,
   AtomCardText,
+  AtomContainer,
   AtomDialog,
   AtomFlex,
   AtomIcon,
@@ -115,6 +118,7 @@ export default {
     AtomButton,
     AtomCard,
     AtomCardText,
+    AtomContainer,
     AtomDialog,
     AtomFlex,
     AtomIcon,

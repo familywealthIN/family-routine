@@ -144,21 +144,6 @@ export default {
       const isNotLifetimeDate = this.date !== '01-01-1970';
       const hasRoutineSelected = !!this.taskRef;
       const isArray = Array.isArray(this.goalItemsRef);
-      const hasItems = this.goalItemsRef && this.goalItemsRef.length > 0;
-
-      console.log('showMilestoneOption debug:', {
-        period: this.period,
-        date: this.date,
-        taskRef: this.taskRef,
-        hasPeriod,
-        hasDate,
-        isNotLifetimeDate,
-        hasRoutineSelected,
-        isArray,
-        goalItemsRefLength: this.goalItemsRef ? this.goalItemsRef.length : 0,
-        hasItems,
-        result: hasPeriod && hasDate && isNotLifetimeDate && hasRoutineSelected && isArray && hasItems,
-      });
 
       return (
         hasPeriod
@@ -166,7 +151,6 @@ export default {
         && isNotLifetimeDate
         && hasRoutineSelected
         && isArray
-        && hasItems
       );
     },
   },

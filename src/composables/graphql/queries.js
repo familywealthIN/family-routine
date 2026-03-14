@@ -55,6 +55,21 @@ export const ROUTINE_DATE_QUERY = gql`
   }
 `;
 
+/**
+ * Get aggregated D/K/G stimulus totals for each day of the week
+ * Used in: WeekdaySelectorContainer.vue
+ */
+export const WEEK_STIMULI_QUERY = gql`
+  query weekStimuli($date: String!) {
+    weekStimuli(date: $date) {
+      date
+      D
+      K
+      G
+    }
+  }
+`;
+
 // ============================================================================
 // GOAL QUERIES
 // ============================================================================
@@ -74,20 +89,28 @@ export const AGENDA_GOALS_QUERY = gql`
         body
         progress
         isComplete
+        isMilestone
         taskRef
         goalRef
+        status
+        completedAt
+        subTasks {
+          id
+          body
+          isComplete
+        }
       }
     }
   }
 `;
 
 /**
- * Get daily goals with full details
+ * Get daily goals with full details (optimized: scoped fetch + parallel queries)
  * Used in: DashBoard.vue
  */
 export const DAILY_GOALS_QUERY = gql`
-  query dailyGoals($date: String!) {
-    dailyGoals(date: $date) {
+  query optimizedDailyGoals($date: String!) {
+    optimizedDailyGoals(date: $date) {
       id
       date
       period

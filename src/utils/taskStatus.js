@@ -1,5 +1,24 @@
 import moment from 'moment';
 
+/**
+ * Parse a timestamp that may be an epoch-millisecond string, number, or ISO date.
+ * @param {string|number} value - The raw timestamp value
+ * @returns {moment.Moment} A valid moment instance
+ */
+function parseTimestamp(value) {
+  if (!value) return moment.invalid();
+  // If it's a numeric string (epoch ms), convert to number first
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    return moment(parseInt(value, 10));
+  }
+  // If it's already a number, use directly
+  if (typeof value === 'number') {
+    return moment(value);
+  }
+  // Otherwise parse as date string
+  return moment(value);
+}
+
 export const TASK_STATUS = {
   TODO: 'todo',
   PROGRESS: 'progress',
@@ -69,7 +88,7 @@ export function determineTaskStatus({
       return TASK_STATUS.DONE;
     }
 
-    const completedAt = moment(taskItem.completedAt);
+    const completedAt = parseTimestamp(taskItem.completedAt);
     const taskFromTasklist = tasklist.find((t) => t.id === taskItem.taskRef || t.taskId === taskItem.taskRef);
 
     if (taskFromTasklist) {
@@ -99,7 +118,7 @@ export function determineTaskStatus({
     return TASK_STATUS.TODO;
   }
 
-  const createdAt = moment(taskItem.createdAt);
+  const createdAt = parseTimestamp(taskItem.createdAt);
   const taskFromTasklist = tasklist.find((t) => t.id === taskItem.taskRef || t.taskId === taskItem.taskRef);
 
   if (!taskFromTasklist) {

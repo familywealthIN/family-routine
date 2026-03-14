@@ -1,16 +1,16 @@
 <template>
-  <v-card :color="color" dark class="ma-2 quadrant-card elevation-2">
+  <v-card class="ma-2 quadrant-card elevation-2" :style="{ borderTop: `3px solid ${colorHex}` }">
     <v-card-title class="pb-1">
-      <v-icon left>{{ icon }}</v-icon>
+      <v-icon left :color="color">{{ icon }}</v-icon>
       <div class="flex-grow-1">
-        <h3 class="headline">{{ title }}</h3>
-        <div class="caption" style="opacity: 0.9;">{{ subtitle }}</div>
+        <h3 class="headline" :style="{ color: colorHex }">{{ title }}</h3>
+        <div class="caption grey--text">{{ subtitle }}</div>
       </div>
-      <v-chip dark small>{{ items.length }}</v-chip>
+      <v-chip small :color="color" dark>{{ items.length }}</v-chip>
     </v-card-title>
-    <v-divider dark></v-divider>
+    <v-divider></v-divider>
     <v-card-text class="pa-0">
-      <v-list dark dense class="transparent">
+      <v-list dense class="transparent">
         <template v-if="items.length">
           <v-list-tile
             v-for="item in items"
@@ -22,15 +22,14 @@
               <v-checkbox
                 :input-value="item.isComplete"
                 @change="$emit('toggle-complete', item)"
-                dark
-                color="white"
+                :color="color"
               />
             </v-list-tile-action>
             <v-list-tile-content>
               <v-list-tile-title :class="{ 'completed': item.isComplete }">
                 {{ item.body }}
               </v-list-tile-title>
-              <v-list-tile-sub-title class="caption white--text" style="opacity: 0.8;">
+              <v-list-tile-sub-title class="caption grey--text">
                 {{ formatPeriod(item.period) }}
                 <span v-if="item.taskRef"> • {{ getTaskName(item.taskRef) }}</span>
               </v-list-tile-sub-title>
@@ -44,7 +43,7 @@
         </template>
         <v-list-tile v-else>
           <v-list-tile-content>
-            <v-list-tile-title class="grey--text text--lighten-2 text-xs-center pa-3">
+            <v-list-tile-title class="grey--text text-xs-center pa-3">
               No {{ title.toLowerCase() }} items
             </v-list-tile-title>
           </v-list-tile-content>
@@ -83,6 +82,17 @@ export default {
       default: () => [],
     },
   },
+  computed: {
+    colorHex() {
+      const map = {
+        error: '#F44336',
+        primary: '#1976D2',
+        warning: '#FF9800',
+        'grey darken-1': '#757575',
+      };
+      return map[this.color] || '#1976D2';
+    },
+  },
   methods: {
     formatPeriod(period) {
       if (!period) return '';
@@ -105,7 +115,7 @@ export default {
 }
 
 .quadrant-item {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .quadrant-item:last-child {
@@ -113,7 +123,7 @@ export default {
 }
 
 .quadrant-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
 .completed {

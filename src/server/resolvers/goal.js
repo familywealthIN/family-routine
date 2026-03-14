@@ -509,6 +509,52 @@ const query = {
       ];
     },
   },
+  optimizedDailyGoals: {
+    type: GraphQLList(GoalType),
+    args: {
+      date: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      // Only fetch goals for relevant periods instead of all goals
+      const relevantDates = [
+        args.date,
+        periodGoalDates('week', args.date),
+        periodGoalDates('month', args.date),
+        periodGoalDates('year', args.date),
+      ];
+
+      const goals = await GoalModel.find({
+        email,
+        period: { $in: ['day', 'week', 'month', 'year'] },
+        date: { $in: relevantDates },
+      }).exec();
+
+      const cleanGoals = goals.filter((goal) => goal.goalItems && goal.goalItems.length);
+
+      // Run all independent queries in parallel
+      const [dayGoals, weekGoals, monthGoals, yearGoals] = await Promise.all([
+        GoalModel.find({ period: 'day', date: args.date, email }).exec(),
+        autoCheckTaskPeriod({
+          currentPeriod: 'week', stepDownPeriod: 'day', cleanGoals, completionThreshold: threshold.weekDays, date: args.date, email,
+        }),
+        autoCheckTaskPeriod({
+          currentPeriod: 'month', stepDownPeriod: 'week', cleanGoals, completionThreshold: threshold.monthWeeks, date: args.date, email,
+        }),
+        autoCheckTaskPeriod({
+          currentPeriod: 'year', stepDownPeriod: 'month', cleanGoals, completionThreshold: threshold.yearMonths, date: args.date, email,
+        }),
+      ]);
+
+      return [
+        ...dayGoals,
+        ...weekGoals,
+        ...monthGoals,
+        ...yearGoals,
+      ];
+    },
+  },
   monthTaskGoals: {
     type: GraphQLList(GoalType),
     args: {
@@ -1300,8 +1346,9 @@ const mutation = {
       const email = getEmailfromSession(context);
 
       // Only update routine stimuli if taskRef is provided
+      let routine = null;
       if (args.period === 'day' && args.taskRef) {
-        const routine = await findTodayandSort(args, email);
+        routine = await findTodayandSort(args, email);
         // eslint-disable-next-line no-underscore-dangle
         const task = routine?.tasklist?.find((t) => t._id.toString() === args.taskRef.toString());
         if (task) {
@@ -1327,11 +1374,34 @@ const mutation = {
         'goalItems.$.isComplete': args.isComplete,
       };
 
+      let resolvedStatus = args.isComplete ? 'done' : 'todo';
+      const resolvedCompletedAt = args.isComplete ? new Date() : null;
+
       // Add status and timestamp updates for day period tasks
       if (args.period === 'day') {
         if (args.isComplete) {
-          updateFields['goalItems.$.completedAt'] = new Date();
-          updateFields['goalItems.$.status'] = 'done'; // Will be refined by frontend with task timing logic
+          updateFields['goalItems.$.completedAt'] = resolvedCompletedAt;
+
+          // Determine correct status using task timing context
+          if (routine && routine.tasklist && args.taskRef) {
+            const taskFromList = routine.tasklist.find(
+              (t) => t._id.toString() === args.taskRef.toString(),
+            );
+            if (taskFromList) {
+              const taskIndex = routine.tasklist.findIndex(
+                (t) => t._id.toString() === args.taskRef.toString(),
+              );
+              const taskTime = moment(taskFromList.time, 'HH:mm');
+              const nextTask = routine.tasklist[taskIndex + 1];
+              const nextTime = nextTask ? moment(nextTask.time, 'HH:mm') : moment('23:59', 'HH:mm');
+              const completedMoment = moment(resolvedCompletedAt);
+
+              if (completedMoment.isAfter(nextTime)) {
+                resolvedStatus = 'missed';
+              }
+            }
+          }
+          updateFields['goalItems.$.status'] = resolvedStatus;
         } else {
           updateFields['goalItems.$.completedAt'] = null;
           updateFields['goalItems.$.status'] = 'todo'; // Reset to default when unchecked
@@ -1413,7 +1483,11 @@ const mutation = {
           });
         }
       }
-      return args;
+      return {
+        ...args,
+        status: resolvedStatus,
+        completedAt: resolvedCompletedAt,
+      };
     },
   },
   autosaveGoalContribution: {

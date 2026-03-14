@@ -1,8 +1,8 @@
 <template>
   <container-box transparent="true" :isLoading="loading">
-    <div>
+    <div class="dashboard-content">
       <atom-layout wrap>
-        <atom-flex xs12>
+        <atom-flex xs12 class="pa-2">
           <h1 class="display-1">{{ areaTitle }}</h1>
         </atom-flex>
 
@@ -14,7 +14,7 @@
             class="flex-grow-1"
           />
         </atom-flex>
-        <atom-flex xs12 md6 class="d-flex pa-2">
+        <atom-flex xs12 md6 class="d-flex pa-2 hidden-xs-only">
           <atom-layout row wrap class="flex-grow-1 w-100">
             <atom-flex xs12 sm6 v-for="period in periods" :key="period.name" class="d-flex pa-2">
               <atom-card class="flex-column" style="width: 100%;">
@@ -43,7 +43,7 @@
         </atom-flex>
 
         <!-- Recent Activity Timeline -->
-        <atom-flex xs12 md6>
+        <atom-flex xs12 md6 class="hidden-xs-only">
           <atom-card class="ma-2">
             <atom-card-title>Recent Activity</atom-card-title>
             <atom-card-text>
@@ -80,11 +80,11 @@
             </atom-card-text>
           </atom-card>
         </atom-flex>
-        <atom-flex xs12 md6>
+        <atom-flex xs12 md6 class="pa-2">
           <next-steps
             :goal-items="getFlattenedGoalItems()"
             :tag="tag"
-            class="ma-2"
+            class="flex-grow-1"
           />
         </atom-flex>
       </atom-layout>
@@ -321,5 +321,17 @@ export default {
 
 .v-progress-circular {
   margin: 16px;
+}
+
+@media (max-width: 599px) {
+  .display-1 {
+    font-size: 1.5rem !important;
+    margin-bottom: 8px;
+  }
+
+  .dashboard-content {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
 }
 </style>

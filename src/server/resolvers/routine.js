@@ -4,8 +4,10 @@ const {
   GraphQLID,
   GraphQLString,
   GraphQLBoolean,
+  GraphQLFloat,
   GraphQLList,
   GraphQLNonNull,
+  GraphQLObjectType,
 } = require('graphql');
 const moment = require('moment');
 
@@ -90,6 +92,70 @@ function buildStimuliForRoutineItem(taskId, tasklist) {
     },
   ];
 }
+
+// Threshold constants for G stimulus scaling
+const stimuliThreshold = {
+  weekDays: 5,
+  monthWeeks: 3,
+  yearMonths: 6,
+};
+
+function stimuliWeekOfMonth(d) {
+  const addFirstWeek = moment(d, 'DD-MM-YYYY').startOf('month').weekday() < 2 ? 1 : 0;
+  return moment(d, 'DD-MM-YYYY').week() - moment(d, 'DD-MM-YYYY').startOf('month').week() + addFirstWeek;
+}
+
+/**
+ * Aggregate stimulus totals for a routine's tasklist
+ * Uses the same formula as the frontend countTotal / server getProgressReport countTotal
+ */
+function aggregateStimuliForRoutine(routine) {
+  const result = { D: 0, K: 0, G: 0 };
+  if (!routine || !routine.tasklist || !Array.isArray(routine.tasklist)) {
+    return result;
+  }
+
+  ['D', 'K', 'G'].forEach((stimName) => {
+    const total = routine.tasklist.reduce((sum, task) => {
+      const stim = task.stimuli && task.stimuli.find((s) => s.name === stimName);
+      if (stim && stim.earned) {
+        return sum + stim.earned;
+      }
+      return sum;
+    }, 0);
+
+    if (stimName === 'G') {
+      const dateStr = routine.date;
+      if (moment(dateStr, 'DD-MM-YYYY').weekday() >= stimuliThreshold.weekDays - 1) {
+        if (stimuliWeekOfMonth(dateStr) >= stimuliThreshold.monthWeeks - 1) {
+          if (moment(dateStr, 'DD-MM-YYYY').month() >= stimuliThreshold.yearMonths - 1) {
+            result.G = total;
+          } else {
+            result.G = Number((total * 1.334).toFixed(1));
+          }
+        } else {
+          result.G = total * 2;
+        }
+      } else {
+        result.G = total * 4;
+      }
+    } else {
+      result[stimName] = total;
+    }
+  });
+
+  return result;
+}
+
+const DayStimuliType = new GraphQLObjectType({
+  name: 'DayStimuli',
+  fields: {
+    date: { type: GraphQLString },
+    D: { type: GraphQLFloat },
+    K: { type: GraphQLFloat },
+    G: { type: GraphQLFloat },
+  },
+});
 
 const query = {
   routines: {
@@ -200,6 +266,46 @@ const query = {
       }
 
       return findTodayandSort(args, email);
+    },
+  },
+  weekStimuli: {
+    type: GraphQLList(DayStimuliType),
+    args: {
+      date: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      // Calculate all 7 dates in the week containing the given date
+      const weekStart = moment(args.date, 'DD-MM-YYYY').startOf('week');
+      const weekDates = [];
+      for (let i = 0; i < 7; i += 1) {
+        weekDates.push(weekStart.clone().add(i, 'days').format('DD-MM-YYYY'));
+      }
+
+      // Fetch all routines for the week in a single query
+      const routines = await RoutineModel.find({
+        email,
+        date: { $in: weekDates },
+      }).exec();
+
+      // Build a map of date -> routine for quick lookup
+      const routineMap = {};
+      routines.forEach((routine) => {
+        routineMap[routine.date] = routine;
+      });
+
+      // Return stimulus totals for each day of the week
+      return weekDates.map((dateStr) => {
+        const routine = routineMap[dateStr];
+        const stimuli = aggregateStimuliForRoutine(routine);
+        return {
+          date: dateStr,
+          D: stimuli.D,
+          K: stimuli.K,
+          G: stimuli.G,
+        };
+      });
     },
   },
 };

@@ -274,6 +274,14 @@ export default {
     margin-right: -10px !important;
     font-size: 14px !important;
   }
+
+  .goal-tag-input {
+    font-size: 16px;
+  }
+
+  .goal-tag-input::placeholder {
+    font-size: 16px;
+  }
 }
 
 /* Inline tag text input */
