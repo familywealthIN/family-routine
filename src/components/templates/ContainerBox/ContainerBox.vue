@@ -42,7 +42,7 @@ export default {
 
 <style>
 .animated {
-  padding-top:55px;
+  padding-top: 55px;
   -webkit-animation-duration: 1s;
   animation-duration: 1s;
   -webkit-animation-fill-mode: both;
