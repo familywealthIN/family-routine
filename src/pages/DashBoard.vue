@@ -638,24 +638,41 @@
           Routine Steps
         </atom-card-title>
 
-            <atom-divider></atom-divider>
+        <atom-card-text v-if="currentTask && currentTask.steps">
+          <ul>
+            <li v-for="step in currentTask.steps" v-bind:key="step.name">{{ step.name }}</li>
+          </ul>
+        </atom-card-text>
 
-            <atom-card-actions>
-              <atom-spacer></atom-spacer>
-              <atom-button color="primary" flat @click="toggleStepModal = false">
-                Close
-              </atom-button>
-            </atom-card-actions>
-          </atom-card>
-        </atom-dialog>
-      </container-box>
-    </pull-to-refresh-container>
+        <atom-divider></atom-divider>
+
+        <atom-card-actions>
+          <atom-spacer></atom-spacer>
+          <atom-button
+            color="primary"
+            flat
+            @click="toggleStepModal = false"
+          >
+            Close
+          </atom-button>
+        </atom-card-actions>
+      </atom-card>
+    </atom-dialog>
+    </container-box>
 
     <!-- Dashboard FAB for AI Search -->
     <atom-fab-transition>
-      <atom-button key="ai-search-fab-dashboard" fab bottom right color="primary" dark fixed
+      <atom-button
+        key="ai-search-fab-dashboard"
+        fab
+        bottom
+        right
+        color="primary"
+        dark
+        fixed
         :style="$vuetify.breakpoint.xsOnly ? 'z-index: 4; margin-bottom: 72px;' : 'z-index: 1000; margin-bottom: 16px; margin-right: 16px;'"
-        @click.stop="openAiSearchModal">
+        @click.stop="openAiSearchModal"
+      >
         <atom-icon>add</atom-icon>
       </atom-button>
     </atom-fab-transition>
@@ -684,7 +701,6 @@ import {
 import GoalList from '../containers/GoalListContainer.vue';
 import GoalItemList from '../components/organisms/GoalItemList/GoalItemList.vue';
 import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
-import PullToRefreshContainer from '../components/molecules/PullToRefreshContainer/PullToRefreshContainer.vue';
 import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
 import QuickGoalCreation from '../containers/QuickGoalCreationContainer.vue';
 import StreakChecks from '../components/molecules/StreakChecks/StreakChecks.vue';
@@ -752,7 +768,6 @@ export default {
     GoalList,
     GoalItemList,
     ContainerBox,
-    PullToRefreshContainer,
     QuickGoalCreation,
     StreakChecks,
     GoalCreation,
@@ -867,6 +882,7 @@ export default {
   data() {
     return {
       isLoading: false,
+      isRefreshing: false,
       goalDetailsDialog: false,
       goalDisplayDialog: false,
       quickTaskDialog: false,
@@ -969,10 +985,10 @@ export default {
           console.log('DashBoard: Current task changed:', newTask, oldTask);
           const isComplete = this.countTaskCompleted(newTask) >= this.countTaskTotal(newTask);
           const isOldComplete = this.countTaskCompleted(oldTask) >= this.countTaskTotal(oldTask);
-          const taskKey = `${this.date}-${newTask.id}`;
 
           // Execute endEvent if task is complete and endEvent hasn't been executed yet
-          if (isComplete && !isOldComplete && !this.executedEndEvents.has(taskKey)) {
+          // Use just task.id as key to match checkEventExecutionForTask which adds task.id to the Set
+          if (isComplete && !isOldComplete && !this.executedEndEvents.has(newTask.id)) {
             this.checkEventExecutionForTask(newTask.id, 'K');
           }
         }
@@ -1116,9 +1132,7 @@ export default {
 
     // Open AI Search Modal
     openAiSearchModal() {
-      console.log('FAB clicked! Emitting event...');
       eventBus.$emit(EVENTS.OPEN_AI_SEARCH, { date: this.date });
-      console.log('Event emitted:', EVENTS.OPEN_AI_SEARCH);
     },
 
     // Open edit goal dialog for day tasks
@@ -1265,13 +1279,8 @@ export default {
         is_today: this.isTodaySelected,
       });
 
-      // Refresh all data
-      Promise.all([
-        this.refreshApolloQueries(),
-        new Promise((resolve) => setTimeout(resolve, 1000)), // Minimum refresh time for UX
-      ]).then(() => {
-        this.$refs.pullToRefreshWrapper.endRefresh();
-
+      try {
+        await this.refreshApolloQueries();
         this.$notify({
           title: 'Refreshed',
           text: 'Dashboard data has been updated',
@@ -1279,10 +1288,8 @@ export default {
           type: 'success',
           duration: 2000,
         });
-      }).catch((error) => {
-        console.error('Pull to refresh error:', error);
-        this.$refs.pullToRefreshWrapper.endRefresh();
-
+      } catch (error) {
+        console.error('Refresh error:', error);
         this.$notify({
           title: 'Refresh Failed',
           text: 'Could not refresh data. Please try again.',
@@ -1290,7 +1297,9 @@ export default {
           type: 'error',
           duration: 3000,
         });
-      });
+      } finally {
+        this.isRefreshing = false;
+      }
     },
 
     // Global event handlers
@@ -1576,9 +1585,11 @@ export default {
     },
 
     // Check event execution for a specific task (used after user interactions)
-    checkEventExecutionForTask(taskId, stimulusName) {
-      // Find the task in the current tasklist (from store)
-      const task = this.$routineTasklist.find((t) => t.id === taskId);
+    // freshTasklist: optional array from refetch result to avoid stale Apollo cache
+    checkEventExecutionForTask(taskId, stimulusName, freshTasklist) {
+      // Use fresh tasklist from refetch if provided, otherwise fall back to displayTasklist
+      const tasklist = freshTasklist || this.displayTasklist;
+      const task = tasklist.find((t) => t.id === taskId);
 
       if (!task || !task.stimuli || !Array.isArray(task.stimuli)) {
         console.log(`DashBoard: No task or stimuli found for taskId ${taskId}`);
@@ -1619,8 +1630,8 @@ export default {
 
       // Check startEvent condition: D stimulus earned = D target
       if (task.startEvent
-        && dStimulus.earned === dTarget
-        && !this.executedStartEvents.has(task.id) && stimulusName === 'D') {
+          && dStimulus.earned === dTarget
+          && !this.executedStartEvents.has(task.id) && stimulusName === 'D') {
         console.log(`DashBoard: ✅ StartEvent condition met for task ${task.name}: D earned (${dStimulus.earned}) = D target (${dTarget})`);
         this.executeEvent(task.startEvent, 'startEvent', task.id);
         this.executedStartEvents.add(task.id);
@@ -1632,8 +1643,8 @@ export default {
 
       // Check endEvent condition: K stimulus earned = K target
       if (task.endEvent
-        && kStimulus.earned === kTarget
-        && !this.executedEndEvents.has(task.id) && stimulusName === 'K') {
+          && kStimulus.earned === kTarget
+          && !this.executedEndEvents.has(task.id) && stimulusName === 'K') {
         console.log(`DashBoard: ✅ EndEvent condition met for task ${task.name}: K earned (${kStimulus.earned}) = K target (${kTarget})`);
         this.executeEvent(task.endEvent, 'endEvent', task.id);
         this.executedEndEvents.add(task.id);
@@ -1722,8 +1733,8 @@ export default {
         stepUpPeriod.period,
       );
       this.selectedBody = (filteredPeriodGoals
-        && filteredPeriodGoals.length
-        && filteredPeriodGoals[0].goalItems[0].body)
+          && filteredPeriodGoals.length
+          && filteredPeriodGoals[0].goalItems[0].body)
         || '';
       this.selectedTaskRef = task.id;
       this.currentGoalPeriod = period;
@@ -1972,8 +1983,17 @@ export default {
                 tickRoutineItem(id: $id, taskId: $taskId, ticked: $ticked) {
                   id
                   tasklist {
+                    id
                     name
                     ticked
+                    points
+                    startEvent
+                    endEvent
+                    stimuli {
+                      name
+                      splitRate
+                      earned
+                    }
                   }
                 }
               }
@@ -1994,10 +2014,14 @@ export default {
 
             return this.$routine.fetchRoutine(this.date, { useCache: false });
           })
-          .then(() => {
-            // Check for event execution after task state changes and refetch completes
+          // Refetch Apollo routineDate query (includes stimuli) before checking events
+          .then(() => this.$apollo.queries.routineDate.refetch())
+          .then((result) => {
+            // Check for event execution using fresh refetch data to avoid stale cache
             console.log('DashBoard: Tasklist refetch completed, checking events for task:', task.id);
-            this.checkEventExecutionForTask(task.id, 'D');
+            const freshTasklist = result?.data?.routineDate?.tasklist;
+            this.checkEventExecutionForTask(task.id, 'D', freshTasklist);
+            this.checkEventExecutionForTask(task.id, 'K', freshTasklist);
             return this.$apollo.queries.goals.refetch();
           })
           .then(() => {
@@ -2464,63 +2488,15 @@ export default {
 </script>
 
 <style scoped>
-.pull-to-refresh-container {
-  position: relative;
-  height: 100vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.pull-to-refresh-indicator {
-  position: absolute;
-  top: -80px;
-  left: 0;
-  right: 0;
-  height: 80px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
-  z-index: 1000;
-  opacity: 0;
-}
-
-.pull-to-refresh-indicator.visible {
-  opacity: 1;
-}
-
-.pull-to-refresh-indicator.refreshing {
-  transform: translateY(80px) !important;
-}
-
-.refresh-text {
-  margin-top: 8px;
-  font-size: 14px;
-  color: #666;
-  font-weight: 500;
-}
-
-/* Ensure proper touch handling on mobile */
-@media (max-width: 768px) {
-  .pull-to-refresh-container {
-    touch-action: pan-y;
-  }
-}
-
 /* Mobile: task-goals full width */
 @media (max-width: 600px) {
   .concentrated-view .active .v-list__tile--avatar {
     height: auto;
   }
-
   .concentrated-view .active .v-list__tile__content {
     overflow: visible;
     min-width: 0;
   }
-
   .concentrated-view .active .task-goals {
     height: auto;
     max-height: 300px;
@@ -2537,16 +2513,13 @@ export default {
   background: #fff8e1 !important;
   border-left: 4px solid #ffc107;
 }
-
 .caching-label {
   font-size: 13px;
   color: #5d4037;
 }
-
 .caching-progress {
   border-radius: 3px;
 }
-
 .caching-counter {
   font-size: 11px;
 }
@@ -2562,27 +2535,25 @@ export default {
 .current-task .active .v-list__tile--avatar:hover {
   background-color: #fff;
 }
-
 .v-timeline-item {
   padding-left: 16px;
   padding-right: 16px;
 }
-
 .routine-item.v-timeline-item {
   display: flex;
   border-bottom: 1px solid #ccc;
 }
 
-.routine-item.v-timeline-item~.v-timeline-item,
-.routine-item.v-timeline-item~.timeline-item-list {
+.routine-item.v-timeline-item ~ .v-timeline-item,
+.routine-item.v-timeline-item ~ .timeline-item-list {
   display: none;
 }
 
-.routine-item.v-timeline-item.active~.v-timeline-item {
+.routine-item.v-timeline-item.active ~ .v-timeline-item {
   display: flex;
 }
 
-.routine-item.v-timeline-item.active~.timeline-item-list {
+.routine-item.v-timeline-item.active ~ .timeline-item-list {
   display: block;
 }
 
@@ -2622,54 +2593,23 @@ export default {
   font-weight: bold;
 }
 
-.weekdays {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 500;
-  gap: 4px;
-}
-
-.weekdays .day {
-  flex: 1;
-  padding: 12px 4px;
-  border-radius: 4px;
-  text-align: center;
-  min-width: 0;
-  /* font-size: 12px; */
-}
-
-#mobileLayout .weekdays .day {
-  border-radius: 16px;
-}
-
-.weekdays .day.active {
-  background-color: #288bd5;
-  color: #fff;
-}
-
 .overlay-icon {
   position: absolute;
   font-size: 14px;
   padding: 2px 0 0 3px;
 }
-
 /* ======== */
 
 .text-white {
   color: #fff;
 }
-
 .inline-goals {
   padding: 8px 16px;
   background-color: antiquewhite;
 }
-
 .inline-goals summary {
   outline: none;
 }
-
 .inline-goals ul {
   list-style: none;
   padding-left: 4px;
@@ -2681,7 +2621,7 @@ export default {
   align-items: center;
 }
 
-.title-options>.sub-header {
+.title-options > .sub-header {
   flex: 12 !important;
 }
 
@@ -2712,22 +2652,33 @@ export default {
   padding-top: 16px;
   padding-bottom: 16px;
 }
-
 .concentrated-view .active .v-list__tile__avatar {
   justify-content: start;
 }
 
+.concentrated-view .v-list__tile {
+  overflow: hidden;
+}
+
+.concentrated-view .v-list__tile__content {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.concentrated-view .v-list__tile__title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
 .concentrated-view .active .v-list__tile__content {
   justify-content: start;
-  min-width: 0;
 }
 
 .concentrated-view .active .v-list__tile__title {
   font-size: 24px;
   height: 28px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .concentrated-view .active .goal-list .v-list__tile__title {
@@ -2756,15 +2707,12 @@ export default {
   height: 24px;
   border-radius: 0;
 }
-
 .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn:first-child {
   border-radius: 20px 0 0 20px;
 }
-
 .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn:last-child {
   border-radius: 0 20px 20px 0;
 }
-
 .concentrated-view .v-list__tile__sub-title .v-item-group .v-btn__content {
   font-size: 10px;
   color: #000;
@@ -2784,12 +2732,10 @@ export default {
   overflow-x: hidden;
   overflow-y: auto;
 }
-
 .concentrated-view .task-goals .v-list__tile {
   padding: 4px 0;
   height: 32px;
 }
-
 .concentrated-view .task-goals .v-input--selection-controls__ripple,
 .concentrated-view .task-goals .v-list__tile__action .v-btn,
 .concentrated-view .task-goals .v-list__tile__title {
@@ -2804,49 +2750,43 @@ export default {
   color: rgba(0, 0, 0, 0.54);
   padding-left: 8px;
 }
-
 .concentrated-view .task-goals .v-list {
   background: transparent;
 }
-
 .concentrated-view .task-goals .v-list__tile__action {
   min-width: 36px;
 }
-
-.concentrated-view .task-goals .v-input--selection-controls:not(.v-input--hide-details) .v-input__slot {
+.concentrated-view
+  .task-goals
+  .v-input--selection-controls:not(.v-input--hide-details)
+  .v-input__slot {
   margin-bottom: 3px;
 }
-
 .concentrated-view .task-goals .v-list__tile__title {
   font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 .concentrated-view .task-goals .v-chip {
   cursor: pointer;
   font-size: 11px;
   margin: 0 2px 0 0;
 }
-
 .concentrated-view .task-goals .no-goals-text {
   /* text-align: center; */
   display: block;
   padding: 20px 0 20px 36px;
   color: #777;
 }
-
 .concentrated-view .task-goals .v-alert.v-alert--outline {
   padding: 4px;
   font-size: 11px;
 }
-
 .concentrated-view .task-goals .add-new {
   border-top: 1px solid #ccc;
   padding-top: 8px;
 }
-
 .concentrated-view .task-goals .add-new .v-btn {
   padding: 0;
   margin: 0;
@@ -2856,20 +2796,16 @@ export default {
   font-size: 14px;
   font-weight: 400;
 }
-
 .concentrated-view .task-goals .add-new .v-btn .v-icon {
   padding-right: 12px;
 }
-
 .concentrated-view .task-goals .add-new .v-btn .v-btn__content {
   justify-content: initial;
 }
-
 .skip-box {
   text-align: center;
   padding: 32px 16px;
 }
-
 .skip-box img {
   max-width: 100%;
   width: auto;
@@ -2891,10 +2827,10 @@ export default {
     display: none !important;
   }
 }
-
 .action-box {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
 }
 
 /* Skeleton loading styles */
@@ -2920,7 +2856,6 @@ export default {
   0% {
     background-position: 200% 0;
   }
-
   100% {
     background-position: -200% 0;
   }
