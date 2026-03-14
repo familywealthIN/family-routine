@@ -528,6 +528,30 @@ export default {
       const lifetimeGoals = this.allGoals && this.allGoals.find((goal) => goal && goal.period === 'lifetime');
       return lifetimeGoals && lifetimeGoals.goalItems && lifetimeGoals.goalItems.length || 0
     },
+    getMonthGoalsCount() {
+      if (!this.allGoals) return 0;
+      return this.allGoals
+        .filter((goal) => goal && goal.period === 'month')
+        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
+    },
+    getWeekGoalsCount() {
+      if (!this.allGoals) return 0;
+      return this.allGoals
+        .filter((goal) => goal && goal.period === 'week')
+        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
+    },
+    getDayGoalsCount() {
+      if (!this.allGoals) return 0;
+      return this.allGoals
+        .filter((goal) => goal && goal.period === 'day')
+        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
+    },
+    getYearGoalsCount() {
+      if (!this.allGoals) return 0;
+      return this.allGoals
+        .filter((goal) => goal && goal.period === 'year')
+        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
+    },
     updateNewGoalItem(goalItem, period, date) {
       this.newGoalItem = {
         ...goalItem,
