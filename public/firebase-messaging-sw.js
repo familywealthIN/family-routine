@@ -23,12 +23,14 @@ importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyBkpoFkuAAT2eJVWX_rE9pLVww1ncBSUt8",
+  authDomain: "groutine-21c1b.firebaseapp.com",
+  databaseURL: "https://groutine-21c1b.firebaseio.com",
+  projectId: "groutine-21c1b",
+  storageBucket: "groutine-21c1b.firebasestorage.app",
+  messagingSenderId: "350952942983",
+  appId: "1:350952942983:web:b935acc08daebd64977722",
+  measurementId: "G-FNR8VD551J"
 });
 
 const messaging = firebase.messaging();
