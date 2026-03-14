@@ -85,7 +85,7 @@ export default {
         (t) => t
           && t.toLowerCase().includes(query)
           && !this.normalizedTags.includes(t),
-      );  
+      );
     },
     showAutocomplete() {
       return this.inputFocused && this.filteredSuggestions.length > 0;
