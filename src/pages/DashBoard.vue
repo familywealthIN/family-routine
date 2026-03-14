@@ -1179,11 +1179,6 @@ export default {
       }
     },
 
-<<<<<<< HEAD
-    // Handle pull to refresh from wrapper
-    handlePullToRefresh() {
-      this.trackUserInteraction('pull_to_refresh', 'gesture', {
-=======
     // Delete goal from agenda list (via GoalItemList event)
     deleteAgendaGoalFromList({ id, period, date }) {
       this.$goals.deleteGoalItem({
@@ -1266,7 +1261,6 @@ export default {
     async refreshData() {
       this.isRefreshing = true;
       this.trackUserInteraction('refresh_button', 'click', {
->>>>>>> upstream/master
         date: this.date,
         is_today: this.isTodaySelected,
       });
@@ -2562,13 +2556,9 @@ export default {
 .current-task {
   overflow: hidden;
 }
-<<<<<<< HEAD
-
-=======
 .upcoming-past-card {
   overflow: hidden;
 }
->>>>>>> upstream/master
 .current-task .active .v-list__tile--avatar:hover {
   background-color: #fff;
 }
