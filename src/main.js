@@ -1,3 +1,4 @@
+import { StatusBar } from '@capacitor/status-bar';
 import 'babel-polyfill';
 import 'isomorphic-unfetch';
 import Vue from 'vue';
@@ -10,18 +11,28 @@ import { InMemoryCache } from 'apollo-cache-inmemory';
 import { persistCache } from 'apollo-cache-persist';
 import localforage from 'localforage';
 import 'firebase/messaging';
-
+import { Capacitor } from '@capacitor/core';
 import { graphQLUrl } from './blob/config';
 import './plugins/vuetify';
 import './plugins/notifications';
 import './plugins/curl-executor';
 import './styles/shadows.css';
 import VueApollo from './plugins/apollo';
+import './styles/android-safe-area.css';
+import './utils/androidSafeArea'; // Initialize Android safe area manager
 import currentTaskPlugin from './plugins/currentTask';
+import { SplashScreen } from '@capacitor/splash-screen';
 import routinePlugin from './plugins/routine';
 import goalPlugin from './plugins/goal';
 // routineStore import removed - using Apollo cache persistence instead
 import App from './App.vue';
+// Load Google Identity Services script
+const script = document.createElement('script');
+script.src = 'https://accounts.google.com/gsi/client';
+script.async = true;
+script.defer = true;
+document.head.appendChild(script);
+// Import Google OAuth plugin
 import './plugins/vue-google-oauth2';
 import router from './router';
 import {
@@ -31,11 +42,49 @@ import redirectOnError from './utils/redirectOnError';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
+import PushService from './services/pushService.js';
 
 // Register Vue Composition API (must be before other plugins that use it)
 Vue.use(VueCompositionAPI);
 
 Vue.config.productionTip = false;
+if (Capacitor.isNativePlatform()) {
+  // Show splash screen
+  SplashScreen.show({
+    showDuration: 2000,
+    autoHide: true
+  });
+}
+
+if (Capacitor.isNativePlatform()) {
+  StatusBar.setOverlaysWebView({ overlay: false });
+  StatusBar.setStyle({ style: 'LIGHT' });
+  StatusBar.setBackgroundColor({ color: '#ffffff' });
+}
+// if (window && window.location && window.location.protocol && window.location.protocol.startsWith('http')) {
+//   console.log('http')
+//   GoogleAuth.init();
+// }else{
+//   console.log('https')
+// }
+
+// if (Capacitor.isNativePlatform()) {
+//   try {
+//     GoogleAuth.init();
+//     GoogleAuth.initialize({
+//       clientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+//       scopes: ['profile', 'email'],
+//       grantOfflineAccess: true,
+//       androidClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+//       iosClientId: '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com',
+//       webClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+//     });
+//     console.log('GoogleAuth initialized in main.js');
+//   } catch (error) {
+//     console.error('Failed to initialize GoogleAuth in main.js:', error);
+//   }
+// }
+
 
 // Install Analytics plugin
 Vue.use(AnalyticsPlugin);
@@ -65,9 +114,11 @@ loadData().then(() => {
   });
 
   // HTTP connection to the API
+  console.log('Graph url:', graphQLUrl)
+  console.log('is native platform', Capacitor.isNativePlatform())
   const httpLink = createHttpLink({
     // You should use an absolute URL here
-    uri: graphQLUrl,
+    uri: graphQLUrl || 'https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com/dev/graphql',
   });
 
   // Cache implementation with persistence
@@ -141,10 +192,6 @@ loadData().then(() => {
   const apolloClient = new ApolloClient({
     link: errorLink.concat(normalLink),
     cache,
-    fetchOptions: {
-      fetch,
-      mode: 'no-cors',
-    },
     defaultOptions: {
       watchQuery: {
         fetchPolicy: 'cache-and-network',
@@ -186,5 +233,23 @@ loadData().then(() => {
     }).$mount('#app');
 
     console.log('[Main] App mounted with Apollo cache persistence');
+  });
+  // Initialize push service after app is mounted
+  setupCachePersistence().then(async () => {
+    const app = new Vue({
+      router,
+      apolloProvider,
+      data: { name, email, picture },
+      render: (h) => h(App),
+    }).$mount('#app');
+
+    // Make app globally available
+    window.app = app;
+
+    // Initialize push service with action categories
+    if (Capacitor.isNativePlatform()) {
+      const PushService = (await import('./services/pushService.js')).default;
+      await PushService.init();
+    }
   });
 });

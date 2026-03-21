@@ -1662,7 +1662,7 @@ export default {
 
 @media (max-width: 600px) {
   .scrollable-content {
-    padding: 16px;
+    padding: 0!important;
   }
 }
 

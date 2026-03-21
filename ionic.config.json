@@ -1,0 +1,7 @@
+{
+  "name": "Routine Notes",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "custom"
+}
