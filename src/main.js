@@ -16,6 +16,8 @@ import './plugins/vuetify';
 import './plugins/notifications';
 import './plugins/curl-executor';
 import './styles/shadows.css';
+import './styles/easymde-preview.css';
+import './styles/ios-input-zoom-fix.css';
 import VueApollo from './plugins/apollo';
 import currentTaskPlugin from './plugins/currentTask';
 import routinePlugin from './plugins/routine';

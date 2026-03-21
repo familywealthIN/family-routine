@@ -176,7 +176,7 @@ export default {
 
       const completed = subTasks.filter((subTask) => subTask.isComplete).length;
       const total = subTasks.length;
-      return `${completed}/${total} subtasks completed`;
+      return `${completed}/${total} subtasks`;
     },
     handleSubTaskClick(subTaskId, goalItem) {
       // Don't proceed if component is in passive state

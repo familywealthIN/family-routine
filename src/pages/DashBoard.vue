@@ -29,7 +29,7 @@
         <div class="action-box">
           <div><wake-check></wake-check></div>
           <div class="d-flex align-center">
-            <atom-switch v-model="skipDay" label="Skip Day" @change="skipClick()" hide-details class="mt-0 pt-0"></atom-switch>
+            <atom-switch v-model="skipDay" label="Skip Day" @change="skipClick($event)" hide-details class="mt-0 pt-0"></atom-switch>
             <atom-button icon small @click="refreshData" :loading="isRefreshing" class="ml-2">
               <atom-icon color="rgba(0,0,0,0.57)" size="24">refresh</atom-icon>
             </atom-button>
@@ -216,6 +216,9 @@
                     </atom-list-tile-content>
                   </atom-list-tile>
                 </atom-list>
+                <current-task-skeleton
+                  v-else-if="showRoutineSkeleton || ($apollo.queries.goals && $apollo.queries.goals.loading)"
+                />
                 <div v-else-if="!$apollo.queries.goals.loading">
                   <atom-card-text class="text-xs-center">
                     <p>No current items to display. Please go to Routine Settings and add routine items.</p>
@@ -701,6 +704,7 @@ import {
 import GoalList from '../containers/GoalListContainer.vue';
 import GoalItemList from '../components/organisms/GoalItemList/GoalItemList.vue';
 import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
+import CurrentTaskSkeleton from '../components/molecules/CurrentTaskSkeleton/CurrentTaskSkeleton.vue';
 import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
 import QuickGoalCreation from '../containers/QuickGoalCreationContainer.vue';
 import StreakChecks from '../components/molecules/StreakChecks/StreakChecks.vue';
@@ -710,6 +714,8 @@ import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
 import { TimeFormatMixin } from '../utils/timeFormat';
 import { initDashboardCaching } from '../composables/useDashboardCaching';
+import { filterAreaProjectTags } from '../utils/dashboardCache';
+import { readAiSearchSettings } from '../utils/aiSearchSettings';
 
 import {
   AtomAlert,
@@ -768,6 +774,7 @@ export default {
     GoalList,
     GoalItemList,
     ContainerBox,
+    CurrentTaskSkeleton,
     QuickGoalCreation,
     StreakChecks,
     GoalCreation,
@@ -1003,6 +1010,7 @@ export default {
         // Update skipDay state when routine data changes
         if (newTasklist && newTasklist.length > 0) {
           this.routineFirstLoad = false;
+          this.startDashboardCaching();
           // Check for passed/wait times if today is selected
           if (this.isTodaySelected) {
             this.setPassedWait();
@@ -1093,11 +1101,42 @@ export default {
     }
   },
   methods: {
+    getAiEnabledRoutineTags() {
+      const routines = Array.isArray(this.$currentTaskList) && this.$currentTaskList.length
+        ? this.$currentTaskList
+        : this.tasklist;
+
+      if (!Array.isArray(routines) || routines.length === 0) {
+        return [];
+      }
+
+      const tags = routines.reduce((acc, routine) => {
+        const routineId = routine && routine.id;
+        const settings = readAiSearchSettings(routineId);
+        if (!settings.aiEnhancedTask) {
+          return acc;
+        }
+
+        const routineTags = Array.isArray(routine.tags) ? routine.tags : [];
+        if (routineTags.length > 0) {
+          acc.push(...routineTags);
+        }
+        return acc;
+      }, []);
+
+      return [...new Set(filterAreaProjectTags(tags))];
+    },
+
     // Start dashboard caching for area/project tags
     startDashboardCaching() {
-      if (this.$root.$data.email) {
-        initDashboardCaching(this);
+      if (!this.$root.$data.email) return;
+
+      const tags = this.getAiEnabledRoutineTags();
+      if (tags.length === 0) {
+        return;
       }
+
+      initDashboardCaching(this, { tags });
     },
 
     // Handle dashboard caching progress updates
@@ -1274,6 +1313,7 @@ export default {
     // Handle refresh button click
     async refreshData() {
       this.isRefreshing = true;
+      eventBus.$emit(EVENTS.DASHBOARD_REFRESH);
       this.trackUserInteraction('refresh_button', 'click', {
         date: this.date,
         is_today: this.isTodaySelected,
@@ -2039,10 +2079,21 @@ export default {
           });
       }
     },
-    skipClick() {
-      // v-model already set the value via computed setter
-      // Just persist to server
-      const skipValue = this.skipDay;
+    skipClick(nextValue) {
+      // Persist the emitted switch value (fallback to current model value).
+      const skipValue = typeof nextValue === 'boolean' ? nextValue : this.skipDay;
+
+      if (!this.did) {
+        this.$notify({
+          title: 'Please wait',
+          text: 'Routine is still loading. Try again in a moment.',
+          group: 'notify',
+          type: 'warning',
+          duration: 3000,
+        });
+        this.$routine.setSkipDay(!skipValue);
+        return;
+      }
 
       this.$apollo
         .mutate({

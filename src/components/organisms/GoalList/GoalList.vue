@@ -172,7 +172,6 @@ export default {
 
       this.setLocalUserTag(this.newGoalItem.tags);
       this.$emit('add-goal-item', { ...this.newGoalItem });
-      this.newGoalItem = { ...this.defaultGoalItem };
     },
     autoSelectGoalRef() {
       if (this.goalItemsRef && this.goalItemsRef.length) {

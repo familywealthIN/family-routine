@@ -119,7 +119,8 @@ export default {
 .description-editor >>> .EasyMDEContainer .CodeMirror {
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .description-editor >>> .EasyMDEContainer .CodeMirror-scroll {

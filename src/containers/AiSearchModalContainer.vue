@@ -20,6 +20,7 @@ import AiSearchModal from '../components/organisms/AiSearchModal/AiSearchModal.v
 import { stepupMilestonePeriodDate } from '../utils/getDates';
 import { GOAL_DATE_PERIOD_QUERY, GOALS_BY_GOAL_REF_QUERY } from '../composables/graphql/queries';
 import eventBus, { EVENTS } from '../utils/eventBus';
+import { notifyNonCurrentTaskGoalCreation } from '../utils/taskCreationNotification';
 
 export default {
   name: 'AiSearchModalContainer',
@@ -205,6 +206,11 @@ export default {
     handleDirectTaskCreate(goalItemData) {
       // Close modal immediately
       this.$emit('input', false);
+      notifyNonCurrentTaskGoalCreation({
+        vm: this,
+        goalItemData,
+        routines: this.routines,
+      });
 
       // Fire mutation in background
       this.$goals.addGoalItem(goalItemData)
