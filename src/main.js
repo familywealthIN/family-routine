@@ -26,12 +26,6 @@ import routinePlugin from './plugins/routine';
 import goalPlugin from './plugins/goal';
 // routineStore import removed - using Apollo cache persistence instead
 import App from './App.vue';
-// Load Google Identity Services script
-const script = document.createElement('script');
-script.src = 'https://accounts.google.com/gsi/client';
-script.async = true;
-script.defer = true;
-document.head.appendChild(script);
 // Import Google OAuth plugin
 import './plugins/vue-google-oauth2';
 import router from './router';
@@ -43,6 +37,12 @@ import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
 import PushService from './services/pushService.js';
+// Load Google Identity Services script
+const script = document.createElement('script');
+script.src = 'https://accounts.google.com/gsi/client';
+script.async = true;
+script.defer = true;
+document.head.appendChild(script);
 
 // Register Vue Composition API (must be before other plugins that use it)
 Vue.use(VueCompositionAPI);
@@ -52,7 +52,7 @@ if (Capacitor.isNativePlatform()) {
   // Show splash screen
   SplashScreen.show({
     showDuration: 2000,
-    autoHide: true
+    autoHide: true,
   });
 }
 
@@ -61,44 +61,9 @@ if (Capacitor.isNativePlatform()) {
   StatusBar.setStyle({ style: 'LIGHT' });
   StatusBar.setBackgroundColor({ color: '#ffffff' });
 }
-// if (window && window.location && window.location.protocol && window.location.protocol.startsWith('http')) {
-//   console.log('http')
-//   GoogleAuth.init();
-// }else{
-//   console.log('https')
-// }
-
-// if (Capacitor.isNativePlatform()) {
-//   try {
-//     GoogleAuth.init();
-//     GoogleAuth.initialize({
-//       clientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
-//       scopes: ['profile', 'email'],
-//       grantOfflineAccess: true,
-//       androidClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
-//       iosClientId: '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com',
-//       webClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
-//     });
-//     console.log('GoogleAuth initialized in main.js');
-//   } catch (error) {
-//     console.error('Failed to initialize GoogleAuth in main.js:', error);
-//   }
-// }
-
 
 // Install Analytics plugin
 Vue.use(AnalyticsPlugin);
-
-// localStorage.__proto__ = Object.create(Storage.prototype);
-// localStorage.__proto__.setItem = function () {
-//   console.log('localstorage.setItem is disabled');
-// };
-// localStorage.__proto__.removeItem = function () {
-//   console.log('localstorage.removeItem is disabled');
-// };
-// localStorage.__proto__.getItem = function () {
-//   console.log('localstorage.getItem is disabled');
-// };
 
 loadData().then(() => {
   const authMiddleware = new ApolloLink((operation, forward) => {
@@ -114,8 +79,8 @@ loadData().then(() => {
   });
 
   // HTTP connection to the API
-  console.log('Graph url:', graphQLUrl)
-  console.log('is native platform', Capacitor.isNativePlatform())
+  console.log('Graph url:', graphQLUrl);
+  console.log('is native platform', Capacitor.isNativePlatform());
   const httpLink = createHttpLink({
     // You should use an absolute URL here
     uri: graphQLUrl || 'https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com/dev/graphql',
@@ -248,8 +213,8 @@ loadData().then(() => {
 
     // Initialize push service with action categories
     if (Capacitor.isNativePlatform()) {
-      const PushService = (await import('./services/pushService.js')).default;
-      await PushService.init();
+      const PushService1 = (await import('./services/pushService.js')).default;
+      await PushService1.init();
     }
   });
 });

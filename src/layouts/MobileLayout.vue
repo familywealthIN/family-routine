@@ -142,6 +142,8 @@
 import localforage from 'localforage';
 import moment from 'moment';
 import gql from 'graphql-tag';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 import PendingList from '../containers/PendingListContainer.vue';
 import TaskTimingBar from '../components/atoms/TaskTimingBar/TaskTimingBar.vue';
 import AreaSidebar from '../components/molecules/AreaSidebar/AreaSidebar.vue';
@@ -154,8 +156,7 @@ import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
 import { clearData, getSessionItem } from '../token';
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
-import { Capacitor } from '@capacitor/core';
+import { gauthOption } from '../blob/config';
 
 export default {
   components: {
@@ -325,12 +326,12 @@ export default {
           // Initialize before signOut to prevent nil error
           const platform = Capacitor.getPlatform();
           const clientId = platform === 'ios'
-            ? '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com'
-            : '350952942983-6h4a30scu81ra204ndpe1md2sccukrhv.apps.googleusercontent.com';
+            ? gauthOption.iosClientId
+            : gauthOption.androidClientId;
 
           await GoogleAuth.initialize({
-            clientId: clientId,
-            scopes: ['profile', 'email']
+            clientId,
+            scopes: ['profile', 'email'],
           });
 
           await GoogleAuth.signOut();
@@ -340,6 +341,7 @@ export default {
 
         this.drawer = false;
         await clearData();
+        await localforage.clear();
         localStorage.removeItem(USER_TAGS);
         this.$root.$data.userName = getSessionItem(GC_USER_NAME);
         this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
@@ -349,48 +351,30 @@ export default {
         console.log(error);
         // Just clear local data and redirect on error
         await clearData();
+        await localforage.clear();
         localStorage.removeItem(USER_TAGS);
         this.$router.push('/').catch(() => { });
       }
     },
-
-    // handleClickSignOut() {
-    //   this.$gAuth
-    //     .signOut()
-    //     .then(async () => {
-    //       this.drawer = false;
-    //       this.isSignIn = this.$gAuth.isAuthorized;
-    //       await clearData();
-    //       localStorage.removeItem(USER_TAGS);
-    //       this.$root.$data.userName = getSessionItem(GC_USER_NAME);
-    //       this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
-    //       this.$root.$data.userEmail = getSessionItem(GC_PICTURE);
-    //       this.$router.push('/').catch(() => {});
-    //     })
-    //     .catch((error) => {
-    //       window.location.reload();
-    //       console.log(error);
-    //     });
-    // },
   },
   mounted() {
     if (typeof window !== 'undefined') {
       const ua = navigator.userAgent || navigator.vendor || window.opera;
-      
+
       // Extract Android version from user agent
       const androidMatch = ua.match(/Android\s([0-9\.]+)/);
       if (androidMatch) {
         const androidVersion = parseFloat(androidMatch[1]);
-        
+
         // Android 14+ detection (API 34+)
         if (androidVersion >= 14) {
           document.body.classList.add('android14-plus');
           document.documentElement.classList.add('android14-plus');
-          
+
           // Set CSS custom properties for safe area handling
           document.documentElement.style.setProperty('--android-version', androidVersion.toString());
         }
-        
+
         // Legacy Android 15 detection for backward compatibility
         if (androidVersion >= 15 || /Android\s15|Android\sVanilla|Android\sVIC/i.test(ua)) {
           document.body.classList.add('android15');

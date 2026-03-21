@@ -73,12 +73,11 @@ body {
 }
 
 @media (max-width: 600px) {
-
   .v-toolbar,
   .v-item-group {
     padding-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top));
   }
-  
+
   /* Header/Toolbar safe area for Android 14+ */
   .android14-plus .fixed-toolbar.safe-area-top {
     padding-top: var(--safe-area-inset-top) !important;
@@ -89,7 +88,7 @@ body {
     right: 0 !important;
     width: 100% !important;
   }
-  
+
   /* Bottom navigation safe area for Android 14+ */
   .android14-plus .fixed-bottom-nav.safe-area-bottom {
     padding-bottom: var(--safe-area-inset-bottom) !important;
@@ -100,7 +99,7 @@ body {
     right: 0 !important;
     width: 100% !important;
   }
-  
+
   /* Content area adjustments for Android 14+ */
   .android14-plus .scrollable-content {
     padding-top: calc(64px + var(--safe-area-inset-top)) !important;
@@ -108,18 +107,18 @@ body {
     padding-left: var(--safe-area-inset-left) !important;
     padding-right: var(--safe-area-inset-right) !important;
   }
-  
+
   /* Navigation drawer safe area */
   .android14-plus .v-navigation-drawer {
     padding-top: var(--safe-area-inset-top) !important;
     z-index: 999 !important;
   }
-  
+
   /* Dialog toolbar safe area for Android 14+ */
   .android14-plus .v-dialog .v-toolbar {
     margin-top: var(--safe-area-inset-top) !important;
   }
-  
+
   /* App container safe area */
   .android14-plus .v-app {
     padding-top: 0 !important;
@@ -128,9 +127,10 @@ body {
 }
 
 /* Fallback for older Android versions */
-.v-content {
+/* Enable this before android build */
+/* .v-content {
   padding-top: 0px !important;
-}
+} */
 
 /* Additional Android 14+ fixes */
 .android14-plus #mobileLayout {
@@ -164,7 +164,7 @@ body {
   .android14-plus .fixed-toolbar.safe-area-top {
     padding-top: max(env(safe-area-inset-top), 0px) !important;
   }
-  
+
   .android14-plus .vue-notification-group {
     bottom: max(var(--safe-area-inset-bottom), 8px) !important;
   }

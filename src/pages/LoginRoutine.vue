@@ -80,6 +80,7 @@ import {
 } from '../constants/settings';
 import { SignInWithApple } from '@capacitor-community/apple-sign-in';
 import ContainerBox from '../components/templates/ContainerBox/ContainerBox.vue';
+import { gauthOption } from '../blob/config';
 
 export default {
   name: 'Login',
@@ -102,25 +103,25 @@ export default {
   methods: {
  async handleAppleSignIn() {
   this.isLoading = true;
-  
+
   try {
     const result = await SignInWithApple.authorize({
       clientId: 'com.routine.note',
       scopes: 'name email'
     });
-    
+
     console.log('Apple Sign-In result:', result);
-    
+
     const { identityToken, email, givenName, familyName } = result.response;
     const name = (givenName && familyName) ? `${givenName} ${familyName}`.trim() : 'Apple User';
     const userEmail = email || 'apple.user@example.com';
-    
+
     this.createAppleSession(identityToken, userEmail, name);
-    
+
   } catch (error) {
     console.error('Apple Sign-In failed:', error);
     this.isLoading = false;
-    
+
     // Don't show error for user cancellation
     if (error.code !== 1001) {
       this.$notify({
@@ -134,18 +135,17 @@ export default {
   }
 },
 
-
  createAppleSession(identityToken, email, name) {
   console.log('=== Apple Session Creation Started ===');
   console.log('Identity Token:', identityToken);
   console.log('Email:', email);
   console.log('Name:', name);
-  
+
   const notificationId = localStorage.getItem('GC_NOTIFICATION_TOKEN') || '';
   console.log('Notification ID:', notificationId);
-  
+
   console.log('Starting GraphQL mutation...');
-  
+
   this.$apollo.mutate({
     mutation: gql`
       mutation authApple($identityToken: String!, $notificationId: String!) {
@@ -169,19 +169,19 @@ export default {
     update: async (store, { data: { authApple } }) => {
       console.log('=== GraphQL Response Received ===');
       console.log('Auth Apple Response:', authApple);
-      
+
       const {
         name, email, picture, token, needsOnboarding, tags = []
       } = authApple;
-      
+
       console.log('Extracted data:', { name, email, picture, token, needsOnboarding, tags });
-      
+
       this.isSignIn = true;
       this.isAuthenticatedSignIn = true;
-      
+
       const userData = { token, email, name, picture };
       console.log('Saving user data:', userData);
-      
+
       try {
             await saveData(userData);
             console.log('saveData completed successfully');
@@ -190,13 +190,13 @@ export default {
             // Continue execution even if saveData fails
           }
       localStorage.setItem(USER_TAGS, JSON.stringify(tags));
-      
+
       this.$root.$data.name = getSessionItem(GC_USER_NAME);
       this.$root.$data.email = getSessionItem(GC_USER_EMAIL);
       this.$root.$data.picture = getSessionItem(GC_PICTURE);
 
       console.log('Navigation decision - needsOnboarding:', needsOnboarding);
-      
+
       if (needsOnboarding) {
         console.log('Redirecting to wizard');
         this.$router.push('wizard');
@@ -205,7 +205,7 @@ export default {
         this.$router.push('home');
       }
 
-      setTimeout(() => { 
+      setTimeout(() => {
         console.log('Setting loading to false');
         this.isLoading = false;
       }, 500);
@@ -215,7 +215,7 @@ export default {
     console.error('Error details:', error);
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
-    
+
     this.isLoading = false;
     this.$notify({
       title: 'Login Error',
@@ -227,9 +227,6 @@ export default {
   });
 },
 
-
-
-   
     async handleClickSignIn() {
       this.isLoading = true;
 
@@ -239,36 +236,10 @@ export default {
         try {
           // Re-initialize GoogleAuth to ensure it's properly configured
           const platform = Capacitor.getPlatform();
-      const clientId = platform === 'ios' 
-        ? '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com'
-        : '350952942983-6h4a30scu81ra204ndpe1md2sccukrhv.apps.googleusercontent.com';
+      const clientId = platform === 'ios'
+        ? gauthOption.iosClientId
+        : gauthOption.androidClientId;
           console.log(platform)
-      // const clientId = platform === 'ios' 
-      //   ? '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com'
-      //   : '350952942983-6h4a30scu81ra204ndpe1md2sccukrhv.apps.googleusercontent.com';
-
-      //     await GoogleAuth.initialize({
-      //       clientId: clientId,
-      //       scopes: ['profile', 'email'],
-      //       grantOfflineAccess: true,
-      //       forceCodeForRefreshToken: true
-      //     });
-        //   if(platform === 'ios'){
-        //         await GoogleAuth.initialize({
-        //           clientId: clientId,
-        //           scopes: ['profile', 'email'],
-        //           grantOfflineAccess: true,
-        //           forceCodeForRefreshToken: true
-        //         });
-
-        //   }else{
-        //   await GoogleAuth.initialize({
-        //     clientId: clientId,
-        //     scopes: ['profile', 'email'],
-        //     grantOfflineAccess: true,
-        //     forceCodeForRefreshToken: true
-        //   });
-        // }
 
           if(platform === 'ios'){
                 await GoogleAuth.initialize({
@@ -280,24 +251,24 @@ export default {
 
           }else{
           await GoogleAuth.initialize({
-            clientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+            clientId: gauthOption.clientId,
             scopes: ['profile', 'email'],
             grantOfflineAccess: true,
-            androidClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
-            iosClientId: '350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com',
-            webClientId: '350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com',
+            androidClientId: gauthOption.androidClientId,
+            iosClientId: gauthOption.iosClientId,
+            webClientId: gauthOption.clientId,
             forceCodeForRefreshToken: true
           });
         }
-          
+
           console.log('Attempting to sign in with GoogleAuth');
           const result = await GoogleAuth.signIn();
           console.log('GoogleAuth sign in result:', result);
-          
+
           if (!result || !result.authentication.idToken) {
             throw new Error('Authentication data missing from sign in result');
           }
-          
+
           const accessToken = result.authentication.idToken;
           const notificationId = localStorage.getItem('GC_NOTIFICATION_TOKEN') || '';
           console.log('Access Token:', accessToken);
@@ -323,7 +294,7 @@ export default {
           // The credential property contains the JWT access token
           const accessToken = user.credential;
           const notificationId = localStorage.getItem('GC_NOTIFICATION_TOKEN') || '';
-          console.log('Access Token:', accessToken);  
+          console.log('Access Token:', accessToken);
           console.log('Notification ID:', notificationId);
 
           this.createSession(accessToken, notificationId);
@@ -339,7 +310,6 @@ export default {
         });
       }
     },
-
 
     handleClickSignOut() {
       if (this.isNative) {
@@ -429,7 +399,7 @@ export default {
           const {
             name, email, picture, token, needsOnboarding, tags = []
           } = authGoogle;
-          
+
           if(this.isNative){
             this.isSignIn=true;
             this.isAuthenticatedSignIn=true;
@@ -437,7 +407,7 @@ export default {
             this.isSignIn = this.$gAuth.isAuthorized;
             this.isAuthenticatedSignIn = this.$gAuth.isAuthorized;
           }
-          
+
           const userData = { token, email, name, picture, notificationId: notificationId };
           try {
             await saveData(userData);
@@ -446,13 +416,13 @@ export default {
             console.error('saveData failed:', saveError);
             // Continue execution even if saveData fails
           }
-          
+
           localStorage.setItem(USER_TAGS, JSON.stringify(tags));
-          
+
           this.$root.$data.name = getSessionItem(GC_USER_NAME);
-          
+
           this.$root.$data.email = getSessionItem(GC_USER_EMAIL);
-          
+
           this.$root.$data.picture = getSessionItem(GC_PICTURE);
 
           // Track successful login
@@ -477,7 +447,7 @@ export default {
             this.$router.push('home');
           }
 
-          setTimeout(() => { 
+          setTimeout(() => {
             this.isLoading = false;
           }, 500);
         },
@@ -497,12 +467,12 @@ export default {
         });
     },
   },
-  mounted() { 
+  mounted() {
     console.log('Capacitor platform:', Capacitor.getPlatform());
     this.isNative = Capacitor.isNativePlatform();
     this.isIOS = Capacitor.getPlatform() === 'ios';
     console.log('Is native platform:', this.isNative);
-    
+
     // Initialize Google Auth for native platforms
     if (this.isNative) {
       try {
@@ -687,7 +657,6 @@ export default {
 /* .login-box {
   margin-bottom: 120px;
 } */
-
 
 .apple-text {
   margin-left: 12px;

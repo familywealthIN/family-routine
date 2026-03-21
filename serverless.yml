@@ -48,8 +48,10 @@ package:
     - '!node_modules/webpack*/**'
     # --- Frontend-only dependencies ---
     - '!node_modules/@capacitor/**'
+    - '!node_modules/@capacitor-community/**'
     - '!node_modules/@codetrix-studio/**'
     - '!node_modules/@johmun/**'
+    - '!node_modules/@types/**'
     - '!node_modules/@vue/composition-api/**'
     - '!node_modules/apollo-*/**'
     - '!node_modules/vue/**'
