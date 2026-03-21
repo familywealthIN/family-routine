@@ -42,7 +42,8 @@ import redirectOnError from './utils/redirectOnError';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
-
+import PushService from './services/pushService';
+PushService.init();
 // Register Vue Composition API (must be before other plugins that use it)
 Vue.use(VueCompositionAPI);
 
@@ -113,7 +114,7 @@ loadData().then(() => {
   });
 
   // HTTP connection to the API
-  console.log('Graph url:',graphQLUrl)
+  console.log('Graph url:', graphQLUrl)
   console.log('is native platform', Capacitor.isNativePlatform())
   const httpLink = createHttpLink({
     // You should use an absolute URL here

@@ -13,7 +13,10 @@
       "sound": "beep.wav"
     },
     "GoogleAuth": {
-      "scopes": ["profile", "email"],
+      "scopes": [
+        "profile",
+        "email"
+      ],
       "serverClientId": "350952942983-eu6bevc5ve0pjkfqarolulruhbokat05.apps.googleusercontent.com",
       "androidClientId": "350952942983-6h4a30scu81ra204ndpe1md2sccukrhv.apps.googleusercontent.com",
       "iosClientId": "350952942983-48lis9mbeudskd9rovrnov5gm35h0vre.apps.googleusercontent.com",
@@ -27,15 +30,16 @@
     "SplashScreen": {
       "launchShowDuration": 2000,
       "launchAutoHide": true,
-      "launchFadeOutDuration": 500,
+      "launchFadeOutDuration": 300,
       "backgroundColor": "#ffffff",
       "androidSplashResourceName": "splash",
-      "androidScaleType": "CENTER_INSIDE",
+      "androidScaleType": "FIT_CENTER",
       "showSpinner": false,
-      "iosSpinnerStyle": "small",
-      "spinnerColor": "#999999",
+      "androidSpinnerStyle": "none",
+      "iosSpinnerStyle": "none",
       "splashFullScreen": false,
-      "splashImmersive": false
+      "splashImmersive": false,
+      "useDialog": false
     }
   }
 }

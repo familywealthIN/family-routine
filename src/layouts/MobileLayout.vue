@@ -468,12 +468,12 @@ body.android15 .safe-area-bottom {
 
 /* Android 14+ content padding */
 body.android14-plus .scrollable-content {
-  padding-top: calc(64px + max(env(safe-area-inset-top), 24px)) !important;
-  padding-bottom: calc(75px + max(env(safe-area-inset-bottom), 16px)) !important;
+  /* padding-top: calc(64px + max(env(safe-area-inset-top), 24px)) !important;
+  padding-bottom: calc(75px + max(env(safe-area-inset-bottom), 16px)) !important; */
 }
 
 body.android15 .scrollable-content {
-  padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important;
+  /* padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important; */
 }
 
 .safe-area-content {
