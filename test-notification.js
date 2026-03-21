@@ -97,8 +97,7 @@
 //   'Hello World',
 // );
 
-
-// test-notification-interactive-fixed.js
+// test-notification-with-actions.js
 require('dotenv').config();
 const admin = require('firebase-admin');
 const serviceAccount = require('./serviceAccountKey.json');
@@ -109,15 +108,14 @@ admin.initializeApp({
 });
 
 class InteractiveNotificationTester {
-  
-  // Fixed interactive notification without unsupported actions field
-  async sendBasicInteractiveNotification(token, title, body, data = {}) {
+
+  async sendNotificationWithActions(token, title, body, data = {}) {
     if (!token) {
       console.log('No device token provided.');
       return;
     }
 
-    console.log('Sending interactive notification to token:', token);
+    console.log('Sending notification with actions to token:', token);
 
     const payload = {
       token: token,
@@ -130,9 +128,10 @@ class InteractiveNotificationTester {
         taskId: data.taskId || "",
         routineId: data.routineId || "",
         type: data.type || "routine_reminder",
-        // Add action data for client-side handling
+        actionType: data.actionType || "routine_actions", // This determines which action set to use
         hasActions: "true",
-        actionType: "routine_actions",
+        title: title, // Include in data for local notifications
+        body: body,
         // Convert all data values to strings (FCM requirement)
         ...Object.fromEntries(
           Object.entries(data).map(([key, value]) => [key, String(value)])
@@ -144,10 +143,9 @@ class InteractiveNotificationTester {
           priority: 'high',
           defaultSound: true,
           clickAction: 'FLUTTER_NOTIFICATION_CLICK',
-          // Remove unsupported actions field
         },
         priority: 'high',
-        ttl: 3600000, // 1 hour
+        ttl: 3600000,
       },
       apns: {
         headers: {
@@ -160,10 +158,9 @@ class InteractiveNotificationTester {
               title: title,
               body: body
             },
-            category: "ROUTINE_ACTIONS", // This enables action buttons on iOS
+            category: "ROUTINE_ACTIONS", // This should match your registered category
             sound: "default",
             badge: 1,
-            // Add custom data for iOS actions
             "mutable-content": 1,
           }
         }
@@ -172,140 +169,54 @@ class InteractiveNotificationTester {
 
     try {
       const response = await admin.messaging().send(payload);
-      console.log('Interactive notification sent successfully:', response);
+      console.log('✅ Notification with actions sent successfully:', response);
       return response;
     } catch (error) {
-      console.error('Error sending interactive notification:', error);
+      console.error('❌ Error sending notification:', error);
       throw error;
     }
   }
 
-  // Alternative: Send data-only message for full client control
-  async sendDataOnlyNotification(token, title, body, data = {}) {
-    if (!token) {
-      console.log('No device token provided.');
-      return;
-    }
-
-    console.log('Sending data-only notification to token:', token);
-
-    const payload = {
-      token: token,
-      // No notification field - this makes it a data-only message
-      data: {
-        title: title,
-        body: body,
-        habitId: data.habitId || "1",
-        taskId: data.taskId || "",
-        routineId: data.routineId || "",
-        type: data.type || "routine_reminder",
-        hasActions: "true",
-        actionType: "routine_actions",
-        // Action definitions as data
-        action1: "DO_NOW",
-        action1Title: "Do Now",
-        action2: "COMPLETE", 
-        action2Title: "Complete",
-        action3: "SNOOZE",
-        action3Title: "Snooze 10min",
-        // Convert all data values to strings
-        ...Object.fromEntries(
-          Object.entries(data).map(([key, value]) => [key, String(value)])
-        ),
-      },
-      android: {
-        priority: 'high',
-        ttl: 3600000,
-      },
-      apns: {
-        headers: {
-          "apns-priority": "10",
-          "apns-push-type": "background"
-        },
-        payload: {
-          aps: {
-            "content-available": 1,
-            category: "ROUTINE_ACTIONS",
-          }
-        }
-      }
-    };
-
-    try {
-      const response = await admin.messaging().send(payload);
-      console.log('Data-only notification sent successfully:', response);
-      return response;
-    } catch (error) {
-      console.error('Error sending data-only notification:', error);
-      throw error;
-    }
-  }
-
-  // Routine reminder with actions (fixed version)
-  async sendRoutineReminder(token, routineData) {
-    const data = {
-      habitId: routineData.id || "1",
-      taskId: routineData.id || "",
-      routineId: routineData.routineId || "",
-      type: "routine_reminder",
-      time: routineData.time || "",
-      description: routineData.description || "",
-    };
-
-    return this.sendBasicInteractiveNotification(
-      token,
-      `⏰ Time for ${routineData.name}`,
-      routineData.description || `Your routine "${routineData.name}" is scheduled now`,
-      data
-    );
-  }
-
-  // Water reminder (fixed version)
   async sendWaterReminder(token) {
-    const data = {
-      habitId: "water_habit_1",
-      type: "water_reminder",
-      glasses_remaining: "8",
-    };
-
-    return this.sendBasicInteractiveNotification(
+    return this.sendNotificationWithActions(
       token,
-      "💧 Drink water",
-      "8 glasses remaining",
-      data
+      "💧 Drink Water",
+      "8 glasses remaining - tap actions below",
+      {
+        habitId: "water_habit_1",
+        type: "water_reminder",
+        actionType: "routine_actions",
+        glasses_remaining: "8",
+      }
     );
   }
 
-  // Data-only version for full client control
-  async sendWaterReminderDataOnly(token) {
-    const data = {
-      habitId: "water_habit_1",
-      type: "water_reminder",
-      glasses_remaining: "8",
-    };
-
-    return this.sendDataOnlyNotification(
-      token,
-      "💧 Drink water",
-      "8 glasses remaining - Tap for actions",
-      data
-    );
-  }
-
-  // Exercise reminder
   async sendExerciseReminder(token) {
-    const data = {
-      habitId: "exercise_habit_1",
-      taskId: "morning_exercise",
-      type: "exercise_reminder",
-      duration: "30",
-    };
-
-    return this.sendBasicInteractiveNotification(
+    return this.sendNotificationWithActions(
       token,
       "🏃♂️ Morning Exercise",
       "Time for your 30-minute workout!",
-      data
+      {
+        habitId: "exercise_habit_1",
+        taskId: "morning_exercise",
+        type: "exercise_reminder",
+        actionType: "routine_actions",
+        duration: "30",
+      }
+    );
+  }
+
+  async sendHabitReminder(token) {
+    return this.sendNotificationWithActions(
+      token,
+      "📚 Reading Habit",
+      "Time to read for 20 minutes",
+      {
+        habitId: "reading_habit_1",
+        type: "habit_reminder",
+        actionType: "habit_actions", // Different action set
+        duration: "20",
+      }
     );
   }
 }
@@ -313,61 +224,44 @@ class InteractiveNotificationTester {
 // Test function
 async function runTests() {
   const tester = new InteractiveNotificationTester();
-  
-  // Replace with your actual FCM token
+
   const testToken = "dCEbN4_rf0tWkXfenEOeHw:APA91bHXuslEEPDWlGGJPeioJA5G5rW1uDIndAc_t_e58g4DbikeMUGQU7LLihyIp69qqiiFOCsPCapHxwvKuzmpHlETfC_scJT09OqGWe4sgEUI2fiTVrY";
-  
+
   try {
-    console.log('\n=== Testing Fixed Interactive Notifications ===\n');
+    console.log('\n=== Testing Notifications with Action Buttons ===\n');
 
-    // Test 1: Fixed water reminder
-    console.log('1. Sending fixed water reminder...');
+    console.log('1. Sending water reminder with routine actions...');
     await tester.sendWaterReminder(testToken);
-    await delay(3000);
+    await delay(5000);
 
-    // Test 2: Data-only water reminder (for full client control)
-    console.log('2. Sending data-only water reminder...');
-    await tester.sendWaterReminderDataOnly(testToken);
-    await delay(3000);
-
-    // Test 3: Exercise routine
-    console.log('3. Sending exercise reminder...');
+    console.log('2. Sending exercise reminder with routine actions...');
     await tester.sendExerciseReminder(testToken);
-    await delay(3000);
+    await delay(5000);
 
-    // Test 4: Custom routine
-    console.log('4. Sending custom routine reminder...');
-    await tester.sendRoutineReminder(testToken, {
-      id: "routine_123",
-      name: "Morning Routine",
-      description: "Start your day with energy!",
-      time: "07:00",
-      routineId: "morning_routine_set"
-    });
+    console.log('3. Sending habit reminder with habit actions...');
+    await tester.sendHabitReminder(testToken);
 
-    console.log('\n=== All test notifications sent successfully! ===');
-    console.log('📱 Check your device for notifications.');
-    console.log('💡 The app will handle creating action buttons based on the data payload.');
-    
+    console.log('\n=== All notifications sent! ===');
+    console.log('📱 Check your device - you should see action buttons on the notifications');
+    console.log('🔘 Available actions depend on the notification type');
+
   } catch (error) {
     console.error('Test failed:', error);
   }
 }
 
-// Helper function for delays
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Run the tests
 if (require.main === module) {
   runTests()
     .then(() => {
-      console.log('\nTest completed successfully!');
+      console.log('\n✅ Test completed successfully!');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('Test failed:', error);
+      console.error('❌ Test failed:', error);
       process.exit(1);
     });
 }

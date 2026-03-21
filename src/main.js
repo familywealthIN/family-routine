@@ -243,11 +243,12 @@ loadData().then(() => {
       render: (h) => h(App),
     }).$mount('#app');
 
-    // Make app globally available for push service
+    // Make app globally available
     window.app = app;
 
-    // Initialize push service
+    // Initialize push service with action categories
     if (Capacitor.isNativePlatform()) {
+      const PushService = (await import('./services/pushService.js')).default;
       await PushService.init();
     }
   });

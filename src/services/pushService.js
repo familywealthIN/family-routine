@@ -1,4 +1,4 @@
-// src/services/pushService.js
+// src/services/pushService.js (Complete updated version)
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
@@ -6,350 +6,326 @@ import { Capacitor } from '@capacitor/core';
 class PushService {
   constructor() {
     this.isInitialized = false;
-    this.pendingActions = [];
   }
 
   async init() {
     if (this.isInitialized) return;
 
     try {
-      // Request permissions
+      // Request permissions first
       const permResult = await PushNotifications.requestPermissions();
       if (permResult.receive !== 'granted') {
         console.warn('Push notification permission not granted');
         return;
       }
 
+      const localPermResult = await LocalNotifications.requestPermissions();
+      if (localPermResult.display !== 'granted') {
+        console.warn('Local notification permission not granted');
+        return;
+      }
+
+      // IMPORTANT: Register notification categories with actions
+      await this.registerNotificationCategories();
+
       // Register for push notifications
       await PushNotifications.register();
 
       // Set up listeners
       this.setupListeners();
-
-      // Process any pending actions from cold start
-      await this.processPendingActions();
-
+      
       this.isInitialized = true;
-      console.log('PushService initialized successfully');
+      console.log('PushService initialized successfully with action categories');
     } catch (error) {
       console.error('Failed to initialize PushService:', error);
     }
   }
 
-  setupListeners() {
-    // Foreground notification listener - create interactive notification
-    PushNotifications.addListener('pushNotificationReceived', async (notification) => {
-      console.log('Push notification received in foreground:', notification);
+  async registerNotificationCategories() {
+    try {
+      // Register notification categories with actions
+      await LocalNotifications.registerActionTypes({
+        types: [
+          {
+            id: 'ROUTINE_ACTIONS',
+            actions: [
+              {
+                id: 'DO_NOW',
+                title: 'Do Now',
+                requiresAuthentication: false,
+                foreground: true,
+                destructive: false,
+              },
+              {
+                id: 'COMPLETE',
+                title: 'Complete',
+                requiresAuthentication: false,
+                foreground: true,
+                destructive: false,
+              },
+              {
+                id: 'SNOOZE',
+                title: 'Snooze 10min',
+                requiresAuthentication: false,
+                foreground: false,
+                destructive: false,
+              },
+            ]
+          },
+          {
+            id: 'HABIT_ACTIONS',
+            actions: [
+              {
+                id: 'MARK_DONE',
+                title: 'Mark Done',
+                requiresAuthentication: false,
+                foreground: true,
+                destructive: false,
+              },
+              {
+                id: 'SKIP',
+                title: 'Skip',
+                requiresAuthentication: false,
+                foreground: false,
+                destructive: true,
+              },
+              {
+                id: 'REMIND_LATER',
+                title: 'Remind Later',
+                requiresAuthentication: false,
+                foreground: false,
+                destructive: false,
+              },
+            ]
+          }
+        ]
+      });
+      
+      console.log('✅ Notification action categories registered successfully');
+    } catch (error) {
+      console.error('❌ Error registering notification categories:', error);
+    }
+  }
 
-      // Check if this notification should have actions
-      if (notification.data?.hasActions === 'true') {
-        await this.showInteractiveLocalNotification(notification);
-      } else {
-        // Show regular notification
-        await this.showRegularLocalNotification(notification);
-      }
+  setupListeners() {
+    // Registration listener
+    PushNotifications.addListener('registration', (token) => {
+      console.log('Push registration success, token:', token.value);
+      this.sendTokenToServer(token.value);
     });
 
-    // Handle notification taps and actions
+    // Foreground notification listener
+    PushNotifications.addListener('pushNotificationReceived', async (notification) => {
+      console.log('📱 Push notification received in foreground:', notification);
+      
+      // Always show as local notification with actions for foreground
+      await this.showLocalNotificationWithActions(notification);
+    });
+
+    // Background/killed app notification action listener
     PushNotifications.addListener('pushNotificationActionPerformed', async (action) => {
-      console.log('Push notification action performed:', action);
+      console.log('🔔 Push notification action performed:', action);
       await this.handleNotificationAction(action);
     });
 
-    // Handle local notification actions
+    // Local notification action listener
     LocalNotifications.addListener('localNotificationActionPerformed', async (action) => {
-      console.log('Local notification action performed:', action);
-      await this.handleLocalNotificationAction(action);
+      console.log('📲 Local notification action performed:', action);
+      await this.handleNotificationAction(action);
+    });
+
+    // Regular local notification received
+    LocalNotifications.addListener('localNotificationReceived', (notification) => {
+      console.log('📬 Local notification received:', notification);
     });
   }
 
-  async handleLocalNotificationAction(action) {
-    const { actionId, notification } = action;
-    const data = notification?.extra || {};
-
-    console.log(`Handling local notification action: ${actionId}`, data);
-
-    switch (actionId) {
-      case 'DO_NOW':
-        await this.handleDoNow(data);
-        break;
-      case 'COMPLETE':
-        await this.handleComplete(data);
-        break;
-      case 'SNOOZE':
-        await this.handleSnooze(data);
-        break;
-      default:
-        console.log('Unknown local notification action:', actionId);
-    }
-  }
-  async showRegularLocalNotification(notification) {
-    try {
-      const localNotification = {
-        title: notification.title || 'Notification',
-        body: notification.body || '',
-        id: Date.now(),
-        schedule: { at: new Date(Date.now() + 100) },
-        sound: 'default',
-        extra: notification.data || {},
-      };
-
-      await LocalNotifications.schedule({
-        notifications: [localNotification],
-      });
-    } catch (error) {
-      console.error('Error showing regular local notification:', error);
-    }
-  }
-  async showInteractiveLocalNotification(notification) {
-    try {
-      const data = notification.data || {};
-
-      // Create local notification with actions
-      const localNotification = {
-        title: notification.title || data.title || 'Routine Reminder',
-        body: notification.body || data.body || 'Time for your routine!',
-        id: Date.now(),
-        schedule: { at: new Date(Date.now() + 100) },
-        sound: 'default',
-        actionTypeId: 'ROUTINE_ACTIONS',
-        extra: data,
-        actions: [
-          {
-            id: 'DO_NOW',
-            title: data.action1Title || 'Do Now',
-            requiresAuthentication: false,
-            foreground: true,
-          },
-          {
-            id: 'COMPLETE',
-            title: data.action2Title || 'Complete',
-            requiresAuthentication: false,
-            foreground: true,
-          },
-          {
-            id: 'SNOOZE',
-            title: data.action3Title || 'Snooze 10min',
-            requiresAuthentication: false,
-            foreground: false,
-          },
-        ],
-      };
-
-      await LocalNotifications.schedule({
-        notifications: [localNotification],
-      });
-
-      console.log('Interactive local notification scheduled');
-    } catch (error) {
-      console.error('Error showing interactive local notification:', error);
-    }
-  }
   async showLocalNotificationWithActions(notification) {
     try {
+      const data = notification.data || {};
+      const title = notification.title || data.title || 'Routine Reminder';
+      const body = notification.body || data.body || 'Time for your routine!';
+      
+      // Determine which action type to use
+      const actionTypeId = data.actionType === 'habit_actions' ? 'HABIT_ACTIONS' : 'ROUTINE_ACTIONS';
+      
       const localNotification = {
-        title: notification.title || 'Routine Reminder',
-        body: notification.body || 'Time for your routine!',
+        title: title,
+        body: body,
         id: Date.now(),
-        schedule: { at: new Date(Date.now() + 100) },
+        schedule: { at: new Date(Date.now() + 500) }, // Small delay to ensure proper display
         sound: 'default',
-        actionTypeId: 'ROUTINE_ACTIONS',
-        extra: notification.data || {},
-        actions: [
-          {
-            id: 'DO_NOW',
-            title: 'Do Now',
-            requiresAuthentication: false,
-            foreground: true,
-          },
-          {
-            id: 'COMPLETE',
-            title: 'Complete',
-            requiresAuthentication: false,
-            foreground: true,
-          },
-          {
-            id: 'SNOOZE',
-            title: 'Snooze 10min',
-            requiresAuthentication: false,
-            foreground: false,
-          },
-        ],
+        actionTypeId: actionTypeId, // This links to registered categories
+        extra: {
+          ...data,
+          originalTitle: title,
+          originalBody: body,
+        },
+        // Don't specify actions here - they come from the registered actionTypeId
       };
 
       await LocalNotifications.schedule({
         notifications: [localNotification],
       });
+
+      console.log(`✅ Local notification with actions scheduled (${actionTypeId})`);
     } catch (error) {
-      console.error('Error showing local notification:', error);
-    }
-  }
-
-  storeAction(action) {
-    // Store action in localStorage for cold start scenarios
-    const storedActions = JSON.parse(localStorage.getItem('pendingNotificationActions') || '[]');
-    storedActions.push({
-      ...action,
-      timestamp: Date.now(),
-    });
-
-    // Keep only last 10 actions
-    if (storedActions.length > 10) {
-      storedActions.splice(0, storedActions.length - 10);
-    }
-
-    localStorage.setItem('pendingNotificationActions', JSON.stringify(storedActions));
-  }
-
-  async processPendingActions() {
-    try {
-      const storedActions = JSON.parse(localStorage.getItem('pendingNotificationActions') || '[]');
-
-      // Process actions from last 5 minutes only
-      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-      const recentActions = storedActions.filter(action => action.timestamp > fiveMinutesAgo);
-
-      for (const action of recentActions) {
-        await this.handleNotificationAction(action);
-      }
-
-      // Clear processed actions
-      localStorage.removeItem('pendingNotificationActions');
-    } catch (error) {
-      console.error('Error processing pending actions:', error);
+      console.error('❌ Error showing local notification with actions:', error);
     }
   }
 
   async handleNotificationAction(action) {
     const { actionId, notification } = action;
-    const data = notification?.data || {};
-
-    console.log(`Handling action: ${actionId}`, data);
+    // Get data from either notification.data or notification.extra
+    const data = notification?.data || notification?.extra || {};
+    
+    console.log(`🎯 Handling action: ${actionId}`, data);
 
     try {
       switch (actionId) {
         case 'DO_NOW':
+        case 'MARK_DONE':
           await this.handleDoNow(data);
           break;
         case 'COMPLETE':
           await this.handleComplete(data);
           break;
         case 'SNOOZE':
+        case 'REMIND_LATER':
           await this.handleSnooze(data);
           break;
+        case 'SKIP':
+          await this.handleSkip(data);
+          break;
         default:
-          console.log('Unknown action:', actionId);
+          console.log('❓ Unknown action:', actionId);
       }
     } catch (error) {
-      console.error(`Error handling action ${actionId}:`, error);
+      console.error(`❌ Error handling action ${actionId}:`, error);
     }
   }
 
   async handleDoNow(data) {
-    console.log('Do Now action triggered', data);
-
+    console.log('▶️ Do Now action triggered', data);
+    
+    // Show feedback notification
+    await this.showFeedbackNotification('Starting now! 💪', 'success');
+    
     // Navigate to the specific routine/task
-    if (data.taskId) {
-      // Use Vue router or your navigation method
-      if (window.app && window.app.$router) {
-        window.app.$router.push(`/routine/${data.taskId}`);
-      }
+    if (data.taskId && window.app?.$router) {
+      window.app.$router.push(`/routine/${data.taskId}`);
     }
-
-    // Send analytics event
+    
     this.trackAction('do_now', data);
   }
 
   async handleComplete(data) {
-    console.log('Complete action triggered', data);
-
+    console.log('✅ Complete action triggered', data);
+    
     try {
       // Call your API to mark task as complete
-      const response = await fetch('/api/tasks/complete', {
+      const authToken = localStorage.getItem('authToken') || localStorage.getItem('GC_AUTH_TOKEN');
+      
+      if (!authToken) {
+        await this.showFeedbackNotification('Please log in to complete tasks', 'error');
+        return;
+      }
+
+      const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          taskId: data.taskId,
-          habitId: data.habitId,
-          completedAt: new Date().toISOString(),
+          query: `
+            mutation completeTask($taskId: ID!) {
+              completeTask(taskId: $taskId) {
+                id
+                completed
+              }
+            }
+          `,
+          variables: {
+            taskId: data.taskId || data.habitId,
+          },
         }),
       });
 
       if (response.ok) {
-        // Show success notification
-        await this.showSuccessNotification('Task completed successfully!');
-
+        await this.showFeedbackNotification('Task completed! 🎉', 'success');
+        
         // Refresh app data if app is open
-        if (window.app && window.app.$apollo) {
+        if (window.app?.$apollo) {
           window.app.$apollo.queries.goals?.refetch();
           window.app.$apollo.queries.tasklist?.refetch();
         }
+      } else {
+        throw new Error('API request failed');
       }
     } catch (error) {
       console.error('Error completing task:', error);
-      await this.showErrorNotification('Failed to complete task');
+      await this.showFeedbackNotification('Failed to complete task 😞', 'error');
     }
-
+    
     this.trackAction('complete', data);
   }
 
   async handleSnooze(data) {
-    console.log('Snooze action triggered', data);
-
+    console.log('😴 Snooze action triggered', data);
+    
     // Schedule another notification in 10 minutes
     const snoozeTime = new Date(Date.now() + 10 * 60 * 1000);
-
+    
     await LocalNotifications.schedule({
       notifications: [{
-        title: data.title || 'Routine Reminder (Snoozed)',
-        body: data.body || 'Time for your routine!',
+        title: `⏰ ${data.originalTitle || 'Routine Reminder'} (Snoozed)`,
+        body: data.originalBody || 'Time for your routine!',
         id: Date.now(),
         schedule: { at: snoozeTime },
-        extra: data,
         actionTypeId: 'ROUTINE_ACTIONS',
-        actions: [
-          { id: 'DO_NOW', title: 'Do Now', foreground: true },
-          { id: 'COMPLETE', title: 'Complete', foreground: true },
-          { id: 'SNOOZE', title: 'Snooze 10min', foreground: false },
-        ],
+        extra: data,
       }],
     });
-
+    
+    await this.showFeedbackNotification('Snoozed for 10 minutes ⏰', 'info');
     this.trackAction('snooze', data);
   }
 
-  async showSuccessNotification(message) {
-    await LocalNotifications.schedule({
-      notifications: [{
-        title: 'Success',
-        body: message,
-        id: Date.now(),
-        schedule: { at: new Date(Date.now() + 100) },
-      }],
-    });
+  async handleSkip(data) {
+    console.log('⏭️ Skip action triggered', data);
+    await this.showFeedbackNotification('Task skipped', 'info');
+    this.trackAction('skip', data);
   }
 
-  async showErrorNotification(message) {
+  async showFeedbackNotification(message, type = 'info') {
+    const icons = {
+      success: '✅',
+      error: '❌',
+      info: 'ℹ️',
+      warning: '⚠️'
+    };
+
     await LocalNotifications.schedule({
       notifications: [{
-        title: 'Error',
+        title: `${icons[type]} ${type.charAt(0).toUpperCase() + type.slice(1)}`,
         body: message,
         id: Date.now(),
         schedule: { at: new Date(Date.now() + 100) },
+        sound: type === 'error' ? 'default' : null,
       }],
     });
   }
 
   async sendTokenToServer(token) {
     try {
+      const authToken = localStorage.getItem('authToken') || localStorage.getItem('GC_AUTH_TOKEN');
+      
       await fetch('/api/push-tokens', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({ token }),
       });
@@ -359,8 +335,7 @@ class PushService {
   }
 
   trackAction(action, data) {
-    // Send analytics event
-    if (window.app && window.app.$analytics) {
+    if (window.app?.$analytics) {
       window.app.$analytics.track('notification_action', {
         action,
         taskId: data.taskId,
