@@ -7,12 +7,11 @@ class PushService {
   constructor() {
     this.isInitialized = false;
   }
-
   async init() {
     if (this.isInitialized) return;
 
     try {
-      // Request permissions first
+      // Request permissions
       const permResult = await PushNotifications.requestPermissions();
       if (permResult.receive !== 'granted') {
         console.warn('Push notification permission not granted');
@@ -25,21 +24,125 @@ class PushService {
         return;
       }
 
-      // IMPORTANT: Register notification categories with actions
-      await this.registerNotificationCategories();
+      // For iOS, we don't need to register categories here - they're in native code
+      if (Capacitor.getPlatform() === 'android') {
+        await this.registerNotificationCategories();
+      }
 
-      // Register for push notifications
       await PushNotifications.register();
-
-      // Set up listeners
       this.setupListeners();
-      
+
       this.isInitialized = true;
-      console.log('PushService initialized successfully with action categories');
+      console.log('PushService initialized successfully');
     } catch (error) {
       console.error('Failed to initialize PushService:', error);
     }
   }
+
+  setupListeners() {
+    // Registration listener
+    PushNotifications.addListener('registration', (token) => {
+      console.log('Push registration success, token:', token.value);
+      this.sendTokenToServer(token.value);
+    });
+
+    // Foreground notification listener
+    PushNotifications.addListener('pushNotificationReceived', async (notification) => {
+      console.log('📱 Push notification received in foreground:', notification);
+
+      // For iOS, show local notification to get action buttons in foreground
+      if (Capacitor.getPlatform() === 'ios') {
+        await this.showLocalNotificationWithActions(notification);
+      } else {
+        // Android handles actions differently
+        await this.showLocalNotificationWithActions(notification);
+      }
+    });
+
+    // Background/killed app notification action listener
+    PushNotifications.addListener('pushNotificationActionPerformed', async (action) => {
+      console.log('🔔 Push notification action performed:', action);
+      await this.handleNotificationAction(action);
+    });
+
+    // Local notification action listener
+    LocalNotifications.addListener('localNotificationActionPerformed', async (action) => {
+      console.log('📲 Local notification action performed:', action);
+      await this.handleNotificationAction(action);
+    });
+  }
+
+  async showLocalNotificationWithActions(notification) {
+    try {
+      const data = notification.data || {};
+      const title = notification.title || data.title || 'Routine Reminder';
+      const body = notification.body || data.body || 'Time for your routine!';
+
+      // Determine category based on data
+      const category = data.actionType === 'habit_actions' ? 'HABIT_ACTIONS' : 'ROUTINE_ACTIONS';
+
+      const localNotification = {
+        title: title,
+        body: body,
+        id: Date.now(),
+        schedule: { at: new Date(Date.now() + 500) },
+        sound: 'default',
+        extra: {
+          ...data,
+          originalTitle: title,
+          originalBody: body,
+        },
+      };
+
+      // For iOS, we need to set the category differently
+      if (Capacitor.getPlatform() === 'ios') {
+        localNotification.actionTypeId = category;
+      } else {
+        // Android
+        localNotification.actionTypeId = category;
+      }
+
+      await LocalNotifications.schedule({
+        notifications: [localNotification],
+      });
+
+      console.log(`✅ Local notification scheduled with category: ${category}`);
+    } catch (error) {
+      console.error('❌ Error showing local notification:', error);
+    }
+  }
+  // async init() {
+  //   if (this.isInitialized) return;
+
+  //   try {
+  //     // Request permissions first
+  //     const permResult = await PushNotifications.requestPermissions();
+  //     if (permResult.receive !== 'granted') {
+  //       console.warn('Push notification permission not granted');
+  //       return;
+  //     }
+
+  //     const localPermResult = await LocalNotifications.requestPermissions();
+  //     if (localPermResult.display !== 'granted') {
+  //       console.warn('Local notification permission not granted');
+  //       return;
+  //     }
+
+  //     // IMPORTANT: Register notification categories with actions
+  //     await this.registerNotificationCategories();
+
+  //     // Register for push notifications
+  //     await PushNotifications.register();
+
+  //     // Set up listeners
+  //     this.setupListeners();
+
+  //     this.isInitialized = true;
+  //     console.log('PushService initialized successfully with action categories');
+  //   } catch (error) {
+  //     console.error('Failed to initialize PushService:', error);
+  //   }
+  // }
 
   async registerNotificationCategories() {
     try {
@@ -100,7 +203,7 @@ class PushService {
           }
         ]
       });
-      
+
       console.log('✅ Notification action categories registered successfully');
     } catch (error) {
       console.error('❌ Error registering notification categories:', error);
@@ -117,7 +220,7 @@ class PushService {
     // Foreground notification listener
     PushNotifications.addListener('pushNotificationReceived', async (notification) => {
       console.log('📱 Push notification received in foreground:', notification);
-      
+
       // Always show as local notification with actions for foreground
       await this.showLocalNotificationWithActions(notification);
     });
@@ -145,10 +248,10 @@ class PushService {
       const data = notification.data || {};
       const title = notification.title || data.title || 'Routine Reminder';
       const body = notification.body || data.body || 'Time for your routine!';
-      
+
       // Determine which action type to use
       const actionTypeId = data.actionType === 'habit_actions' ? 'HABIT_ACTIONS' : 'ROUTINE_ACTIONS';
-      
+
       const localNotification = {
         title: title,
         body: body,
@@ -178,7 +281,7 @@ class PushService {
     const { actionId, notification } = action;
     // Get data from either notification.data or notification.extra
     const data = notification?.data || notification?.extra || {};
-    
+
     console.log(`🎯 Handling action: ${actionId}`, data);
 
     try {
@@ -207,25 +310,25 @@ class PushService {
 
   async handleDoNow(data) {
     console.log('▶️ Do Now action triggered', data);
-    
+
     // Show feedback notification
     await this.showFeedbackNotification('Starting now! 💪', 'success');
-    
+
     // Navigate to the specific routine/task
     if (data.taskId && window.app?.$router) {
       window.app.$router.push(`/routine/${data.taskId}`);
     }
-    
+
     this.trackAction('do_now', data);
   }
 
   async handleComplete(data) {
     console.log('✅ Complete action triggered', data);
-    
+
     try {
       // Call your API to mark task as complete
       const authToken = localStorage.getItem('authToken') || localStorage.getItem('GC_AUTH_TOKEN');
-      
+
       if (!authToken) {
         await this.showFeedbackNotification('Please log in to complete tasks', 'error');
         return;
@@ -254,7 +357,7 @@ class PushService {
 
       if (response.ok) {
         await this.showFeedbackNotification('Task completed! 🎉', 'success');
-        
+
         // Refresh app data if app is open
         if (window.app?.$apollo) {
           window.app.$apollo.queries.goals?.refetch();
@@ -267,16 +370,16 @@ class PushService {
       console.error('Error completing task:', error);
       await this.showFeedbackNotification('Failed to complete task 😞', 'error');
     }
-    
+
     this.trackAction('complete', data);
   }
 
   async handleSnooze(data) {
     console.log('😴 Snooze action triggered', data);
-    
+
     // Schedule another notification in 10 minutes
     const snoozeTime = new Date(Date.now() + 10 * 60 * 1000);
-    
+
     await LocalNotifications.schedule({
       notifications: [{
         title: `⏰ ${data.originalTitle || 'Routine Reminder'} (Snoozed)`,
@@ -287,7 +390,7 @@ class PushService {
         extra: data,
       }],
     });
-    
+
     await this.showFeedbackNotification('Snoozed for 10 minutes ⏰', 'info');
     this.trackAction('snooze', data);
   }
@@ -320,7 +423,7 @@ class PushService {
   async sendTokenToServer(token) {
     try {
       const authToken = localStorage.getItem('authToken') || localStorage.getItem('GC_AUTH_TOKEN');
-      
+
       await fetch('/api/push-tokens', {
         method: 'POST',
         headers: {

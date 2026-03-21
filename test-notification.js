@@ -109,13 +109,83 @@ admin.initializeApp({
 
 class InteractiveNotificationTester {
 
-  async sendNotificationWithActions(token, title, body, data = {}) {
+  // async sendNotificationWithActions(token, title, body, data = {}) {
+  //   if (!token) {
+  //     console.log('No device token provided.');
+  //     return;
+  //   }
+
+  //   console.log('Sending notification with actions to token:', token);
+
+  //   const payload = {
+  //     token: token,
+  //     notification: {
+  //       title: title,
+  //       body: body,
+  //     },
+  //     data: {
+  //       habitId: data.habitId || "1",
+  //       taskId: data.taskId || "",
+  //       routineId: data.routineId || "",
+  //       type: data.type || "routine_reminder",
+  //       actionType: data.actionType || "routine_actions", // This determines which action set to use
+  //       hasActions: "true",
+  //       title: title, // Include in data for local notifications
+  //       body: body,
+  //       // Convert all data values to strings (FCM requirement)
+  //       ...Object.fromEntries(
+  //         Object.entries(data).map(([key, value]) => [key, String(value)])
+  //       ),
+  //     },
+  //     android: {
+  //       notification: {
+  //         channelId: 'routine_notifications',
+  //         priority: 'high',
+  //         defaultSound: true,
+  //         clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+  //       },
+  //       priority: 'high',
+  //       ttl: 3600000,
+  //     },
+  //     apns: {
+  //       headers: {
+  //         "apns-priority": "10",
+  //         "apns-push-type": "alert"
+  //       },
+  //       payload: {
+  //         aps: {
+  //           alert: {
+  //             title: title,
+  //             body: body
+  //           },
+  //           category: "ROUTINE_ACTIONS", // This should match your registered category
+  //           sound: "default",
+  //           badge: 1,
+  //           "mutable-content": 1,
+  //         }
+  //       }
+  //     }
+  //   };
+
+  //   try {
+  //     const response = await admin.messaging().send(payload);
+  //     console.log('✅ Notification with actions sent successfully:', response);
+  //     return response;
+  //   } catch (error) {
+  //     console.error('❌ Error sending notification:', error);
+  //     throw error;
+  //   }
+  // }
+
+
+  // Updated test notification for iOS
+  async sendNotificationWithActionsIOS(token, title, body, data = {}) {
     if (!token) {
       console.log('No device token provided.');
       return;
     }
 
-    console.log('Sending notification with actions to token:', token);
+    console.log('Sending iOS notification with actions to token:', token);
 
     const payload = {
       token: token,
@@ -128,11 +198,10 @@ class InteractiveNotificationTester {
         taskId: data.taskId || "",
         routineId: data.routineId || "",
         type: data.type || "routine_reminder",
-        actionType: data.actionType || "routine_actions", // This determines which action set to use
+        actionType: data.actionType || "routine_actions",
         hasActions: "true",
-        title: title, // Include in data for local notifications
+        title: title,
         body: body,
-        // Convert all data values to strings (FCM requirement)
         ...Object.fromEntries(
           Object.entries(data).map(([key, value]) => [key, String(value)])
         ),
@@ -158,7 +227,8 @@ class InteractiveNotificationTester {
               title: title,
               body: body
             },
-            category: "ROUTINE_ACTIONS", // This should match your registered category
+            // This is the key - must match the category identifier in iOS
+            category: data.actionType === "habit_actions" ? "HABIT_ACTIONS" : "ROUTINE_ACTIONS",
             sound: "default",
             badge: 1,
             "mutable-content": 1,
@@ -169,16 +239,16 @@ class InteractiveNotificationTester {
 
     try {
       const response = await admin.messaging().send(payload);
-      console.log('✅ Notification with actions sent successfully:', response);
+      console.log('✅ iOS notification with actions sent successfully:', response);
       return response;
     } catch (error) {
-      console.error('❌ Error sending notification:', error);
+      console.error('❌ Error sending iOS notification:', error);
       throw error;
     }
   }
 
   async sendWaterReminder(token) {
-    return this.sendNotificationWithActions(
+    return this.sendNotificationWithActionsIOS(
       token,
       "💧 Drink Water",
       "8 glasses remaining - tap actions below",
@@ -192,7 +262,7 @@ class InteractiveNotificationTester {
   }
 
   async sendExerciseReminder(token) {
-    return this.sendNotificationWithActions(
+    return this.sendNotificationWithActionsIOS(
       token,
       "🏃♂️ Morning Exercise",
       "Time for your 30-minute workout!",
@@ -207,7 +277,7 @@ class InteractiveNotificationTester {
   }
 
   async sendHabitReminder(token) {
-    return this.sendNotificationWithActions(
+    return this.sendNotificationWithActionsIOS(
       token,
       "📚 Reading Habit",
       "Time to read for 20 minutes",
