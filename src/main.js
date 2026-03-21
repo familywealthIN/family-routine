@@ -42,8 +42,8 @@ import redirectOnError from './utils/redirectOnError';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
-import PushService from './services/pushService';
-PushService.init();
+import PushService from './services/pushService.js';
+
 // Register Vue Composition API (must be before other plugins that use it)
 Vue.use(VueCompositionAPI);
 
@@ -233,5 +233,22 @@ loadData().then(() => {
     }).$mount('#app');
 
     console.log('[Main] App mounted with Apollo cache persistence');
+  });
+  // Initialize push service after app is mounted
+  setupCachePersistence().then(async () => {
+    const app = new Vue({
+      router,
+      apolloProvider,
+      data: { name, email, picture },
+      render: (h) => h(App),
+    }).$mount('#app');
+
+    // Make app globally available for push service
+    window.app = app;
+
+    // Initialize push service
+    if (Capacitor.isNativePlatform()) {
+      await PushService.init();
+    }
   });
 });
