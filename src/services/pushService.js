@@ -8,17 +8,13 @@ class PushService {
     await PushNotifications.requestPermissions();
     await PushNotifications.register();
 
-    // Token
-    PushNotifications.addListener('registration', (token) => {
-      console.log('Token:', token.value);
-    });
-
-    // When user taps notification OR button
     PushNotifications.addListener(
       'pushNotificationActionPerformed',
       (event) => {
 
-        // store action (important for cold start)
+        console.log("Action clicked:", event);
+
+        // store for cold start
         localStorage.setItem(
           "pendingAction",
           JSON.stringify(event)
@@ -27,10 +23,11 @@ class PushService {
       }
     );
 
-    // process stored action after app loads
+    // process after app loads
     handlePendingAction();
 
   }
+
 }
 
 export default new PushService();
