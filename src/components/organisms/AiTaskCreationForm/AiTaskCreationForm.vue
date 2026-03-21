@@ -230,7 +230,7 @@ export default {
   border: none;
   border-top: 1px solid #e8e8e8;
   border-radius: 0;
-  font-size: 14px;
+  font-size: 16px;
   color: #666;
   background: transparent;
   padding: 0;
@@ -257,7 +257,7 @@ export default {
   }
 
   .task-description-editor >>> .EasyMDEContainer .CodeMirror {
-    font-size: 13px;
+    font-size: 16px;
   }
 }
 </style>

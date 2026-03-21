@@ -289,10 +289,22 @@ const query = {
         date: { $in: weekDates },
       }).exec();
 
-      // Build a map of date -> routine for quick lookup
+      // Build a map of date -> routine for quick lookup.
+      // When duplicate documents exist for the same date (can happen due to race
+      // conditions in addRoutine), keep the one with the highest total earned
+      // points so stale zero-valued duplicates don't shadow real data.
       const routineMap = {};
       routines.forEach((routine) => {
-        routineMap[routine.date] = routine;
+        const dateStr = routine.date;
+        if (!routineMap[dateStr]) {
+          routineMap[dateStr] = routine;
+        } else {
+          const existing = aggregateStimuliForRoutine(routineMap[dateStr]);
+          const current = aggregateStimuliForRoutine(routine);
+          if (current.D + current.K + current.G > existing.D + existing.K + existing.G) {
+            routineMap[dateStr] = routine;
+          }
+        }
       });
 
       // Return stimulus totals for each day of the week
@@ -331,13 +343,16 @@ const mutation = {
       tasklist.forEach((task) => {
         task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
       });
-      const routine = new RoutineModel({
-        ...args,
-        email,
-        tasklist,
-      });
 
-      await routine.save();
+      // Use atomic upsert to prevent race-condition duplicate documents
+      // when addRoutine is called concurrently (e.g. from handleDayChange
+      // and the routineDate Apollo update callback simultaneously).
+      await RoutineModel.findOneAndUpdate(
+        { date: args.date, email },
+        { $setOnInsert: { date: args.date, email, tasklist } },
+        { upsert: true },
+      ).exec();
+
       return findTodayandSort(args, email);
     },
   },

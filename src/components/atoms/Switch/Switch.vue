@@ -24,7 +24,7 @@
     :light="light"
     :class="switchClass"
     v-bind="$attrs"
-    @change="$emit('input', $event)"
+    @change="handleChange"
     v-on="filteredListeners"
   >
     <template v-if="$slots.label" #label>
@@ -139,6 +139,12 @@ export default {
     filteredListeners() {
       const { input, change, ...listeners } = this.$listeners;
       return listeners;
+    },
+  },
+  methods: {
+    handleChange(value) {
+      this.$emit('input', value);
+      this.$emit('change', value);
     },
   },
 };

@@ -59,3 +59,21 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.tableCard {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tableCard >>> .v-datatable,
+.tableCard >>> .v-datatable__wrapper {
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+}
+
+.tableCard >>> table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+</style>
