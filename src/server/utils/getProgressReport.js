@@ -325,12 +325,18 @@ function getTaskActivities({
 
 function getProgressStatement({ periodRoutines }) {
   try {
-    const sum = periodRoutines.reduce((acc, routine) => acc + countTotal(routine), 0);
-    const { length } = periodRoutines;
+    let consideredDays = 0;
+    const sum = periodRoutines.reduce((acc, routine) => {
+      if (countTotal(routine) > 0 && !routine.skip) {
+        consideredDays += 1;
+        return acc + countTotal(routine);
+      }
+      return acc;
+    }, 0);
 
-    if (!sum && !length) return 'Stay Calm and focus on what\'s right?';
+    if (!sum && !consideredDays) return 'Stay Calm and focus on what\'s right?';
 
-    const efficiency = Math.ceil(sum / length);
+    const efficiency = Math.ceil(sum / consideredDays);
 
     if (efficiency >= 70) {
       return 'Great Going!';

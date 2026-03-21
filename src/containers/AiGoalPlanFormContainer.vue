@@ -113,6 +113,25 @@ export default {
     },
   },
   methods: {
+    getSelectedRoutineContext() {
+      if (!this.selectedTaskRef || !Array.isArray(this.tasklist) || this.tasklist.length === 0) {
+        return null;
+      }
+
+      const routine = this.tasklist.find(
+        (task) => task.id === this.selectedTaskRef || task.taskId === this.selectedTaskRef,
+      );
+
+      if (!routine || !routine.description) {
+        return null;
+      }
+
+      return {
+        name: routine.name || routine.body || routine.title || 'Selected Routine',
+        description: routine.description,
+      };
+    },
+
     // Expose saveGoals method for parent to call via ref
     saveGoals() {
       if (this.$refs.goalForm) {
@@ -181,19 +200,28 @@ export default {
       try {
         const modifiedQuery = this.modifyQueryPeriod(this.searchQuery);
 
-        // Build system prompt from parent goal context if available
+        // Build system prompt from routine, parent goal, and dashboard context if available.
         let systemPrompt = null;
+        const parts = [];
+        const routineContext = this.getSelectedRoutineContext();
+
+        if (routineContext) {
+          parts.push(
+            `Selected Routine: ${routineContext.name}\nRoutine Description: ${routineContext.description}`,
+          );
+        }
+
         if (this.parentGoalContext) {
-          const parts = [];
           if (this.parentGoalContext.body) {
             parts.push(`Parent Goal: ${this.parentGoalContext.body}`);
           }
           if (this.parentGoalContext.contribution) {
             parts.push(`Description: ${this.parentGoalContext.contribution}`);
           }
-          if (parts.length > 0) {
-            systemPrompt = parts.join('\n');
-          }
+        }
+
+        if (parts.length > 0) {
+          systemPrompt = parts.join('\n');
         }
 
         // Merge dashboard context (cached area/project Description + Next Steps)

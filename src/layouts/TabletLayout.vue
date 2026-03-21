@@ -92,6 +92,10 @@ export default {
       return this.$root.$data.picture || '/img/default-user.png';
     },
     pageTitle() {
+      if (this.$route && this.$route.path && this.$route.path.startsWith('/progress')) {
+        return 'Progress';
+      }
+
       if (this.$route.name) {
         const spaced = this.$route.name.replace(/([a-z])([A-Z])/g, '$1 $2');
         return spaced[0].toUpperCase() + spaced.substr(1);
