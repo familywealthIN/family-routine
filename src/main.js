@@ -1,3 +1,4 @@
+import { StatusBar } from '@capacitor/status-bar';
 import 'babel-polyfill';
 import 'isomorphic-unfetch';
 import Vue from 'vue';
@@ -10,7 +11,7 @@ import { InMemoryCache } from 'apollo-cache-inmemory';
 import { persistCache } from 'apollo-cache-persist';
 import localforage from 'localforage';
 import 'firebase/messaging';
-
+import { Capacitor } from '@capacitor/core';
 import { graphQLUrl } from './blob/config';
 import './plugins/vuetify';
 import './plugins/notifications';
@@ -19,11 +20,14 @@ import './styles/shadows.css';
 import './styles/easymde-preview.css';
 import './styles/ios-input-zoom-fix.css';
 import VueApollo from './plugins/apollo';
+import './styles/android-safe-area.css';
+import './utils/androidSafeArea'; // Initialize Android safe area manager
 import currentTaskPlugin from './plugins/currentTask';
 import routinePlugin from './plugins/routine';
 import goalPlugin from './plugins/goal';
 // routineStore import removed - using Apollo cache persistence instead
 import App from './App.vue';
+// Import Google OAuth plugin
 import './plugins/vue-google-oauth2';
 import router from './router';
 import {
@@ -33,25 +37,34 @@ import redirectOnError from './utils/redirectOnError';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
+import PushService from './services/pushService.js';
+// Load Google Identity Services script
+const script = document.createElement('script');
+script.src = 'https://accounts.google.com/gsi/client';
+script.async = true;
+script.defer = true;
+document.head.appendChild(script);
 
 // Register Vue Composition API (must be before other plugins that use it)
 Vue.use(VueCompositionAPI);
 
 Vue.config.productionTip = false;
+if (Capacitor.isNativePlatform()) {
+  // Show splash screen
+  SplashScreen.show({
+    showDuration: 2000,
+    autoHide: true,
+  });
+}
+
+if (Capacitor.isNativePlatform()) {
+  StatusBar.setOverlaysWebView({ overlay: false });
+  StatusBar.setStyle({ style: 'LIGHT' });
+  StatusBar.setBackgroundColor({ color: '#ffffff' });
+}
 
 // Install Analytics plugin
 Vue.use(AnalyticsPlugin);
-
-// localStorage.__proto__ = Object.create(Storage.prototype);
-// localStorage.__proto__.setItem = function () {
-//   console.log('localstorage.setItem is disabled');
-// };
-// localStorage.__proto__.removeItem = function () {
-//   console.log('localstorage.removeItem is disabled');
-// };
-// localStorage.__proto__.getItem = function () {
-//   console.log('localstorage.getItem is disabled');
-// };
 
 loadData().then(() => {
   const authMiddleware = new ApolloLink((operation, forward) => {
@@ -175,7 +188,7 @@ loadData().then(() => {
   Vue.use(goalPlugin);
 
   // Initialize Apollo cache persistence before mounting app
-  setupCachePersistence().then(() => {
+  setupCachePersistence().then(async () => {
     const app = new Vue({
       router,
       apolloProvider,
@@ -188,5 +201,14 @@ loadData().then(() => {
     }).$mount('#app');
 
     console.log('[Main] App mounted with Apollo cache persistence');
+
+    // Make app globally available
+    window.app = app;
+
+    // Initialize push service with action categories
+    if (Capacitor.isNativePlatform()) {
+      const PushService1 = (await import('./services/pushService.js')).default;
+      await PushService1.init();
+    }
   });
 });

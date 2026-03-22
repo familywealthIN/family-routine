@@ -175,7 +175,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 4px 4px;
+  padding: 0px 4px 4px;
 }
 
 .day-column {

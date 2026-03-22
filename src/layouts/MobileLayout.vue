@@ -5,7 +5,8 @@
       clipped
       right
       v-model="drawer"
-      v-if="$route.name !== 'login' && $route.name !== 'stats'"
+      v-if="$route.name!== 'login' && $route.name !== 'stats'"
+      class="nav-header"
     >
       <v-list-tile @click.stop="drawer = !drawer">
         <v-list-tile-action style="min-width: 40px;">
@@ -20,7 +21,7 @@
         <v-divider></v-divider>
         <v-list-tile avatar>
           <v-list-tile-avatar>
-            <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src='/img/default-user.png'" />
+            <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src = '/img/default-user.png'" />
           </v-list-tile-avatar>
 
           <v-list-tile-content>
@@ -101,7 +102,7 @@
         </v-flex>
       </v-layout>
     </v-navigation-drawer>
-    <v-toolbar v-if="$route.name !== 'login'" class="elevation-0" color="white" app>
+    <v-toolbar v-if="$route.name !== 'login'" class="elevation-0 fixed-toolbar safe-area-top" color="white" app>
       <v-toolbar-title style="font-size: 24px">{{ pageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn icon @click="openAiSearch">
@@ -112,30 +113,34 @@
       </v-btn>
       <v-btn icon @click.stop="drawer = !drawer">
         <v-avatar size="32">
-          <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src='/img/default-user.png'" />
+          <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src = '/img/default-user.png'" />
         </v-avatar>
       </v-btn>
     </v-toolbar>
-    <v-content>
+    <div v-if="$route.name !== 'login'" class="scrollable-content safe-area-content">
+      <v-content>
+        <router-view></router-view>
+      </v-content>
+    </div>
+    <div v-else class="login-content-wrapper">
       <router-view></router-view>
-    </v-content>
+    </div>
     <v-bottom-nav
       :value="true"
       fixed
       color="white"
-      class="pb-2"
+      class="pb-2 fixed-bottom-nav safe-area-bottom"
       v-if="$route.name !== 'login' && $route.name !== 'stats'"
     >
       <v-btn
         color="primary"
-        flat
-        v-for="item in bottomNav"
+        flat v-for="item in bottomNav"
         :key="item.title"
         :to="item.route"
         :value="item.route"
       >
-        <span>{{item.title}}</span>
-        <v-icon>{{item.icon}}</v-icon>
+        <span>{{ item.title }}</span>
+        <v-icon>{{ item.icon }}</v-icon>
       </v-btn>
     </v-bottom-nav>
     <v-dialog
@@ -162,6 +167,8 @@
 import localforage from 'localforage';
 import moment from 'moment';
 import gql from 'graphql-tag';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 import PendingList from '../containers/PendingListContainer.vue';
 import TaskTimingBar from '../components/atoms/TaskTimingBar/TaskTimingBar.vue';
 import AreaSidebar from '../components/molecules/AreaSidebar/AreaSidebar.vue';
@@ -174,6 +181,7 @@ import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
 import { clearData, getSessionItem } from '../token';
+import { gauthOption } from '../blob/config';
 
 export default {
   components: {
@@ -341,79 +349,229 @@ export default {
     openAiSearch() {
       eventBus.$emit(EVENTS.OPEN_AI_SEARCH, { mode: 'search' });
     },
-    handleClickSignOut() {
-      this.$gAuth
-        .signOut()
-        .then(async () => {
-          this.drawer = false;
-          this.isSignIn = this.$gAuth.isAuthorized;
-          await clearData();
-          localStorage.removeItem(USER_TAGS);
-          // Clear Apollo in-memory cache and persisted storage
-          await this.$apollo.provider.defaultClient.clearStore();
-          await localforage.clear();
-          this.$root.$data.userName = getSessionItem(GC_USER_NAME);
-          this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
-          this.$root.$data.userEmail = getSessionItem(GC_PICTURE);
-          this.$router.push('/').catch(() => {});
-        })
-        .catch((error) => {
-          window.location.reload();
-          console.log(error);
-        });
+    async handleClickSignOut() {
+      try {
+        if (Capacitor.isNativePlatform()) {
+          // Initialize before signOut to prevent nil error
+          const platform = Capacitor.getPlatform();
+          const clientId = platform === 'ios'
+            ? gauthOption.iosClientId
+            : gauthOption.androidClientId;
+
+          await GoogleAuth.initialize({
+            clientId,
+            scopes: ['profile', 'email'],
+          });
+
+          await GoogleAuth.signOut();
+        } else {
+          await this.$gAuth.signOut();
+        }
+
+        this.drawer = false;
+        await clearData();
+        await localforage.clear();
+        localStorage.removeItem(USER_TAGS);
+        this.$root.$data.userName = getSessionItem(GC_USER_NAME);
+        this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
+        this.$root.$data.picture = getSessionItem(GC_PICTURE);
+        this.$router.push('/').catch(() => { });
+      } catch (error) {
+        console.log(error);
+        // Just clear local data and redirect on error
+        await clearData();
+        await localforage.clear();
+        localStorage.removeItem(USER_TAGS);
+        this.$router.push('/').catch(() => { });
+      }
     },
+  },
+  mounted() {
+    if (typeof window !== 'undefined') {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+
+      // Extract Android version from user agent
+      const androidMatch = ua.match(/Android\s([0-9\.]+)/);
+      if (androidMatch) {
+        const androidVersion = parseFloat(androidMatch[1]);
+
+        // Android 14+ detection (API 34+)
+        if (androidVersion >= 14) {
+          document.body.classList.add('android14-plus');
+          document.documentElement.classList.add('android14-plus');
+
+          // Set CSS custom properties for safe area handling
+          document.documentElement.style.setProperty('--android-version', androidVersion.toString());
+        }
+
+        // Legacy Android 15 detection for backward compatibility
+        if (androidVersion >= 15 || /Android\s15|Android\sVanilla|Android\sVIC/i.test(ua)) {
+          document.body.classList.add('android15');
+        }
+      }
+    }
   },
 };
 </script>
 
 <style>
 #mobileLayout {
-    padding-bottom: 64px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.fixed-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Android 14+ specific safe area handling */
+body.android14-plus .safe-area-top {
+  padding-top: max(env(safe-area-inset-top), 24px) !important;
+}
+
+body.android15 .safe-area-top {
+  padding-top: max(env(safe-area-inset-top, 0px), 8px);
+}
+
+.fixed-bottom-nav {
+  position: fixed !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  padding-bottom: 0 !important;
+  /* Remove padding-bottom from footer, let scrollable-content handle it */
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Android 14+ specific safe area handling */
+body.android14-plus .safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px) !important;
+}
+
+body.android15 .safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px);
+}
+
+.scrollable-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  /* padding-top: 20px; */
+  /* height of toolbar */
+  padding-bottom: 100px;
+  min-height: 0;
+}
+
+/* Android 14+ content padding */
+body.android14-plus .scrollable-content {
+  /* padding-top: calc(64px + max(env(safe-area-inset-top), 24px)) !important;
+  padding-bottom: calc(75px + max(env(safe-area-inset-bottom), 16px)) !important; */
+}
+
+body.android15 .scrollable-content {
+  /* padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important; */
+}
+
+.safe-area-content {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  background: #fff;
+  min-height: 100%;
+  box-sizing: border-box;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body.android15 .safe-area-content {
+  padding-left: max(env(safe-area-inset-left, 0px), 0px);
+  padding-right: max(env(safe-area-inset-right, 0px), 0px);
+}
+
+#mobileLayout .v-card {
+  border-radius: 16px;
+}
+
+.login footer {
+  bottom: calc(30px + env(safe-area-inset-bottom)) !important;
 }
 
 #mobileLayout .progress .v-card .headline {
-    color: rgba(0, 0, 0, 0.54);
-    font-size: 14px !important;
-    line-height: 16px !important;
-    font-weight: bold;
+  color: rgba(0, 0, 0, 0.54);
+  font-size: 14px !important;
+  line-height: 16px !important;
+  font-weight: bold;
 }
 
 #mobileLayout .image-card {
-    border-radius: 0;
+  border-radius: 0;
+}
+
+#mobileLayout .v-btn--bottom:not(.v-btn--absolute) {
+  bottom: 70px;
 }
 
 #mobileLayout .v-btn--bottom:not(.v-btn--absolute).second-right-btn {
-    right: 16px;
+  right: 16px;
 }
 
 #mobileLayout .image-card .v-btn--bottom.v-btn--absolute {
-    bottom: -12px;
+  bottom: -12px;
 }
 
 #mobileLayout .image-card-page {
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    position: relative;
-    top: -16px;
-    background-color: #fff;
-    padding-top: 16px !important;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  position: relative;
+  top: -16px;
+  background-color: #fff;
+  padding-top: 16px !important;
 }
 
 #mobileLayout .v-chip .v-chip__content {
-    height: 38px;
-    padding: 0 16px;
+  height: 38px;
+  padding: 0 16px;
 }
 
 #mobileLayout .v-chip .v-chip__content .v-icon {
-    font-size: 16px;
+  font-size: 16px;
 }
 
 #mobileLayout .v-navigation-drawer--temporary:not(.v-navigation-drawer--close),
 #mobileLayout .v-navigation-drawer--is-mobile:not(.v-navigation-drawer--close) {
   width: 100% !important;
 }
+
 .v-bottom-nav {
-  height: 64px !important;
+  height: 80px !important;
+}
+
+.login-content-wrapper {
+  min-height: 100vh;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+body.android15 #mobileLayout .nav-header {
+  padding-top: max(env(safe-area-inset-top, 0px), 8px);
 }
 
 .stimulus-row {

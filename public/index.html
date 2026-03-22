@@ -12,21 +12,26 @@
       content="Live a healthy life by following a great Routine"
     />
 
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Live a healthy life by following a great Routine" />
+
+  <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com;
-      font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com;;
+      font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com;
       img-src 'self' data: https: blob:;
       media-src 'self' data: https: blob:;
       frame-src 'self' https://accounts.google.com;
-      connect-src 'self' https://accounts.google.com https://www.googleapis.com https://httpbin.org https://*.httpbin.org https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com http://localhost:4000 https://n8n.srv943121.hstgr.cloud https://cdn.jsdelivr.net https://maxcdn.bootstrapcdn.com;
-    "
-    />
+connect-src 'self' https://accounts.google.com https://www.googleapis.com https://httpbin.org https://*.httpbin.org https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com http://localhost:4000 https://n8n.srv943121.hstgr.cloud https://cdn.jsdelivr.net https://maxcdn.bootstrapcdn.com https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net;
+    " />
 
-    <link rel="icon" href="<%= BASE_URL %>favicon.ico" />
+  <link rel="icon" href="<%= BASE_URL %>favicon.ico" />
 
     <link
       rel="apple-touch-icon-precomposed"
@@ -263,34 +268,25 @@
       href="<%= BASE_URL %>img/splash_screens/8.3__iPad_Mini_portrait.png"
     />
 
-    <title>Routine Notes</title>
+  <title>Routine Notes</title>
 
-    <link
-      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css?family=Material+Icons&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-      integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
-  </head>
+  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css?family=Material+Icons&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
 
-  <body>
-    <noscript>
-      <strong>
-        We're sorry but Routine Notes doesn't work properly without JavaScript
-        enabled. Please enable it to continue.
-      </strong>
-    </noscript>
+<body>
+  <noscript>
+    <strong>
+      We're sorry but Routine Notes doesn't work properly without JavaScript
+      enabled. Please enable it to continue.
+    </strong>
+  </noscript>
 
-    <div id="app"></div>
-    <!-- built files will be auto injected -->
-  </body>
+  <div id="app"></div>
+  <!-- built files will be auto injected -->
+</body>
+
 </html>

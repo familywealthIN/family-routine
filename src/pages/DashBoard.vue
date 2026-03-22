@@ -18,7 +18,7 @@
       </atom-card>
       <weekday-selector-container
         :selectedDate="date"
-        :class="$vuetify.breakpoint.xsOnly ? 'mr-3 mb-1 ml-3 mt-2' : 'mr-3 mb-3 ml-3'"
+        :class="$vuetify.breakpoint.xsOnly ? 'mr-3 mb-1 ml-3' : 'mr-3 mb-3 ml-3'"
         @date-selected="handleDateSelected"
       />
     <div v-if="isTodaySelected">
