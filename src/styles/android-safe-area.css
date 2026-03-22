@@ -41,9 +41,11 @@
   padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom)) !important;
 }
 
-.v-content {
-  padding-top: calc(64px + max(var(--system-top-inset, 0px), env(safe-area-inset-top))) !important;
-  padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom)) !important;
+@media screen and (max-width: 600px) {
+  .v-content {
+    padding-top: calc(64px + max(var(--system-top-inset, 0px), env(safe-area-inset-top))) !important;
+    padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom)) !important;
+  }
 }
 
 .android15-soft-keys .v-content {
@@ -68,7 +70,7 @@ body {
   padding-bottom: max(var(--system-bottom-inset, 48px), env(safe-area-inset-bottom)) !important;
 }
 
-.header {
+.nav-header {
   /* padding-top: max(var(--status-bar-height, 40px), env(safe-area-inset-top)) !important; */
 }
 
