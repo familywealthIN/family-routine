@@ -79,12 +79,6 @@ export default {
     }
   },
   methods: {
-    handleOpenAiSearch(data) {
-      console.log('App.vue: Received OPEN_AI_SEARCH event', data);
-      console.log('App.vue: Current aiSearchModal value:', this.aiSearchModal);
-      this.aiSearchModal = true;
-      console.log('App.vue: Set aiSearchModal to:', this.aiSearchModal);
-    },
     async initPwaFCM() {
       if (isDevelopment || netlify) {
         firebase.initializeApp(config);

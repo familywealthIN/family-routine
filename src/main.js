@@ -23,7 +23,6 @@ import VueApollo from './plugins/apollo';
 import './styles/android-safe-area.css';
 import './utils/androidSafeArea'; // Initialize Android safe area manager
 import currentTaskPlugin from './plugins/currentTask';
-import { SplashScreen } from '@capacitor/splash-screen';
 import routinePlugin from './plugins/routine';
 import goalPlugin from './plugins/goal';
 // routineStore import removed - using Apollo cache persistence instead
@@ -157,6 +156,10 @@ loadData().then(() => {
   const apolloClient = new ApolloClient({
     link: errorLink.concat(normalLink),
     cache,
+    fetchOptions: {
+      fetch,
+      mode: 'no-cors',
+    },
     defaultOptions: {
       watchQuery: {
         fetchPolicy: 'cache-and-network',
@@ -185,7 +188,7 @@ loadData().then(() => {
   Vue.use(goalPlugin);
 
   // Initialize Apollo cache persistence before mounting app
-  setupCachePersistence().then(() => {
+  setupCachePersistence().then(async () => {
     const app = new Vue({
       router,
       apolloProvider,
@@ -198,15 +201,6 @@ loadData().then(() => {
     }).$mount('#app');
 
     console.log('[Main] App mounted with Apollo cache persistence');
-  });
-  // Initialize push service after app is mounted
-  setupCachePersistence().then(async () => {
-    const app = new Vue({
-      router,
-      apolloProvider,
-      data: { name, email, picture },
-      render: (h) => h(App),
-    }).$mount('#app');
 
     // Make app globally available
     window.app = app;

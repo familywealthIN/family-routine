@@ -1,7 +1,13 @@
 <template>
   <div id="mobileLayout">
-    <v-navigation-drawer fixed clipped right v-model="drawer" v-if="$route.name !== 'login' && $route.name !== 'stats'"
-      class="header">
+    <v-navigation-drawer
+      fixed
+      clipped
+      right
+      v-model="drawer"
+      v-if="$route.name!== 'login' && $route.name !== 'stats'"
+      class="nav-header"
+    >
       <v-list-tile @click.stop="drawer = !drawer">
         <v-list-tile-action style="min-width: 40px;">
           <v-icon>arrow_back</v-icon>
@@ -15,8 +21,7 @@
         <v-divider></v-divider>
         <v-list-tile avatar>
           <v-list-tile-avatar>
-            <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`"
-              @error="$event.target.src = '/img/default-user.png'" />
+            <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src = '/img/default-user.png'" />
           </v-list-tile-avatar>
 
           <v-list-tile-content>
@@ -86,7 +91,12 @@
 
       <v-layout row wrap>
         <v-flex d-flex xs12>
-          <v-btn color="error" block class="ma-3" @click="handleClickSignOut">
+          <v-btn
+            color="error"
+            block
+            class="ma-3"
+            @click="handleClickSignOut"
+          >
             Log out
           </v-btn>
         </v-flex>
@@ -103,8 +113,7 @@
       </v-btn>
       <v-btn icon @click.stop="drawer = !drawer">
         <v-avatar size="32">
-          <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`"
-            @error="$event.target.src = '/img/default-user.png'" />
+          <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src = '/img/default-user.png'" />
         </v-avatar>
       </v-btn>
     </v-toolbar>
@@ -116,14 +125,30 @@
     <div v-else class="login-content-wrapper">
       <router-view></router-view>
     </div>
-    <v-bottom-nav :value="true" fixed color="white" class="pb-2 fixed-bottom-nav safe-area-bottom"
-      v-if="$route.name !== 'login' && $route.name !== 'stats'">
-      <v-btn color="primary" flat v-for="item in bottomNav" :key="item.title" :to="item.route" :value="item.route">
+    <v-bottom-nav
+      :value="true"
+      fixed
+      color="white"
+      class="pb-2 fixed-bottom-nav safe-area-bottom"
+      v-if="$route.name !== 'login' && $route.name !== 'stats'"
+    >
+      <v-btn
+        color="primary"
+        flat v-for="item in bottomNav"
+        :key="item.title"
+        :to="item.route"
+        :value="item.route"
+      >
         <span>{{ item.title }}</span>
         <v-icon>{{ item.icon }}</v-icon>
       </v-btn>
     </v-bottom-nav>
-    <v-dialog v-model="pendingDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
+    <v-dialog
+      v-model="pendingDialog"
+      fullscreen
+      hide-overlay
+      transition="dialog-bottom-transition"
+    >
       <v-card>
         <v-toolbar dark color="primary">
           <v-btn icon dark @click="pendingDialog = false">
@@ -545,7 +570,7 @@ body.android15 .safe-area-content {
   justify-content: center;
 }
 
-body.android15 #mobileLayout .header {
+body.android15 #mobileLayout .nav-header {
   padding-top: max(env(safe-area-inset-top, 0px), 8px);
 }
 
