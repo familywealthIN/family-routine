@@ -39,7 +39,14 @@
         </template>
       </atom-data-table>
     </atom-card-text>
-    <atom-dialog width="600" v-model="dialog" persistent>
+    <atom-dialog
+      v-model="dialog"
+      :width="isMobile ? '100%' : 600"
+      :max-width="isMobile ? '100%' : 600"
+      scrollable
+      :transition="isMobile ? 'dialog-bottom-transition' : 'dialog-transition'"
+      :content-class="isMobile ? 'routine-item-dialog routine-item-dialog--mobile' : 'routine-item-dialog'"
+    >
       <atom-card>
         <atom-card-title>
           <span class="headline">{{ formTitle }}</span>
@@ -60,22 +67,30 @@
                     @update-new-tag-items="updateNewTagItems"
                   />
                 </atom-flex>
-                <div>
+                <div class="steps-section">
                   <atom-list subheader>
                     <atom-subheader>Steps</atom-subheader>
                     <div class="formStep pl-3">
                       <atom-text-field clearable v-model="stepBody" id="newStepBody" name="newStepBody"
                         label="Type your step" class="inputGoal" @keyup.enter="addStep">
                       </atom-text-field>
-                      <atom-button icon color="success" fab class="ml-3 mr-0" :loading="buttonLoading"
-                        @click="addStep(editedItem.steps)">
-                        <atom-icon dark>send</atom-icon>
+                      <atom-button
+                        color="success"
+                        :icon="!isMobile"
+                        :fab="!isMobile"
+                        :block="isMobile"
+                        class="step-add-btn"
+                        :loading="buttonLoading"
+                        @click="addStep(editedItem.steps)"
+                      >
+                        <atom-icon :dark="!isMobile" class="step-add-btn-icon">send</atom-icon>
+                        <span v-if="isMobile" class="step-add-btn-label">Add Step</span>
                       </atom-button>
                     </div>
                   </atom-list>
                   <draggable v-model="editedItem.steps">
                     <transition-group>
-                      <atom-list-tile v-for="step in editedItem.steps" :key="step.id">
+                      <atom-list-tile v-for="step in editedItem.steps" :key="step.id" class="step-row">
                         <atom-list-tile-action class="mr-3">
                           <atom-icon color="grey lighten-1" class="drag-handle">drag_indicator</atom-icon>
                         </atom-list-tile-action>
@@ -296,6 +311,9 @@ export default {
   computed: {
     formTitle() {
       return this.editedIndex === -1 ? 'New Item' : 'Edit Item';
+    },
+    isMobile() {
+      return this.$vuetify && this.$vuetify.breakpoint && this.$vuetify.breakpoint.xs;
     },
   },
 
@@ -618,6 +636,33 @@ export default {
   flex-grow: 1;
 }
 
+.steps-section {
+  width: 100%;
+}
+
+.formStep {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding-right: 12px;
+}
+
+.step-add-btn {
+  margin-left: 0;
+  margin-right: 0;
+  flex-shrink: 0;
+}
+
+.step-add-btn-label {
+  margin-left: 8px;
+}
+
+.step-row .v-list__tile__title {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+
 .drag-handle {
   cursor: move;
 }
@@ -628,6 +673,73 @@ export default {
 
 .monospace-font >>> textarea {
   font-family: 'Courier New', Courier, monospace !important;
-  font-size: 14px;
+  font-size: 16px;
+}
+
+.routine-item-dialog {
+  overflow: hidden;
+}
+
+.routine-item-dialog .v-card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 96px);
+  overflow: hidden;
+}
+
+.routine-item-dialog .v-form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.routine-item-dialog .v-card__text {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 600px) {
+  .routine-item-dialog--mobile {
+    align-self: flex-end;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100%;
+  }
+
+  .routine-item-dialog--mobile .v-card {
+    border-radius: 16px 16px 0 0;
+    max-height: 86vh;
+  }
+
+  .formStep {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding-right: 0;
+    padding-left: 0 !important;
+  }
+
+  .formStep .inputGoal {
+    width: 100%;
+  }
+
+  .step-add-btn {
+    width: 100%;
+    min-height: 40px;
+    border-radius: 10px !important;
+  }
+
+  .step-add-btn-icon {
+    margin-right: 0;
+  }
+
+  .step-row .v-list__tile {
+    min-height: 44px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
 }
 </style>

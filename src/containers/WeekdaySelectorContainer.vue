@@ -77,10 +77,12 @@ export default {
 
   mounted() {
     eventBus.$on(EVENTS.ROUTINE_TICKED, this.handleRoutineTicked);
+    eventBus.$on(EVENTS.DASHBOARD_REFRESH, this.handleRoutineTicked);
   },
 
   beforeDestroy() {
     eventBus.$off(EVENTS.ROUTINE_TICKED, this.handleRoutineTicked);
+    eventBus.$off(EVENTS.DASHBOARD_REFRESH, this.handleRoutineTicked);
   },
 
   methods: {

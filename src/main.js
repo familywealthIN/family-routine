@@ -17,6 +17,8 @@ import './plugins/vuetify';
 import './plugins/notifications';
 import './plugins/curl-executor';
 import './styles/shadows.css';
+import './styles/easymde-preview.css';
+import './styles/ios-input-zoom-fix.css';
 import VueApollo from './plugins/apollo';
 import './styles/android-safe-area.css';
 import './utils/androidSafeArea'; // Initialize Android safe area manager

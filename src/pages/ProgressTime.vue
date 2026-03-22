@@ -3,7 +3,7 @@
       <atom-container fluid grid-list-lg>
         <atom-layout row wrap class="mb-4">
           <atom-flex d-flex xs7>
-            <h1>{{ capitalize(period || 'week') }} Progress</h1>
+            <h1>{{ progress && progress.progressStatement }}</h1>
           </atom-flex>
           <atom-flex d-flex xs5>
             <div class="text-xs-right">

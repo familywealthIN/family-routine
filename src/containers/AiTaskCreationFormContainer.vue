@@ -29,6 +29,7 @@ import AiTaskCreationForm from '../components/organisms/AiTaskCreationForm/AiTas
 import eventBus, { EVENTS } from '../utils/eventBus';
 import getJSON from '../utils/getJSON';
 import { USER_TAGS } from '../constants/settings';
+import { notifyNonCurrentTaskGoalCreation } from '../utils/taskCreationNotification';
 
 export default {
   name: 'AiTaskCreationFormContainer',
@@ -106,6 +107,25 @@ export default {
     },
   },
   methods: {
+    getSelectedRoutineContext() {
+      if (!this.selectedTaskRef || !Array.isArray(this.tasklist) || this.tasklist.length === 0) {
+        return null;
+      }
+
+      const routine = this.tasklist.find(
+        (task) => task.id === this.selectedTaskRef || task.taskId === this.selectedTaskRef,
+      );
+
+      if (!routine || !routine.description) {
+        return null;
+      }
+
+      return {
+        name: routine.name || routine.body || routine.title || 'Selected Routine',
+        description: routine.description,
+      };
+    },
+
     updateTaskData(data) {
       this.taskData = data;
     },
@@ -137,19 +157,28 @@ export default {
       this.loading = true;
 
       try {
-        // Build system prompt from dashboard context if available
+        // Build system prompt from selected routine and dashboard context if available.
         let systemPrompt = null;
+        const parts = [];
+        const routineContext = this.getSelectedRoutineContext();
+
+        if (routineContext) {
+          parts.push(
+            `Selected Routine: ${routineContext.name}\nRoutine Description: ${routineContext.description}`,
+          );
+        }
+
         if (this.dashboardContext) {
-          const parts = [];
           if (this.dashboardContext.description) {
             parts.push(`Area/Project Description:\n${this.dashboardContext.description}`);
           }
           if (this.dashboardContext.nextSteps) {
             parts.push(`Area/Project Next Steps:\n${this.dashboardContext.nextSteps}`);
           }
-          if (parts.length > 0) {
-            systemPrompt = parts.join('\n\n');
-          }
+        }
+
+        if (parts.length > 0) {
+          systemPrompt = parts.join('\n\n');
         }
 
         const result = await this.$apollo.mutate({
@@ -216,6 +245,11 @@ export default {
       this.saving = false;
       this.$emit('task-created', goalItemData);
       this.$emit('success');
+      notifyNonCurrentTaskGoalCreation({
+        vm: this,
+        goalItemData,
+        routines: this.tasklist,
+      });
 
       // Fire mutation in background — Apollo optimisticResponse handles instant UI
       this.$goals.addGoalItem(goalItemData)

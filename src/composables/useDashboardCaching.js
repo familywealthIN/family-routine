@@ -6,6 +6,7 @@ import {
     setCachedDashboard,
     getTagsMissingCache,
     clearExpiredCache,
+    filterAreaProjectTags,
 } from '../utils/dashboardCache';
 
 /**
@@ -231,14 +232,19 @@ async function fetchRoutineTags(vm) {
  * Emits DASHBOARD_CACHING_STATUS events via event bus for progress tracking.
  *
  * @param {Object} vm - Vue component instance (needs $apollo)
+ * @param {Object} [options] - Optional behavior overrides
+ * @param {string[]} [options.tags] - Explicit area/project tags to cache
  * @returns {Promise<void>}
  */
-export async function initDashboardCaching(vm) {
+export async function initDashboardCaching(vm, options = {}) {
     // Clean up expired entries first
     clearExpiredCache();
 
     // Fetch area/project tags from routines (same source as sidebar)
-    const areaProjectTags = await fetchRoutineTags(vm);
+    // unless caller provides an explicit filtered tag set.
+    const explicitTags = Array.isArray(options.tags) ? options.tags : [];
+    const sourceTags = explicitTags.length > 0 ? explicitTags : await fetchRoutineTags(vm);
+    const areaProjectTags = [...new Set(filterAreaProjectTags(sourceTags))];
 
     if (areaProjectTags.length === 0) return;
 

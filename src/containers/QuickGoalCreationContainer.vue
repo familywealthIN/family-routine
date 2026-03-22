@@ -22,6 +22,8 @@ import QuickGoalCreation from '../components/organisms/QuickGoalCreation/QuickGo
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 import eventBus, { EVENTS } from '../utils/eventBus';
 
+const ADD_GOAL_ITEM_TIMEOUT_MS = 12000;
+
 export default {
   name: 'QuickGoalCreationContainer',
   components: {
@@ -124,6 +126,25 @@ export default {
     },
   },
   methods: {
+    async addGoalItemWithTimeout(payload) {
+      let timeoutId;
+      const timeoutPromise = new Promise((resolve, reject) => {
+        timeoutId = setTimeout(() => {
+          const timeoutError = new Error('addGoalItem request timed out');
+          timeoutError.code = 'ADD_GOAL_ITEM_TIMEOUT';
+          reject(timeoutError);
+        }, ADD_GOAL_ITEM_TIMEOUT_MS);
+      });
+
+      try {
+        return await Promise.race([
+          this.$goals.addGoalItem(payload),
+          timeoutPromise,
+        ]);
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    },
     /**
      * Fetch goal items for the parent period using shared composable
      */
@@ -202,7 +223,7 @@ export default {
       this.currentGoalRef = newGoalItem.goalRef;
 
       try {
-        const addedItem = await this.$goals.addGoalItem({
+        const addedItem = await this.addGoalItemWithTimeout({
           body: newGoalItem.body,
           period: this.period,
           date,
@@ -240,7 +261,9 @@ export default {
         console.error('Error adding goal item:', error);
         this.$notify({
           title: 'Error',
-          text: 'An unexpected error occurred',
+          text: error.code === 'ADD_GOAL_ITEM_TIMEOUT'
+            ? 'Add item timed out. Please try again.'
+            : 'An unexpected error occurred',
           group: 'notify',
           type: 'error',
           duration: 3000,

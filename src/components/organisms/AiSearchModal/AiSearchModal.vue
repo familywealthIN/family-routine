@@ -604,10 +604,11 @@ import {
   AtomSwitch,
   AtomTextarea,
 } from '@/components/atoms';
-import { USER_TAGS, AI_SEARCH_SETTINGS } from '@/constants/settings';
+import { USER_TAGS } from '@/constants/settings';
 import getJSON from '@/utils/getJSON';
 import { blurActiveElement } from '@/utils/blurActiveElement';
 import { getAllCachedDashboards, filterAreaProjectTags } from '@/utils/dashboardCache';
+import { readAiSearchSettings, writeAiSearchSettings } from '@/utils/aiSearchSettings';
 import eventBus, { EVENTS } from '@/utils/eventBus';
 import AiTaskCreationForm from '../../../containers/AiTaskCreationFormContainer.vue';
 import AiGoalPlanForm from '../../../containers/AiGoalPlanFormContainer.vue';
@@ -814,6 +815,10 @@ export default {
 
     canSave() {
       return this.isFormValid;
+    },
+
+    activeRoutineId() {
+      return this.toolbarTaskRef || (this.$currentTaskData && this.$currentTaskData.id) || null;
     },
 
     getSaveButtonText() {
@@ -1081,6 +1086,8 @@ export default {
 
     // Auto-swap routine tags when routine dropdown selection changes
     toolbarTaskRef(newTaskRef) {
+      this.loadSettings(newTaskRef);
+
       // In search mode, do not auto-populate routine tags
       if (this.isSearchMode) return;
 
@@ -1139,6 +1146,7 @@ export default {
       // Populate tags from selected routine
       // (watcher won't fire if toolbarTaskRef value didn't change after reset)
       this.populateRoutineTags();
+      this.loadSettings(this.toolbarTaskRef);
     },
 
     /**
@@ -1498,8 +1506,6 @@ export default {
       this.isFormValid = false;
       this.showTopShadow = false;
       this.showBottomShadow = false;
-      // Restore saved settings from localStorage
-      this.loadSettings();
       // If opened from search bar, default to search mode; otherwise always reset to task mode
       if (this.openMode === 'search') {
         this.manualMode = 'search';
@@ -1546,15 +1552,15 @@ export default {
         associateParentGoal: this.associateParentGoal,
         buildOnNextSteps: this.buildOnNextSteps,
       };
-      localStorage.setItem(AI_SEARCH_SETTINGS, JSON.stringify(settings));
+      writeAiSearchSettings(this.activeRoutineId, settings);
     },
 
     /**
      * Load AI Search modal settings from localStorage.
      * Falls back to defaults if no saved settings exist.
      */
-    loadSettings() {
-      const saved = getJSON(localStorage.getItem(AI_SEARCH_SETTINGS), {}) || {};
+    loadSettings(routineId = this.activeRoutineId) {
+      const saved = readAiSearchSettings(routineId);
       this.aiEnhancedTask = saved.aiEnhancedTask || false;
       this.associateParentGoal = saved.associateParentGoal || false;
       this.buildOnNextSteps = saved.buildOnNextSteps || false;

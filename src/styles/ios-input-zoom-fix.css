@@ -1,0 +1,14 @@
+/*
+ * iOS Safari auto-zooms when editable controls use font-size < 16px.
+ * Keep textarea-like surfaces and EasyMDE editor text at 16px on phone widths.
+ */
+@supports (-webkit-touch-callout: none) {
+    @media (max-width: 767px) {
+        .v-textarea textarea,
+        textarea,
+        .EasyMDEContainer .CodeMirror,
+        .EasyMDEContainer .CodeMirror textarea {
+            font-size: 16px !important;
+        }
+    }
+}
