@@ -27,7 +27,6 @@
     "@capacitor/splash-screen": "^7.0.3",
     "@capacitor/status-bar": "^7.0.3",
     "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
-    "@johmun/vue-tags-input": "^2.1.0",
     "@types/node": "^24.0.10",
     "apn": "^2.2.0",
     "@vue/composition-api": "^1.7.2",
