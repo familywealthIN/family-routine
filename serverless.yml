@@ -9,6 +9,7 @@ build:
   esbuild: false
 
 package:
+  excludeDevDependencies: true
   patterns:
     # Exclude everything by default, then include only what's needed
     - '!**'
@@ -22,10 +23,13 @@ package:
     - node_modules/**
     # --- devDependencies ---
     - '!node_modules/@babel/**'
+    - '!node_modules/babel*/**'
     - '!node_modules/@capacitor/assets/**'
     - '!node_modules/@mdi/**'
     - '!node_modules/@storybook/**'
+    - '!node_modules/@vue/**'
     - '!node_modules/@vue/cli-*/**'
+    - '!node_modules/vue-cli*/**'
     - '!node_modules/@vue/eslint-*/**'
     - '!node_modules/@vue/test-utils/**'
     - '!node_modules/@vue/vue2-jest/**'

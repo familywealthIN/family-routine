@@ -165,7 +165,6 @@ export default {
         index: undefined, // Add index for pending list tracking
       },
       defaultGoalItem,
-      addGoalItemDialog: false, 
     };
   },
   methods: {

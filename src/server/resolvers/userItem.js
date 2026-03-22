@@ -111,63 +111,63 @@ const mutation = {
       }
     },
   },
-authApple: {
-  type: UserItemType,
-  args: {
-    identityToken: { type: GraphQLNonNull(GraphQLString) },
-    notificationId: { type: GraphQLNonNull(GraphQLString) },
-  },
-  resolve: async (root, args) => {
-    try {
+  authApple: {
+    type: UserItemType,
+    args: {
+      identityToken: { type: GraphQLNonNull(GraphQLString) },
+      notificationId: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args) => {
+      try {
       // Decode Apple identity token (simplified - in production, verify signature)
-      const jwt = require('jsonwebtoken');
-      const decoded = jwt.decode(args.identityToken);
-      
-      if (!decoded || !decoded.email) {
-        throw new ApiError(400, '400:Invalid Apple identity token');
-      }
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.decode(args.identityToken);
 
-      // Create or find user with Apple data
-      let user = await UserModel.findOne({ email: decoded.email }).exec();
-      
-      if (!user) {
+        if (!decoded || !decoded.email) {
+          throw new ApiError(400, '400:Invalid Apple identity token');
+        }
+
+        // Create or find user with Apple data
+        let user = await UserModel.findOne({ email: decoded.email }).exec();
+
+        if (!user) {
         // Create new user from Apple data
-        user = new UserModel({
-          email: decoded.email,
-          name: decoded.name || 'Apple User',
-          picture: '', // Apple doesn't provide profile pictures
-          notificationId: args.notificationId,
-          needsOnboarding: true,
-          social: {
-            appleProvider: {
-              id: decoded.sub,
+          user = new UserModel({
+            email: decoded.email,
+            name: decoded.name || 'Apple User',
+            picture: '', // Apple doesn't provide profile pictures
+            notificationId: args.notificationId,
+            needsOnboarding: true,
+            social: {
+              appleProvider: {
+                id: decoded.sub,
+              },
             },
-          },
-          tags: [],
-        });
-        await user.save();
-      } else {
+            tags: [],
+          });
+          await user.save();
+        } else {
         // Update existing user
-        user.notificationId = args.notificationId;
-        await user.save();
-      }
+          user.notificationId = args.notificationId;
+          await user.save();
+        }
 
-      return {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        picture: user.picture || '',
-        token: user.generateJWT(),
-        needsOnboarding: user.needsOnboarding || false,
-        motto: [],
-        tags: user.tags || [],
-      };
-    } catch (error) {
-      console.error('Apple auth error:', error);
-      return new ApiError(500, '500:Apple authentication failed');
-    }
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          picture: user.picture || '',
+          token: user.generateJWT(),
+          needsOnboarding: user.needsOnboarding || false,
+          motto: [],
+          tags: user.tags || [],
+        };
+      } catch (error) {
+        console.error('Apple auth error:', error);
+        return new ApiError(500, '500:Apple authentication failed');
+      }
+    },
   },
-},
 
   sendInvite: {
     type: UserItemType,

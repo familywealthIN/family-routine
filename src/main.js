@@ -79,11 +79,9 @@ loadData().then(() => {
   });
 
   // HTTP connection to the API
-  console.log('Graph url:', graphQLUrl);
-  console.log('is native platform', Capacitor.isNativePlatform());
   const httpLink = createHttpLink({
     // You should use an absolute URL here
-    uri: graphQLUrl || 'https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com/dev/graphql',
+    uri: graphQLUrl,
   });
 
   // Cache implementation with persistence

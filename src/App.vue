@@ -16,6 +16,9 @@
 
 <script>
 import firebase from 'firebase/app';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 import {
   config, publicKey, isDevelopment, netlify,
 } from './blob/config';
@@ -24,9 +27,6 @@ import {
 } from './constants/settings';
 import MobileLayout from './layouts/MobileLayout.vue';
 import DesktopLayout from './layouts/DesktopLayout.vue';
-import { PushNotifications } from '@capacitor/push-notifications';
-import { LocalNotifications } from '@capacitor/local-notifications';
-import { Capacitor } from '@capacitor/core';
 import AiSearchModal from './containers/AiSearchModalContainer.vue';
 import eventBus, { EVENTS } from './utils/eventBus';
 
@@ -63,6 +63,11 @@ export default {
     },
   },
   created() {
+    // Listen for AI search open event
+    eventBus.$on(EVENTS.OPEN_AI_SEARCH, (payload) => {
+      this.aiSearchModal = true;
+      this.aiSearchOpenMode = (payload && payload.mode) || 'add';
+    });
     if (Capacitor.isNativePlatform()) {
       // Native logic using Capacitor Push Notifications
       this.initNativeFCM();
@@ -73,14 +78,8 @@ export default {
       this.initPwaFCM();
     }
   },
-   mounted() {
-    eventBus.$on(EVENTS.OPEN_AI_SEARCH, this.handleOpenAiSearch);
-  },
-  beforeDestroy() {
-    eventBus.$off(EVENTS.OPEN_AI_SEARCH, this.handleOpenAiSearch);
-  },
   methods: {
-     handleOpenAiSearch(data) {
+    handleOpenAiSearch(data) {
       console.log('App.vue: Received OPEN_AI_SEARCH event', data);
       console.log('App.vue: Current aiSearchModal value:', this.aiSearchModal);
       this.aiSearchModal = true;
@@ -89,32 +88,27 @@ export default {
     async initPwaFCM() {
       if (isDevelopment || netlify) {
         firebase.initializeApp(config);
-    // Listen for AI search open event
-    eventBus.$on(EVENTS.OPEN_AI_SEARCH, (payload) => {
-      this.aiSearchModal = true;
-      this.aiSearchOpenMode = (payload && payload.mode) || 'add';
-    });
 
         const messaging = firebase.messaging();
         messaging.usePublicVapidKey(publicKey);
-        console.log('testttttttttttt')
-try {
-      // Request permission using Notification API
-      const permission = await Notification.requestPermission();
-      
-      if (permission === 'granted') {
-        console.log('Notification permission granted.');
-        
-        // Get Token
-        const token = await messaging.getToken();
-        console.log('FCM token:', token);
-        localStorage.setItem('GC_NOTIFICATION_TOKEN', token);
-      } else {
-        console.log('Notification permission denied.');
-      }
-    } catch (err) {
-      console.log('Unable to get permission to notify.', err);
-    }
+
+        try {
+          // Request permission using Notification API
+          const permission = await Notification.requestPermission();
+
+          if (permission === 'granted') {
+            console.log('Notification permission granted.');
+
+            // Get Token
+            const token = await messaging.getToken();
+            console.log('FCM token:', token);
+            localStorage.setItem(GC_NOTIFICATION_TOKEN, token);
+          } else {
+            console.log('Notification permission denied.');
+          }
+        } catch (err) {
+          console.log('Unable to get permission to notify.', err);
+        }
 
         // Foreground messages
         messaging.onMessage((payload) => {
@@ -135,32 +129,31 @@ try {
         console.warn('Local notification permission not granted');
         return;
       }
-if (Capacitor.getPlatform() === 'android') {
-
+      if (Capacitor.getPlatform() === 'android') {
       // Create notification channel for Android
-      await LocalNotifications.createChannel({
-        id: 'routine-notifications',
-        name: 'Routine Notifications',
-        description: 'Notifications for routine updates and reminders',
-        sound: 'default',
-        importance: 5,
-        visibility: 1,
-        lights: true,
-        lightColor: '#4285f4',
-        vibration: true
-      });
-    }
+        await LocalNotifications.createChannel({
+          id: 'routine-notifications',
+          name: 'Routine Notifications',
+          description: 'Notifications for routine updates and reminders',
+          sound: 'default',
+          importance: 5,
+          visibility: 1,
+          lights: true,
+          lightColor: '#4285f4',
+          vibration: true,
+        });
+      }
 
-      PushNotifications.requestPermissions().then(result => {
-      console.log('pust notification result', result)
+      PushNotifications.requestPermissions().then((result) => {
+        console.log('pust notification result', result);
         if (result.receive === 'granted') {
           PushNotifications.register();
         }
       });
 
-      PushNotifications.addListener('registration', token => {
+      PushNotifications.addListener('registration', (token) => {
         console.log('Device registered', token.value);
-        localStorage.setItem('GC_NOTIFICATION_TOKEN', token.value);
+        localStorage.setItem(GC_NOTIFICATION_TOKEN, token.value);
       });
 
       PushNotifications.addListener('pushNotificationReceived', async (notification) => {
@@ -182,13 +175,13 @@ if (Capacitor.getPlatform() === 'android') {
               visibility: 1,
               ongoing: false,
               autoCancel: true,
-              channelId: 'routine-notifications'
+              channelId: 'routine-notifications',
             },
           ],
         });
       });
 
-      PushNotifications.addListener('pushNotificationActionPerformed', notification => {
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
         console.log('Push action performed', notification);
         // handle navigation if needed
       });
@@ -205,7 +198,7 @@ if (Capacitor.getPlatform() === 'android') {
           document.documentElement.classList.add('android14-plus');
         }
       }
-    }
+    },
   },
 };
 </script>
