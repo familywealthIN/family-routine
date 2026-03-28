@@ -42,6 +42,7 @@ export default {
       mottoDialog: false,
       aiSearchModal: false,
       aiSearchOpenMode: 'add',
+      lastActiveTime: Date.now(),
     };
   },
   computed: {
@@ -68,6 +69,10 @@ export default {
       this.aiSearchModal = true;
       this.aiSearchOpenMode = (payload && payload.mode) || 'add';
     });
+
+    // Refresh app if inactive for more than 15 minutes
+    document.addEventListener('visibilitychange', this.handleAppVisibility);
+
     if (Capacitor.isNativePlatform()) {
       // Native logic using Capacitor Push Notifications
       this.initNativeFCM();
@@ -78,7 +83,23 @@ export default {
       this.initPwaFCM();
     }
   },
+  beforeDestroy() {
+    document.removeEventListener('visibilitychange', this.handleAppVisibility);
+  },
   methods: {
+    handleAppVisibility() {
+      if (document.visibilityState === 'hidden') {
+        this.lastActiveTime = Date.now();
+      } else if (document.visibilityState === 'visible') {
+        const elapsed = Date.now() - this.lastActiveTime;
+        const fifteenMinutes = 15 * 60 * 1000;
+        if (elapsed > fifteenMinutes) {
+          console.log(`App inactive for ${Math.round(elapsed / 60000)} minutes, refreshing...`);
+          window.location.reload();
+        }
+      }
+    },
+
     async initPwaFCM() {
       if (isDevelopment || netlify) {
         firebase.initializeApp(config);
