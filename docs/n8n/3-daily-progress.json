@@ -1,72 +1,72 @@
 {
-  "name": "Daily Progress Notification",
-  "nodes": [
-    {
-      "parameters": {
-        "content": "## Daily Progress Notification\nRuns daily at 21:00 EST.\nExecutes `cron/progress.js` on the server.\n\n### Setup\n1. Place the family-routine project on your n8n server\n2. Update the command path in the Execute Command node\n3. Ensure `.env` and `serviceAccountKey.json` are configured",
-        "height": 200,
-        "width": 420
-      },
-      "id": "note",
-      "name": "Setup Notes",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        240,
-        40
-      ]
-    },
-    {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "cronExpression",
-              "expression": "0 21 * * *"
-            }
-          ]
+    "name": "Daily Progress Notification",
+    "nodes": [
+        {
+            "parameters": {
+                "content": "## Daily Progress Notification\nRuns daily at 21:00 EST.\nExecutes `cron/progress.js` on the server.\n\n### Setup\n1. Place the family-routine project on your n8n server\n2. Update the command path in the Execute Command node\n3. Ensure `.env` and `serviceAccountKey.json` are configured",
+                "height": 200,
+                "width": 420
+            },
+            "id": "note",
+            "name": "Setup Notes",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                240,
+                40
+            ]
+        },
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 21 * * *"
+                        }
+                    ]
+                }
+            },
+            "id": "trigger",
+            "name": "Daily 21:00 EST",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                240,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "command": "cd /home/node/family-routine && node cron/progress.js"
+            },
+            "id": "exec",
+            "name": "Run progress.js",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                500,
+                320
+            ]
         }
-      },
-      "id": "trigger",
-      "name": "Daily 21:00 EST",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        240,
-        320
-      ]
+    ],
+    "connections": {
+        "Daily 21:00 EST": {
+            "main": [
+                [
+                    {
+                        "node": "Run progress.js",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
     },
-    {
-      "parameters": {
-        "command": "cd /home/node/family-routine && node cron/progress.js"
-      },
-      "id": "exec",
-      "name": "Run progress.js",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        500,
-        320
-      ]
-    }
-  ],
-  "connections": {
-    "Daily 21:00 EST": {
-      "main": [
-        [
-          {
-            "node": "Run progress.js",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  },
-  "settings": {
-    "executionOrder": "v1",
-    "timezone": "America/New_York"
-  },
-  "active": false,
-  "pinData": {}
+    "settings": {
+        "executionOrder": "v1",
+        "timezone": "America/New_York"
+    },
+    "active": false,
+    "pinData": {}
 }

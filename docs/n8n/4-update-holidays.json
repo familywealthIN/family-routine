@@ -1,72 +1,72 @@
 {
-  "name": "Update Holidays",
-  "nodes": [
-    {
-      "parameters": {
-        "content": "## Update Holidays\nRuns daily at midnight EST.\nExecutes `cron/update-holidays.js` on the server.\n\n### Setup\n1. Place the family-routine project on your n8n server\n2. Update the command path in the Execute Command node\n3. Ensure `.env` is configured",
-        "height": 200,
-        "width": 420
-      },
-      "id": "note",
-      "name": "Setup Notes",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        240,
-        40
-      ]
-    },
-    {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "cronExpression",
-              "expression": "0 0 * * *"
-            }
-          ]
+    "name": "Update Holidays",
+    "nodes": [
+        {
+            "parameters": {
+                "content": "## Update Holidays\nRuns daily at midnight EST.\nExecutes `cron/update-holidays.js` on the server.\n\n### Setup\n1. Place the family-routine project on your n8n server\n2. Update the command path in the Execute Command node\n3. Ensure `.env` is configured",
+                "height": 200,
+                "width": 420
+            },
+            "id": "note",
+            "name": "Setup Notes",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                240,
+                40
+            ]
+        },
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 0 * * *"
+                        }
+                    ]
+                }
+            },
+            "id": "trigger",
+            "name": "Daily Midnight EST",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                240,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "command": "cd /home/node/family-routine && node cron/update-holidays.js"
+            },
+            "id": "exec",
+            "name": "Run update-holidays.js",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                500,
+                320
+            ]
         }
-      },
-      "id": "trigger",
-      "name": "Daily Midnight EST",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        240,
-        320
-      ]
+    ],
+    "connections": {
+        "Daily Midnight EST": {
+            "main": [
+                [
+                    {
+                        "node": "Run update-holidays.js",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
     },
-    {
-      "parameters": {
-        "command": "cd /home/node/family-routine && node cron/update-holidays.js"
-      },
-      "id": "exec",
-      "name": "Run update-holidays.js",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        500,
-        320
-      ]
-    }
-  ],
-  "connections": {
-    "Daily Midnight EST": {
-      "main": [
-        [
-          {
-            "node": "Run update-holidays.js",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  },
-  "settings": {
-    "executionOrder": "v1",
-    "timezone": "America/New_York"
-  },
-  "active": false,
-  "pinData": {}
+    "settings": {
+        "executionOrder": "v1",
+        "timezone": "America/New_York"
+    },
+    "active": false,
+    "pinData": {}
 }
