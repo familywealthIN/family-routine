@@ -36,8 +36,6 @@
 //   'Hello World',
 // );
 
-
-
 // require('dotenv').config();
 // const admin = require('firebase-admin');
 // const serviceAccount = require('./serviceAccountKey.json');
@@ -100,7 +98,7 @@
 // test-notification-with-actions.js
 require('dotenv').config();
 const admin = require('firebase-admin');
-const serviceAccount = require('./serviceAccountKey.json');
+const serviceAccount = require('../serviceAccountKey.json');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -108,7 +106,6 @@ admin.initializeApp({
 });
 
 class InteractiveNotificationTester {
-
   // async sendNotificationWithActions(token, title, body, data = {}) {
   //   if (!token) {
   //     console.log('No device token provided.');
@@ -177,7 +174,6 @@ class InteractiveNotificationTester {
   //   }
   // }
 
-
   // Updated test notification for iOS
   async sendNotificationWithActionsIOS(token, title, body, data = {}) {
     if (!token) {
@@ -188,22 +184,22 @@ class InteractiveNotificationTester {
     console.log('Sending iOS notification with actions to token:', token);
 
     const payload = {
-      token: token,
+      token,
       notification: {
-        title: title,
-        body: body,
+        title,
+        body,
       },
       data: {
-        habitId: data.habitId || "1",
-        taskId: data.taskId || "",
-        routineId: data.routineId || "",
-        type: data.type || "routine_reminder",
-        actionType: data.actionType || "routine_actions",
-        hasActions: "true",
-        title: title,
-        body: body,
+        habitId: data.habitId || '1',
+        taskId: data.taskId || '',
+        routineId: data.routineId || '',
+        type: data.type || 'routine_reminder',
+        actionType: data.actionType || 'routine_actions',
+        hasActions: 'true',
+        title,
+        body,
         ...Object.fromEntries(
-          Object.entries(data).map(([key, value]) => [key, String(value)])
+          Object.entries(data).map(([key, value]) => [key, String(value)]),
         ),
       },
       android: {
@@ -218,23 +214,23 @@ class InteractiveNotificationTester {
       },
       apns: {
         headers: {
-          "apns-priority": "10",
-          "apns-push-type": "alert"
+          'apns-priority': '10',
+          'apns-push-type': 'alert',
         },
         payload: {
           aps: {
             alert: {
-              title: title,
-              body: body
+              title,
+              body,
             },
             // This is the key - must match the category identifier in iOS
-            category: data.actionType === "habit_actions" ? "HABIT_ACTIONS" : "ROUTINE_ACTIONS",
-            sound: "default",
+            category: data.actionType === 'habit_actions' ? 'HABIT_ACTIONS' : 'ROUTINE_ACTIONS',
+            sound: 'default',
             badge: 1,
-            "mutable-content": 1,
-          }
-        }
-      }
+            'mutable-content': 1,
+          },
+        },
+      },
     };
 
     try {
@@ -250,43 +246,43 @@ class InteractiveNotificationTester {
   async sendWaterReminder(token) {
     return this.sendNotificationWithActionsIOS(
       token,
-      "💧 Drink Water",
-      "8 glasses remaining - tap actions below",
+      '💧 Drink Water',
+      '8 glasses remaining - tap actions below',
       {
-        habitId: "water_habit_1",
-        type: "water_reminder",
-        actionType: "routine_actions",
-        glasses_remaining: "8",
-      }
+        habitId: 'water_habit_1',
+        type: 'water_reminder',
+        actionType: 'routine_actions',
+        glasses_remaining: '8',
+      },
     );
   }
 
   async sendExerciseReminder(token) {
     return this.sendNotificationWithActionsIOS(
       token,
-      "🏃♂️ Morning Exercise",
-      "Time for your 30-minute workout!",
+      '🏃♂️ Morning Exercise',
+      'Time for your 30-minute workout!',
       {
-        habitId: "exercise_habit_1",
-        taskId: "morning_exercise",
-        type: "exercise_reminder",
-        actionType: "routine_actions",
-        duration: "30",
-      }
+        habitId: 'exercise_habit_1',
+        taskId: 'morning_exercise',
+        type: 'exercise_reminder',
+        actionType: 'routine_actions',
+        duration: '30',
+      },
     );
   }
 
   async sendHabitReminder(token) {
     return this.sendNotificationWithActionsIOS(
       token,
-      "📚 Reading Habit",
-      "Time to read for 20 minutes",
+      '📚 Reading Habit',
+      'Time to read for 20 minutes',
       {
-        habitId: "reading_habit_1",
-        type: "habit_reminder",
-        actionType: "habit_actions", // Different action set
-        duration: "20",
-      }
+        habitId: 'reading_habit_1',
+        type: 'habit_reminder',
+        actionType: 'habit_actions', // Different action set
+        duration: '20',
+      },
     );
   }
 }
@@ -295,7 +291,7 @@ class InteractiveNotificationTester {
 async function runTests() {
   const tester = new InteractiveNotificationTester();
 
-  const testToken = "dCEbN4_rf0tWkXfenEOeHw:APA91bHXuslEEPDWlGGJPeioJA5G5rW1uDIndAc_t_e58g4DbikeMUGQU7LLihyIp69qqiiFOCsPCapHxwvKuzmpHlETfC_scJT09OqGWe4sgEUI2fiTVrY";
+  const testToken = 'dpZcpmD03U_nsCXfl2nOd5:APA91bHoikCqD2LVGY32rW09pK7mzjd4H7jg-JD2XM3J0oCn_4I3_yCFC64g-7fZNv5ZSXQzw7MH0omMH5NVcdNehhFB7CESU2YCcEMHer6MyOf_JEFxpL8';
 
   try {
     console.log('\n=== Testing Notifications with Action Buttons ===\n');
@@ -314,14 +310,13 @@ async function runTests() {
     console.log('\n=== All notifications sent! ===');
     console.log('📱 Check your device - you should see action buttons on the notifications');
     console.log('🔘 Available actions depend on the notification type');
-
   } catch (error) {
     console.error('Test failed:', error);
   }
 }
 
 function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 if (require.main === module) {

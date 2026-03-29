@@ -1,0 +1,204 @@
+{
+  "name": "Family Routine Cron Jobs",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Family Routine Cron Jobs\nAll 4 scheduled tasks in one workflow.\n\n### Setup\n1. Place the family-routine project on your n8n server at `/home/node/family-routine`\n2. Run `npm install` or `yarn install` in the project folder\n3. Ensure `.env` and `serviceAccountKey.json` are configured\n4. Adjust paths in Execute Command nodes if needed\n5. Set workflow timezone to America/New_York",
+        "height": 240,
+        "width": 460
+      },
+      "id": "note",
+      "name": "Setup Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "w1-trigger",
+      "name": "Every Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/node/family-routine && node cron/send-notification.js"
+      },
+      "id": "w1-exec",
+      "name": "Run send-notification.js",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        500,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "w2-trigger",
+      "name": "Monday 08:00 EST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/node/family-routine && node cron/weekly-agenda.js"
+      },
+      "id": "w2-exec",
+      "name": "Run weekly-agenda.js",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        500,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 21 * * *"
+            }
+          ]
+        }
+      },
+      "id": "w3-trigger",
+      "name": "Daily 21:00 EST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/node/family-routine && node cron/progress.js"
+      },
+      "id": "w3-exec",
+      "name": "Run progress.js",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        500,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "w4-trigger",
+      "name": "Daily Midnight EST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/node/family-routine && node cron/update-holidays.js"
+      },
+      "id": "w4-exec",
+      "name": "Run update-holidays.js",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        500,
+        780
+      ]
+    }
+  ],
+  "connections": {
+    "Every Minute": {
+      "main": [
+        [
+          {
+            "node": "Run send-notification.js",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monday 08:00 EST": {
+      "main": [
+        [
+          {
+            "node": "Run weekly-agenda.js",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily 21:00 EST": {
+      "main": [
+        [
+          {
+            "node": "Run progress.js",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Midnight EST": {
+      "main": [
+        [
+          {
+            "node": "Run update-holidays.js",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York"
+  },
+  "active": false,
+  "pinData": {}
+}
