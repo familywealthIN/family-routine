@@ -1,7 +1,11 @@
-# Build is handled by GitHub Actions CI/CD
-# Netlify receives pre-built dist/ via netlify-cli deploy
 [build]
+  command = "node ./scripts/create-env.js && npm run build"
   publish = "dist"
+
+[build.environment]
+  NODE_OPTIONS = "--openssl-legacy-provider"
+  NODE_VERSION = "20"
+  YARN_FLAGS = "--ignore-engines"
 
 [[headers]]
   # Define which paths this specific [[headers]] block will cover.
