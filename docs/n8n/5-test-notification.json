@@ -1,0 +1,56 @@
+{
+  "name": "Test Notification",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        3552,
+        2032
+      ],
+      "id": "3b9c7e86-add5-4d71-b380-d0539cced417",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "command": "cd /var/lib/n8n/notes-cron && node test-notification.js"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        3760,
+        2032
+      ],
+      "id": "a5e10f32-1c23-4dbf-8433-d8e9568c2d3c",
+      "name": "Execute Command"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "12a60efc-929e-4ac1-ad0c-d00b248b7fe8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e57e9987eecc837c728209696b07e0775137bc7d67bf9e4c23b0ab3b30be2a95"
+  },
+  "id": "mQOupXi802ltVY5U",
+  "tags": []
+}
