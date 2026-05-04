@@ -1,0 +1,76 @@
+name: Deploy Server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/server/**'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/deploy-server.yml'
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Serverless stage to deploy (e.g. dev, prod)'
+        required: false
+        default: 'dev'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: yarn
+
+      - name: Install workspace dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: .
+
+      - name: Install server production deps locally
+        # Yarn workspaces hoist deps to the root node_modules, but `serverless
+        # package` only ships apps/server/node_modules. Install prod deps
+        # directly into the server's own node_modules so they end up in the zip.
+        run: npm install --omit=dev --no-package-lock --no-save --legacy-peer-deps --fetch-retries=5
+
+      - name: Break workspace symlink loop
+        # apps/server's package name is "server"; yarn hoists a symlink at
+        # node_modules/server -> apps/server. Serverless v4 follows it and
+        # recurses infinitely (5GB+ zip with 700k duplicate entries).
+        # Remove it before packaging — npm/yarn will recreate it next install.
+        run: rm -f node_modules/server
+
+      - name: Verify critical runtime modules
+        run: |
+          node -e "require.resolve('mongoose'); require.resolve('express'); require.resolve('graphql'); require.resolve('@vendia/serverless-express'); console.log('runtime deps OK')"
+
+      - name: Write secrets.json
+        env:
+          SERVER_SECRETS_JSON: ${{ secrets.SERVER_SECRETS_JSON }}
+        run: |
+          if [ -z "$SERVER_SECRETS_JSON" ]; then
+            echo "SERVER_SECRETS_JSON secret is not set" >&2
+            exit 1
+          fi
+          printf '%s' "$SERVER_SECRETS_JSON" > secrets.json
+          node -e "JSON.parse(require('fs').readFileSync('secrets.json','utf8'))"
+
+      - name: Install Serverless Framework
+        run: npm install -g serverless@4
+
+      - name: Deploy to AWS
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+          # Serverless v4's bundler needs more than the 4GB Node default
+          # when walking large monorepo dep trees.
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: serverless deploy --stage ${{ github.event.inputs.stage || 'dev' }}

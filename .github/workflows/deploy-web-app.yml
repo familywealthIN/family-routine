@@ -1,0 +1,60 @@
+name: Deploy Web App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web-app/**'
+      - 'packages/ui/**'
+      - 'packages/config/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Generate runtime config (src/blob/config.js)
+        working-directory: apps/web-app
+        run: node scripts/create-env.js
+        env:
+          FCM_API_KEY: ${{ secrets.FCM_API_KEY }}
+          FCM_AUTH_DOMAIN: ${{ secrets.FCM_AUTH_DOMAIN }}
+          FCM_DATABASE_URL: ${{ secrets.FCM_DATABASE_URL }}
+          FCM_PROJECT_ID: ${{ secrets.FCM_PROJECT_ID }}
+          FCM_STORAGE_BUCKET: ${{ secrets.FCM_STORAGE_BUCKET }}
+          FCM_MESSAGING_SENDER_ID: ${{ secrets.FCM_MESSAGING_SENDER_ID }}
+          FCM_APP_ID: ${{ secrets.FCM_APP_ID }}
+          FCM_MEASUREMENT_ID: ${{ secrets.FCM_MEASUREMENT_ID }}
+          IS_DEVELOPMENT: 'false'
+          NETLIFY: 'true'
+          GQL_URL: ${{ secrets.GQL_URL }}
+          GA_PUBLIC_KEY: ${{ secrets.GA_PUBLIC_KEY }}
+          GA_CLIENT_ID: ${{ secrets.GA_CLIENT_ID }}
+          GA_SERVER_CLIENT_ID: ${{ secrets.GA_SERVER_CLIENT_ID }}
+          GA_ANDROID_CLIENT_ID: ${{ secrets.GA_ANDROID_CLIENT_ID }}
+          GA_IOS_CLIENT_ID: ${{ secrets.GA_IOS_CLIENT_ID }}
+
+      - name: Build web-app
+        run: yarn turbo build --filter=web-app
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v3
+        with:
+          publish-dir: apps/web-app/dist
+          netlify-config-path: apps/web-app/netlify.toml
+          production-deploy: true
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_WEB_APP_SITE_ID }}

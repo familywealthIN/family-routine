@@ -1,0 +1,252 @@
+<template>
+  <v-app>
+    <template v-if="isMobile">
+      <mobile-layout />
+    </template>
+    <template v-else>
+      <desktop-layout />
+    </template>
+    <notifications group="notify" position="bottom center" />
+    <!-- <v-footer app></v-footer> -->
+
+    <!-- Global AI Search Modal -->
+    <ai-search-modal v-model="aiSearchModal" :open-mode="aiSearchOpenMode" />
+
+    <!-- Timezone backfill + travel detection -->
+    <timezone-sync />
+  </v-app>
+</template>
+
+<script>
+import firebase from 'firebase/app';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
+import {
+  config, publicKey, isDevelopment, netlify,
+} from './blob/config';
+import {
+  GC_NOTIFICATION_TOKEN,
+} from './constants/settings';
+import MobileLayout from './layouts/MobileLayout.vue';
+import DesktopLayout from './layouts/DesktopLayout.vue';
+import AiSearchModal from './containers/AiSearchModalContainer.vue';
+import TimezoneSync from './components/TimezoneSync.vue';
+import eventBus, { EVENTS } from './utils/eventBus';
+
+export default {
+  components: {
+    MobileLayout,
+    DesktopLayout,
+    AiSearchModal,
+    TimezoneSync,
+  },
+  data() {
+    return {
+      drawer: null,
+      mottoDialog: false,
+      aiSearchModal: false,
+      aiSearchOpenMode: 'add',
+      lastActiveTime: Date.now(),
+    };
+  },
+  computed: {
+    name() {
+      return this.$root.$data.name;
+    },
+    email() {
+      return this.$root.$data.email;
+    },
+    picture() {
+      return this.$root.$data.picture;
+    },
+    pageTitle() {
+      return (this.$route.name && this.$route.name[0].toUpperCase() + this.$route.name.substr(1))
+        || 'Routine Notes';
+    },
+    isMobile() {
+      return this.$vuetify.breakpoint.name === 'xs';
+    },
+  },
+  created() {
+    // Listen for AI search open event
+    eventBus.$on(EVENTS.OPEN_AI_SEARCH, (payload) => {
+      this.aiSearchModal = true;
+      this.aiSearchOpenMode = (payload && payload.mode) || 'add';
+    });
+
+    // Refresh app if inactive for more than 15 minutes
+    document.addEventListener('visibilitychange', this.handleAppVisibility);
+
+    if (Capacitor.isNativePlatform()) {
+      // Native logic using Capacitor Push Notifications
+      this.initNativeFCM();
+      // Check for soft keys on Android
+      this.checkSoftKeys();
+    } else {
+      // PWA logic
+      this.initPwaFCM();
+    }
+  },
+  beforeDestroy() {
+    document.removeEventListener('visibilitychange', this.handleAppVisibility);
+  },
+  methods: {
+    handleAppVisibility() {
+      if (document.visibilityState === 'hidden') {
+        this.lastActiveTime = Date.now();
+      } else if (document.visibilityState === 'visible') {
+        const elapsed = Date.now() - this.lastActiveTime;
+        const fifteenMinutes = 15 * 60 * 1000;
+        if (elapsed > fifteenMinutes) {
+          console.log(`App inactive for ${Math.round(elapsed / 60000)} minutes, refreshing...`);
+          window.location.reload();
+        }
+      }
+    },
+
+    async initPwaFCM() {
+      if (isDevelopment || netlify) {
+        firebase.initializeApp(config);
+
+        const messaging = firebase.messaging();
+        messaging.usePublicVapidKey(publicKey);
+
+        try {
+          // Request permission using Notification API
+          const permission = await Notification.requestPermission();
+
+          if (permission === 'granted') {
+            console.log('Notification permission granted.');
+
+            // Get Token
+            const token = await messaging.getToken();
+            console.log('FCM token:', token);
+            localStorage.setItem(GC_NOTIFICATION_TOKEN, token);
+          } else {
+            console.log('Notification permission denied.');
+          }
+        } catch (err) {
+          console.log('Unable to get permission to notify.', err);
+        }
+
+        // Foreground messages
+        messaging.onMessage((payload) => {
+          console.log('Message received in foreground:', payload);
+          this.$notify({
+            group: 'notify',
+            title: payload.notification.title,
+            text: payload.notification.body,
+          });
+        });
+      }
+    },
+
+    async initNativeFCM() {
+      // Request Local Notifications permission first
+      const localPerm = await LocalNotifications.requestPermissions();
+      if (localPerm.display !== 'granted') {
+        console.warn('Local notification permission not granted');
+        return;
+      }
+      if (Capacitor.getPlatform() === 'android') {
+      // Create notification channel for Android
+        await LocalNotifications.createChannel({
+          id: 'routine-notifications',
+          name: 'Routine Notifications',
+          description: 'Notifications for routine updates and reminders',
+          sound: 'default',
+          importance: 5,
+          visibility: 1,
+          lights: true,
+          lightColor: '#4285f4',
+          vibration: true,
+        });
+      }
+
+      PushNotifications.requestPermissions().then((result) => {
+        console.log('pust notification result', result);
+        if (result.receive === 'granted') {
+          PushNotifications.register();
+        }
+      });
+
+      PushNotifications.addListener('registration', (token) => {
+        console.log('Device registered', token.value);
+        localStorage.setItem(GC_NOTIFICATION_TOKEN, token.value);
+      });
+
+      PushNotifications.addListener('pushNotificationReceived', async (notification) => {
+        console.log('Push received: ', notification);
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              title: notification.title || 'Routine Notes',
+              body: notification.body || '',
+              id: Math.floor(Math.random() * 100000),
+              schedule: { at: new Date(Date.now() + 100) },
+              sound: 'default',
+              smallIcon: 'file://android_asset/icon-512.webp',
+              largeIcon: 'ic_launcher',
+              iconColor: '#4285f4',
+              actionTypeId: '',
+              extra: notification.data,
+              importance: 5,
+              visibility: 1,
+              ongoing: false,
+              autoCancel: true,
+              channelId: 'routine-notifications',
+            },
+          ],
+        });
+      });
+
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+        console.log('Push action performed', notification);
+        // handle navigation if needed
+      });
+    },
+
+    checkSoftKeys() {
+      // Android 14+ detection
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      const androidMatch = ua.match(/Android\s([0-9\.]+)/);
+      if (androidMatch) {
+        const androidVersion = parseFloat(androidMatch[1]);
+        if (androidVersion >= 14) {
+          document.body.classList.add('android14-plus');
+          document.documentElement.classList.add('android14-plus');
+        }
+      }
+    },
+  },
+};
+</script>
+
+<style>
+.v-toolbar--fixed {
+  z-index: 5;
+}
+
+/* Toolbar positioning below safe area */
+.v-toolbar {
+  margin-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top)) !important;
+  padding-top: 0 !important;
+  height: 64px !important;
+}
+
+/* Android 15 soft keys handling */
+.android15-soft-keys {
+  padding-bottom: 48px;
+}
+
+.android15-no-soft-keys {
+  padding-bottom: 0;
+}
+
+@media (max-height: 600px) {
+  .android15-soft-keys {
+    padding-bottom: 40px;
+  }
+}
+</style>

@@ -1,0 +1,15 @@
+# Build is handled by GitHub Actions CI/CD
+# Netlify receives pre-built dist/ via netlify-cli deploy
+[build]
+  publish = "dist"
+
+[[headers]]
+  # Define which paths this specific [[headers]] block will cover.
+  for = "/*"
+    [headers.values]
+    Access-Control-Allow-Origin = "*"
+[[redirects]]
+  from = "/graphql"
+  to = "https://api.routine.familywealth.in/graphql"
+  status = 200
+  force = true

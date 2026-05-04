@@ -1,0 +1,23 @@
+{
+    "name": "@family-routine/markdown-editor",
+    "version": "0.0.0",
+    "private": true,
+    "main": "index.js",
+    "files": [
+        "configs",
+        "styles",
+        "MarkdownEditor.vue",
+        "index.js"
+    ],
+    "peerDependencies": {
+        "vue": "^2.6.10"
+    },
+    "dependencies": {
+        "easymde": "^2.20.0",
+        "vue-easymde": "^2.0.0"
+    },
+    "devDependencies": {
+        "vue": "^2.6.10",
+        "vue-template-compiler": "^2.5.21"
+    }
+}

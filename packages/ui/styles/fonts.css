@@ -1,0 +1,9 @@
+/* Shared font definitions for @family-routine/ui.
+   Loaded via design.js so storybook and web-app render identically.
+   Type system: Plus Jakarta Sans (UI) + Fraunces (display / numeric moments).
+   Material Icons and Font Awesome ship alongside for legacy icon usage. */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap');
+@import url('https://fonts.googleapis.com/css?family=Material+Icons&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
