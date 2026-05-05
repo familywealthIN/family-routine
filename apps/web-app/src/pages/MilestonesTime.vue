@@ -49,9 +49,9 @@ import moment from 'moment';
 
 import { defaultGoalItem, periodsArray } from '../constants/goals';
 
-import GoalItemMilestoneList from '@family-routine/ui/molecules/GoalItemMilestoneList/GoalItemMilestoneList.vue';
+import GoalItemMilestoneList from '@routine-notes/ui/molecules/GoalItemMilestoneList/GoalItemMilestoneList.vue';
 import GoalCreation from '../containers/GoalCreationContainer.vue';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import {
   AtomButton,
   AtomCardText,
@@ -62,7 +62,7 @@ import {
   AtomListTileContent,
   AtomListTileTitle,
   AtomSubheader,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
 
 export default {
   components: {

@@ -75,7 +75,7 @@
 
 <script>
 import moment from 'moment';
-import { MarkdownEditor } from '@family-routine/markdown-editor';
+import { MarkdownEditor } from '@routine-notes/markdown-editor';
 import TimelineEntryEditor from '../../molecules/TimelineEntryEditor/TimelineEntryEditor.vue';
 import {
   stepupMilestonePeriodDate,

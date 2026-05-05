@@ -91,7 +91,7 @@ import { useSearchGoals } from '@/composables/useGoalQueries';
 import { ROUTINE_DATE_QUERY } from '@/composables/graphql/queries';
 import { USER_TAGS } from '@/constants/settings';
 import getJSON from '@/utils/getJSON';
-import SearchResults from '@family-routine/ui/organisms/SearchResults/SearchResults.vue';
+import SearchResults from '@routine-notes/ui/organisms/SearchResults/SearchResults.vue';
 import GoalCreation from '@/containers/GoalCreationContainer.vue';
 
 export default {

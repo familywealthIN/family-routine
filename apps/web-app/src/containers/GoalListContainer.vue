@@ -17,7 +17,7 @@
 </template>
 
 <script>
-import GoalList from '@family-routine/ui/organisms/GoalList/GoalList.vue';
+import GoalList from '@routine-notes/ui/organisms/GoalList/GoalList.vue';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 
 const ADD_GOAL_ITEM_TIMEOUT_MS = 12000;

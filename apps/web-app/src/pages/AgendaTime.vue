@@ -235,11 +235,8 @@
 /* eslint-disable no-param-reassign */
 import moment from 'moment';
 
-import GoalList from '../containers/GoalListContainer.vue';
-import TimelineItemList from '@family-routine/ui/molecules/TimelineItemList/TimelineItemList.vue';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
-import { stepupMilestonePeriodDate } from '../utils/getDates';
-import { ROUTINE_DATE_QUERY, AGENDA_GOALS_QUERY } from '../composables/graphql/queries';
+import TimelineItemList from '@routine-notes/ui/molecules/TimelineItemList/TimelineItemList.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import {
   AtomAlert,
   AtomButton,
@@ -255,7 +252,10 @@ import {
   AtomTimelineItem,
   AtomToolbar,
   AtomToolbarTitle,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
+import GoalList from '../containers/GoalListContainer.vue';
+import { stepupMilestonePeriodDate } from '../utils/getDates';
+import { ROUTINE_DATE_QUERY, AGENDA_GOALS_QUERY } from '../composables/graphql/queries';
 
 export default {
   components: {

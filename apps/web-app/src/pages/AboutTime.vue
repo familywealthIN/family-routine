@@ -59,8 +59,8 @@
 
 <script>
 import gql from 'graphql-tag';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
-import { AtomCardText } from '@family-routine/ui/atoms';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
+import { AtomCardText } from '@routine-notes/ui/atoms';
 
 export default {
   components: { ContainerBox, AtomCardText },

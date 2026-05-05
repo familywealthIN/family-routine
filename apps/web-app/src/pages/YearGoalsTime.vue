@@ -303,7 +303,7 @@
 import gql from 'graphql-tag';
 import moment from 'moment';
 import VueMarkdown from 'vue-markdown';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import {
   AtomAlert,
   AtomButton,
@@ -331,7 +331,7 @@ import {
   AtomSubheader,
   AtomToolbar,
   AtomToolbarTitle,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
 import { defaultGoalItem } from '@/constants/goals';
 import { PROFILE_SETTINGS } from '../constants/settings';
 import GoalCreation from '../containers/GoalCreationContainer.vue';

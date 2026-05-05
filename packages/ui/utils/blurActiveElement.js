@@ -6,7 +6,7 @@
  * @returns {Promise<void>} Resolves after the delay
  *
  * @example
- * import { blurActiveElement } from '@family-routine/ui/utils/blurActiveElement';
+ * import { blurActiveElement } from '@routine-notes/ui/utils/blurActiveElement';
  *
  * async openDrawer() {
  *   await blurActiveElement();

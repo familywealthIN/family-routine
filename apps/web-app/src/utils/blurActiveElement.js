@@ -1,1 +1,1 @@
-export { blurActiveElement } from '@family-routine/ui/utils/blurActiveElement';
+export { blurActiveElement } from '@routine-notes/ui/utils/blurActiveElement';

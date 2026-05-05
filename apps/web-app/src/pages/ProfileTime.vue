@@ -685,7 +685,7 @@
 
 <script>
 import gql from 'graphql-tag';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import { PROFILE_SETTINGS, WEEK_START_OPTIONS, TIMEZONE_OPTIONS } from '../constants/settings';
 import {
   AtomAlert,
@@ -712,7 +712,7 @@ import {
   AtomTabs,
   AtomTabsItems,
   AtomTextField,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
 
 export default {
   components: {

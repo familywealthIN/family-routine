@@ -138,12 +138,12 @@
 <script>
 import gql from 'graphql-tag';
 import moment from 'moment';
-import ProjectSidebar from '@family-routine/ui/molecules/ProjectSidebar/ProjectSidebar.vue';
-import AreaSidebar from '@family-routine/ui/molecules/AreaSidebar/AreaSidebar.vue';
-import YearGoalSidebar from '@family-routine/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue';
+import ProjectSidebar from '@routine-notes/ui/molecules/ProjectSidebar/ProjectSidebar.vue';
+import AreaSidebar from '@routine-notes/ui/molecules/AreaSidebar/AreaSidebar.vue';
+import YearGoalSidebar from '@routine-notes/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue';
 import localforage from 'localforage';
+import TaskTimingBar from '@routine-notes/ui/atoms/TaskTimingBar/TaskTimingBar.vue';
 import PendingList from '../containers/PendingListContainer.vue';
-import TaskTimingBar from '@family-routine/ui/atoms/TaskTimingBar/TaskTimingBar.vue';
 import { taskTimingMixin } from '../mixins/taskTimingMixin';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import { ROUTINE_DATE_QUERY, AGENDA_GOALS_QUERY } from '../composables/graphql/queries';

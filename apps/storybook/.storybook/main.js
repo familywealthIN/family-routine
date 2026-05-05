@@ -61,12 +61,12 @@ module.exports = {
 
         config.plugins.push(new VuetifyLoaderPlugin());
 
-        // Design, utils, constants and composables all live in @family-routine/ui.
+        // Design, utils, constants and composables all live in @routine-notes/ui.
         // Deliberately no alias to apps/web-app so storybook remains isolated.
         config.resolve.alias = {
             ...config.resolve.alias,
-            '@family-routine/ui': path.resolve(__dirname, '../../../packages/ui'),
-            '@family-routine/markdown-editor': path.resolve(__dirname, '../../../packages/markdown-editor'),
+            '@routine-notes/ui': path.resolve(__dirname, '../../../packages/ui'),
+            '@routine-notes/markdown-editor': path.resolve(__dirname, '../../../packages/markdown-editor'),
             'vue$': 'vue/dist/vue.esm.js',
         };
 

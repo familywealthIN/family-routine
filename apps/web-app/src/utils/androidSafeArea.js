@@ -21,11 +21,11 @@ export class AndroidSafeAreaManager {
 
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     const androidMatch = ua.match(/Android\s([0-9\.]+)/);
-    
+
     if (androidMatch) {
       this.androidVersion = parseFloat(androidMatch[1]);
       this.isAndroid14Plus = this.androidVersion >= 14;
-      
+
       console.log(`Detected Android version: ${this.androidVersion}`);
       console.log(`Android 14+ support: ${this.isAndroid14Plus}`);
     }
@@ -34,7 +34,7 @@ export class AndroidSafeAreaManager {
   applySafeAreaClasses() {
     if (!this.isAndroid14Plus) return;
 
-    const body = document.body;
+    const { body } = document;
     const html = document.documentElement;
 
     // Add Android 14+ classes
@@ -43,7 +43,7 @@ export class AndroidSafeAreaManager {
 
     // Set CSS custom properties
     html.style.setProperty('--android-version', this.androidVersion.toString());
-    
+
     // Apply safe area CSS variables
     this.updateSafeAreaVariables();
   }
@@ -52,7 +52,7 @@ export class AndroidSafeAreaManager {
     if (!this.isAndroid14Plus) return;
 
     const html = document.documentElement;
-    
+
     // Set safe area inset variables with fallbacks
     html.style.setProperty('--safe-area-inset-top', 'max(env(safe-area-inset-top), 24px)');
     html.style.setProperty('--safe-area-inset-bottom', 'max(env(safe-area-inset-bottom), 16px)');
@@ -70,10 +70,10 @@ export class AndroidSafeAreaManager {
 
     // Listen for orientation changes
     window.addEventListener('orientationchange', handleViewportChange);
-    
+
     // Listen for resize events (keyboard show/hide)
     window.addEventListener('resize', handleViewportChange);
-    
+
     // Visual viewport API support
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleViewportChange);
@@ -88,7 +88,9 @@ export class AndroidSafeAreaManager {
   // Get current safe area values
   getSafeAreaInsets() {
     if (!this.isAndroid14Plus) {
-      return { top: 0, bottom: 0, left: 0, right: 0 };
+      return {
+        top: 0, bottom: 0, left: 0, right: 0,
+      };
     }
 
     const computedStyle = getComputedStyle(document.documentElement);

@@ -18,7 +18,7 @@
 </template>
 
 <script>
-import QuickGoalCreation from '@family-routine/ui/organisms/QuickGoalCreation/QuickGoalCreation.vue';
+import QuickGoalCreation from '@routine-notes/ui/organisms/QuickGoalCreation/QuickGoalCreation.vue';
 import { GOALS_BY_GOAL_REF_QUERY } from '../composables/useGoalQueries';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 import eventBus, { EVENTS } from '../utils/eventBus';

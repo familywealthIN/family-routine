@@ -1,5 +1,5 @@
 {
-    "name": "@family-routine/markdown-editor",
+    "name": "@routine-notes/markdown-editor",
     "version": "0.0.0",
     "private": true,
     "main": "index.js",

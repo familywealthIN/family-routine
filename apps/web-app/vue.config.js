@@ -1,7 +1,7 @@
 module.exports = {
   transpileDependencies: [
-    '@family-routine/ui',
-    '@family-routine/markdown-editor',
+    '@routine-notes/ui',
+    '@routine-notes/markdown-editor',
   ],
   configureWebpack: {
     devServer: {
@@ -47,5 +47,5 @@ module.exports = {
       exclude: ['_header', '_redirects', 'public/firebase-messaging-sw.js', 'public/firebase.html', '.htaccess'],
     },
   },
-  lintOnSave: false
+  lintOnSave: false,
 };

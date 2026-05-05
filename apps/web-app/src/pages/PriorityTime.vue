@@ -108,7 +108,7 @@
 
 <script>
 import moment from 'moment';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import { defaultGoalItem } from '@/constants/goals';
 import {
   AtomButton,
@@ -120,8 +120,8 @@ import {
   AtomLayout,
   AtomSpacer,
   AtomToolbar,
-} from '@family-routine/ui/atoms';
-import PriorityMatrix from '@family-routine/ui/organisms/PriorityMatrix/PriorityMatrix.vue';
+} from '@routine-notes/ui/atoms';
+import PriorityMatrix from '@routine-notes/ui/organisms/PriorityMatrix/PriorityMatrix.vue';
 import GoalCreation from '../containers/GoalCreationContainer.vue';
 
 export default {

@@ -38,7 +38,7 @@
 </template>
 
 <script>
-import { MarkdownEditor } from '@family-routine/markdown-editor';
+import { MarkdownEditor } from '@routine-notes/markdown-editor';
 import {
   AtomFlex,
   AtomLayout,

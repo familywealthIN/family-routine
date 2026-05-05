@@ -471,7 +471,7 @@ export function useGoalMutations(apolloClient, options = {}) {
     let optimisticStatus = 'todo';
     let optimisticCompletedAt = null;
     if (isComplete) {
-      const currentTask = currentTaskStore.currentTask;
+      const { currentTask } = currentTaskStore;
       const { tasklist } = currentTaskStore;
       if (currentTask && tasklist && tasklist.length && taskRef) {
         const r = updateTaskStatusOnComplete({
@@ -524,7 +524,9 @@ export function useGoalMutations(apolloClient, options = {}) {
     try {
       const { data } = await apolloClient.mutate({
         mutation: COMPLETE_GOAL_ITEM_MUTATION,
-        variables: { id, taskRef, date, period, isComplete, isMilestone },
+        variables: {
+          id, taskRef, date, period, isComplete, isMilestone,
+        },
         optimisticResponse: {
           __typename: 'Mutation',
           completeGoalItem: {

@@ -19,10 +19,10 @@
 <script>
 import moment from 'moment';
 import gql from 'graphql-tag';
-import AiSearchModal from '@family-routine/ui/organisms/AiSearchModal/AiSearchModal.vue';
-import { stepupMilestonePeriodDate } from '@family-routine/ui/utils/getDates';
+import AiSearchModal from '@routine-notes/ui/organisms/AiSearchModal/AiSearchModal.vue';
+import { stepupMilestonePeriodDate } from '@routine-notes/ui/utils/getDates';
+import eventBus, { EVENTS } from '@routine-notes/ui/utils/eventBus';
 import { GOAL_DATE_PERIOD_QUERY, GOALS_BY_GOAL_REF_QUERY } from '../composables/graphql/queries';
-import eventBus, { EVENTS } from '@family-routine/ui/utils/eventBus';
 import { notifyNonCurrentTaskGoalCreation } from '../utils/taskCreationNotification';
 import AiTaskCreationFormContainer from './AiTaskCreationFormContainer.vue';
 import AiGoalPlanFormContainer from './AiGoalPlanFormContainer.vue';

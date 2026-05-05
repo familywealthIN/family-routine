@@ -1,6 +1,6 @@
 let baseConfig;
 try {
-    baseConfig = require('@family-routine/config/jest');
+    baseConfig = require('@routine-notes/config/jest');
 } catch (e) {
     baseConfig = require('../config/jest');
 }
@@ -14,6 +14,6 @@ module.exports = {
     ],
     moduleNameMapper: {
         ...baseConfig.moduleNameMapper,
-        '^@family-routine/ui/(.*)$': '<rootDir>/$1',
+        '^@routine-notes/ui/(.*)$': '<rootDir>/$1',
     },
 };

@@ -204,8 +204,8 @@ import { MeasurementMixin } from '@/utils/measurementMixins.js';
 
 import { defaultGoalItem, periodsArray } from '../constants/goals';
 
-import GoalItemList from '@family-routine/ui/organisms/GoalItemList/GoalItemList.vue';
-import GoalsFilterTime from '@family-routine/ui/organisms/GoalsFilterTime/GoalsFilterTime.vue';
+import GoalItemList from '@routine-notes/ui/organisms/GoalItemList/GoalItemList.vue';
+import GoalsFilterTime from '@routine-notes/ui/organisms/GoalsFilterTime/GoalsFilterTime.vue';
 
 import {
   AtomButton,
@@ -223,9 +223,9 @@ import {
   AtomSpacer,
   AtomToolbar,
   AtomToolbarTitle,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
 import GoalCreation from '../containers/GoalCreationContainer.vue';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 
 export default {
   mixins: [MeasurementMixin],

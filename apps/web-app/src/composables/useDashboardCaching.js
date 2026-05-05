@@ -2,11 +2,11 @@ import gql from 'graphql-tag';
 import moment from 'moment';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import {
-    isCacheValid,
-    setCachedDashboard,
-    getTagsMissingCache,
-    clearExpiredCache,
-    filterAreaProjectTags,
+  isCacheValid,
+  setCachedDashboard,
+  getTagsMissingCache,
+  clearExpiredCache,
+  filterAreaProjectTags,
 } from '../utils/dashboardCache';
 
 /**
@@ -66,16 +66,16 @@ const GOALS_BY_TAG = gql`
  * @returns {Array} - Array of unique { body, period, date }
  */
 function dedupeGoalItems(goals) {
-    const seenBodies = new Set();
-    return goals.flatMap((goal) => {
-        if (!Array.isArray(goal.goalItems)) return [];
-        return goal.goalItems.reduce((acc, goalItem) => {
-            if (!goalItem.body || seenBodies.has(goalItem.body)) return acc;
-            seenBodies.add(goalItem.body);
-            acc.push({ body: goalItem.body, period: goal.period, date: goal.date });
-            return acc;
-        }, []);
-    });
+  const seenBodies = new Set();
+  return goals.flatMap((goal) => {
+    if (!Array.isArray(goal.goalItems)) return [];
+    return goal.goalItems.reduce((acc, goalItem) => {
+      if (!goalItem.body || seenBodies.has(goalItem.body)) return acc;
+      seenBodies.add(goalItem.body);
+      acc.push({ body: goalItem.body, period: goal.period, date: goal.date });
+      return acc;
+    }, []);
+  });
 }
 
 /**
@@ -89,44 +89,44 @@ function dedupeGoalItems(goals) {
  * @returns {Array} - Array of { body, period, date }
  */
 function flattenGoalItems(goals) {
-    if (!Array.isArray(goals)) return [];
+  if (!Array.isArray(goals)) return [];
 
-    const MAX_ITEMS = 20;
-    const MAX_DAY_ENTRIES = 7;
+  const MAX_ITEMS = 20;
+  const MAX_DAY_ENTRIES = 7;
 
-    // Separate day-period goals from others
-    const dayGoals = [];
-    const nonDayGoals = [];
+  // Separate day-period goals from others
+  const dayGoals = [];
+  const nonDayGoals = [];
 
-    goals.forEach((goal) => {
-        if (!Array.isArray(goal.goalItems) || goal.goalItems.length === 0) return;
-        if (goal.period === 'day') {
-            dayGoals.push(goal);
-        } else {
-            nonDayGoals.push(goal);
-        }
-    });
+  goals.forEach((goal) => {
+    if (!Array.isArray(goal.goalItems) || goal.goalItems.length === 0) return;
+    if (goal.period === 'day') {
+      dayGoals.push(goal);
+    } else {
+      nonDayGoals.push(goal);
+    }
+  });
 
-    // Sort day goals by date descending (newest first)
-    dayGoals.sort((a, b) => {
-        const dateA = moment(a.date, 'DD-MM-YYYY');
-        const dateB = moment(b.date, 'DD-MM-YYYY');
-        return dateB.valueOf() - dateA.valueOf();
-    });
+  // Sort day goals by date descending (newest first)
+  dayGoals.sort((a, b) => {
+    const dateA = moment(a.date, 'DD-MM-YYYY');
+    const dateB = moment(b.date, 'DD-MM-YYYY');
+    return dateB.valueOf() - dateA.valueOf();
+  });
 
-    // Collect unique day-dates (already sorted newest-first) and pick latest 7
-    const allowedDates = new Set();
-    dayGoals.forEach((goal) => {
-        if (allowedDates.size < MAX_DAY_ENTRIES) {
-            allowedDates.add(goal.date);
-        }
-    });
+  // Collect unique day-dates (already sorted newest-first) and pick latest 7
+  const allowedDates = new Set();
+  dayGoals.forEach((goal) => {
+    if (allowedDates.size < MAX_DAY_ENTRIES) {
+      allowedDates.add(goal.date);
+    }
+  });
 
-    const recentDayGoals = dayGoals.filter((goal) => allowedDates.has(goal.date));
+  const recentDayGoals = dayGoals.filter((goal) => allowedDates.has(goal.date));
 
-    // Combine: non-day goals + latest 7 day-entries, then deduplicate
-    const combined = [...nonDayGoals, ...recentDayGoals];
-    return dedupeGoalItems(combined).slice(0, MAX_ITEMS);
+  // Combine: non-day goals + latest 7 day-entries, then deduplicate
+  const combined = [...nonDayGoals, ...recentDayGoals];
+  return dedupeGoalItems(combined).slice(0, MAX_ITEMS);
 }
 
 /**
@@ -136,54 +136,54 @@ function flattenGoalItems(goals) {
  * @returns {Promise<boolean>} - Whether caching succeeded
  */
 async function cacheTagDashboard(vm, tag) {
-    try {
-        // 1. Fetch goals for this tag using no-cache to avoid Apollo normalization
-        // (goalsByTag returns goals with id: null, causing cache merge issues)
-        const { data } = await vm.$apollo.query({
-            query: GOALS_BY_TAG,
-            variables: { tag },
-            fetchPolicy: 'no-cache',
-        });
-        const goals = data?.goalsByTag || [];
+  try {
+    // 1. Fetch goals for this tag using no-cache to avoid Apollo normalization
+    // (goalsByTag returns goals with id: null, causing cache merge issues)
+    const { data } = await vm.$apollo.query({
+      query: GOALS_BY_TAG,
+      variables: { tag },
+      fetchPolicy: 'no-cache',
+    });
+    const goals = data?.goalsByTag || [];
 
-        if (!goals || goals.length === 0) {
-            // No goals — cache as empty so we don't retry
-            setCachedDashboard(tag, '', '');
-            return true;
-        }
-
-        // 2. Flatten goal items to AI input format
-        const aiItems = flattenGoalItems(goals);
-
-        if (aiItems.length === 0) {
-            setCachedDashboard(tag, '', '');
-            return true;
-        }
-
-        // 3. Fetch summary and next steps in parallel
-        const [summaryResult, nextStepsResult] = await Promise.all([
-            vm.$apollo.query({
-                query: GET_GOALS_SUMMARY,
-                variables: { items: aiItems },
-                fetchPolicy: 'network-only',
-            }),
-            vm.$apollo.query({
-                query: GET_GOALS_NEXT_STEPS,
-                variables: { items: aiItems },
-                fetchPolicy: 'network-only',
-            }),
-        ]);
-
-        const description = summaryResult?.data?.getGoalsSummary?.description || '';
-        const nextSteps = nextStepsResult?.data?.getGoalsNextSteps?.nextSteps || '';
-
-        // 4. Cache the results
-        setCachedDashboard(tag, description, nextSteps);
-        return true;
-    } catch (err) {
-        console.error(`Failed to cache dashboard for tag "${tag}":`, err);
-        return false;
+    if (!goals || goals.length === 0) {
+      // No goals — cache as empty so we don't retry
+      setCachedDashboard(tag, '', '');
+      return true;
     }
+
+    // 2. Flatten goal items to AI input format
+    const aiItems = flattenGoalItems(goals);
+
+    if (aiItems.length === 0) {
+      setCachedDashboard(tag, '', '');
+      return true;
+    }
+
+    // 3. Fetch summary and next steps in parallel
+    const [summaryResult, nextStepsResult] = await Promise.all([
+      vm.$apollo.query({
+        query: GET_GOALS_SUMMARY,
+        variables: { items: aiItems },
+        fetchPolicy: 'network-only',
+      }),
+      vm.$apollo.query({
+        query: GET_GOALS_NEXT_STEPS,
+        variables: { items: aiItems },
+        fetchPolicy: 'network-only',
+      }),
+    ]);
+
+    const description = summaryResult?.data?.getGoalsSummary?.description || '';
+    const nextSteps = nextStepsResult?.data?.getGoalsNextSteps?.nextSteps || '';
+
+    // 4. Cache the results
+    setCachedDashboard(tag, description, nextSteps);
+    return true;
+  } catch (err) {
+    console.error(`Failed to cache dashboard for tag "${tag}":`, err);
+    return false;
+  }
 }
 
 const GET_PROJECT_TAGS = gql`
@@ -207,21 +207,21 @@ const GET_AREA_TAGS = gql`
  * @returns {Promise<string[]>} - Combined array of area/project tags
  */
 async function fetchRoutineTags(vm) {
-    const [projectResult, areaResult] = await Promise.all([
-        vm.$apollo.query({
-            query: GET_PROJECT_TAGS,
-            fetchPolicy: 'network-only',
-        }),
-        vm.$apollo.query({
-            query: GET_AREA_TAGS,
-            fetchPolicy: 'network-only',
-        }),
-    ]);
+  const [projectResult, areaResult] = await Promise.all([
+    vm.$apollo.query({
+      query: GET_PROJECT_TAGS,
+      fetchPolicy: 'network-only',
+    }),
+    vm.$apollo.query({
+      query: GET_AREA_TAGS,
+      fetchPolicy: 'network-only',
+    }),
+  ]);
 
-    const projectTags = projectResult?.data?.projectTags || [];
-    const areaTags = areaResult?.data?.areaTags || [];
+  const projectTags = projectResult?.data?.projectTags || [];
+  const areaTags = areaResult?.data?.areaTags || [];
 
-    return [...areaTags, ...projectTags];
+  return [...areaTags, ...projectTags];
 }
 
 /**
@@ -237,58 +237,58 @@ async function fetchRoutineTags(vm) {
  * @returns {Promise<void>}
  */
 export async function initDashboardCaching(vm, options = {}) {
-    // Clean up expired entries first
-    clearExpiredCache();
+  // Clean up expired entries first
+  clearExpiredCache();
 
-    // Fetch area/project tags from routines (same source as sidebar)
-    // unless caller provides an explicit filtered tag set.
-    const explicitTags = Array.isArray(options.tags) ? options.tags : [];
-    const sourceTags = explicitTags.length > 0 ? explicitTags : await fetchRoutineTags(vm);
-    const areaProjectTags = [...new Set(filterAreaProjectTags(sourceTags))];
+  // Fetch area/project tags from routines (same source as sidebar)
+  // unless caller provides an explicit filtered tag set.
+  const explicitTags = Array.isArray(options.tags) ? options.tags : [];
+  const sourceTags = explicitTags.length > 0 ? explicitTags : await fetchRoutineTags(vm);
+  const areaProjectTags = [...new Set(filterAreaProjectTags(sourceTags))];
 
-    if (areaProjectTags.length === 0) return;
+  if (areaProjectTags.length === 0) return;
 
-    // Find tags that need caching
-    const tagsToCache = getTagsMissingCache(areaProjectTags);
+  // Find tags that need caching
+  const tagsToCache = getTagsMissingCache(areaProjectTags);
 
-    if (tagsToCache.length === 0) return;
+  if (tagsToCache.length === 0) return;
 
-    // Signal caching started
+  // Signal caching started
+  eventBus.$emit(EVENTS.DASHBOARD_CACHING_STATUS, {
+    isCaching: true,
+    progress: 0,
+    total: tagsToCache.length,
+    completed: 0,
+    currentTag: tagsToCache[0] || '',
+  });
+
+  // Process tags sequentially to avoid flooding LLM API
+  // eslint-disable-next-line no-await-in-loop
+  await tagsToCache.reduce(async (prevPromise, tag, index) => {
+    await prevPromise;
+
+    // Emit current tag being processed
     eventBus.$emit(EVENTS.DASHBOARD_CACHING_STATUS, {
-        isCaching: true,
-        progress: 0,
-        total: tagsToCache.length,
-        completed: 0,
-        currentTag: tagsToCache[0] || '',
+      isCaching: true,
+      progress: Math.round((index / tagsToCache.length) * 100),
+      total: tagsToCache.length,
+      completed: index,
+      currentTag: tag,
     });
 
-    // Process tags sequentially to avoid flooding LLM API
-    // eslint-disable-next-line no-await-in-loop
-    await tagsToCache.reduce(async (prevPromise, tag, index) => {
-        await prevPromise;
+    await cacheTagDashboard(vm, tag);
 
-        // Emit current tag being processed
-        eventBus.$emit(EVENTS.DASHBOARD_CACHING_STATUS, {
-            isCaching: true,
-            progress: Math.round((index / tagsToCache.length) * 100),
-            total: tagsToCache.length,
-            completed: index,
-            currentTag: tag,
-        });
+    const completedCount = index + 1;
+    const progress = Math.round((completedCount / tagsToCache.length) * 100);
 
-        await cacheTagDashboard(vm, tag);
-
-        const completedCount = index + 1;
-        const progress = Math.round((completedCount / tagsToCache.length) * 100);
-
-        eventBus.$emit(EVENTS.DASHBOARD_CACHING_STATUS, {
-            isCaching: completedCount < tagsToCache.length,
-            progress,
-            total: tagsToCache.length,
-            completed: completedCount,
-            currentTag: completedCount < tagsToCache.length ? tagsToCache[completedCount] : '',
-        });
-    }, Promise.resolve());
+    eventBus.$emit(EVENTS.DASHBOARD_CACHING_STATUS, {
+      isCaching: completedCount < tagsToCache.length,
+      progress,
+      total: tagsToCache.length,
+      completed: completedCount,
+      currentTag: completedCount < tagsToCache.length ? tagsToCache[completedCount] : '',
+    });
+  }, Promise.resolve());
 }
 
 export { isCacheValid };

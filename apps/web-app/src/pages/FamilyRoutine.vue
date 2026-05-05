@@ -181,8 +181,8 @@
 <script>
 import gql from 'graphql-tag';
 
-import FamilyUserHistory from '@family-routine/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
+import FamilyUserHistory from '@routine-notes/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import {
   AtomAvatar,
   AtomButton,
@@ -209,7 +209,7 @@ import {
   AtomTextField,
   AtomToolbar,
   AtomToolbarTitle,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
 
 export default {
   components: {

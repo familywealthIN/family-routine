@@ -4,4 +4,4 @@ export {
   taskStatusTypes,
   taskStatusConfig,
   periodsArray,
-} from '@family-routine/ui/constants/goals';
+} from '@routine-notes/ui/constants/goals';

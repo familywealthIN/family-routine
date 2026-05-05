@@ -107,7 +107,7 @@ import {
   GC_AUTH_TOKEN,
 } from '../constants/settings';
 import { SignInWithApple } from '@capacitor-community/apple-sign-in';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import { gauthOption } from '../blob/config';
 
 export default {

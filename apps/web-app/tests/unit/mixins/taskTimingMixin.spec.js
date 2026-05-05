@@ -1,6 +1,9 @@
 // We swap the real `determineTaskStatus` for a jest.fn before any module
 // that depends on it loads. Using jest.spyOn on the re-exported binding
 // fails because Babel marks the wrapper exports as non-configurable.
+import { taskTimingMixin } from '@/mixins/taskTimingMixin';
+import { TASK_STATUS, determineTaskStatus } from '@/utils/taskStatus';
+
 jest.mock('@/utils/taskStatus', () => {
   const actual = jest.requireActual('@/utils/taskStatus');
   return {
@@ -9,9 +12,6 @@ jest.mock('@/utils/taskStatus', () => {
     determineTaskStatus: jest.fn(),
   };
 });
-
-import { taskTimingMixin } from '@/mixins/taskTimingMixin';
-import { TASK_STATUS, determineTaskStatus } from '@/utils/taskStatus';
 
 describe('taskTimingMixin', () => {
   let vm;

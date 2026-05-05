@@ -12,4 +12,4 @@ export {
   PROFILE_SETTINGS,
   WEEK_START_OPTIONS,
   TIMEZONE_OPTIONS,
-} from '@family-routine/ui/constants/settings';
+} from '@routine-notes/ui/constants/settings';

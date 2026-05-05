@@ -7,6 +7,7 @@ class PushService {
   constructor() {
     this.isInitialized = false;
   }
+
   async init() {
     if (this.isInitialized) return;
 
@@ -39,78 +40,6 @@ class PushService {
     }
   }
 
-  setupListeners() {
-    // Registration listener
-    PushNotifications.addListener('registration', (token) => {
-      console.log('Push registration success, token:', token.value);
-      this.sendTokenToServer(token.value);
-    });
-
-    // Foreground notification listener
-    PushNotifications.addListener('pushNotificationReceived', async (notification) => {
-      console.log('📱 Push notification received in foreground:', notification);
-
-      // For iOS, show local notification to get action buttons in foreground
-      if (Capacitor.getPlatform() === 'ios') {
-        await this.showLocalNotificationWithActions(notification);
-      } else {
-        // Android handles actions differently
-        await this.showLocalNotificationWithActions(notification);
-      }
-    });
-
-    // Background/killed app notification action listener
-    PushNotifications.addListener('pushNotificationActionPerformed', async (action) => {
-      console.log('🔔 Push notification action performed:', action);
-      await this.handleNotificationAction(action);
-    });
-
-    // Local notification action listener
-    LocalNotifications.addListener('localNotificationActionPerformed', async (action) => {
-      console.log('📲 Local notification action performed:', action);
-      await this.handleNotificationAction(action);
-    });
-  }
-
-  async showLocalNotificationWithActions(notification) {
-    try {
-      const data = notification.data || {};
-      const title = notification.title || data.title || 'Routine Reminder';
-      const body = notification.body || data.body || 'Time for your routine!';
-
-      // Determine category based on data
-      const category = data.actionType === 'habit_actions' ? 'HABIT_ACTIONS' : 'ROUTINE_ACTIONS';
-
-      const localNotification = {
-        title: title,
-        body: body,
-        id: Date.now(),
-        schedule: { at: new Date(Date.now() + 500) },
-        sound: 'default',
-        extra: {
-          ...data,
-          originalTitle: title,
-          originalBody: body,
-        },
-      };
-
-      // For iOS, we need to set the category differently
-      if (Capacitor.getPlatform() === 'ios') {
-        localNotification.actionTypeId = category;
-      } else {
-        // Android
-        localNotification.actionTypeId = category;
-      }
-
-      await LocalNotifications.schedule({
-        notifications: [localNotification],
-      });
-
-      console.log(`✅ Local notification scheduled with category: ${category}`);
-    } catch (error) {
-      console.error('❌ Error showing local notification:', error);
-    }
-  }
   // async init() {
   //   if (this.isInitialized) return;
 
@@ -173,7 +102,7 @@ class PushService {
                 foreground: false,
                 destructive: false,
               },
-            ]
+            ],
           },
           {
             id: 'HABIT_ACTIONS',
@@ -199,9 +128,9 @@ class PushService {
                 foreground: false,
                 destructive: false,
               },
-            ]
-          }
-        ]
+            ],
+          },
+        ],
       });
 
       console.log('✅ Notification action categories registered successfully');
@@ -253,12 +182,12 @@ class PushService {
       const actionTypeId = data.actionType === 'habit_actions' ? 'HABIT_ACTIONS' : 'ROUTINE_ACTIONS';
 
       const localNotification = {
-        title: title,
-        body: body,
+        title,
+        body,
         id: Date.now(),
         schedule: { at: new Date(Date.now() + 500) }, // Small delay to ensure proper display
         sound: 'default',
-        actionTypeId: actionTypeId, // This links to registered categories
+        actionTypeId, // This links to registered categories
         extra: {
           ...data,
           originalTitle: title,
@@ -338,7 +267,7 @@ class PushService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           query: `
@@ -360,8 +289,8 @@ class PushService {
 
         // Refresh app data if app is open
         if (window.app?.$apollo) {
-          window.app.$apollo.queries.goals?.refetch();
-          window.app.$apollo.queries.tasklist?.refetch();
+          if (window.app.$apollo.queries.goals) window.app.$apollo.queries.goals.refetch();
+          if (window.app.$apollo.queries.tasklist) window.app.$apollo.queries.tasklist.refetch();
         }
       } else {
         throw new Error('API request failed');
@@ -406,7 +335,7 @@ class PushService {
       success: '✅',
       error: '❌',
       info: 'ℹ️',
-      warning: '⚠️'
+      warning: '⚠️',
     };
 
     await LocalNotifications.schedule({
@@ -428,7 +357,7 @@ class PushService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ token }),
       });

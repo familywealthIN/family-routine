@@ -126,7 +126,7 @@
 </template>
 
 <script>
-import { MarkdownEditor } from '@family-routine/markdown-editor';
+import { MarkdownEditor } from '@routine-notes/markdown-editor';
 
 import taskStatusMixin from '../../composables/useTaskStatus';
 import SubTaskItemList from '../../molecules/SubTaskItemList/SubTaskItemList.vue';
@@ -455,7 +455,7 @@ export default {
 </script>
 
 <style>
-  /* easymde CSS is bundled by @family-routine/markdown-editor's MarkdownEditor. */
+  /* easymde CSS is bundled by @routine-notes/markdown-editor's MarkdownEditor. */
 
   .no-shadow {
     box-shadow: none !important;

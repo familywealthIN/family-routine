@@ -367,14 +367,14 @@
 import moment from 'moment';
 import gql from 'graphql-tag';
 
-import GoalItemList from '@family-routine/ui/organisms/GoalItemList/GoalItemList.vue';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
-import CurrentTaskSkeleton from '@family-routine/ui/skeletons/CurrentTaskSkeleton/CurrentTaskSkeleton.vue';
-import StreakChecks from '@family-routine/ui/molecules/StreakChecks/StreakChecks.vue';
-import WakeCheck from '@family-routine/ui/atoms/WakeCheck/WakeCheck.vue';
-import CurrentTaskCard from '@family-routine/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue';
-import UpcomingPastTasks from '@family-routine/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue';
-import WeekGoalStreak from '@family-routine/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue';
+import GoalItemList from '@routine-notes/ui/organisms/GoalItemList/GoalItemList.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
+import CurrentTaskSkeleton from '@routine-notes/ui/skeletons/CurrentTaskSkeleton/CurrentTaskSkeleton.vue';
+import StreakChecks from '@routine-notes/ui/molecules/StreakChecks/StreakChecks.vue';
+import WakeCheck from '@routine-notes/ui/atoms/WakeCheck/WakeCheck.vue';
+import CurrentTaskCard from '@routine-notes/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue';
+import UpcomingPastTasks from '@routine-notes/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue';
+import WeekGoalStreak from '@routine-notes/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue';
 import {
   AtomAlert,
   AtomAvatar,
@@ -408,7 +408,7 @@ import {
   AtomTabs,
   AtomToolbar,
   AtomToolbarTitle,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
 import { TIMES_UP_TIME, PROACTIVE_START_TIME, ONBOARDING_COMPLETE } from '../constants/settings';
 import { defaultGoalItem } from '../constants/goals';
 import eventBus, { EVENTS } from '../utils/eventBus';
@@ -1738,7 +1738,6 @@ export default {
       if (pendingMutations.has(pendingKey)) return;
       pendingMutations.add(pendingKey);
 
-      const apolloClient = this.$apollo.provider.defaultClient;
       const tickedAt = Date.now();
 
       // Note: no longer mutate `task.ticked` directly. Vue reactivity

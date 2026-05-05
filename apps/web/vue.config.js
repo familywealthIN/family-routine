@@ -1,6 +1,6 @@
 module.exports = {
     transpileDependencies: [
-        '@family-routine/ui',
+        '@routine-notes/ui',
     ],
     configureWebpack: {
         resolve: {

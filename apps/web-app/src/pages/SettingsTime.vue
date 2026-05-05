@@ -173,10 +173,10 @@
 import gql from 'graphql-tag';
 import { MeasurementMixin } from '@/utils/measurementMixins';
 
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import draggable from 'vuedraggable';
-import CircadianCycle from '@family-routine/ui/organisms/CircadianCycle/CircadianCycle.vue';
-import GoalTagsInput from '@family-routine/ui/molecules/GoalTagsInput/GoalTagsInput.vue';
+import CircadianCycle from '@routine-notes/ui/organisms/CircadianCycle/CircadianCycle.vue';
+import GoalTagsInput from '@routine-notes/ui/molecules/GoalTagsInput/GoalTagsInput.vue';
 import getJSON from '../utils/getJSON';
 import {
   AtomButton,
@@ -200,7 +200,7 @@ import {
   AtomSubheader,
   AtomTextarea,
   AtomTextField,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
 
 export default {
   mixins: [MeasurementMixin],

@@ -20,7 +20,6 @@ import gql from 'graphql-tag';
 import goalStore from '../store/goalStore';
 import {
   GOAL_ITEM_STANDARD_FIELDS_STRING,
-  GOAL_ITEM_CORE_FIELDS_STRING,
   GOAL_ITEM_FULL_FIELDS_STRING,
 } from './graphql/fragments';
 

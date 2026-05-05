@@ -1,1 +1,1 @@
-export { default } from '@family-routine/ui/utils/getJSON';
+export { default } from '@routine-notes/ui/utils/getJSON';

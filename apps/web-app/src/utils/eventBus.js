@@ -1,1 +1,1 @@
-export { default, EVENTS } from '@family-routine/ui/utils/eventBus';
+export { default, EVENTS } from '@routine-notes/ui/utils/eventBus';

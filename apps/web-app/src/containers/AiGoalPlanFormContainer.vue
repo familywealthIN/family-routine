@@ -28,10 +28,9 @@
 <script>
 import gql from 'graphql-tag';
 import moment from 'moment';
-import AiGoalPlanForm from '@family-routine/ui/organisms/AiGoalPlanForm/AiGoalPlanForm.vue';
+import AiGoalPlanForm from '@routine-notes/ui/organisms/AiGoalPlanForm/AiGoalPlanForm.vue';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import {
-  stepupMilestonePeriodDate,
   getTimelineEntryPeriod,
   getTimelineEntryDate,
 } from '../utils/getDates';

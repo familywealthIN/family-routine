@@ -25,7 +25,7 @@
 <script>
 import gql from 'graphql-tag';
 import moment from 'moment';
-import AiTaskCreationForm from '@family-routine/ui/organisms/AiTaskCreationForm/AiTaskCreationForm.vue';
+import AiTaskCreationForm from '@routine-notes/ui/organisms/AiTaskCreationForm/AiTaskCreationForm.vue';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import getJSON from '../utils/getJSON';
 import { USER_TAGS } from '../constants/settings';

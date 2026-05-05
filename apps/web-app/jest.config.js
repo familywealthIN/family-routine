@@ -9,8 +9,8 @@ module.exports = {
   transformIgnorePatterns: ['/node_modules/(?!(@vue/composition-api|@babel/runtime|@family-routine)/)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@family-routine/ui/(.*)$': '<rootDir>/../../packages/ui/$1',
-    '^@family-routine/ui$': '<rootDir>/../../packages/ui/index.js',
+    '^@routine-notes/ui/(.*)$': '<rootDir>/../../packages/ui/$1',
+    '^@routine-notes/ui$': '<rootDir>/../../packages/ui/index.js',
     // Pin core-js requests from hoisted @babel/runtime to web-app's local
     // core-js@2 install. Without this, Node resolution finds the root's
     // core-js@3 which doesn't expose the es7.* module paths Babel asks for.

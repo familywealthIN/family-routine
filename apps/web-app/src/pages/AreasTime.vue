@@ -96,7 +96,7 @@
 import moment from 'moment';
 import SummaryCards from '@/containers/SummaryCardsContainer.vue';
 import NextSteps from '@/containers/NextStepsContainer.vue';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import {
   AtomCard,
   AtomCardText,
@@ -110,7 +110,7 @@ import {
   AtomListTileTitle,
   AtomTimeline,
   AtomTimelineItem,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
 
 export default {
   name: 'AreasTime',

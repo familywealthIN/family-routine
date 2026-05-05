@@ -89,11 +89,11 @@
 import moment from 'moment';
 import gql from 'graphql-tag';
 
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
-import NumericCard from '@family-routine/ui/atoms/NumericCard/NumericCard.vue';
-import RadarCard from '@family-routine/ui/atoms/RadarCard/RadarCard.vue';
-import TableCard from '@family-routine/ui/molecules/TableCard/TableCard.vue';
-import TasksCompletedCard from '@family-routine/ui/atoms/TasksCompletedCard/TasksCompletedCard.vue';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
+import NumericCard from '@routine-notes/ui/atoms/NumericCard/NumericCard.vue';
+import RadarCard from '@routine-notes/ui/atoms/RadarCard/RadarCard.vue';
+import TableCard from '@routine-notes/ui/molecules/TableCard/TableCard.vue';
+import TasksCompletedCard from '@routine-notes/ui/atoms/TasksCompletedCard/TasksCompletedCard.vue';
 import {
   AtomButton,
   AtomCard,
@@ -109,7 +109,7 @@ import {
   AtomMenu,
   AtomSheet,
   AtomSparkline,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
 
 export default {
   components: {

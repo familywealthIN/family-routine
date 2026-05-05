@@ -39,7 +39,7 @@
 </template>
 
 <script>
-import { MarkdownEditor } from '@family-routine/markdown-editor';
+import { MarkdownEditor } from '@routine-notes/markdown-editor';
 import RelatedTasksTimeline from '../../molecules/RelatedTasksTimeline/RelatedTasksTimeline.vue';
 import {
   AtomAlert,
@@ -178,7 +178,7 @@ export default {
 </script>
 
 <style scoped>
-/* easymde CSS is bundled by @family-routine/markdown-editor's MarkdownEditor. */
+/* easymde CSS is bundled by @routine-notes/markdown-editor's MarkdownEditor. */
 
 .task-creation-form {
   width: 100%;

@@ -10,7 +10,7 @@
 
 <script>
 import moment from 'moment';
-import WeekdaySelector from '@family-routine/ui/organisms/WeekdaySelector/WeekdaySelector.vue';
+import WeekdaySelector from '@routine-notes/ui/organisms/WeekdaySelector/WeekdaySelector.vue';
 import { WEEK_STIMULI_QUERY } from '../composables/graphql/queries';
 import eventBus, { EVENTS } from '../utils/eventBus';
 

@@ -1,4 +1,5 @@
 import { StatusBar } from '@capacitor/status-bar';
+import { SplashScreen } from '@capacitor/splash-screen';
 import 'babel-polyfill';
 import 'isomorphic-unfetch';
 import Vue from 'vue';
@@ -35,7 +36,6 @@ import redirectOnError from './utils/redirectOnError';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
-import PushService from './services/pushService.js';
 // Load Google Identity Services script
 const script = document.createElement('script');
 script.src = 'https://accounts.google.com/gsi/client';

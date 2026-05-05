@@ -9,7 +9,7 @@
 
 <script>
 import gql from 'graphql-tag';
-import SummaryCards from '@family-routine/ui/organisms/SummaryCards/SummaryCards.vue';
+import SummaryCards from '@routine-notes/ui/organisms/SummaryCards/SummaryCards.vue';
 import { getCachedDashboard, setCachedDashboard } from '../utils/dashboardCache';
 
 export default {

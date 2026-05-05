@@ -34,10 +34,9 @@ import {
   AtomCardTitle,
   AtomDialog,
   AtomSpacer,
-} from '@family-routine/ui/atoms';
-import { TIMEZONE_OPTIONS } from '../constants/settings';
+} from '@routine-notes/ui/atoms';
+import { TIMEZONE_OPTIONS, GC_AUTH_TOKEN } from '../constants/settings';
 import { getSessionItem } from '../token';
-import { GC_AUTH_TOKEN } from '../constants/settings';
 
 const TRAVEL_DISMISS_KEY = 'TZ_TRAVEL_DISMISS';
 

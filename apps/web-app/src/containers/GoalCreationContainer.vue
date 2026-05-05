@@ -19,7 +19,7 @@
 
 <script>
 import moment from 'moment';
-import GoalCreation from '@family-routine/ui/organisms/GoalCreation/GoalCreation.vue';
+import GoalCreation from '@routine-notes/ui/organisms/GoalCreation/GoalCreation.vue';
 import { stepupMilestonePeriodDate } from '../utils/getDates';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import { ROUTINE_DATE_QUERY, GOAL_DATE_PERIOD_QUERY } from '../composables/graphql/queries';

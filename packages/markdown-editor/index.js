@@ -1,4 +1,4 @@
-// @family-routine/markdown-editor — shared markdown editor for the routine apps.
+// @routine-notes/markdown-editor — shared markdown editor for the routine apps.
 // Exports a Vue 2 `MarkdownEditor` component (thin wrapper around
 // vue-easymde) and the named config builders used across organisms.
 

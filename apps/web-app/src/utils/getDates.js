@@ -11,4 +11,4 @@ export {
   threshold,
   getTimelineEntryPeriod,
   getTimelineEntryDate,
-} from '@family-routine/ui/utils/getDates';
+} from '@routine-notes/ui/utils/getDates';

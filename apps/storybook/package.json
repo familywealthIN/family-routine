@@ -7,7 +7,7 @@
         "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider build-storybook -o dist"
     },
     "dependencies": {
-        "@family-routine/ui": "*",
+        "@routine-notes/ui": "*",
         "vue": "^2.6.10",
         "vuetify": "^1.5.5"
     },

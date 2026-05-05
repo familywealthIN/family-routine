@@ -9,7 +9,7 @@
 
 <script>
 import gql from 'graphql-tag';
-import NextSteps from '@family-routine/ui/organisms/NextSteps/NextSteps.vue';
+import NextSteps from '@routine-notes/ui/organisms/NextSteps/NextSteps.vue';
 import { getCachedDashboard, setCachedDashboard } from '../utils/dashboardCache';
 
 export default {

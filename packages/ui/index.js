@@ -1,4 +1,4 @@
-// @family-routine/ui - Barrel export
+// @routine-notes/ui - Barrel export
 // Atomic Design component library
 
 export * from './atoms';

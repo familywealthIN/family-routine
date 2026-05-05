@@ -11,7 +11,7 @@
 
 <script>
 import gql from 'graphql-tag';
-import PendingList from '@family-routine/ui/organisms/PendingList/PendingList.vue';
+import PendingList from '@routine-notes/ui/organisms/PendingList/PendingList.vue';
 
 export default {
   name: 'PendingListContainer',

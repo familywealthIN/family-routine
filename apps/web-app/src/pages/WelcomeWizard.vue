@@ -666,8 +666,6 @@
 <script>
 import gql from 'graphql-tag';
 import { MeasurementMixin } from '@/utils/measurementMixins';
-import { GC_USER_NAME, GC_USER_EMAIL } from '../constants/settings';
-import { getSessionItem } from '../token';
 import {
   AtomAlert,
   AtomButton,
@@ -691,7 +689,9 @@ import {
   AtomStepperStep,
   AtomTextField,
   AtomTimePicker,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
+import { GC_USER_NAME, GC_USER_EMAIL } from '../constants/settings';
+import { getSessionItem } from '../token';
 
 export default {
   components: {

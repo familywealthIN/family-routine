@@ -1,4 +1,4 @@
-/* Aggregate entry point for @family-routine/ui design stylesheets.
+/* Aggregate entry point for @routine-notes/ui design stylesheets.
    Imported once by design.js; do not import sub-files individually.
    Note: @mdi/font is imported from design.js so webpack/css-loader
    can resolve the node_modules package without a `~` prefix. */
@@ -6,5 +6,5 @@
 @import './fonts.css';
 @import './base.css';
 @import './theme.css';
-/* easymde preview typography lives in @family-routine/markdown-editor,
+/* easymde preview typography lives in @routine-notes/markdown-editor,
    loaded by its MarkdownEditor component when the editor is rendered. */

@@ -74,9 +74,7 @@
 /* eslint-disable no-param-reassign */
 import moment from 'moment';
 
-import GoalList from '../containers/GoalListContainer.vue';
-import ContainerBox from '@family-routine/ui/templates/ContainerBox/ContainerBox.vue';
-import { stepupMilestonePeriodDate } from '../utils/getDates';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import {
   AtomAlert,
   AtomButton,
@@ -89,7 +87,9 @@ import {
   AtomSpacer,
   AtomToolbar,
   AtomToolbarTitle,
-} from '@family-routine/ui/atoms';
+} from '@routine-notes/ui/atoms';
+import GoalList from '../containers/GoalListContainer.vue';
+import { stepupMilestonePeriodDate } from '../utils/getDates';
 
 export default {
   components: {

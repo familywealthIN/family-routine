@@ -5,4 +5,4 @@ export {
   groupGoalItemsByTaskRef,
   createTaskRefLabelFn,
   addTimeFromTasklist,
-} from '@family-routine/ui/utils/groupingUtils';
+} from '@routine-notes/ui/utils/groupingUtils';

@@ -4,11 +4,10 @@
     "private": true,
     "scripts": {
         "dev": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
-        "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
-        "lint": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service lint"
+        "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build"
     },
     "dependencies": {
-        "@family-routine/ui": "*",
+        "@routine-notes/ui": "*",
         "vue": "^2.6.10",
         "vue-router": "^3.0.3",
         "vuetify": "^1.5.5"

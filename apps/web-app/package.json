@@ -22,7 +22,7 @@
         "@capacitor/splash-screen": "^7.0.3",
         "@capacitor/status-bar": "^7.0.3",
         "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
-        "@family-routine/ui": "*",
+        "@routine-notes/ui": "*",
         "@vue/composition-api": "^1.7.2",
         "apollo-cache-inmemory": "^1.6.5",
         "apollo-cache-persist": "^0.1.1",

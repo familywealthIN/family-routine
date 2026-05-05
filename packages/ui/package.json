@@ -1,5 +1,5 @@
 {
-    "name": "@family-routine/ui",
+    "name": "@routine-notes/ui",
     "version": "0.0.0",
     "private": true,
     "main": "index.js",
@@ -21,7 +21,7 @@
         "vuetify": "^1.5.5"
     },
     "dependencies": {
-        "@family-routine/markdown-editor": "*",
+        "@routine-notes/markdown-editor": "*",
         "@mdi/font": "^7.4.47",
         "moment": "^2.24.0"
     },
