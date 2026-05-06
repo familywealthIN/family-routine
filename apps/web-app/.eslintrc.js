@@ -29,6 +29,7 @@ module.exports = {
     'no-useless-escape': 'warn',
     'no-case-declarations': 'warn',
     'import/no-extraneous-dependencies': 'off',
+    'import/no-unresolved': ['error', { ignore: ['^\\.{1,2}/blob/config$'] }],
   },
   overrides: [
     {
