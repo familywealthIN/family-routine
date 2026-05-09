@@ -1,0 +1,31 @@
+{
+    "name": "storybook",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "storybook": "cross-env NODE_OPTIONS=--openssl-legacy-provider start-storybook -p 6006",
+        "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider build-storybook -o dist"
+    },
+    "dependencies": {
+        "@routine-notes/ui": "*",
+        "vue": "^2.6.10",
+        "vuetify": "^1.5.5"
+    },
+    "devDependencies": {
+        "@storybook/addon-a11y": "^6.5.16",
+        "@storybook/addon-essentials": "^6.5.16",
+        "@storybook/addon-links": "^6.5.16",
+        "@storybook/addon-viewport": "^6.5.16",
+        "@storybook/vue": "^6.5.16",
+        "@storybook/builder-webpack4": "^6.5.16",
+        "@storybook/manager-webpack4": "^6.5.16",
+        "cross-env": "^7.0.3",
+        "css-loader": "^5.0.0",
+        "style-loader": "^2.0.0",
+        "stylus": "^0.64.0",
+        "stylus-loader": "4.3.3",
+        "vue-loader": "15.9.8",
+        "vue-template-compiler": "^2.5.21",
+        "vuetify-loader": "^1.0.5"
+    }
+}

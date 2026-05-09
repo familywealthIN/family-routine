@@ -1,0 +1,232 @@
+/* Override Vuetify's .application font-family (Roboto) with the shared type
+   stack so web-app and storybook render the same way. `.application`
+   (specificity 0,1,0) beats `html/body` (0,0,1) because Vuetify 1.x sets the
+   font on its app root — so we have to match that selector. */
+html,
+body,
+.application,
+.application--wrap,
+.v-application,
+.v-application--wrap {
+    font-family: 'Plus Jakarta Sans', 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* Keep Material / FontAwesome glyphs vertically centred inside Vuetify
+   buttons. Without this, Plus Jakarta Sans's taller x-height leaks into the
+   button's flex baseline and pushes icons upward by a few pixels. */
+.v-btn .v-icon,
+.v-btn__content,
+.v-icon {
+    line-height: 1 !important;
+}
+
+.v-btn--icon,
+.v-btn--fab,
+.v-btn--floating {
+    line-height: 1 !important;
+}
+
+.v-btn--icon .v-btn__content,
+.v-btn--fab .v-btn__content,
+.v-btn--floating .v-btn__content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.v-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Optimistic-refetch smoothing
+ *
+ * When a user ticks a freshly created task, Apollo does:
+ *   1. optimistic cache write  — UI flips to checked
+ *   2. server mutation + refetch — may briefly echo old state
+ *   3. cache reconciles        — UI settles to checked
+ *
+ * Without transitions this reads as a flicker. The rules below ease
+ * every visual field that can flip during that round-trip:
+ *   - checkbox glyph
+ *   - progress-circular stroke (the task "donut")
+ *   - task tile background / icons
+ *
+ * <transition name="fr-icon-fade"> is used around action-button icons
+ * so icon swaps cross-fade instead of snapping.
+ * ───────────────────────────────────────────────────────────────────── */
+
+/* NOTE: we intentionally do NOT add a transition to `.v-input--checkbox
+ * .v-icon`. Vuetify 1.x runs its own ripple + state-layer animation on
+ * that element, and stacking a custom `transform`/`opacity` transition
+ * over it blocks the checked state from applying in some browsers —
+ * users end up tapping a checkbox that never visibly ticks. Smoothing
+ * the surrounding row is enough. */
+
+.v-progress-circular__overlay {
+    transition:
+        stroke-dashoffset 380ms cubic-bezier(0.4, 0, 0.2, 1),
+        stroke            200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.v-progress-circular__info {
+    transition: color 160ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.task-action-btn {
+    transition:
+        background-color 180ms cubic-bezier(0.4, 0, 0.2, 1),
+        color            180ms cubic-bezier(0.4, 0, 0.2, 1),
+        box-shadow       180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Cross-fade when action button icon swaps (check ↔ alarm ↔ close).
+   Used via <transition name="fr-icon-fade" mode="out-in"> in
+   CurrentTaskCard / UpcomingPastTasks. */
+.fr-icon-fade-enter-active,
+.fr-icon-fade-leave-active {
+    transition: opacity 150ms ease, transform 150ms ease;
+}
+.fr-icon-fade-enter,
+.fr-icon-fade-leave-to {
+    opacity: 0;
+    transform: scale(0.85);
+}
+
+/* Gently fade the completed strike-through so refetch reconciliation
+   on goal item titles doesn't jitter. */
+.goal-item-title,
+.subtask-title {
+    transition: color 160ms ease, text-decoration-color 160ms ease, opacity 160ms ease;
+}
+
+/* Modern Box Shadow Utilities */
+
+/* Consistent border-radius for labeled buttons with background */
+.v-btn:not(.v-btn--icon):not(.v-btn--fab):not(.v-btn--floating) {
+    border-radius: 16px;
+}
+
+/* Exclude buttons inside button groups (toggle groups) */
+.v-btn-toggle {
+    border-radius: 16px;
+    overflow: hidden;
+}
+.v-btn-toggle .v-btn {
+    border-radius: 0 !important;
+}
+.v-btn-toggle .v-btn:first-child {
+    border-radius: 16px 0 0 16px !important;
+}
+.v-btn-toggle .v-btn:last-child {
+    border-radius: 0 16px 16px 0 !important;
+}
+
+/* Base card styling with modern shadows */
+.v-card {
+    border-radius: 16px;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Match the dialog surface to the card radius so the corner of the
+   content (v-card) and the wrapper (v-dialog) line up. Without this,
+   Vuetify's default 2px dialog corner peeks outside the 16px card. */
+.v-dialog {
+    border-radius: 16px;
+}
+
+/* Fullscreen dialogs (mobile drawers etc.) should fill the viewport
+   with square corners — explicitly reset when .v-dialog--fullscreen is
+   applied. */
+.v-dialog.v-dialog--fullscreen {
+    border-radius: 0;
+}
+
+/* .v-card:hover {
+    box-shadow:
+        0 10px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+} */
+
+/* Elevation variants */
+.v-card.elevation-0 {
+    box-shadow: none;
+}
+
+.v-card.elevation-1 {
+    box-shadow:
+        0 1px 3px 0 rgba(0, 0, 0, 0.1),
+        0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.v-card.elevation-2 {
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.v-card.elevation-3 {
+    box-shadow:
+        0 10px 15px -3px rgba(0, 0, 0, 0.1),
+        0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.v-card.elevation-4 {
+    box-shadow:
+        0 20px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.v-card.elevation-5 {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Utility classes for applying shadows to other elements */
+.shadow-sm {
+    box-shadow:
+        0 1px 3px 0 rgba(0, 0, 0, 0.1),
+        0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.shadow {
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.shadow-md {
+    box-shadow:
+        0 10px 15px -3px rgba(0, 0, 0, 0.1),
+        0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-lg {
+    box-shadow:
+        0 20px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-xl {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.shadow-none {
+    box-shadow: none;
+}
+
+/* Hover effects for utility classes */
+/* .shadow-hover:hover {
+    box-shadow:
+        0 20px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+} */
