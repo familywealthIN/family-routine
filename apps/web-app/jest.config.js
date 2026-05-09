@@ -6,7 +6,7 @@ module.exports = {
     '^.+\\.vue$': '@vue/vue2-jest',
     '^.+\\.js$': 'babel-jest',
   },
-  transformIgnorePatterns: ['/node_modules/(?!(@vue/composition-api|@babel/runtime|@family-routine)/)'],
+  transformIgnorePatterns: ['/node_modules/(?!(@vue/composition-api|@babel/runtime|@babel/runtime-corejs2|@routine-notes)/)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@routine-notes/ui/(.*)$': '<rootDir>/../../packages/ui/$1',
