@@ -20,7 +20,7 @@ export class AndroidSafeAreaManager {
     if (typeof window === 'undefined') return;
 
     const ua = navigator.userAgent || navigator.vendor || window.opera;
-    const androidMatch = ua.match(/Android\s([0-9\.]+)/);
+    const androidMatch = ua.match(/Android\s([0-9.]+)/);
 
     if (androidMatch) {
       this.androidVersion = parseFloat(androidMatch[1]);

@@ -210,7 +210,7 @@ export default {
     checkSoftKeys() {
       // Android 14+ detection
       const ua = navigator.userAgent || navigator.vendor || window.opera;
-      const androidMatch = ua.match(/Android\s([0-9\.]+)/);
+      const androidMatch = ua.match(/Android\s([0-9.]+)/);
       if (androidMatch) {
         const androidVersion = parseFloat(androidMatch[1]);
         if (androidVersion >= 14) {

@@ -694,13 +694,14 @@ export default {
           // Month period: last day of the month
           date = currentDate.clone().endOf('month').format('DD-MM-YYYY');
           break;
-        case 'week':
+        case 'week': {
           // Week period: last Friday of current week (DD-MM-YYYY format)
           // Week ends on Friday, not Sunday
           const currentDayOfWeek = currentDate.day(); // 0 = Sunday, 5 = Friday
           const daysUntilFriday = currentDayOfWeek <= 5 ? 5 - currentDayOfWeek : 7 - currentDayOfWeek + 5;
           date = currentDate.clone().add(daysUntilFriday, 'days').format('DD-MM-YYYY');
           break;
+        }
         case 'day':
           // Day period: current day in DD-MM-YYYY format
           date = currentDate.format('DD-MM-YYYY');

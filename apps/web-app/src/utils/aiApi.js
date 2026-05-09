@@ -402,7 +402,9 @@ async function generateMilestonePlan(userQuery, systemPrompt = null) {
       : '';
 
     const insightStepsRule = systemPrompt
-      ? '7. At the END of each entry\'s description, append a section titled "**Insight Steps:**" with exactly 3 brief bullet lines (using "- ") that suggest concrete next actions the user can create as follow-up AI tasks, based on the area/project context provided.'
+      ? '7. At the END of each entry\'s description, append a section titled "**Insight Steps:**"'
+        + ' with exactly 3 brief bullet lines (using "- ") that suggest concrete next actions'
+        + ' the user can create as follow-up AI tasks, based on the area/project context provided.'
       : '';
 
     const prompt = `${contextPrefix}
@@ -456,7 +458,9 @@ async function extractTaskFromNaturalLanguage(naturalLanguageText, systemPrompt)
     : '';
 
   const insightStepsInstruction = systemPrompt
-    ? '5. At the END of the description, append a section titled "**Insight Steps:**" with exactly 3 brief bullet lines (using "- ") that suggest concrete next actions the user can create as follow-up AI tasks, based on the area/project context provided.'
+    ? '5. At the END of the description, append a section titled "**Insight Steps:**"'
+      + ' with exactly 3 brief bullet lines (using "- ") that suggest concrete next actions'
+      + ' the user can create as follow-up AI tasks, based on the area/project context provided.'
     : '';
 
   const prompt = `${contextPrefix}

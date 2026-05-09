@@ -391,7 +391,7 @@ export default {
       const ua = navigator.userAgent || navigator.vendor || window.opera;
 
       // Extract Android version from user agent
-      const androidMatch = ua.match(/Android\s([0-9\.]+)/);
+      const androidMatch = ua.match(/Android\s([0-9.]+)/);
       if (androidMatch) {
         const androidVersion = parseFloat(androidMatch[1]);
 

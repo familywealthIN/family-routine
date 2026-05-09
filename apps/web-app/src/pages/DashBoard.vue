@@ -197,7 +197,11 @@
                         <v-checkbox
                           :input-value="goalItem.isComplete"
                           color="primary"
-                          @change="completeAgendaGoalItem({ id: goalItem.id, period: taskGoals.period, date: taskGoals.date, taskRef: goalItem.taskRef, isComplete: $event, isMilestone: goalItem.isMilestone })"
+                          @change="completeAgendaGoalItem({
+                            id: goalItem.id, period: taskGoals.period,
+                            date: taskGoals.date, taskRef: goalItem.taskRef,
+                            isComplete: $event, isMilestone: goalItem.isMilestone
+                          })"
                         />
                       </v-list-tile-action>
                       <v-list-tile-content>
@@ -206,7 +210,10 @@
                         </v-list-tile-title>
                       </v-list-tile-content>
                       <v-list-tile-action>
-                        <v-btn icon small @click.stop="toggleGoalDisplayDialog({ ...goalItem, period: taskGoals.period, date: taskGoals.date }, true)">
+                        <v-btn icon small
+                          @click.stop="toggleGoalDisplayDialog(
+                            { ...goalItem, period: taskGoals.period, date: taskGoals.date }, true
+                          )">
                           <v-icon size="18">edit</v-icon>
                         </v-btn>
                       </v-list-tile-action>
@@ -367,45 +374,28 @@
 import moment from 'moment';
 import gql from 'graphql-tag';
 
-import GoalItemList from '@routine-notes/ui/organisms/GoalItemList/GoalItemList.vue';
 import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
-import CurrentTaskSkeleton from '@routine-notes/ui/skeletons/CurrentTaskSkeleton/CurrentTaskSkeleton.vue';
-import StreakChecks from '@routine-notes/ui/molecules/StreakChecks/StreakChecks.vue';
 import WakeCheck from '@routine-notes/ui/atoms/WakeCheck/WakeCheck.vue';
 import CurrentTaskCard from '@routine-notes/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue';
 import UpcomingPastTasks from '@routine-notes/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue';
 import WeekGoalStreak from '@routine-notes/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue';
 import {
   AtomAlert,
-  AtomAvatar,
-  AtomBtnToggle,
   AtomButton,
   AtomCard,
   AtomCardActions,
   AtomCardText,
   AtomCardTitle,
-  AtomChip,
   AtomDialog,
   AtomDivider,
   AtomFabTransition,
   AtomFlex,
   AtomIcon,
   AtomLayout,
-  AtomList,
-  AtomListTile,
-  AtomListTileAction,
-  AtomListTileActionText,
-  AtomListTileAvatar,
-  AtomListTileContent,
-  AtomListTileSubTitle,
-  AtomListTileTitle,
   AtomProgressCircular,
   AtomProgressLinear,
   AtomSpacer,
-  AtomSubheader,
   AtomSwitch,
-  AtomTab,
-  AtomTabs,
   AtomToolbar,
   AtomToolbarTitle,
 } from '@routine-notes/ui/atoms';
@@ -456,47 +446,30 @@ export default {
   mixins: [MeasurementMixin, intelligentRefreshMixin, TimeFormatMixin],
   components: {
     GoalList,
-    GoalItemList,
     ContainerBox,
-    CurrentTaskSkeleton,
-    QuickGoalCreation,
-    StreakChecks,
-    GoalCreation,
     WakeCheck,
+    QuickGoalCreation,
+    GoalCreation,
     WeekdaySelectorContainer,
     CurrentTaskCard,
     UpcomingPastTasks,
     WeekGoalStreak,
     AtomAlert,
-    AtomAvatar,
-    AtomBtnToggle,
     AtomButton,
     AtomCard,
     AtomCardActions,
     AtomCardText,
     AtomCardTitle,
-    AtomChip,
     AtomDialog,
     AtomDivider,
     AtomFabTransition,
     AtomFlex,
     AtomIcon,
     AtomLayout,
-    AtomList,
-    AtomListTile,
-    AtomListTileAction,
-    AtomListTileActionText,
-    AtomListTileAvatar,
-    AtomListTileContent,
-    AtomListTileSubTitle,
-    AtomListTileTitle,
     AtomProgressCircular,
     AtomProgressLinear,
     AtomSpacer,
-    AtomSubheader,
     AtomSwitch,
-    AtomTab,
-    AtomTabs,
     AtomToolbar,
     AtomToolbarTitle,
   },

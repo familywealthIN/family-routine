@@ -3,7 +3,7 @@ require('./utils/suppressMongooseWarnings')();
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { createServer, proxy } = require('@vendia/serverless-express');
+const serverlessExpress = require('@vendia/serverless-express');
 const { graphql } = require('graphql');
 const { schema } = require('./resolvers');
 const { UserModel } = require('./schema/UserSchema');
@@ -1045,12 +1045,16 @@ class HttpMCPServer {
     });
   }
 
-  // Serverless handler
+  // Serverless handler — uses @vendia/serverless-express v4 modern API.
+  // The legacy createServer/proxy path in v4 silently returns undefined,
+  // causing API Gateway 502s. Cache the wrapped handler across invocations.
   createServerlessHandler() {
-    const server = createServer(this.app);
-    return (event, context, callback) => {
+    if (!this._cachedServerlessHandler) {
+      this._cachedServerlessHandler = serverlessExpress({ app: this.app });
+    }
+    return (event, context) => {
       context.callbackWaitsForEmptyEventLoop = false;
-      return proxy(server, event, context, 'PROMISE').promise;
+      return this._cachedServerlessHandler(event, context);
     };
   }
 }

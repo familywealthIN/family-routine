@@ -238,7 +238,9 @@ export default {
             tags: [...newGoalItem.tags],
           });
 
-          const task = this.tasklist ? this.tasklist.find((taskItem) => taskItem.id === newGoalItem.taskRef || taskItem.taskId === newGoalItem.taskRef) : null;
+          const task = this.tasklist
+            ? this.tasklist.find((taskItem) => taskItem.id === newGoalItem.taskRef || taskItem.taskId === newGoalItem.taskRef)
+            : null;
           this.$emit('start-quick-goal-task', task);
 
           // Emit event to notify Dashboard about the new goal item
