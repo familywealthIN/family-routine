@@ -1,0 +1,24 @@
+{
+    "name": "cron",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "start:send-notification": "node src/send-notification.js",
+        "start:progress": "node src/progress.js",
+        "start:weekly-agenda": "node src/weekly-agenda.js",
+        "start:update-holidays": "node src/update-holidays.js",
+        "test": "jest",
+        "test:watch": "jest --watch"
+    },
+    "dependencies": {
+        "dotenv": "^8.6.0",
+        "firebase-admin": "^13.6.0",
+        "moment": "^2.24.0",
+        "mongoose": "^5.9.9"
+    },
+    "devDependencies": {
+        "@babel/preset-env": "^7.29.0",
+        "babel-jest": "^29.7.0",
+        "jest": "^29.7.0"
+    }
+}

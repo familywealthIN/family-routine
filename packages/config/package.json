@@ -1,0 +1,11 @@
+{
+    "name": "@routine-notes/config",
+    "version": "0.0.0",
+    "private": true,
+    "main": "index.js",
+    "files": [
+        "eslint",
+        "babel",
+        "jest"
+    ]
+}
