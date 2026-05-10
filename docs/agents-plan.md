@@ -1,0 +1,13 @@
+I want to move start event and end event mechanism to agents. We will have agents page just like routine. move out all the logic from those component and build a complete system of agents same as goals and routines in mongodb. So here is flow
+
+1. User clicks the routine check circle
+2. It opens the Quick Goal Creation. along with start task, user will have option to start agent. if the agent is not assigned to routine and the option will be build agent. Remove Routine Task from the Quick Goal Creation
+3. Build agent is "create" from CRUD of Agents page. clicking on build agent opens another modal that accepts name, start event and end event. you can assign only one routine to the agent. In case of build agent, the routine is already selected from where you clicked build agent. once agent is set amd modal closed, on previous Quick Goal Creation modal, the build agent button will switch to start agent.
+4. To work with notifications, we can invoke with url like home/{routine-id}/complete, home/{routine-id}/start and home/{routine-id}/build. Currently the Quick Goal Creation bypasses if a routine goal is already there. same will happen with urls where complete will just tick the routine, start will tick the routine and initiate the agent and finally build will open a modal to build agent. If goal task is not set for routine, all three url will open quick goal creation anyways as there is not goal task for agent to work with. 
+5. when user clicks the routine tick and quick goal creation bypasess when goal task is present), the agent is not trigger. by default trigger the agent with the first goalid from the list.
+6. Once the agent is running show a running badge besides the info icon and remove the old timer mechanism. Once we get 200 response from start event, the running switches to finised with refresh if no end event is set. if the end event is set then it will be listenting followed with refresh. show ready status to the goal id that was updated with agent.
+7. Once all task-goals are done (same current mechanism where it is triggered on completion of K stimulus), trigger the end event and show the result html on iframe large modal on desktop and drawer in mobile. If it is json response, just show that the agent action for the given routine is finished.
+8. THe start and the end event are designed to work in given time frame. If the routine task is not current task then start and build should not show nor it could be executed with urls
+9. Have measurement of success and fail counts of agents in db. agents collection is very light. make sure agents are secure.
+
+THe task is a initial design for living with agent. Design it in a way that I can later extend with connectors and system prompt 

@@ -69,26 +69,7 @@
           </AtomButton>
         </AtomListTileAction>
 
-        <AtomListTileAction v-if="lastCompleteItemId === goalItem.id && animateEntry">
-          <div style="width: 150px">
-            <streak-checks :progress="progress || 0" :animate="true"></streak-checks>
-          </div>
-        </AtomListTileAction>
-
-        <!-- Delete button - always show for week and month when not animating -->
-        <AtomListTileAction v-else-if="goal.period === 'week' || goal.period === 'month'">
-          <AtomButton
-            flat
-            icon
-            :disabled="passive"
-            @click="deleteGoalItem(i, goal.period, goal.date)"
-          >
-            <AtomIcon>delete</AtomIcon>
-          </AtomButton>
-        </AtomListTileAction>
-
-        <!-- Delete button for other periods (original behavior) -->
-        <AtomListTileAction v-else>
+        <AtomListTileAction>
           <AtomButton
             flat
             icon
@@ -130,7 +111,6 @@
 </template>
 <script>
 import taskStatusMixin from '../../composables/useTaskStatus';
-import StreakChecks from '../../molecules/StreakChecks/StreakChecks.vue';
 import {
   AtomButton,
   AtomCheckbox,
@@ -144,7 +124,7 @@ import {
 
 export default {
   name: 'OrganismGoalItemList',
-  props: ['goal', 'editMode', 'newGoalItem', 'progress', 'passive'],
+  props: ['goal', 'editMode', 'newGoalItem', 'passive'],
   components: {
     AtomButton,
     AtomCheckbox,
@@ -154,16 +134,13 @@ export default {
     AtomListTileAction,
     AtomListTileContent,
     AtomListTileTitle,
-    StreakChecks,
   },
   mixins: [taskStatusMixin],
   data() {
     return {
       show: true,
       newGoalItemBody: '',
-      animateEntry: false,
-      lastCompleteItemId: '',
-      pendingSubTaskUpdates: new Set(), // Track pending subtask updates
+      pendingSubTaskUpdates: new Set(),
     };
   },
   computed: {
@@ -347,8 +324,6 @@ export default {
         id, isComplete, period, date, taskRef, isMilestone, goalRef,
       });
 
-      this.lastCompleteItemId = id;
-
       // Emit event with all data needed for mutation - parent handles GraphQL
       this.$emit('complete-goal-item', {
         id,
@@ -368,8 +343,6 @@ export default {
     },
     // Method to reset component state (can be called from parent)
     resetState() {
-      this.lastCompleteItemId = '';
-      this.animateEntry = false;
       this.pendingSubTaskUpdates.clear();
       console.log('GoalItemList state reset');
     },
@@ -404,12 +377,6 @@ export default {
         if (newVal) {
           this.pendingSubTaskUpdates.clear();
         }
-      }
-    },
-    progress(val, oldVal) {
-      if (val !== oldVal) {
-        this.animateEntry = true;
-        setTimeout(() => { this.animateEntry = false; }, 2000);
       }
     },
   },

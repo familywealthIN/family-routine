@@ -9,6 +9,7 @@
         name="newSubTaskItemBody"
         label="Type your sub task"
         class="inputGoal"
+        ref="subTaskInput"
         @keyup.enter="addSubTaskItem"
         :disabled="isAddingSubTask"
         :loading="isAddingSubTask"
@@ -19,7 +20,7 @@
         fab
         small
         dark
-        class="ml-3 mr-3"
+        class="ml-2 send-btn"
         @click="addSubTaskItem(newSubTaskItemBody)"
         :disabled="isAddingSubTask"
         :loading="isAddingSubTask"
@@ -134,6 +135,7 @@ export default {
           this.newSubTaskItemBody = '';
           this.isAddingSubTask = false;
           this.$emit('sub-task-loading', false);
+          this.focusSubTaskInput();
         },
         onError: () => {
           this.isAddingSubTask = false;
@@ -154,6 +156,13 @@ export default {
         taskId,
         period,
         date,
+      });
+    },
+    focusSubTaskInput() {
+      this.$nextTick(() => {
+        const wrapper = this.$refs.subTaskInput && this.$refs.subTaskInput.$el;
+        const input = wrapper && wrapper.querySelector('input');
+        if (input) input.focus();
       });
     },
     completeSubTaskItem(id, isComplete) {
@@ -194,6 +203,23 @@ export default {
     height: 100%;
     border-radius: 0;
   }
+}
+
+/* Lay the input and submit button on a single row. v-text-field reserves
+   vertical space above for the floated label, so aligning to flex-end
+   parks the FAB next to the input line instead of below it. */
+.formGoal {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.formGoal .inputGoal {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.formGoal .send-btn {
+  flex: 0 0 auto;
+  margin-bottom: 4px;
 }
 
 .sub-task-list >>> .completed {

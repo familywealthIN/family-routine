@@ -15,6 +15,7 @@ import 'firebase/messaging';
 import { Capacitor } from '@capacitor/core';
 import { graphQLUrl } from './blob/config';
 import './plugins/vuetify';
+import './theme-override.css';
 import './plugins/notifications';
 import './plugins/curl-executor';
 import './styles/ios-input-zoom-fix.css';
