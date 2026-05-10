@@ -448,6 +448,25 @@ export default {
 }
 .current-task .text-white { color: #fff; }
 
+/* Mobile: task-goals full width */
+@media (max-width: 600px) {
+  .current-task .concentrated-view .active .v-list__tile--avatar {
+    height: auto;
+  }
+  .current-task .concentrated-view .active .v-list__tile__content {
+    overflow: visible;
+    min-width: 0;
+  }
+  .current-task .concentrated-view .active .task-goals {
+    height: auto;
+    max-height: 300px;
+    position: relative;
+    z-index: 1;
+    margin-left: -60px;
+    width: calc(100% + 60px);
+  }
+}
+
 /* Skeleton loading styles scoped to this card */
 .current-task .skeleton {
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);

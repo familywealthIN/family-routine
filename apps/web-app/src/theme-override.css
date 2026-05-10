@@ -1,0 +1,30 @@
+/* Production-build specificity overrides.
+ *
+ * In dev, vue-style-loader injects each imported CSS as its own <style>
+ * tag in import order, so @routine-notes/ui/styles/theme.css lands AFTER
+ * Vuetify and its `.v-card { border-radius: 16px }` rules win on source
+ * order alone. In the production build mini-css-extract-plugin merges
+ * everything into chunk-vendors.css, where Vuetify's later
+ * `.v-sheet { border-radius: 2px }` / `.v-btn-toggle { border-radius: 2px }`
+ * / `.v-dialog { border-radius: 0 }` rules end up AFTER theme.css. Same
+ * specificity (0,1,0) → later wins → cards render at the Vuetify default.
+ *
+ * Doubling the class (`.foo.foo`) is a no-op match-wise but bumps
+ * specificity to (0,2,0), so theme intent wins regardless of order.
+ */
+
+.v-card.v-sheet {
+    border-radius: 16px;
+}
+
+.v-btn-toggle.v-btn-toggle {
+    border-radius: 16px;
+}
+
+.v-dialog.v-dialog {
+    border-radius: 16px;
+}
+
+.v-dialog.v-dialog--fullscreen {
+    border-radius: 0;
+}

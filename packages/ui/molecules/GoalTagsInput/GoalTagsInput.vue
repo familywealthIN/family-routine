@@ -268,9 +268,13 @@ export default {
 
 /* Mobile: always show close button */
 @media (max-width: 600px) {
+  .goal-tag-chip >>> .v-chip__content {
+    padding: 0 6px 0 8px !important;
+  }
+
   .goal-tag-chip >>> .v-chip__close {
-    margin-left: 2px !important;
-    margin-right: -10px !important;
+    margin-left: 4px !important;
+    margin-right: 0 !important;
     font-size: 14px !important;
   }
 
