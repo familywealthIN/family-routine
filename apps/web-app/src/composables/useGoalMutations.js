@@ -30,6 +30,7 @@ import {
   deleteSubTaskFromCache,
   findGoalRefFromCache,
   updateWeekGoalProgressInCache,
+  shouldUpdateWeekStreak,
 } from './useApolloCacheUpdates';
 
 // ============================================================================
@@ -509,15 +510,28 @@ export function useGoalMutations(apolloClient, options = {}) {
 
     // Linked week-goal streak. We snapshot the goalRef now so the post-
     // mutation reconciliation can compute the right corrective state.
+    //
+    // Per-date dedup: the server (autoCheckTaskPeriod) counts at most one
+    // contribution per date toward a week goal's progress. If another day
+    // goal on the same routine day already targets this week goal AND is
+    // complete, this toggle is a no-op for the streak — skip the optimistic
+    // update so we don't inflate (or, on uncheck, deflate) the visible
+    // streak past what the server will compute.
     let goalRef = null;
+    let streakDeltaApplied = false;
     if (period === 'day') {
       goalRef = findGoalRefFromCache(apolloClient, id, params.dayDate || date);
-      if (goalRef) {
+      if (goalRef && shouldUpdateWeekStreak(apolloClient, {
+        goalItemId: id,
+        weekGoalItemId: goalRef,
+        dayDate: params.dayDate || date,
+      })) {
         updateWeekGoalProgressInCache(apolloClient, {
           weekGoalItemId: goalRef,
           delta: isComplete ? 1 : -1,
           dayDate: params.dayDate,
         });
+        streakDeltaApplied = true;
       }
     }
 
@@ -565,8 +579,9 @@ export function useGoalMutations(apolloClient, options = {}) {
     } catch (err) {
       // Apollo automatically rolls back the optimisticResponse on error,
       // but we've also done a side-cache write to the week-goal streak —
-      // undo that here.
-      if (goalRef) {
+      // undo that here. Only undo if we actually applied a delta (the
+      // dedup guard above may have skipped the write).
+      if (goalRef && streakDeltaApplied) {
         updateWeekGoalProgressInCache(apolloClient, {
           weekGoalItemId: goalRef,
           delta: isComplete ? -1 : 1,

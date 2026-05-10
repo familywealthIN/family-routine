@@ -351,6 +351,56 @@ export function findGoalRefFromCache(apolloClient, goalItemId, date) {
 }
 
 /**
+ * Mirror the server's per-date dedup rule for week-streak progress.
+ *
+ * The server's `autoCheckTaskPeriod` (apps/server/src/resolvers/goal.js)
+ * recomputes a week goal item's `progress` by iterating dates and using
+ * `.find()` per date to locate at most ONE matching day-goal-item with
+ * `goalRef === weekGoalItem.id && isComplete`. So a single date contributes
+ * at most +1 to progress regardless of how many day goals on that date
+ * point at the same week goal.
+ *
+ * Returns true only when toggling `goalItemId` will actually change the
+ * date's contribution — i.e., when no OTHER day-goal item on the same
+ * date is already (still) marking that week goal complete. When another
+ * sibling on the same routine day already counted the date, this toggle
+ * is a no-op for the streak.
+ *
+ * @param {Object} apolloClient - Apollo client instance
+ * @param {Object} params - Check parameters
+ * @param {string} params.goalItemId - The day goal item being toggled
+ * @param {string} params.weekGoalItemId - Linked week goal item id (goalRef)
+ * @param {string} [params.dayDate] - Day date for cache lookups (defaults to today)
+ * @returns {boolean} true → caller should apply the streak delta
+ */
+export function shouldUpdateWeekStreak(apolloClient, {
+  goalItemId, weekGoalItemId, dayDate,
+}) {
+  try {
+    const queryDate = dayDate || getCurrentDayDate();
+    const cacheData = apolloClient.readQuery({
+      query: DAILY_GOALS_QUERY,
+      variables: { date: queryDate },
+    });
+    if (!cacheData || !cacheData.optimizedDailyGoals) return true;
+
+    const dayGoals = cacheData.optimizedDailyGoals.filter((g) => g.period === 'day');
+    const siblingAlreadyCompleteForWeekGoal = dayGoals.some((g) => (
+      (g.goalItems || []).some((gi) => (
+        gi.id !== goalItemId
+        && String(gi.goalRef) === String(weekGoalItemId)
+        && gi.isComplete
+      ))
+    ));
+
+    return !siblingAlreadyCompleteForWeekGoal;
+  } catch (error) {
+    console.warn('[shouldUpdateWeekStreak] Cache read failed:', error);
+    return true;
+  }
+}
+
+/**
  * Optimistically update a week goal item's progress in the Apollo cache.
  * Used before the completeGoalItem mutation fires so the streak UI updates instantly.
  *
@@ -980,6 +1030,7 @@ export default {
   // Optimistic streak updates
   findGoalRefFromCache,
   updateWeekGoalProgressInCache,
+  shouldUpdateWeekStreak,
 
   // Goal deletion
   deleteGoalItemFromCache,

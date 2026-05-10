@@ -418,4 +418,23 @@ export default {
   margin: 0 auto;
 }
 .upcoming-past-card .text-white { color: #fff; }
+
+/* Mobile: task-goals full width */
+@media (max-width: 600px) {
+  .upcoming-past-card .concentrated-view .active .v-list__tile--avatar {
+    height: auto;
+  }
+  .upcoming-past-card .concentrated-view .active .v-list__tile__content {
+    overflow: visible;
+    min-width: 0;
+  }
+  .upcoming-past-card .concentrated-view .active .task-goals {
+    height: auto;
+    max-height: 300px;
+    position: relative;
+    z-index: 1;
+    margin-left: -60px;
+    width: calc(100% + 60px);
+  }
+}
 </style>

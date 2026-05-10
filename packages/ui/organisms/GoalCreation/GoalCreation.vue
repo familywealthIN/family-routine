@@ -2,6 +2,14 @@
   <AtomForm ref="form" v-model="valid">
     <AtomContainer style="max-width: 900px;" fill-height>
       <AtomLayout wrap class="goal-creation">
+        <AtomFlex xs12 v-if="shouldShowStatus(localGoalItem.period) && localGoalItem.body" class="status-row pb-0">
+          <div class="d-flex align-center status-container">
+            <task-status-tag
+              :status="getNewTaskStatus(localGoalItem.taskRef, localGoalItem.originalDate, localGoalItem)"
+              class="status-chip"
+            />
+          </div>
+        </AtomFlex>
         <AtomFlex xs12 d-flex class="pb-0">
           <AtomTextField
             v-model="localGoalItem.body"
@@ -36,14 +44,6 @@
             :userTags="userTags"
             @update-new-tag-items="updateNewTagItems"
           ></goal-tags-input>
-        </AtomFlex>
-        <AtomFlex xs12 v-if="shouldShowStatus(localGoalItem.period) && localGoalItem.body">
-          <div class="d-flex align-center status-container">
-            <task-status-tag
-              :status="getNewTaskStatus(localGoalItem.taskRef, localGoalItem.originalDate, localGoalItem)"
-              class="status-chip"
-            />
-          </div>
         </AtomFlex>
         <AtomLayout row wrap>
         <AtomFlex sm8>
@@ -497,7 +497,30 @@ export default {
     justify-content: flex-start;
     align-items: center;
     gap: 8px;
-    margin-top: 8px;
+  }
+
+  .goal-creation .status-row {
+    margin-top: -4px;
+    padding-top: 0;
+  }
+
+  /* Mobile: full-bleed EasyMDE editor inside the goal creation dialog */
+  @media (max-width: 600px) {
+    .goal-creation .markdown-editor {
+      width: 100vw;
+      margin-left: calc(50% - 50vw);
+      margin-right: calc(50% - 50vw);
+    }
+    .goal-creation .markdown-editor .EasyMDEContainer .CodeMirror,
+    .goal-creation .markdown-editor .EasyMDEContainer .editor-toolbar,
+    .goal-creation .markdown-editor .EasyMDEContainer .editor-statusbar {
+      border-radius: 0;
+      border-left: 0;
+      border-right: 0;
+    }
+    .goal-creation .v-card {
+      box-shadow: none !important;
+    }
   }
 
 </style>
