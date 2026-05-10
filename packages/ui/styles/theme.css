@@ -106,13 +106,19 @@ body,
 
 /* Modern Box Shadow Utilities */
 
+/* Specificity note: production CSS extraction concatenates Vuetify and
+   theme.css into a single chunk-vendors stylesheet, and Vuetify's later
+   `.v-sheet { border-radius: 2px }` / `.v-btn-toggle { border-radius: 2px }`
+   rules end up *after* ours. Same specificity (0,1,0) → later wins. Doubling
+   the class (`.foo.foo`) bumps us to 0,2,0 without changing what we match. */
+
 /* Consistent border-radius for labeled buttons with background */
 .v-btn:not(.v-btn--icon):not(.v-btn--fab):not(.v-btn--floating) {
     border-radius: 16px;
 }
 
 /* Exclude buttons inside button groups (toggle groups) */
-.v-btn-toggle {
+.v-btn-toggle.v-btn-toggle {
     border-radius: 16px;
     overflow: hidden;
 }
@@ -126,8 +132,10 @@ body,
     border-radius: 0 16px 16px 0 !important;
 }
 
-/* Base card styling with modern shadows */
-.v-card {
+/* Base card styling with modern shadows. `.v-card.v-sheet` matches every
+   v-card (Vuetify always renders both classes on the root) and beats the
+   bare `.v-sheet { border-radius: 2px }` rule. */
+.v-card.v-sheet {
     border-radius: 16px;
     box-shadow:
         0 4px 6px -1px rgba(0, 0, 0, 0.1),
@@ -138,7 +146,7 @@ body,
 /* Match the dialog surface to the card radius so the corner of the
    content (v-card) and the wrapper (v-dialog) line up. Without this,
    Vuetify's default 2px dialog corner peeks outside the 16px card. */
-.v-dialog {
+.v-dialog.v-dialog {
     border-radius: 16px;
 }
 
