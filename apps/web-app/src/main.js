@@ -25,6 +25,7 @@ import './utils/androidSafeArea'; // Initialize Android safe area manager
 import currentTaskPlugin from './plugins/currentTask';
 import routinePlugin from './plugins/routine';
 import goalPlugin from './plugins/goal';
+import agentPlugin from './plugins/agent';
 // routineStore import removed - using Apollo cache persistence instead
 import App from './App.vue';
 // Import Google OAuth plugin
@@ -190,6 +191,7 @@ loadData().then(() => {
   // Install routine and goal plugins for shared state
   Vue.use(routinePlugin);
   Vue.use(goalPlugin);
+  Vue.use(agentPlugin);
 
   // Initialize Apollo cache persistence before mounting app
   setupCachePersistence().then(async () => {

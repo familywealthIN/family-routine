@@ -1,13 +1,79 @@
-I want to move start event and end event mechanism to agents. We will have agents page just like routine. move out all the logic from those component and build a complete system of agents same as goals and routines in mongodb. So here is flow
+## Overview
 
-1. User clicks the routine check circle
-2. It opens the Quick Goal Creation. along with start task, user will have option to start agent. if the agent is not assigned to routine and the option will be build agent. Remove Routine Task from the Quick Goal Creation
-3. Build agent is "create" from CRUD of Agents page. clicking on build agent opens another modal that accepts name, start event and end event. you can assign only one routine to the agent. In case of build agent, the routine is already selected from where you clicked build agent. once agent is set amd modal closed, on previous Quick Goal Creation modal, the build agent button will switch to start agent.
-4. To work with notifications, we can invoke with url like home/{routine-id}/complete, home/{routine-id}/start and home/{routine-id}/build. Currently the Quick Goal Creation bypasses if a routine goal is already there. same will happen with urls where complete will just tick the routine, start will tick the routine and initiate the agent and finally build will open a modal to build agent. If goal task is not set for routine, all three url will open quick goal creation anyways as there is not goal task for agent to work with. 
-5. when user clicks the routine tick and quick goal creation bypasess when goal task is present), the agent is not trigger. by default trigger the agent with the first goalid from the list.
-6. Once the agent is running show a running badge besides the info icon and remove the old timer mechanism. Once we get 200 response from start event, the running switches to finised with refresh if no end event is set. if the end event is set then it will be listenting followed with refresh. show ready status to the goal id that was updated with agent.
-7. Once all task-goals are done (same current mechanism where it is triggered on completion of K stimulus), trigger the end event and show the result html on iframe large modal on desktop and drawer in mobile. If it is json response, just show that the agent action for the given routine is finished.
-8. THe start and the end event are designed to work in given time frame. If the routine task is not current task then start and build should not show nor it could be executed with urls
-9. Have measurement of success and fail counts of agents in db. agents collection is very light. make sure agents are secure.
+We should move the current start-event and end-event behavior out of routine UI components and redesign it as a first-class **Agents** system. This system should live alongside Goals and Routines, with its own MongoDB-backed model, dedicated CRUD flows, execution state handling, and secure event orchestration.
 
-THe task is a initial design for living with agent. Design it in a way that I can later extend with connectors and system prompt 
+The goal is to make agents reusable, observable, and extensible, while keeping the user experience simple from the routine screen. This initial version should be designed so we can later add connectors, system prompts, and richer execution logic without changing the core model.
+
+## Product direction
+
+Agents should become a dedicated domain, similar to Goals and Routines, instead of being embedded as ad hoc logic inside start/end event components. The Agents page should provide full CRUD support just like Routines Page and store lightweight but secure agent records in MongoDB, including execution metadata such as success and failure counts.
+
+From a user perspective, the routine remains the primary entry point, but agent execution is controlled by the agent system. This keeps routine interactions simple while moving orchestration, status tracking, and event handling into a centralized architecture that is easier to maintain and extend.
+
+## User flow
+
+1. When the user clicks the routine check circle, the system opens Quick Goal Creation.
+2. In Quick Goal Creation, remove “Routine Task” droptdown. Along with "Start Task", The user should see either:
+    - Start Agent, if an agent is already assigned to the routine.
+    - Build Agent, if no agent is assigned yet.
+3. Clicking Build Agent should open the standard agent creation flow from the Agents CRUD system, but prefilled with the selected routine. The creation modal should accept:
+    - Agent name
+    - Start event
+    - End event
+    - Assigned routine, limited to exactly one routine per agent.
+4. After the agent is created and the modal closes, the previous Quick Goal Creation modal should immediately switch from Build Agent to Start Agent.
+
+This flow keeps agent creation contextual when launched from a routine, but still aligns it with the centralized Agents data model and CRUD behavior. That separation is important for consistency and future scalability.
+
+## Execution rules
+
+We should support notification- and deep-link-based execution through these routes:
+* `home/{routine-id}/complete`
+* `home/{routine-id}/start`
+* `home/{routine-id}/build`
+
+These routes should behave as follows:
+* `complete`: marks the routine as completed.
+* `start`: marks the routine as completed and starts the assigned agent.
+* `build`: opens the agent creation flow for that routine.
+
+If the routine does not yet have a goal task, all three routes should fall back to Quick Goal Creation because the agent cannot operate without a goal context. This should match the current bypass behavior where Quick Goal Creation is skipped only when the routine goal already exists.
+
+When the user clicks the routine tick and Quick Goal Creation is bypassed because a goal task already exists, the system should automatically trigger the assigned agent. By default, it should use the first goal ID from the available goal list as the execution target.
+
+Start and Build actions must only be available when the routine task is the current task within its active time window. If the routine is not currently actionable, those options should neither be shown in the UI nor be executable through direct URLs.
+
+## Status and lifecycle
+
+The old timer-based mechanism should be removed and replaced with explicit agent execution states. Once an agent starts, the UI should show a running badge next to the info icon for the relevant routine.
+
+After the start event returns HTTP 200:
+* If no end event is configured, the agent should move to finished state and refresh the routine view.
+* If an end event is configured, the agent should remain in a listening state until the end event is resolved. refresh at both listening and finished state change
+
+The goal item updated by the agent should show a ready status so the user can clearly see which goal is associated with the current or most recent execution. This makes the relationship between routine action, goal state, and agent execution visible in the UI.
+
+Once all task-goals are complete, using the same completion trigger mechanism currently driven by K stimulus, the system should fire the agent’s end event. After that:
+* If the response is HTML, show it in a large iframe modal on desktop and a drawer on mobile.
+* If the response is JSON, show a simple completion message indicating that the agent action for the routine has finished.
+
+## Data and extension model
+
+The `agents` collection should remain lightweight, but it must include enough structure to support future expansion. At minimum, the model should cover:
+* Agent identity and name
+* Assigned routine ID (taskRef)
+* Start event configuration (URL or cURL)
+* End event configuration (URL or cURL)
+* Execution status
+* Success count
+* Failure count
+* Audit and security fields.
+
+This should be treated as the foundation for a larger agent platform. The design should allow us to LATER add:
+* Connectors
+* System prompts
+* Richer execution configurations
+* More advanced result handling
+* Multi-step orchestration.
+
+A simple extensibility example would be evolving the agent from “routine + start/end webhooks” into “routine + connector + prompt + execution policy, ” without needing to redesign the routine UI or the core MongoDB relationship model. That is why the first version should centralize agent ownership, execution state, and security from the start.

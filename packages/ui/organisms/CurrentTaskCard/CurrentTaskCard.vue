@@ -35,6 +35,9 @@
         <AtomListTileContent>
           <AtomListTileTitle>
             <span>{{ task.name }}</span>
+            <span v-if="agentStatusBadge" :class="['agent-status-badge', `agent-status-badge--${agentStatusBadge.kind}`]">
+              {{ agentStatusBadge.label }}
+            </span>
             <div class="step-info" @click="$emit('toggle-step-modal')"><AtomIcon>info</AtomIcon></div>
           </AtomListTileTitle>
           <AtomListTileSubTitle class="pt-2">
@@ -106,29 +109,6 @@
                   <AtomAvatar class="success text-white"><AtomIcon>check</AtomIcon></AtomAvatar>
                   Set Week's Goal
                 </AtomChip>
-              </AtomFlex>
-            </AtomLayout>
-
-            <!-- Event execution timer alert -->
-            <AtomLayout class="mb-3" row wrap v-if="eventExecutionInProgress">
-              <AtomFlex xs12>
-                <AtomAlert :value="true" color="info" icon="timer" outline>
-                  <div class="d-flex align-center">
-                    <div class="flex-grow-1">
-                      <div class="caption">Refreshing goals in {{ eventExecutionTimeLeft }} seconds...</div>
-                    </div>
-                    <div>
-                      <AtomProgressCircular
-                        :value="((60 - eventExecutionTimeLeft) / 60) * 100"
-                        size="32"
-                        width="3"
-                        color="info"
-                      >
-                        {{ eventExecutionTimeLeft }}
-                      </AtomProgressCircular>
-                    </div>
-                  </div>
-                </AtomAlert>
               </AtomFlex>
             </AtomLayout>
 
@@ -245,8 +225,7 @@ export default {
     buttonIcon: { type: String, default: 'more_horiz' },
     buttonColor: { type: String, default: '' },
     buttonDisabled: { type: Boolean, default: false },
-    eventExecutionInProgress: { type: Boolean, default: false },
-    eventExecutionTimeLeft: { type: Number, default: 0 },
+    agentStatus: { type: String, default: '' },
     showGoalsSkeleton: { type: Boolean, default: false },
     showRoutineSkeleton: { type: Boolean, default: false },
     loading: { type: Boolean, default: false },
@@ -263,6 +242,15 @@ export default {
     hasMonthGoal() { return this.monthGoals.length > 0; },
     filteredPeriodGoals() {
       return filterByTaskPeriod(this.goals, this.task && this.task.id, this.goalPeriod);
+    },
+    agentStatusBadge() {
+      switch (this.agentStatus) {
+        case 'running': return { kind: 'running', label: 'Agent running' };
+        case 'listening': return { kind: 'listening', label: 'Agent listening' };
+        case 'finished': return { kind: 'finished', label: 'Agent done' };
+        case 'failed': return { kind: 'failed', label: 'Agent failed' };
+        default: return null;
+      }
     },
   },
   methods: {
@@ -445,6 +433,29 @@ export default {
   float: right;
   height: 24px;
   line-height: 0;
+}
+.current-task .agent-status-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+  vertical-align: middle;
+  color: #fff;
+}
+.current-task .agent-status-badge--running {
+  background: #1976d2;
+  animation: agent-status-pulse 1.4s ease-in-out infinite;
+}
+.current-task .agent-status-badge--listening { background: #ffb300; }
+.current-task .agent-status-badge--finished { background: #43a047; }
+.current-task .agent-status-badge--failed { background: #e53935; }
+@keyframes agent-status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 .current-task .text-white { color: #fff; }
 

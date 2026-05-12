@@ -85,11 +85,18 @@ admin.initializeApp({
   // databaseURL: 'https://groutine-21c1b.firebaseio.com',
 });
 
-function sendNotification(token, name, description, url) {
+function sendNotification(token, name, description, url, meta = {}) {
   if (!token) {
     console.log('No device token provided.');
     return Promise.resolve();
   }
+
+  const data = {
+    click_action: url || DOMAIN,
+  };
+  if (meta.routineId) data.routineId = String(meta.routineId);
+  if (meta.agentId) data.agentId = String(meta.agentId);
+  if (meta.action) data.action = String(meta.action);
 
   const payload = {
     token,
@@ -97,9 +104,7 @@ function sendNotification(token, name, description, url) {
       title: name,
       body: description,
     },
-    data: {
-      click_action: url || DOMAIN,
-    },
+    data,
     android: {
       priority: 'high',
       ttl: 60 * 60 * 1000,
@@ -144,6 +149,15 @@ db.once('open', async () => {
         )
         .toArray();
 
+      const itemIds = items.map((item) => item._id);
+      const agents = await db.collection('agents')
+        .find(
+          { email: { $in: emails }, taskRef: { $in: itemIds.map(String) } },
+          { projection: { taskRef: 1, email: 1 } },
+        )
+        .toArray();
+      const agentByKey = new Map(agents.map((a) => [`${a.email}:${a.taskRef}`, a]));
+
       items.forEach((item) => {
         const decrypted = decryptFields(item, ['name', 'description']);
         const {
@@ -152,8 +166,15 @@ db.once('open', async () => {
         if (ticked) return;
         const notificationId = notificationById.get(email);
         if (!notificationId) return;
+        const routineId = String(item._id);
+        const agent = agentByKey.get(`${email}:${routineId}`);
+        const meta = {
+          routineId,
+          agentId: agent ? String(agent._id) : undefined,
+          action: agent ? 'start' : 'complete',
+        };
         console.log(`Sending notification to ${email} (${name}) via ${notificationId}`);
-        notificationList.push(sendNotification(notificationId, name, description));
+        notificationList.push(sendNotification(notificationId, name, description, undefined, meta));
       });
     });
 

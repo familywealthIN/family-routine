@@ -58,8 +58,7 @@
                 :button-icon="getButtonIcon(currentTask)"
                 :button-color="getCurrentButtonColor(currentTask)"
                 :button-disabled="getButtonDisabled(currentTask)"
-                :event-execution-in-progress="eventExecutionInProgress"
-                :event-execution-time-left="eventExecutionTimeLeft"
+                :agent-status="currentAgentStatus"
                 :show-goals-skeleton="showGoalsSkeleton"
                 :show-routine-skeleton="showRoutineSkeleton"
                 :loading="$apollo.queries.goals && $apollo.queries.goals.loading"
@@ -311,10 +310,18 @@
             :tasklist="displayTasklist"
             :selectedTaskRef="selectedTaskRef"
             @start-quick-goal-task="checkClick"
+            @build-agent="onBuildAgent"
+            @start-agent="onStartAgentFromQuick"
           />
         </atom-card-text>
       </atom-card>
     </atom-dialog>
+    <agent-edit-modal
+      v-model="agentEditModalOpen"
+      :prefilled-task-ref="agentEditTaskRef"
+      :routine-options="agentEditRoutineOptions"
+      @saved="onAgentSaved"
+    />
     <atom-dialog
       v-model="toggleStepModal"
       width="500"
@@ -379,6 +386,7 @@ import WakeCheck from '@routine-notes/ui/atoms/WakeCheck/WakeCheck.vue';
 import CurrentTaskCard from '@routine-notes/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue';
 import UpcomingPastTasks from '@routine-notes/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue';
 import WeekGoalStreak from '@routine-notes/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue';
+import { AgentEditModal } from '@routine-notes/ui/organisms';
 import {
   AtomAlert,
   AtomButton,
@@ -472,6 +480,7 @@ export default {
     AtomSwitch,
     AtomToolbar,
     AtomToolbarTitle,
+    AgentEditModal,
   },
   apollo: {
     // Routine data query - Apollo cache persistence handles offline caching
@@ -570,13 +579,6 @@ export default {
       activeSelectionId: '',
       tabs: null,
       toggleStepModal: false,
-      // Event execution timer system
-      eventExecutionTimer: null,
-      eventExecutionTimeLeft: 0,
-      eventExecutionInProgress: false,
-      // Track executed events to prevent multiple executions
-      executedStartEvents: new Set(),
-      executedEndEvents: new Set(),
       // Track first load for skeleton display
       goalsFirstLoad: true,
       // Track first load for routine skeleton display
@@ -586,10 +588,12 @@ export default {
       // on that goal. Declared here so the template binding stays
       // reactive — `refreshTaskGoal()` writes to it after a tick.
       lastCompleteItemGoalRef: null,
-      // Queue for events waiting for goal IDs per routine item
-      pendingEvents: [],
-      // Track created goal IDs per routine item for placeholder replacement
-      routineGoalIds: {}, // { routineItemId: goalId }
+      // Agent edit modal state (driven by Build Agent button + deep links)
+      agentEditModalOpen: false,
+      agentEditTaskRef: '',
+      // Track which routine actions we've already dispatched from the URL
+      // so route reuse doesn't re-fire on every render
+      dispatchedRouteAction: '',
       // Analytics: Track component mount time for session duration
       mountTime: Date.now(),
       // Reactive time tracker to auto-update currentTask
@@ -611,14 +615,6 @@ export default {
         const date = moment(this.date, 'DD-MM-YYYY');
         const todayDate = moment(new Date(), 'DD-MM-YYYY');
         this.isEditable = moment(date).isSameOrAfter(todayDate, 'day');
-
-        // Reset executed events when date changes
-        this.executedStartEvents.clear();
-        this.executedEndEvents.clear();
-        // Reset goal IDs and pending events for new date
-        this.routineGoalIds = {};
-        this.pendingEvents = [];
-        console.log('DashBoard: Reset executed events, routine goal IDs, and pending events for new date:', newVal);
       }
     },
     // Watch for route changes to detect login/logout
@@ -650,20 +646,22 @@ export default {
 
     // Update global current task store when local currentTask changes
     currentTask: {
-      handler(newTask, oldTask) {
+      handler(newTask) {
         // Update the global current task store with the current task
         this.$currentTask.setCurrentTask(newTask || {});
-        if (newTask && oldTask && newTask.id && oldTask.id && newTask.endEvent) {
-          console.log('DashBoard: Current task changed:', newTask, oldTask);
-          const isComplete = this.countTaskCompleted(newTask) >= this.countTaskTotal(newTask);
-          const isOldComplete = this.countTaskCompleted(oldTask) >= this.countTaskTotal(oldTask);
-
-          // Execute endEvent if task is complete and endEvent hasn't been executed yet
-          // Use just task.id as key to match checkEventExecutionForTask which adds task.id to the Set
-          if (isComplete && !isOldComplete && !this.executedEndEvents.has(newTask.id)) {
-            this.checkEventExecutionForTask(newTask.id, 'K');
-          }
-        }
+      },
+      immediate: true,
+    },
+    // Re-evaluate deep-link routine action whenever routes or data become ready
+    '$route.params.routineId': function watchRouteRoutineId() {
+      this.maybeDispatchRouteAction();
+    },
+    '$route.params.action': function watchRouteAction() {
+      this.maybeDispatchRouteAction();
+    },
+    displayTasklist: {
+      handler() {
+        this.maybeDispatchRouteAction();
       },
       immediate: true,
     },
@@ -718,9 +716,14 @@ export default {
     eventBus.$on(EVENTS.TASK_CREATED, this.handleTaskCreated);
     eventBus.$on(EVENTS.GOALS_SAVED, this.handleGoalsSaved);
     eventBus.$on(EVENTS.GOAL_ITEM_CREATED, this.handleGoalItemCreated);
+    eventBus.$on(EVENTS.AGENT_STATUS_CHANGED, this.handleAgentStatusChanged);
 
     // Listen for dashboard caching progress
     eventBus.$on(EVENTS.DASHBOARD_CACHING_STATUS, this.handleDashboardCachingStatus);
+
+    // Pull the user's agents into the local store so QuickGoalCreation
+    // and the running-badge can render synchronously on first paint
+    this.$agent.fetchAll();
 
     console.log('DashBoard: Event listeners registered');
 
@@ -751,10 +754,13 @@ export default {
     eventBus.$off(EVENTS.TASK_CREATED, this.handleTaskCreated);
     eventBus.$off(EVENTS.GOALS_SAVED, this.handleGoalsSaved);
     eventBus.$off(EVENTS.GOAL_ITEM_CREATED, this.handleGoalItemCreated);
+    eventBus.$off(EVENTS.AGENT_STATUS_CHANGED, this.handleAgentStatusChanged);
     eventBus.$off(EVENTS.DASHBOARD_CACHING_STATUS, this.handleDashboardCachingStatus);
 
-    // Clean up timer
-    this.stopEventExecutionTimer();
+    if (this.agentRefreshTimer) {
+      clearTimeout(this.agentRefreshTimer);
+      this.agentRefreshTimer = null;
+    }
 
     // Clean up intelligent refresh timer
     this.stopIntelligentRefresh();
@@ -1066,50 +1072,20 @@ export default {
       }
     },
 
-    handleGoalItemCreated(eventData) {
-      console.log('DashBoard: Handling goal item created event', eventData);
-
-      if (eventData && eventData.goalId && eventData.taskRef) {
-        // Store the goal ID for the specific routine item
-        this.routineGoalIds[eventData.taskRef] = eventData.goalId;
-        console.log('DashBoard: Stored goal ID for routine item:', eventData.taskRef, '→', eventData.goalId);
-
-        // Clean up old routine goal IDs to prevent memory buildup
-        this.cleanupOldRoutineGoalIds();
-
-        // Process any pending events that were waiting for this routine's goal ID
-        this.processPendingEvents(eventData.taskRef);
-      }
-
-      // Refetch daily goals to reflect the new goal item
+    handleGoalItemCreated() {
+      // Refetch daily goals to reflect the new goal item; agent execution is
+      // now triggered from QuickGoalCreationContainer using the freshly
+      // created goal id, so we no longer need to queue events here.
       this.refetchDailyGoals();
     },
-    processPendingEvents(routineItemId = null) {
-      if (this.pendingEvents.length === 0) {
-        console.log('DashBoard: No pending events to process');
-        return;
-      }
-
-      // Filter events to process - either for specific routine item or all if no ID provided
-      const eventsToProcess = routineItemId
-        ? this.pendingEvents.filter((event) => event.routineItemId === routineItemId)
-        : this.pendingEvents.filter((event) => !event.routineItemId || this.routineGoalIds[event.routineItemId]);
-
-      if (eventsToProcess.length === 0) {
-        console.log(`DashBoard: No matching pending events to process for routine ${routineItemId || 'any'}`);
-        return;
-      }
-
-      console.log(`DashBoard: Processing ${eventsToProcess.length} pending events for routine ${routineItemId || 'any'}`);
-
-      // Remove processed events from pending array
-      this.pendingEvents = this.pendingEvents.filter((event) => !eventsToProcess.includes(event));
-
-      // Execute each pending event
-      eventsToProcess.forEach((event) => {
-        console.log(`DashBoard: Executing queued ${event.eventType} event for routine ${event.routineItemId}`);
-        this.executeEvent(event.eventCommand, event.eventType, event.routineItemId);
-      });
+    handleAgentStatusChanged() {
+      // Debounce: coalesce a burst of running → listening → finished
+      // transitions into a single dashboard refresh.
+      if (this.agentRefreshTimer) clearTimeout(this.agentRefreshTimer);
+      this.agentRefreshTimer = setTimeout(() => {
+        this.agentRefreshTimer = null;
+        this.refreshApolloQueries().catch(() => {});
+      }, 250);
     },
     refetchDailyGoals() {
       try {
@@ -1152,49 +1128,91 @@ export default {
       }
     },
 
-    // Routine goal ID management methods
-    cleanupOldRoutineGoalIds() {
-      // Keep only the last 20 routine goal IDs to prevent memory buildup
-      const goalIdEntries = Object.entries(this.routineGoalIds);
-      if (goalIdEntries.length > 20) {
-        // Sort by goal ID (assuming newer goal IDs are higher) and keep the latest 20
-        const sortedEntries = goalIdEntries.sort((a, b) => b[1].localeCompare(a[1]));
-        this.routineGoalIds = Object.fromEntries(sortedEntries.slice(0, 20));
-        console.log('DashBoard: Cleaned up old routine goal IDs, keeping latest 20');
+    // ───────────────────────────────────────────────────────────────────
+    // Agent integration
+    //
+    // The legacy executeEvent/checkEventExecutionForTask/{60-s timer} block
+    // that lived here previously has moved to the agentStore — see
+    // store/agentStore.js (fireStartEventIfPresent / fireEndEvent).
+    // ───────────────────────────────────────────────────────────────────
+
+    findFirstGoalIdForRoutine(taskId) {
+      if (!taskId) return null;
+      const goals = this.displayGoals || [];
+      for (const goal of goals) {
+        if (!goal || goal.period !== 'day' || !Array.isArray(goal.goalItems)) continue;
+        const item = goal.goalItems.find((gi) => gi.taskRef === taskId);
+        if (item && item.id) return item.id;
+      }
+      return null;
+    },
+
+    onBuildAgent(taskRef) {
+      if (!taskRef) return;
+      this.agentEditTaskRef = taskRef;
+      this.agentEditModalOpen = true;
+    },
+
+    async onStartAgentFromQuick(taskRef) {
+      if (!taskRef) return;
+      this.quickTaskDialog = false;
+      const task = this.displayTasklist.find((t) => t.id === taskRef);
+      if (task) {
+        this.checkClick(task);
+      }
+      const goalId = this.findFirstGoalIdForRoutine(taskRef);
+      if (goalId) {
+        await this.$agent.fireStartEventIfPresent({
+          taskRef, goalId, goalDate: this.date, goalPeriod: 'day',
+        });
       }
     },
 
-    // Event execution methods
-    async executeEvent(eventCommand, eventType = 'unknown', routineItemId = null) {
-      if (!eventCommand || typeof eventCommand !== 'string') {
-        console.log(`DashBoard: No ${eventType} event to execute`);
+    onAgentSaved() {
+      this.$agent.fetchAll();
+    },
+
+    maybeDispatchRouteAction() {
+      const { routineId, action } = this.$route.params || {};
+      if (!routineId || !action) return;
+      const tasklist = this.displayTasklist;
+      if (!Array.isArray(tasklist) || tasklist.length === 0) return;
+
+      const dispatchKey = `${routineId}:${action}`;
+      if (this.dispatchedRouteAction === dispatchKey) return;
+
+      const routine = tasklist.find((t) => t.id === routineId);
+      if (!routine) {
+        this.dispatchedRouteAction = dispatchKey;
+        this.$notify({
+          title: 'Routine not found',
+          text: 'That routine isn\'t on today\'s list.',
+          group: 'notify',
+          type: 'warning',
+          duration: 3000,
+        });
+        this.$router.replace('/home').catch(() => {});
         return;
       }
 
-      console.log(`DashBoard: Executing ${eventType} event for routine ${routineItemId}:`, eventCommand);
+      const isCurrent = this.currentTask && this.currentTask.id === routine.id;
+      const hasGoal = this.filterTaskGoalsPeriod(routine.id, this.displayGoals, 'day').length > 0;
 
-      // Check if event contains {{goal_id}} placeholder
-      if (eventCommand.includes('{{goal_id}}')) {
-        console.log('DashBoard: Event contains {{goal_id}} placeholder, checking for available goal ID');
+      this.dispatchedRouteAction = dispatchKey;
 
-        // If routine item ID is provided and we have a goal ID for it, replace the placeholder
-        if (routineItemId && this.routineGoalIds[routineItemId]) {
-          const goalId = this.routineGoalIds[routineItemId];
-          const updatedCommand = eventCommand.replace(/\{\{goal_id\}\}/g, goalId);
-          console.log(`DashBoard: Replacing {{goal_id}} with ${goalId} for routine ${routineItemId}:`, updatedCommand);
-
-          // Execute the updated command
-          this.executeEvent(updatedCommand, eventType, routineItemId);
-          return;
+      if (action === 'complete') {
+        if (!hasGoal) {
+          this.openQuickGoalForRoutine(routine);
+        } else if (!routine.ticked) {
+          this.checkClick(routine);
         }
+        return;
+      }
 
-        // Queue the event for later execution when goal ID becomes available
-        console.log(`DashBoard: No goal ID available for routine ${routineItemId}, queuing event for later execution`);
-        this.pendingEvents.push({ eventCommand, eventType, routineItemId });
-
+      if (!isCurrent) {
         this.$notify({
-          title: 'Event Queued',
-          text: `${eventType} event queued until goal is created for routine`,
+          title: 'Not your current task',
+          text: 'Start/Build are only available for the active routine.',
           group: 'notify',
           type: 'info',
           duration: 3000,
@@ -1202,164 +1220,32 @@ export default {
         return;
       }
 
-      // Check if event starts with 'curl'
-      if (eventCommand.toLowerCase().startsWith('curl')) {
-        try {
-          // Execute curl command without waiting
-          console.log(`DashBoard: Executing curl command: ${eventCommand}`);
-          this.$curl.execute(eventCommand)
-            .then((result) => {
-              console.log(`DashBoard: Curl ${eventType} event executed successfully:`, result);
-            })
-            .catch((error) => {
-              console.error(`DashBoard: Error executing curl ${eventType} event:`, error);
-              this.$notify({
-                title: 'Event Execution Error',
-                text: `Failed to execute ${eventType} event: ${error.message}`,
-                group: 'notify',
-                type: 'error',
-                duration: 5000,
-              });
-            });
+      if (!hasGoal) {
+        this.openQuickGoalForRoutine(routine);
+        return;
+      }
 
-          // Start 1-minute timer for goal refetch
-          this.startEventExecutionTimer();
-        } catch (error) {
-          console.error(`DashBoard: Error executing curl ${eventType} event:`, error);
-          this.$notify({
-            title: 'Event Execution Error',
-            text: `Failed to execute ${eventType} event: ${error.message}`,
-            group: 'notify',
-            type: 'error',
-            duration: 5000,
+      if (action === 'start') {
+        if (!routine.ticked) this.checkClick(routine);
+        const goalId = this.findFirstGoalIdForRoutine(routine.id);
+        if (goalId) {
+          this.$agent.fireStartEventIfPresent({
+            taskRef: routine.id, goalId, goalDate: this.date, goalPeriod: 'day',
           });
         }
-      } else if (eventCommand.match(/^https?:\/\/.+/)) { // Check if it's a URL (starts with http:// or https://)
-        window.open(eventCommand, '_blank');
-      } else if (eventCommand.toLowerCase().startsWith('notify:')) {
-        const message = eventCommand.substring(7).trim();
-        this.$notify({
-          title: `${eventType}`,
-          text: message,
-          group: 'notify',
-          type: 'success',
-          duration: 5000,
-        });
-        console.log(`${eventType} executed`);
-      } else if (eventCommand.toLowerCase().startsWith('log:')) {
-        const message = eventCommand.substring(4).trim();
-        console.log(`${eventType} for ${message}`);
-      } else {
-        console.log(`DashBoard: Event command does not start with 'curl', skipping: ${eventCommand}`);
-      }
-    },
-
-    startEventExecutionTimer() {
-      // Clear any existing timer
-      if (this.eventExecutionTimer) {
-        clearInterval(this.eventExecutionTimer);
-      }
-
-      // Set initial state
-      this.eventExecutionInProgress = true;
-      this.eventExecutionTimeLeft = 60; // 1 minute
-
-      console.log('DashBoard: Starting 60-second countdown timer for goal refetch');
-
-      // Start countdown timer
-      this.eventExecutionTimer = setInterval(() => {
-        this.eventExecutionTimeLeft -= 1;
-
-        if (this.eventExecutionTimeLeft <= 0) {
-          // Timer finished - refetch goals and cleanup
-          console.log('DashBoard: Timer finished, refetching daily goals');
-          this.stopEventExecutionTimer();
-          this.refetchDailyGoals();
-        }
-      }, 1000);
-    },
-
-    stopEventExecutionTimer() {
-      if (this.eventExecutionTimer) {
-        clearInterval(this.eventExecutionTimer);
-        this.eventExecutionTimer = null;
-      }
-      this.eventExecutionInProgress = false;
-      this.eventExecutionTimeLeft = 0;
-      console.log('DashBoard: Event execution timer stopped');
-    },
-
-    // Check event execution for a specific task (used after user interactions)
-    // freshTasklist: optional array from refetch result to avoid stale Apollo cache
-    checkEventExecutionForTask(taskId, stimulusName, freshTasklist) {
-      // Use fresh tasklist from refetch if provided, otherwise fall back to displayTasklist
-      const tasklist = freshTasklist || this.displayTasklist;
-      const task = tasklist.find((t) => t.id === taskId);
-
-      if (!task || !task.stimuli || !Array.isArray(task.stimuli)) {
-        console.log(`DashBoard: No task or stimuli found for taskId ${taskId}`);
         return;
       }
 
-      // Find D and K stimuli
-      const dStimulus = task.stimuli.find((s) => s.name === 'D');
-      const kStimulus = task.stimuli.find((s) => s.name === 'K');
-
-      if (!dStimulus || !kStimulus) {
-        console.log(`DashBoard: Missing stimuli for task ${task.name}. `
-          + `D stimulus: ${dStimulus ? 'found' : 'missing'}, K stimulus: ${kStimulus ? 'found' : 'missing'}`);
-        return;
+      if (action === 'build') {
+        this.onBuildAgent(routine.id);
       }
+    },
 
-      console.log(`DashBoard: Checking events for task ${task.name}:`);
-      console.log(`  - Task points: ${task.points}`);
-      console.log(`  - Task ticked: ${task.ticked}`);
-      console.log(`  - D stimulus earned: ${dStimulus.earned}`);
-      console.log(`  - K stimulus earned: ${kStimulus.earned}`);
-      console.log(`  - D stimulus splitRate: ${dStimulus.splitRate}`);
-      console.log(`  - K stimulus splitRate: ${kStimulus.splitRate}`);
-      console.log(`  - StartEvent: ${task.startEvent || 'none'}`);
-      console.log(`  - EndEvent: ${task.endEvent || 'none'}`);
-      console.log(`  - StartEvent already executed: ${this.executedStartEvents.has(task.id)}`);
-      console.log(`  - EndEvent already executed: ${this.executedEndEvents.has(task.id)}`);
-
-      // Calculate correct target values for each stimulus
-      const dTarget = task.points; // D stimulus target is task.points
-      const kCount = Number((dStimulus.splitRate / kStimulus.splitRate).toFixed(0));
-      const kTarget = task.points / kCount; // K stimulus target is task.points/count
-
-      console.log(`  - D target value: ${dTarget}`);
-      console.log(`  - K target value: ${kTarget} (task.points ${task.points} / count ${kCount})`);
-      console.log(`  - D condition: ${dStimulus.earned} === ${dTarget} = ${dStimulus.earned === dTarget}`);
-      console.log(`  - K condition: ${kStimulus.earned} === ${kTarget} = ${kStimulus.earned === kTarget}`);
-
-      // Check startEvent condition: D stimulus earned = D target
-      if (task.startEvent
-          && dStimulus.earned === dTarget
-          && !this.executedStartEvents.has(task.id) && stimulusName === 'D') {
-        console.log(`DashBoard: ✅ StartEvent condition met for task ${task.name}: D earned (${dStimulus.earned}) = D target (${dTarget})`);
-        this.executeEvent(task.startEvent, 'startEvent', task.id);
-        this.executedStartEvents.add(task.id);
-      } else if (task.startEvent) {
-        console.log(`DashBoard: ❌ StartEvent condition NOT met for task ${task.name}:`);
-        console.log(`  - D earned (${dStimulus.earned}) === D target (${dTarget}): ${dStimulus.earned === dTarget}`);
-        console.log(`  - Already executed: ${this.executedStartEvents.has(task.id)}`);
-      }
-
-      // Check endEvent condition: K stimulus earned = K target
-      if (task.endEvent
-          && kStimulus.earned === kTarget
-          && !this.executedEndEvents.has(task.id) && stimulusName === 'K') {
-        console.log(`DashBoard: ✅ EndEvent condition met for task ${task.name}: K earned (${kStimulus.earned}) = K target (${kTarget})`);
-        this.executeEvent(task.endEvent, 'endEvent', task.id);
-        this.executedEndEvents.add(task.id);
-      } else if (task.endEvent) {
-        console.log(`DashBoard: ❌ EndEvent condition NOT met for task ${task.name}:`);
-        console.log(`  - K earned (${kStimulus.earned}) === K target (${kTarget}): ${kStimulus.earned === kTarget}`);
-        console.log(`  - Already executed: ${this.executedEndEvents.has(task.id)}`);
-      } else {
-        console.log(`DashBoard: No endEvent configured for task ${task.name}`);
-      }
+    openQuickGoalForRoutine(routine) {
+      this.selectedTaskRef = routine.id;
+      this.quickTaskTitle = routine.name;
+      this.quickTaskDescription = routine.description || '';
+      this.quickTaskDialog = true;
     },
     setActiveSelection(task) {
       this.activeSelectionId = task.id;
@@ -1591,6 +1477,21 @@ export default {
           // so a rapid burst still results in only ~1 WEEK_STIMULI_QUERY
           // refetch.
           eventBus.$emit(EVENTS.ROUTINE_TICKED);
+
+          // Mirror the K-stimulus completion semantics into the agent
+          // domain: when every day-goal for this routine is complete,
+          // fire the agent's end event. The agent store no-ops if no
+          // agent is assigned or no end event is configured.
+          if (isComplete && taskRef && period === 'day') {
+            this.$nextTick(() => {
+              const dayGoals = this.filterTaskGoalsPeriod(taskRef, this.displayGoals, 'day');
+              const allItems = dayGoals.flatMap((g) => g.goalItems || []);
+              const everyDone = allItems.length > 0 && allItems.every((gi) => gi.isComplete);
+              if (everyDone) {
+                this.$agent.fireEndEvent({ taskRef, goalId: id }).catch(() => {});
+              }
+            });
+          }
         })
         .catch(() => {
           this.$notify({
@@ -1787,7 +1688,7 @@ export default {
             }
           },
         })
-        .then((res) => {
+        .then(() => {
           this.trackMutationPerformance('tickRoutineItem', {
             id: this.did,
             taskId: task.id,
@@ -1798,11 +1699,18 @@ export default {
           // earlier waterfall of `fetchRoutine + routineDate.refetch +
           // goals.refetch` is gone — Apollo's `update` callback already
           // wrote the canonical state and smart queries re-render off it.
-          const freshTasklist = res?.data?.tickRoutineItem?.tasklist || this.tasklist;
-          this.checkEventExecutionForTask(task.id, 'D', freshTasklist);
-          this.checkEventExecutionForTask(task.id, 'K', freshTasklist);
-
           eventBus.$emit(EVENTS.ROUTINE_TICKED);
+
+          // Trigger the agent's start event if one is assigned. The
+          // {{goal_id}} substitution uses the first day-goal already
+          // attached to this routine; it's a no-op when no goal yet
+          // exists (Quick Goal Creation handles that path).
+          const goalId = this.findFirstGoalIdForRoutine(task.id);
+          if (goalId) {
+            this.$agent.fireStartEventIfPresent({
+              taskRef: task.id, goalId, goalDate: this.date, goalPeriod: 'day',
+            }).catch(() => {});
+          }
         })
         .catch(() => {
           // Apollo automatically rolls back the optimistic write on error.
@@ -2153,6 +2061,18 @@ export default {
       return this.currentTask && this.currentTask.id
         ? this.filterTaskGoalsPeriod(this.currentTask.id, this.displayGoals, 'week')
         : [];
+    },
+    currentAgentStatus() {
+      const id = this.currentTask && this.currentTask.id;
+      if (!id) return '';
+      return this.$agent.statusByRoutineId[id] || '';
+    },
+    agentEditRoutineOptions() {
+      const tasklist = this.displayTasklist || [];
+      return tasklist.map((t) => ({
+        label: t.time ? `${t.time} — ${t.name}` : t.name,
+        value: t.id,
+      }));
     },
     /**
      * Upcoming routine tasks enriched with the display fields that

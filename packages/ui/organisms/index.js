@@ -31,3 +31,7 @@ export { default as SummaryCards } from './SummaryCards/SummaryCards.vue';
 export { default as CurrentTaskCard } from './CurrentTaskCard/CurrentTaskCard.vue';
 export { default as UpcomingPastTasks } from './UpcomingPastTasks/UpcomingPastTasks.vue';
 export { default as WeekGoalStreak } from './WeekGoalStreak/WeekGoalStreak.vue';
+
+// Agents
+export { default as AgentEditModal } from './AgentEditModal/AgentEditModal.vue';
+export { default as AgentResultModal } from './AgentResultModal/AgentResultModal.vue';

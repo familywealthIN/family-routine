@@ -11,9 +11,12 @@
     :relatedTasks="relatedTasks"
     :loading="loading"
     :buttonLoading="buttonLoading"
+    :agent-state="agentState"
     @add-goal-item="addGoalItem"
     @goal-ref-changed="updateCurrentGoalRef"
     @start-quick-goal-task="(task) => $emit('start-quick-goal-task', task)"
+    @build-agent="$emit('build-agent', selectedTaskRef)"
+    @start-agent="$emit('start-agent', selectedTaskRef)"
   />
 </template>
 
@@ -99,6 +102,11 @@ export default {
     },
   },
   computed: {
+    agentState() {
+      if (!this.selectedTaskRef) return 'none';
+      const agent = this.$agent.getByTaskRef(this.selectedTaskRef);
+      return agent ? 'assigned' : 'none';
+    },
     relatedTasks() {
       if (!this.currentGoalRef || !this.relatedGoalsData || !Array.isArray(this.relatedGoalsData)) {
         return [];
@@ -250,6 +258,20 @@ export default {
             taskRef: addedItem.taskRef,
             body: addedItem.body,
           });
+
+          // If an agent is assigned, fire the start event using the freshly created goal id
+          if (this.agentState === 'assigned' && newGoalItem.taskRef) {
+            try {
+              await this.$agent.fireStartEventIfPresent({
+                taskRef: newGoalItem.taskRef,
+                goalId: addedItem.id,
+                goalDate: date,
+                goalPeriod: this.period,
+              });
+            } catch (err) {
+              console.warn('[QuickGoalCreationContainer] fireStartEventIfPresent failed:', err);
+            }
+          }
         }
       } catch (error) {
         console.error('Error adding goal item:', error);

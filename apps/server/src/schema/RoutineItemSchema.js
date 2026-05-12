@@ -80,6 +80,19 @@ const encryptRoutineItemData = function encryptRoutineItem(next) {
   next();
 };
 
+const warnedDeprecationFor = new Set();
+const warnDeprecatedEvents = (doc) => {
+  if (!doc || (!doc.startEvent && !doc.endEvent)) return;
+  const id = doc._id ? String(doc._id) : null;
+  if (!id || warnedDeprecationFor.has(id)) return;
+  warnedDeprecationFor.add(id);
+  console.warn(
+    '[DEPRECATED] routineItem.startEvent/endEvent are read on doc',
+    id,
+    '— migrate to the Agent domain (apps/server/scripts/migrateRoutineEventsToAgents.js).',
+  );
+};
+
 const decryptRoutineItemData = function decryptRoutineItem(docs) {
   if (!docs) return;
 
@@ -92,6 +105,7 @@ const decryptRoutineItemData = function decryptRoutineItem(docs) {
     }
 
     Object.assign(doc, decrypted);
+    warnDeprecatedEvents(doc);
     return doc;
   };
 

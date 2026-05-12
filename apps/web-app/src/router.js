@@ -16,6 +16,17 @@ export default new Router({
       component: () => import(/* webpackChunkName: "home" */'./views/Home.vue'),
     },
     {
+      path: '/home/:routineId/:action(complete|start|build)',
+      name: 'homeRoutineAction',
+      component: () => import(/* webpackChunkName: "home" */'./views/Home.vue'),
+      props: true,
+    },
+    {
+      path: '/agents',
+      name: 'agents',
+      component: () => import(/* webpackChunkName: "agents" */'./views/Agents.vue'),
+    },
+    {
       path: '/history',
       name: 'history',
       component: () => import(/* webpackChunkName: "history" */'./views/History.vue'),

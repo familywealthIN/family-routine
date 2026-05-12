@@ -18,6 +18,7 @@
       <GoalTaskSelector
         :items="tasklist"
         v-model="newGoalItem.taskRef"
+        disabled
       />
     </v-flex>
     <v-flex xs12 d-flex>
@@ -47,6 +48,24 @@
         @click="handleAddGoalItem"
       >
         Start Task
+      </v-btn>
+      <v-btn
+        v-if="agentState === 'assigned'"
+        color="primary"
+        outline
+        :disabled="buttonLoading"
+        @click="$emit('start-agent')"
+      >
+        Start Agent
+      </v-btn>
+      <v-btn
+        v-else
+        color="primary"
+        outline
+        :disabled="buttonLoading"
+        @click="$emit('build-agent')"
+      >
+        Build Agent
       </v-btn>
     </v-flex>
   </v-layout>
@@ -112,6 +131,10 @@ export default {
     buttonLoading: {
       type: Boolean,
       default: false,
+    },
+    agentState: {
+      type: String,
+      default: 'none', // 'none' | 'assigned'
     },
   },
   data() {

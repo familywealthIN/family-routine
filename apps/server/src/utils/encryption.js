@@ -233,6 +233,8 @@ const ENCRYPTION_FIELDS = {
   routineItem: ['name', 'description'], // Encrypt routine item details
   progress: ['notes'], // Encrypt any progress notes
   motto: ['text'], // Encrypt motto text
+  agent: ['name', 'lastResultBody', 'lastError'],
+  agentEvent: ['value'],
 };
 
 module.exports = {

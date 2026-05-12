@@ -16,4 +16,5 @@ export const EVENTS = {
   DASHBOARD_CACHING_STATUS: 'dashboard-caching-status', // Emitted during dashboard cache population
   ROUTINE_TICKED: 'routine-ticked', // Emitted after a routine task is ticked to trigger weekStimuli refetch
   DASHBOARD_REFRESH: 'dashboard-refresh', // Emitted when the refresh button is clicked
+  AGENT_STATUS_CHANGED: 'agent:status-changed', // Emitted when an agent moves between idle/running/listening/finished/failed
 };
