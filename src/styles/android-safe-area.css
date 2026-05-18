@@ -75,6 +75,7 @@ body {
 }
 
 @media (max-width: 600px) {
+
   .v-toolbar,
   .v-item-group {
     padding-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top));
@@ -130,14 +131,15 @@ body {
 
 /* Fallback for older Android versions */
 /* Enable this before android build */
-/* .v-content {
+.v-content {
   padding-top: 0px !important;
-} */
+}
 
 /* Additional Android 14+ fixes */
 .android14-plus #mobileLayout {
   height: 100vh !important;
-  height: 100dvh !important; /* Dynamic viewport height for better support */
+  height: 100dvh !important;
+  /* Dynamic viewport height for better support */
 }
 
 /* Ensure proper stacking context */
@@ -171,3 +173,14 @@ body {
     bottom: max(var(--safe-area-inset-bottom), 8px) !important;
   }
 }
+
+.animated {
+  padding-top: 0px!important;
+}
+.v-btn-toggle .v-btn {
+  padding: 0 5px!important;
+}
+
+ .prompt-box {
+    padding: 10px 12px 40px 12px!important;
+  }

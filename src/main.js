@@ -37,7 +37,6 @@ import redirectOnError from './utils/redirectOnError';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
-import PushService from './services/pushService.js';
 // Load Google Identity Services script
 const script = document.createElement('script');
 script.src = 'https://accounts.google.com/gsi/client';
@@ -49,19 +48,19 @@ document.head.appendChild(script);
 Vue.use(VueCompositionAPI);
 
 Vue.config.productionTip = false;
-if (Capacitor.isNativePlatform()) {
-  // Show splash screen
-  SplashScreen.show({
-    showDuration: 2000,
-    autoHide: true,
-  });
-}
+// if (Capacitor.isNativePlatform()) {
+//   // Show splash screen
+//   SplashScreen.show({
+//     showDuration: 2000,
+//     autoHide: true,
+//   });
+// }
 
-if (Capacitor.isNativePlatform()) {
-  StatusBar.setOverlaysWebView({ overlay: false });
-  StatusBar.setStyle({ style: 'LIGHT' });
-  StatusBar.setBackgroundColor({ color: '#ffffff' });
-}
+// if (Capacitor.isNativePlatform()) {
+//   StatusBar.setOverlaysWebView({ overlay: false });
+//   StatusBar.setStyle({ style: 'LIGHT' });
+//   StatusBar.setBackgroundColor({ color: '#ffffff' });
+// }
 
 // Install Analytics plugin
 Vue.use(AnalyticsPlugin);

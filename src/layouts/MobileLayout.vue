@@ -559,7 +559,7 @@ body.android15 .safe-area-content {
 }
 
 .v-bottom-nav {
-  height: 80px !important;
+  height: 80px;
 }
 
 .login-content-wrapper {
