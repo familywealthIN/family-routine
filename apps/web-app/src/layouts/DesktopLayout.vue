@@ -1,0 +1,422 @@
+<template>
+  <div id="desktopLayout">
+    <v-navigation-drawer
+      fixed
+      clipped
+      v-model="drawer"
+      width="240"
+      mobile-break-point="1024"
+      v-if="$route.name !== 'login' && $route.name !== 'stats'"
+    >
+      <v-list class="pa-0">
+        <v-list-tile avatar>
+          <v-list-tile-avatar>
+            <img :src="profileImage" :alt="`Profile picture of ${name || 'User'}`" @error="$event.target.src='/img/default-user.png'" />
+          </v-list-tile-avatar>
+
+          <v-list-tile-content>
+            <v-list-tile-title>{{ name }}</v-list-tile-title>
+            <v-list-tile-sub-title>{{ email }}</v-list-tile-sub-title>
+          </v-list-tile-content>
+        </v-list-tile>
+      </v-list>
+      <v-divider></v-divider>
+      <task-timing-bar
+        :inTimeCount="tasksInTimeCount"
+        :outOfTimeCount="tasksOutOfTimeCount"
+        vertical
+      />
+      <v-divider></v-divider>
+      <v-list class="pt-0" dense id="desktopLayoutList">
+        <v-divider></v-divider>
+
+        <v-list-tile v-for="item in items" :key="item.title" :to="item.route">
+          <v-list-tile-action>
+            <v-icon>{{ item.icon }}</v-icon>
+          </v-list-tile-action>
+
+          <v-list-tile-content>
+            <v-list-tile-title>{{ item.title }}</v-list-tile-title>
+          </v-list-tile-content>
+        </v-list-tile>
+        <year-goal-sidebar :yearGoals="yearGoals" />
+        <area-sidebar :areaTags="areaTags" />
+        <v-list-tile v-for="item in otherItems" :key="item.title" :to="item.route">
+          <v-list-tile-action>
+            <v-icon>{{ item.icon }}</v-icon>
+          </v-list-tile-action>
+
+          <v-list-tile-content>
+            <v-list-tile-title>{{ item.title }}</v-list-tile-title>
+          </v-list-tile-content>
+        </v-list-tile>
+
+        <project-sidebar :projectTags="projectTags" />
+
+        <!-- Settings Group with Submenu -->
+        <v-list class="pa-0">
+          <v-list-group prepend-icon="settings" no-action>
+            <template v-slot:activator>
+              <v-list-tile-title class="subheader">Settings</v-list-tile-title>
+            </template>
+
+            <v-list-tile :to="'/settings'">
+              <v-list-tile-avatar>
+                <v-icon>tune</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>Routine Settings</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+
+            <v-list-tile :to="'/settings/profile'">
+              <v-list-tile-avatar>
+                <v-icon>account_circle</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>Profile Settings</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list-group>
+        </v-list>
+
+        <v-list-tile :to="'/about'">
+          <v-list-tile-action>
+            <v-icon>info</v-icon>
+          </v-list-tile-action>
+
+          <v-list-tile-content>
+            <v-list-tile-title>About</v-list-tile-title>
+          </v-list-tile-content>
+        </v-list-tile>
+
+        <v-list-tile @click="handleClickSignOut">
+          <v-list-tile-action>
+            <v-icon>logout</v-icon>
+          </v-list-tile-action>
+
+          <v-list-tile-content>
+            <v-list-tile-title>Log Out</v-list-tile-title>
+          </v-list-tile-content>
+        </v-list-tile>
+      </v-list>
+    </v-navigation-drawer>
+    <v-toolbar v-if="$route.name !== 'login'" color="white" app style="border-bottom: 1px solid rgba(0,0,0,0.12) !important;">
+      <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
+      <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>
+      <div class="ai-search-box" @click="openAiSearch">
+        <span>Build your routine goals with AI</span>
+        <v-icon class="search-icon">search</v-icon>
+      </div>
+      <v-spacer></v-spacer>
+      <v-btn icon @click="pendingDialog = true">
+        <v-icon>checklist</v-icon>
+      </v-btn>
+    </v-toolbar>
+    <v-content>
+      <router-view></router-view>
+    </v-content>
+    <v-dialog
+      v-model="pendingDialog"
+      fullscreen
+      hide-overlay
+      transition="dialog-bottom-transition"
+    >
+      <v-card>
+        <v-toolbar dark color="primary">
+          <v-btn icon dark @click="pendingDialog = false">
+            <v-icon>close</v-icon>
+          </v-btn>
+          <v-toolbar-title>Pending Items</v-toolbar-title>
+          <v-spacer></v-spacer>
+        </v-toolbar>        <pending-list />
+      </v-card>
+    </v-dialog>
+  </div>
+</template>
+
+<script>
+import gql from 'graphql-tag';
+import moment from 'moment';
+import ProjectSidebar from '@routine-notes/ui/molecules/ProjectSidebar/ProjectSidebar.vue';
+import AreaSidebar from '@routine-notes/ui/molecules/AreaSidebar/AreaSidebar.vue';
+import YearGoalSidebar from '@routine-notes/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue';
+import localforage from 'localforage';
+import TaskTimingBar from '@routine-notes/ui/atoms/TaskTimingBar/TaskTimingBar.vue';
+import PendingList from '../containers/PendingListContainer.vue';
+import { taskTimingMixin } from '../mixins/taskTimingMixin';
+import eventBus, { EVENTS } from '../utils/eventBus';
+import { ROUTINE_DATE_QUERY, AGENDA_GOALS_QUERY } from '../composables/graphql/queries';
+import {
+  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
+} from '../constants/settings';
+import { clearData, getSessionItem } from '../token';
+
+export default {
+  components: {
+    PendingList,
+    ProjectSidebar,
+    AreaSidebar,
+    YearGoalSidebar,
+    TaskTimingBar,
+  },
+  mixins: [taskTimingMixin],
+  data() {
+    return {
+      drawer: null,
+      pendingDialog: false,
+      toolbarRoutine: null,
+      items: [
+        { title: 'Home', icon: 'home', route: '/home' },
+        { title: 'Priority', icon: 'view_module', route: '/priority' },
+      ],
+      otherItems: [
+        { title: 'Progress', icon: 'pie_chart', route: '/progress' },
+        { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
+      ],
+      yearGoals: [],
+      projectTags: [],
+      areaTags: [],
+    };
+  },
+  apollo: {
+    yearGoals: {
+      query: gql`
+        query currentYearGoals {
+          currentYearGoals {
+            id
+            date
+            goalItems {
+              id
+              body
+              status
+              milestones {
+                id
+                status
+              }
+            }
+          }
+        }
+      `,
+      update(data) {
+        return data.currentYearGoals || [];
+      },
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
+    projectTags: {
+      query: gql`
+        query projectTags {
+          projectTags
+        }
+      `,
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
+    areaTags: {
+      query: gql`
+        query areaTags {
+          areaTags
+        }
+      `,
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
+    timingGoals: {
+      query: AGENDA_GOALS_QUERY,
+      variables() {
+        return { date: moment().format('DD-MM-YYYY') };
+      },
+      update(data) {
+        return data.agendaGoals || [];
+      },
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
+    toolbarRoutineData: {
+      query: ROUTINE_DATE_QUERY,
+      variables() {
+        return {
+          date: moment().format('DD-MM-YYYY'),
+        };
+      },
+      update(data) {
+        return data.routineDate || {};
+      },
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
+  },
+  computed: {
+    name() {
+      return this.$root.$data.name;
+    },
+    email() {
+      return this.$root.$data.email;
+    },
+    picture() {
+      return this.$root.$data.picture;
+    },
+    profileImage() {
+      return this.$root.$data.picture || '/img/default-user.png';
+    },
+    pageTitle() {
+      if (this.$route && this.$route.path && this.$route.path.startsWith('/progress')) {
+        return 'Progress';
+      }
+
+      if (this.$route.name) {
+        const spaced = this.$route.name.replace(/([a-z])([A-Z])/g, '$1 $2');
+        return spaced[0].toUpperCase() + spaced.substr(1);
+      }
+      return 'Routine Notes';
+    },
+    toolbarRoutineItems() {
+      if (this.toolbarRoutineData && this.toolbarRoutineData.tasklist) {
+        return this.toolbarRoutineData.tasklist;
+      }
+      return [];
+    },
+    dayGoalItemsForTiming() {
+      const goals = this.timingGoals || [];
+      return goals
+        .filter((g) => g.period === 'day')
+        .flatMap((g) => g.goalItems || []);
+    },
+  },
+  watch: {
+    '$route.query.taskRef': {
+      immediate: true,
+      handler(val) {
+        this.toolbarRoutine = val || null;
+      },
+    },
+    'toolbarRoutineData.tasklist': {
+      handler(newTasklist) {
+        this.$currentTask.setTasklist(newTasklist || []);
+      },
+      immediate: true,
+    },
+  },
+  mounted() {
+    eventBus.$on(EVENTS.GOAL_ITEM_CREATED, this.onYearGoalChanged);
+  },
+  beforeDestroy() {
+    eventBus.$off(EVENTS.GOAL_ITEM_CREATED, this.onYearGoalChanged);
+  },
+  methods: {
+    onYearGoalChanged(payload) {
+      // Only year-level goals appear in the sidebar list; skip refetch for
+      // milestones so we don't thrash the network on every day/week edit.
+      if (payload && payload.period && payload.period !== 'year') return;
+      if (this.$apollo.queries.yearGoals) {
+        this.$apollo.queries.yearGoals.refetch();
+      }
+    },
+    openAiSearch() {
+      eventBus.$emit(EVENTS.OPEN_AI_SEARCH, { mode: 'search' });
+    },
+    onToolbarRoutineChange(value) {
+      if (this.$route.name !== 'search') return;
+      const query = { ...this.$route.query };
+      if (value) {
+        query.taskRef = value;
+      } else {
+        delete query.taskRef;
+      }
+      this.$router.replace({ query }).catch(() => {});
+    },
+    handleClickSignOut() {
+      this.$gAuth
+        .signOut()
+        .then(async () => {
+          // On success do something
+          this.isSignIn = this.$gAuth.isAuthorized;
+          await clearData();
+          localStorage.removeItem(USER_TAGS);
+          // Clear Apollo in-memory cache and persisted storage
+          await this.$apollo.provider.defaultClient.clearStore();
+          await localforage.clear();
+          this.$root.$data.userName = getSessionItem(GC_USER_NAME);
+          this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
+          this.$root.$data.userEmail = getSessionItem(GC_PICTURE);
+          this.$router.push('/').catch(() => {});
+        })
+        .catch((error) => {
+          window.location.reload();
+          console.log(error);
+        });
+    },
+  },
+};
+</script>
+
+<style>
+  .v-toolbar__title:not(:first-child) {
+    margin-left: 8px;
+  }
+
+  @media (min-width: 1200px) {
+    .v-toolbar__side-icon {
+      display: none;
+    }
+  }
+  @media (min-width: 1024px) {
+
+    .v-navigation-drawer--open ~ main.v-content {
+      padding-left: 240px !important;
+    }
+
+    .v-navigation-drawer--fixed {
+      padding-top: 64px;
+    }
+  }
+
+  .ai-search-box * {
+    vertical-align: middle;
+  }  .ai-search-box {
+    background-color: #ddd;
+    color: #777;
+    border-radius: 16px;
+    display: inline-block;
+    margin: 8px 8px 8px calc(40% - 250px);
+    padding: 8px 16px;
+    min-width: 500px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .ai-search-box:hover {
+    background-color: #ccc;
+    color: #555;
+  }
+  .search-icon {
+    position: relative;
+    left: 256px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .toolbar-routine-select {
+    max-width: 400px;
+    margin-left: 24px;
+    border-radius: 8px;
+  }
+
+.v-list__group__header  {
+  min-height: 40px;
+}
+.v-list__group__header .v-list__group__header__prepend-icon {
+  color: var(--v-primary-base);
+  min-width: 70px;
+}
+.v-list__group__items--no-action .v-list__tile {
+    padding-left: 12px;
+}
+</style>
