@@ -1,7 +1,6 @@
 .DS_Store
 node_modules
 dist
-android/
 
 # local env files
 .env.local
@@ -25,13 +24,12 @@ yarn-error.log*
 .firebaserc
 serviceAccountKey.json
 GoogleService-info.plist
+GoogleService-Info.plist
 google-services.json
 .env
 .serverless
 secrets.json
 
-ios
-android
 storybook-static
 coverage
 nohup.out
