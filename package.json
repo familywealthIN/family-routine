@@ -12,11 +12,15 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "android:setup": "cd apps/web-app/android && fastlane init",
+    "android:release": "turbo run android:release --filter=web-app",
+    "android:internal": "turbo run android:internal --filter=web-app"
   },
   "devDependencies": {
-    "turbo": "^2.4.0",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "googleapis": "^171.4.0",
+    "turbo": "^2.4.0"
   },
   "resolutions": {
     "node-libs-browser/readable-stream": "^2.3.8",
@@ -45,5 +49,8 @@
   "browserslist": [
     "> 1%",
     "last 2 versions"
-  ]
+  ],
+  "dependencies": {
+    "fastlane": "^0.0.9"
+  }
 }
