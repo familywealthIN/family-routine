@@ -1,5 +1,5 @@
 <template>
-  <v-toolbar-title v-bind="$attrs" v-on="$listeners">
+  <v-toolbar-title class="atom-toolbar-title" v-bind="$attrs" v-on="$listeners">
     <slot />
   </v-toolbar-title>
 </template>
@@ -20,6 +20,10 @@ export default {
 };
 </script>
 
-<style scoped>
-/* Toolbar title styles can be customized here */
+<style>
+.v-toolbar__content .atom-toolbar-title.v-toolbar__title {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
 </style>
