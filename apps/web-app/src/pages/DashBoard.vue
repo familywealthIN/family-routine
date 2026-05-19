@@ -197,6 +197,8 @@
                         <v-checkbox
                           :input-value="goalItem.isComplete"
                           color="primary"
+                          hide-details
+                          class="agenda-day-checkbox ma-0 pa-0"
                           @change="completeAgendaGoalItem({
                             id: goalItem.id, period: taskGoals.period,
                             date: taskGoals.date, taskRef: goalItem.taskRef,
@@ -423,8 +425,6 @@ import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
 import { TimeFormatMixin } from '../utils/timeFormat';
 import { initDashboardCaching } from '../composables/useDashboardCaching';
-import { filterAreaProjectTags } from '../utils/dashboardCache';
-import { readAiSearchSettings } from '../utils/aiSearchSettings';
 
 function weekOfMonth(d) {
   const addFirstWeek = moment(d, 'DD-MM-YYYY')
@@ -766,42 +766,14 @@ export default {
     }
   },
   methods: {
-    getAiEnabledRoutineTags() {
-      const routines = Array.isArray(this.$currentTaskList) && this.$currentTaskList.length
-        ? this.$currentTaskList
-        : this.tasklist;
-
-      if (!Array.isArray(routines) || routines.length === 0) {
-        return [];
-      }
-
-      const tags = routines.reduce((acc, routine) => {
-        const routineId = routine && routine.id;
-        const settings = readAiSearchSettings(routineId);
-        if (!settings.aiEnhancedTask) {
-          return acc;
-        }
-
-        const routineTags = Array.isArray(routine.tags) ? routine.tags : [];
-        if (routineTags.length > 0) {
-          acc.push(...routineTags);
-        }
-        return acc;
-      }, []);
-
-      return [...new Set(filterAreaProjectTags(tags))];
-    },
-
-    // Start dashboard caching for area/project tags
+    // Start dashboard caching for area/project tags. Lets
+    // initDashboardCaching fetch the full set of area/project tags from
+    // the server so the Daily context builder runs for every project/area
+    // the user has, not just routines with per-task AI toggled on.
     startDashboardCaching() {
       if (!this.$root.$data.email) return;
 
-      const tags = this.getAiEnabledRoutineTags();
-      if (tags.length === 0) {
-        return;
-      }
-
-      initDashboardCaching(this, { tags });
+      initDashboardCaching(this);
     },
 
     // Handle dashboard caching progress updates
@@ -1591,6 +1563,12 @@ export default {
           // so a rapid burst still results in only ~1 WEEK_STIMULI_QUERY
           // refetch.
           eventBus.$emit(EVENTS.ROUTINE_TICKED);
+          // Week-goal streak progress is no longer optimistically
+          // updated — refetch the daily goals so the streak reflects the
+          // server's recomputed value (autoCheckTaskPeriod).
+          if (period === 'day' && this.$apollo.queries.goals) {
+            this.$apollo.queries.goals.refetch();
+          }
         })
         .catch(() => {
           this.$notify({
@@ -2671,6 +2649,18 @@ export default {
 
 .agenda-day-item {
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.agenda-day-item .v-list__tile__action {
+  align-self: center;
+}
+
+.agenda-day-checkbox .v-input__slot {
+  margin-bottom: 0;
+}
+
+.agenda-day-checkbox .v-input--selection-controls__ripple {
+  margin: 0;
 }
 
 .agenda-day-item:last-child {
