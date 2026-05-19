@@ -48,19 +48,19 @@ document.head.appendChild(script);
 Vue.use(VueCompositionAPI);
 
 Vue.config.productionTip = false;
-if (Capacitor.isNativePlatform()) {
-  // Show splash screen
-  SplashScreen.show({
-    showDuration: 2000,
-    autoHide: true,
-  });
-}
+// if (Capacitor.isNativePlatform()) {
+//   // Show splash screen
+//   SplashScreen.show({
+//     showDuration: 2000,
+//     autoHide: true,
+//   });
+// }
 
-if (Capacitor.isNativePlatform()) {
-  StatusBar.setOverlaysWebView({ overlay: false });
-  StatusBar.setStyle({ style: 'LIGHT' });
-  StatusBar.setBackgroundColor({ color: '#ffffff' });
-}
+// if (Capacitor.isNativePlatform()) {
+//   StatusBar.setOverlaysWebView({ overlay: false });
+//   StatusBar.setStyle({ style: 'LIGHT' });
+//   StatusBar.setBackgroundColor({ color: '#ffffff' });
+// }
 
 // Install Analytics plugin
 Vue.use(AnalyticsPlugin);

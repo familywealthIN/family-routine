@@ -1,11 +1,11 @@
 <template>
   <div class="markdown-editor" :class="wrapperClass">
     <vue-easymde
-      :value="value"
+      :model-value="value"
       :configs="resolvedConfig"
       :key="editorKey"
       ref="editor"
-      @input="onInput"
+      @update:modelValue="onInput"
     />
   </div>
 </template>

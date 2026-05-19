@@ -297,6 +297,7 @@ export default {
 <style>
 .current-task {
   overflow: hidden;
+  min-height: 336px;
 }
 .current-task .active .v-list__tile--avatar:hover {
   background-color: #fff;

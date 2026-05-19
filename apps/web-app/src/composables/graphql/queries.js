@@ -92,6 +92,9 @@ export const AGENDA_GOALS_QUERY = gql`
         isMilestone
         taskRef
         goalRef
+        contribution
+        reward
+        tags
         status
         completedAt
         subTasks {
