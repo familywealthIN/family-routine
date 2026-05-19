@@ -125,12 +125,18 @@ jobs:
         env:
           ANDROID_GOOGLE_SERVICES_JSON_B64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_B64 }}
         run: |
+          set -e
           if [ -n "$ANDROID_GOOGLE_SERVICES_JSON_B64" ]; then
-            echo "$ANDROID_GOOGLE_SERVICES_JSON_B64" | base64 -d > android/app/google-services.json
+            printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
             echo "Wrote google-services.json from secret"
           else
             echo "::warning::ANDROID_GOOGLE_SERVICES_JSON_B64 not set; building without google-services (push won't work)"
           fi
+
+      - name: Write android/local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+          cat android/local.properties
 
       - name: Capacitor sync (android)
         working-directory: apps/web-app
@@ -280,35 +286,19 @@ jobs:
       - name: Provision GoogleService-Info.plist
         env:
           IOS_GOOGLE_SERVICE_INFO_PLIST_B64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_B64 }}
+          PLACEHOLDER_B64: PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHBsaXN0IFBVQkxJQyAiLS8vQXBwbGUvL0RURCBQTElTVCAxLjAvL0VOIiAiaHR0cDovL3d3dy5hcHBsZS5jb20vRFREcy9Qcm9wZXJ0eUxpc3QtMS4wLmR0ZCI+CjxwbGlzdCB2ZXJzaW9uPSIxLjAiPgo8ZGljdD4KICA8a2V5PkNMSUVOVF9JRDwva2V5PjxzdHJpbmc+MC1wbGFjZWhvbGRlci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTwvc3RyaW5nPgogIDxrZXk+UkVWRVJTRURfQ0xJRU5UX0lEPC9rZXk+PHN0cmluZz5jb20uZ29vZ2xldXNlcmNvbnRlbnQuYXBwcy4wLXBsYWNlaG9sZGVyPC9zdHJpbmc+CiAgPGtleT5BUElfS0VZPC9rZXk+PHN0cmluZz5wbGFjZWhvbGRlcjwvc3RyaW5nPgogIDxrZXk+R0NNX1NFTkRFUl9JRDwva2V5PjxzdHJpbmc+MDwvc3RyaW5nPgogIDxrZXk+UExJU1RfVkVSU0lPTjwva2V5PjxzdHJpbmc+MTwvc3RyaW5nPgogIDxrZXk+QlVORExFX0lEPC9rZXk+PHN0cmluZz5jb20ucm91dGluZS5ub3RlPC9zdHJpbmc+CiAgPGtleT5QUk9KRUNUX0lEPC9rZXk+PHN0cmluZz5wbGFjZWhvbGRlcjwvc3RyaW5nPgogIDxrZXk+U1RPUkFHRV9CVUNLRVQ8L2tleT48c3RyaW5nPnBsYWNlaG9sZGVyLmFwcHNwb3QuY29tPC9zdHJpbmc+CiAgPGtleT5JU19BRFNfRU5BQkxFRDwva2V5PjxmYWxzZS8+CiAgPGtleT5JU19BTkFMWVRJQ1NfRU5BQkxFRDwva2V5PjxmYWxzZS8+CiAgPGtleT5JU19BUFBJTlZJVEVfRU5BQkxFRDwva2V5Pjx0cnVlLz4KICA8a2V5PklTX0dDTV9FTkFCTEVEPC9rZXk+PHRydWUvPgogIDxrZXk+SVNfU0lHTklOX0VOQUJMRUQ8L2tleT48dHJ1ZS8+CiAgPGtleT5HT09HTEVfQVBQX0lEPC9rZXk+PHN0cmluZz4xOjA6aW9zOnBsYWNlaG9sZGVyPC9zdHJpbmc+CjwvZGljdD4KPC9wbGlzdD4K
         run: |
+          set -e
           if [ -n "$IOS_GOOGLE_SERVICE_INFO_PLIST_B64" ]; then
-            echo "$IOS_GOOGLE_SERVICE_INFO_PLIST_B64" | base64 -d > ios/App/App/GoogleService-Info.plist
-            echo "Wrote GoogleService-Info.plist from secret"
+            SOURCE_B64="$IOS_GOOGLE_SERVICE_INFO_PLIST_B64"
+            echo "Using GoogleService-Info.plist from secret"
           else
-            echo "::warning::IOS_GOOGLE_SERVICE_INFO_PLIST_B64 not set; writing placeholder so build succeeds"
-            cat > ios/App/App/GoogleService-Info.plist <<'PLIST'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CLIENT_ID</key><string>0-placeholder.apps.googleusercontent.com</string>
-            <key>REVERSED_CLIENT_ID</key><string>com.googleusercontent.apps.0-placeholder</string>
-            <key>API_KEY</key><string>placeholder</string>
-            <key>GCM_SENDER_ID</key><string>0</string>
-            <key>PLIST_VERSION</key><string>1</string>
-            <key>BUNDLE_ID</key><string>com.routine.note</string>
-            <key>PROJECT_ID</key><string>placeholder</string>
-            <key>STORAGE_BUCKET</key><string>placeholder.appspot.com</string>
-            <key>IS_ADS_ENABLED</key><false/>
-            <key>IS_ANALYTICS_ENABLED</key><false/>
-            <key>IS_APPINVITE_ENABLED</key><true/>
-            <key>IS_GCM_ENABLED</key><true/>
-            <key>IS_SIGNIN_ENABLED</key><true/>
-            <key>GOOGLE_APP_ID</key><string>1:0:ios:placeholder</string>
-          </dict>
-          </plist>
-          PLIST
+            SOURCE_B64="$PLACEHOLDER_B64"
+            echo "::warning::IOS_GOOGLE_SERVICE_INFO_PLIST_B64 not set; using placeholder (Firebase calls will fail at runtime)"
           fi
+          printf '%s' "$SOURCE_B64" | base64 --decode > ios/App/App/GoogleService-Info.plist
+          ls -la ios/App/App/GoogleService-Info.plist
+          head -3 ios/App/App/GoogleService-Info.plist
 
       - name: Capacitor sync (ios)
         working-directory: apps/web-app
