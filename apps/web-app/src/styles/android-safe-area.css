@@ -129,11 +129,16 @@ body {
   }
 }
 
+/* NOTE: We previously force-zeroed v-content's padding-top, which
+   defeated Vuetify's auto-reservation for `app` toolbars and made every
+   page's header overlap the content below. Vuetify already pads
+   v-content by the toolbar's measured height (toolbar height +
+   safe-area on mobile), so we leave that alone now. */
 /* Fallback for older Android versions */
 /* Enable this before android build */
-.v-content {
+/* .v-content {
   padding-top: 0px !important;
-}
+} */
 
 /* Additional Android 14+ fixes */
 .android14-plus #mobileLayout {
