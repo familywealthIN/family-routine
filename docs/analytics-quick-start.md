@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide helps developers quickly integrate analytics into new components in the Family Routine app.
+This guide helps developers quickly integrate analytics into new components in the Routine Notes app.
 
 ## 5-Minute Integration
 
@@ -114,9 +114,9 @@ async loadData() {
 
 ## Event Naming Conventions
 
-* Use **snake_case**: `goal_created`,  `user_login`,  `dialog_open`
+* Use **snake_case**: `goal_created`,   `user_login`,   `dialog_open`
 * Be specific: `goal_period_change` not just `change`
-* Include context: `dashboard_filter_applied`,  `profile_settings_saved`
+* Include context: `dashboard_filter_applied`,   `profile_settings_saved`
 
 ## Parameter Guidelines
 
@@ -168,5 +168,5 @@ this.trackEvent('test_event', {
 ## Need Help?
 
 * 📖 Full documentation: `docs/measurement-implementation.md`
-* 🔧 Check existing implementations in `DashBoard.vue`,  `LoginRoutine.vue`
+* 🔧 Check existing implementations in `DashBoard.vue`,   `LoginRoutine.vue`
 * 🚨 Issues? Check browser console for analytics errors

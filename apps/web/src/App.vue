@@ -3,7 +3,7 @@
     <v-toolbar app color="primary" dark>
       <v-toolbar-title>
         <router-link to="/" class="white--text" style="text-decoration:none">
-          Family Routine
+          Routine Notes
         </router-link>
       </v-toolbar-title>
       <v-spacer />
@@ -22,7 +22,7 @@
 
     <v-footer app color="primary" dark>
       <v-layout justify-center>
-        <span>&copy; {{ new Date().getFullYear() }} Family Routine</span>
+        <span>&copy; {{ new Date().getFullYear() }} Routine Notes</span>
       </v-layout>
     </v-footer>
   </v-app>

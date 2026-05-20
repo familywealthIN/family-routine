@@ -1,5 +1,5 @@
 /**
- * Date Utility Functions for Family Routine Application
+ * Date Utility Functions for Routine Notes Application
  * 
  * This module provides date manipulation and period management utilities
  * for the goal and task management system.

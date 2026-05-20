@@ -425,6 +425,8 @@ import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
 import { TimeFormatMixin } from '../utils/timeFormat';
 import { initDashboardCaching } from '../composables/useDashboardCaching';
+import { filterAreaProjectTags } from '../utils/dashboardCache';
+import { readAiSearchSettings } from '../utils/aiSearchSettings';
 
 function weekOfMonth(d) {
   const addFirstWeek = moment(d, 'DD-MM-YYYY')
@@ -766,14 +768,44 @@ export default {
     }
   },
   methods: {
-    // Start dashboard caching for area/project tags. Lets
-    // initDashboardCaching fetch the full set of area/project tags from
-    // the server so the Daily context builder runs for every project/area
-    // the user has, not just routines with per-task AI toggled on.
+    // Collect area/project tags for routines where the user has opted in
+    // to AI Search in either task mode (aiEnhancedTask) or goal mode
+    // (associateParentGoal). We only build context for those routines.
+    getAiEnabledRoutineTags() {
+      const routines = Array.isArray(this.$currentTaskList) && this.$currentTaskList.length
+        ? this.$currentTaskList
+        : this.tasklist;
+
+      if (!Array.isArray(routines) || routines.length === 0) {
+        return [];
+      }
+
+      const tags = routines.reduce((acc, routine) => {
+        const routineId = routine && routine.id;
+        const settings = readAiSearchSettings(routineId);
+        if (!settings.aiEnhancedTask && !settings.associateParentGoal) {
+          return acc;
+        }
+
+        const routineTags = Array.isArray(routine.tags) ? routine.tags : [];
+        if (routineTags.length > 0) {
+          acc.push(...routineTags);
+        }
+        return acc;
+      }, []);
+
+      return [...new Set(filterAreaProjectTags(tags))];
+    },
+
+    // Start dashboard caching for area/project tags drawn from
+    // AI-enabled routines only (task mode or goal mode).
     startDashboardCaching() {
       if (!this.$root.$data.email) return;
 
-      initDashboardCaching(this);
+      const tags = this.getAiEnabledRoutineTags();
+      if (tags.length === 0) return;
+
+      initDashboardCaching(this, { tags });
     },
 
     // Handle dashboard caching progress updates

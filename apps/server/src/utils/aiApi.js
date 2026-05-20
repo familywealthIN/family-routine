@@ -72,7 +72,7 @@ async function fetchFromAi(prompt, isJsonMode = false) {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${openRouterApiKey}`,
                     'HTTP-Referer': process.env.WEB_APP_URL,
-                    'X-Title': 'Family Routine AI',
+                    'X-Title': 'Routine Notes AI',
                 },
                 body: JSON.stringify({
                     model: OPENROUTER_MODEL,
