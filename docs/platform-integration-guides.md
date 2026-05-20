@@ -2,7 +2,7 @@
 
 ## Overview
 
-Your Family Routine MCP server can be integrated with multiple AI platforms using OAuth 2.0 authentication. This document provides quick setup guides for each supported platform.
+Your Routine Notes MCP server can be integrated with multiple AI platforms using OAuth 2.0 authentication. This document provides quick setup guides for each supported platform.
 
 ---
 
@@ -102,7 +102,7 @@ Your Family Routine MCP server can be integrated with multiple AI platforms usin
       "name": "Get Daily Goals",
       "type": "n8n-nodes-base.httpRequest",
       "credentials": {
-        "oAuth2Api": "Family Routine OAuth"
+        "oAuth2Api": "Routine Notes OAuth"
       },
       "parameters": {
         "url": "{{$env.MCP_SERVER_URL}}/call",
@@ -178,7 +178,7 @@ Gemini's MCP support may vary based on availability. Check Google's latest docum
 04. Click **Add Integration**
 05. Choose **OAuth 2.0** authentication
 06. Enter credentials:
-   - **Name**: Family Routine
+   - **Name**: Routine Notes
    - **Server URL**: (from profile)
    - **Client ID**: `routine-notes-mcp`
 

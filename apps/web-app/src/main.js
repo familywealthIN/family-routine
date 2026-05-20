@@ -1,4 +1,3 @@
-import { StatusBar } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import 'babel-polyfill';
 import 'isomorphic-unfetch';
@@ -48,19 +47,6 @@ document.head.appendChild(script);
 Vue.use(VueCompositionAPI);
 
 Vue.config.productionTip = false;
-// if (Capacitor.isNativePlatform()) {
-//   // Show splash screen
-//   SplashScreen.show({
-//     showDuration: 2000,
-//     autoHide: true,
-//   });
-// }
-
-// if (Capacitor.isNativePlatform()) {
-//   StatusBar.setOverlaysWebView({ overlay: false });
-//   StatusBar.setStyle({ style: 'LIGHT' });
-//   StatusBar.setBackgroundColor({ color: '#ffffff' });
-// }
 
 // Install Analytics plugin
 Vue.use(AnalyticsPlugin);
@@ -208,6 +194,18 @@ loadData().then(() => {
 
     // Make app globally available
     window.app = app;
+
+    // Hide the native Capacitor splashscreen now that Vue is mounted and
+    // the persisted Apollo cache is hydrated. launchAutoHide is set to
+    // false in capacitor.config.json so the splash waits for this call
+    // instead of vanishing on a fixed timer.
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await SplashScreen.hide({ fadeOutDuration: 300 });
+      } catch (e) {
+        console.warn('[Main] SplashScreen.hide failed:', e);
+      }
+    }
 
     // Initialize push service with action categories
     if (Capacitor.isNativePlatform()) {

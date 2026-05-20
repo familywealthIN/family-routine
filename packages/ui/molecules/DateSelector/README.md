@@ -390,4 +390,4 @@ npm run test:unit DateSelector.spec.js
 
 ## License
 
-Part of the Family Routine project.
+Part of the Routine Notes project.

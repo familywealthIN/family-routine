@@ -7,7 +7,7 @@
         <v-card class="pa-4">
           <v-card-text class="subheading">
             <p>
-              Family Routine is a goal and routine management application
+              Routine Notes is a goal and routine management application
               designed to help families stay organized and productive.
             </p>
             <p>
@@ -17,7 +17,7 @@
             </p>
             <p>
               Whether you're managing daily chores, planning weekly goals,
-              or setting long-term milestones, Family Routine keeps everyone
+              or setting long-term milestones, Routine Notes keeps everyone
               on the same page.
             </p>
           </v-card-text>

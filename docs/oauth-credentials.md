@@ -2,7 +2,7 @@
 
 ## 🔐 Your OAuth Configuration
 
-Use these credentials to connect your Family Routine MCP server to ChatGPT:
+Use these credentials to connect your Routine Notes MCP server to ChatGPT:
 
 ### Server URL
 
