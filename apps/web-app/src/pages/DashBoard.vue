@@ -38,8 +38,63 @@
       </div>
       <template v-if="skipDay">
         <div class="skip-box">
-          <img src="/img/relax.jpg" />
-          <h1>Relax, Detox and Enjoy the Day</h1>
+          <div class="skip-grid">
+            <div class="skip-grid-image">
+              <img src="/img/relax.jpg" />
+            </div>
+            <div class="skip-grid-text">
+              <p class="skip-message">
+                Today's point wont be counted but still finish today's task to complete your milestones
+              </p>
+            </div>
+          </div>
+          <div class="skip-agenda">
+            <template v-if="todayGoalItemsGrouped.length">
+              <div v-for="group in todayGoalItemsGrouped" :key="group.taskId" class="mb-3">
+                <v-card class="pb-2">
+                  <v-card-title class="pb-1 pt-2">
+                    <span class="subheading">{{ group.taskName }}</span>
+                  </v-card-title>
+                  <v-divider></v-divider>
+                  <v-card-text class="pa-0">
+                    <v-list dense class="transparent pa-0">
+                      <template v-for="taskGoals in group.goals">
+                        <v-list-tile
+                          v-for="goalItem in taskGoals.goalItems"
+                          :key="goalItem.id"
+                          class="agenda-day-item"
+                        >
+                          <v-list-tile-action @click.stop>
+                            <v-checkbox
+                              :input-value="goalItem.isComplete"
+                              color="primary"
+                              hide-details
+                              class="agenda-day-checkbox ma-0 pa-0"
+                              @change="completeGoalItem({
+                                id: goalItem.id, period: taskGoals.period,
+                                date: taskGoals.date, taskRef: goalItem.taskRef,
+                                isComplete: $event, isMilestone: goalItem.isMilestone
+                              })"
+                            />
+                          </v-list-tile-action>
+                          <v-list-tile-content>
+                            <v-list-tile-title :class="{ 'agenda-item-completed': goalItem.isComplete }">
+                              {{ goalItem.body }}
+                            </v-list-tile-title>
+                          </v-list-tile-content>
+                        </v-list-tile>
+                      </template>
+                    </v-list>
+                  </v-card-text>
+                </v-card>
+              </div>
+            </template>
+            <atom-card v-else class="modern-card">
+              <atom-card-text class="text-xs-center">
+                <p>No Day Tasks</p>
+              </atom-card-text>
+            </atom-card>
+          </div>
         </div>
       </template>
       <template v-else>
@@ -2273,6 +2328,19 @@ export default {
       });
       return groups;
     },
+    todayGoalItemsGrouped() {
+      if (!this.displayTasklist || !this.displayGoals) return [];
+      const groups = [];
+      this.displayTasklist.forEach((task) => {
+        const goals = this.filterTaskGoalsPeriod(
+          task.id, this.displayGoals, 'day',
+        );
+        if (goals.length) {
+          groups.push({ taskId: task.id, taskName: task.name, goals });
+        }
+      });
+      return groups;
+    },
     currentTask() {
       // Use displayTasklist to show cached data while API loads
       const tasklistToUse = this.displayTasklist;
@@ -2622,12 +2690,30 @@ export default {
 }
 .skip-box {
   text-align: center;
-  padding: 32px 16px;
+  padding: 16px;
 }
-.skip-box img {
+.skip-grid {
+  display: grid;
+  grid-template-columns: 30% 70%;
+  gap: 16px;
+  align-items: center;
+  text-align: left;
+}
+.skip-grid-image img {
   max-width: 100%;
   width: auto;
   border-radius: 16px;
+  display: block;
+}
+.skip-message {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.75);
+}
+.skip-agenda {
+  margin-top: 24px;
+  text-align: left;
 }
 
 .circular-task .v-avatar {

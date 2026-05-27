@@ -18,6 +18,7 @@
 </template>
 
 <script>
+import moment from 'moment';
 import QuickGoalCreation from '@routine-notes/ui/organisms/QuickGoalCreation/QuickGoalCreation.vue';
 import { GOALS_BY_GOAL_REF_QUERY } from '../composables/useGoalQueries';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
@@ -104,31 +105,48 @@ export default {
         return [];
       }
 
+      const today = moment(this.date, 'DD-MM-YYYY');
+      const seen = new Set();
       const tasks = [];
+
       this.relatedGoalsData.forEach((goal) => {
-        if (goal.goalItems && Array.isArray(goal.goalItems)) {
-          goal.goalItems.forEach((goalItem) => {
-            if (goalItem.goalRef === this.currentGoalRef) {
-              tasks.push({
-                id: goalItem.id,
-                body: goalItem.body,
-                date: goal.date,
-                period: goal.period,
-                isComplete: goalItem.isComplete,
-                goalRef: goalItem.goalRef,
-                taskRef: goalItem.taskRef,
-                tags: goalItem.tags || [],
-              });
-            }
-          });
+        if (!goal.goalItems || !Array.isArray(goal.goalItems)) return;
+
+        // Exclude today (and future) — the timeline shows PAST activity so the
+        // user can align today's task against what was done on prior days.
+        if (goal.date) {
+          const goalDate = moment(goal.date, 'DD-MM-YYYY');
+          if (goalDate.isValid() && !goalDate.isBefore(today, 'day')) return;
         }
+
+        goal.goalItems.forEach((goalItem) => {
+          if (goalItem.goalRef !== this.currentGoalRef) return;
+          if (seen.has(goalItem.id)) return;
+          seen.add(goalItem.id);
+
+          const routineTask = this.tasklist
+            ? this.tasklist.find((t) => t.id === goalItem.taskRef || t.taskId === goalItem.taskRef)
+            : null;
+
+          tasks.push({
+            id: goalItem.id,
+            body: goalItem.body,
+            date: goal.date,
+            period: goal.period,
+            time: (routineTask && routineTask.time) || null,
+            isComplete: goalItem.isComplete,
+            goalRef: goalItem.goalRef,
+            taskRef: goalItem.taskRef,
+            tags: goalItem.tags || [],
+          });
+        });
       });
 
       return tasks
         .sort((a, b) => {
-          if (!a.time) return 1;
-          if (!b.time) return -1;
-          return a.time.localeCompare(b.time);
+          const da = moment(a.date, 'DD-MM-YYYY');
+          const db = moment(b.date, 'DD-MM-YYYY');
+          return db.valueOf() - da.valueOf();
         })
         .slice(0, 10);
     },
