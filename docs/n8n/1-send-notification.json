@@ -1,0 +1,64 @@
+{
+  "name": "Send Routine Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "b8da86f0-3923-46aa-b2c6-50318e3d1e0d",
+      "name": "Every Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /var/lib/n8n/notes-cron && node send-notification.js"
+      },
+      "id": "335ee1b2-53c9-4c66-983d-bc59c8f8e141",
+      "name": "Run send-notification.js",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        720,
+        304
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every Minute": {
+      "main": [
+        [
+          {
+            "node": "Run send-notification.js",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e7c40f84-d68a-4865-b599-d76b48d9eb1f",
+  "meta": {
+    "instanceId": "e57e9987eecc837c728209696b07e0775137bc7d67bf9e4c23b0ab3b30be2a95"
+  },
+  "id": "FAZfDYe5l6y0JMJq",
+  "tags": []
+}
