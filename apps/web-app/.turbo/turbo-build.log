@@ -1,0 +1,84 @@
+yarn run v1.22.22
+$ cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build
+ WARN  The public/manifest.json file will be ignored in favor of pwa.manifestOptions
+
+-  Building for production...
+ WARNING  Compiled with 2 warnings8:30:05 pm
+
+ warning  
+
+asset size limit: The following asset(s) exceed the recommended size limit (244 KiB).
+This can impact web performance.
+Assets: 
+  fonts/materialdesignicons-webfont.ec024da7.woff2 (394 KiB)
+  fonts/materialdesignicons-webfont.e55a20c8.woff (574 KiB)
+  fonts/materialdesignicons-webfont.2146c3c8.eot (1.25 MiB)
+  fonts/materialdesignicons-webfont.1fcc3627.ttf (1.25 MiB)
+  js/app.3dd02edf.js (272 KiB)
+  css/chunk-vendors.eafd8984.css (611 KiB)
+  js/chunk-vendors.c6575c7d.js (2.37 MiB)
+
+ warning  
+
+entrypoint size limit: The following entrypoint(s) combined asset size exceeds the recommended limit (244 KiB). This can impact web performance.
+Entrypoints:
+  app (3.25 MiB)
+      css/chunk-vendors.eafd8984.css
+      js/chunk-vendors.c6575c7d.js
+      css/app.ebf860c9.css
+      js/app.3dd02edf.js
+
+
+  File                                      Size             Gzipped
+
+  dist\js\chunk-vendors.c6575c7d.js         2424.31 KiB      768.11 KiB
+  dist\js\app.3dd02edf.js                   271.80 KiB       54.87 KiB
+  dist\js\home.4d5247c2.js                  114.93 KiB       27.16 KiB
+  dist\js\settings.51068241.js              95.63 KiB        29.47 KiB
+  dist\js\wizard.67e1ffcf.js                38.87 KiB        8.92 KiB
+  dist\js\goals.30ca5fee.js                 28.26 KiB        8.00 KiB
+  dist\js\profile.501e19f9.js               27.93 KiB        6.74 KiB
+  dist\js\agendaTree.ea28a989.js            25.64 KiB        6.97 KiB
+  dist\precache-manifest.e5df111c71dfba7    17.50 KiB        3.70 KiB
+  0bdd9c5f8f85522ac.js
+  dist\js\priority.a175dd62.js              15.38 KiB        4.80 KiB
+  dist\js\groups.f01e2b64.js                13.09 KiB        3.76 KiB
+  dist\js\chunk-746deeb0.60e68b64.js        12.52 KiB        3.95 KiB
+  dist\js\search.9de34e28.js                10.84 KiB        4.07 KiB
+  dist\js\guide.12a319ed.js                 9.77 KiB         3.46 KiB
+  dist\js\history.197c7707.js               8.46 KiB         2.88 KiB
+  dist\js\milestones.82ed65cb.js            7.46 KiB         1.88 KiB
+  dist\js\progress.e636d2ea.js              6.52 KiB         2.27 KiB
+  dist\js\about.1ecc6b03.js                 4.12 KiB         1.73 KiB
+  dist\js\chunk-2d228ce0.6ee451cc.js        3.57 KiB         1.17 KiB
+  dist\js\chunk-7caead98.44a49c04.js        3.02 KiB         1.53 KiB
+  dist\js\chunk-2d0f0c5f.598861aa.js        2.52 KiB         1.12 KiB
+  dist\firebase-messaging-sw.js             2.20 KiB         0.85 KiB
+  dist\js\stats.71fed439.js                 1.70 KiB         0.66 KiB
+  dist\basic-sw.js                          1.05 KiB         0.44 KiB
+  dist\sw.js                                0.81 KiB         0.48 KiB
+  dist\js\notifications.0b8c8058.js         0.53 KiB         0.34 KiB
+  dist\js\chunk-2d0da3da.9056ddf3.js        0.29 KiB         0.23 KiB
+  dist\css\chunk-vendors.eafd8984.css       610.74 KiB       91.45 KiB
+  dist\css\home.3fdd1609.css                22.27 KiB        3.29 KiB
+  dist\css\app.ebf860c9.css                 18.87 KiB        3.50 KiB
+  dist\css\settings.53e09829.css            5.25 KiB         1.39 KiB
+  dist\css\agendaTree.52cda186.css          3.21 KiB         0.96 KiB
+  dist\css\goals.3c9d874b.css               2.03 KiB         0.73 KiB
+  dist\css\wizard.71edea88.css              1.87 KiB         0.50 KiB
+  dist\css\profile.441570b6.css             1.84 KiB         0.53 KiB
+  dist\css\history.356bde28.css             0.91 KiB         0.38 KiB
+  dist\css\milestones.40e67fa0.css          0.89 KiB         0.31 KiB
+  dist\css\priority.67202de5.css            0.87 KiB         0.37 KiB
+  dist\css\search.cd57299d.css              0.80 KiB         0.32 KiB
+  dist\css\groups.14c0eb51.css              0.70 KiB         0.23 KiB
+  dist\css\about.adbcac1a.css               0.53 KiB         0.22 KiB
+  dist\css\progress.3766a48a.css            0.33 KiB         0.18 KiB
+  dist\css\stats.23fdca75.css               0.06 KiB         0.08 KiB
+
+  Images and other types of assets omitted.
+
+ DONE  Build complete. The dist directory is ready to be deployed.
+ INFO  Check out deployment instructions at https://cli.vuejs.org/guide/deployment.html
+      
+Done in 79.70s.

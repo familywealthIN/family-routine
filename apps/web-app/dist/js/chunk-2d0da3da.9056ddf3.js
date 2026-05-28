@@ -1,0 +1,2 @@
+(window["webpackJsonp"]=window["webpackJsonp"]||[]).push([["chunk-2d0da3da"],{"6b80":function(n,s,c){"use strict";c.r(s),c.d(s,"SplashScreenWeb",(function(){return a}));var e=c("6033");class a extends e["b"]{async show(n){}async hide(n){}}}}]);
+//# sourceMappingURL=chunk-2d0da3da.9056ddf3.js.map

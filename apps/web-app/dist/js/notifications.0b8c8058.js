@@ -1,0 +1,2 @@
+(window["webpackJsonp"]=window["webpackJsonp"]||[]).push([["notifications"],{fda7:function(t,n,e){"use strict";e.r(n);var i=function(){var t=this,n=t.$createElement;t._self._c;return t._m(0)},s=[function(){var t=this,n=t.$createElement,e=t._self._c||n;return e("div",{staticClass:"notifications"},[e("br"),e("h1",{staticClass:"text-xs-center"},[t._v("Coming Soon")])])}],o={components:{},name:"notifications"},a=o,c=e("2be6"),r=Object(c["a"])(a,i,s,!1,null,null,null);n["default"]=r.exports}}]);
+//# sourceMappingURL=notifications.0b8c8058.js.map
