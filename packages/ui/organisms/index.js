@@ -28,6 +28,7 @@ export { default as SearchResults } from './SearchResults/SearchResults.vue';
 export { default as SummaryCards } from './SummaryCards/SummaryCards.vue';
 
 // Dashboard surfaces
+export { default as AgendaTaskList } from './AgendaTaskList/AgendaTaskList.vue';
 export { default as CurrentTaskCard } from './CurrentTaskCard/CurrentTaskCard.vue';
 export { default as UpcomingPastTasks } from './UpcomingPastTasks/UpcomingPastTasks.vue';
 export { default as WeekGoalStreak } from './WeekGoalStreak/WeekGoalStreak.vue';

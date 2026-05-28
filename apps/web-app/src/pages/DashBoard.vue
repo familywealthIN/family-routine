@@ -49,51 +49,13 @@
             </div>
           </div>
           <div class="skip-agenda">
-            <template v-if="todayGoalItemsGrouped.length">
-              <div v-for="group in todayGoalItemsGrouped" :key="group.taskId" class="mb-3">
-                <v-card class="pb-2">
-                  <v-card-title class="pb-1 pt-2">
-                    <span class="subheading">{{ group.taskName }}</span>
-                  </v-card-title>
-                  <v-divider></v-divider>
-                  <v-card-text class="pa-0">
-                    <v-list dense class="transparent pa-0">
-                      <template v-for="taskGoals in group.goals">
-                        <v-list-tile
-                          v-for="goalItem in taskGoals.goalItems"
-                          :key="goalItem.id"
-                          class="agenda-day-item"
-                        >
-                          <v-list-tile-action @click.stop>
-                            <v-checkbox
-                              :input-value="goalItem.isComplete"
-                              color="primary"
-                              hide-details
-                              class="agenda-day-checkbox ma-0 pa-0"
-                              @change="completeGoalItem({
-                                id: goalItem.id, period: taskGoals.period,
-                                date: taskGoals.date, taskRef: goalItem.taskRef,
-                                isComplete: $event, isMilestone: goalItem.isMilestone
-                              })"
-                            />
-                          </v-list-tile-action>
-                          <v-list-tile-content>
-                            <v-list-tile-title :class="{ 'agenda-item-completed': goalItem.isComplete }">
-                              {{ goalItem.body }}
-                            </v-list-tile-title>
-                          </v-list-tile-content>
-                        </v-list-tile>
-                      </template>
-                    </v-list>
-                  </v-card-text>
-                </v-card>
-              </div>
-            </template>
-            <atom-card v-else class="modern-card">
-              <atom-card-text class="text-xs-center">
-                <p>No Day Tasks</p>
-              </atom-card-text>
-            </atom-card>
+            <agenda-task-list
+              :groups="todayGoalItemsGrouped"
+              :loading="$apollo.queries.goals && $apollo.queries.goals.loading && goalsFirstLoad"
+              @complete-goal-item="completeGoalItem"
+              @edit-goal-item="(item) => toggleGoalDisplayDialog(item, true)"
+              @delete-goal-item="deleteTaskGoal"
+            />
           </div>
         </div>
       </template>
@@ -219,78 +181,14 @@
         </div>
       </div>
       <div class="pa-3 pt-0">
-        <!-- Loading state -->
-        <atom-card v-if="$apollo.queries.agendaGoals.loading" class="modern-card">
-          <atom-card-text class="text-xs-center pa-5">
-            <atom-progress-circular
-              indeterminate
-              color="primary"
-              size="40"
-              class="mb-3"
-            ></atom-progress-circular>
-            <p class="mb-0">Loading day tasks...</p>
-          </atom-card-text>
-        </atom-card>
-
-        <template v-else-if="nonTodayGoalItems.length">
-          <div v-for="group in nonTodayGoalItems" :key="group.taskId" class="mb-3">
-            <v-card class="pb-2">
-              <v-card-title class="pb-1 pt-2">
-                <span class="subheading">{{ group.taskName }}</span>
-              </v-card-title>
-              <v-divider></v-divider>
-              <v-card-text class="pa-0">
-                <v-list dense class="transparent pa-0">
-                  <template v-for="taskGoals in group.goals">
-                    <v-list-tile
-                      v-for="goalItem in taskGoals.goalItems"
-                      :key="goalItem.id"
-                      class="agenda-day-item"
-                    >
-                      <v-list-tile-action v-if="!isFutureDateSelected" @click.stop>
-                        <v-checkbox
-                          :input-value="goalItem.isComplete"
-                          color="primary"
-                          hide-details
-                          class="agenda-day-checkbox ma-0 pa-0"
-                          @change="completeAgendaGoalItem({
-                            id: goalItem.id, period: taskGoals.period,
-                            date: taskGoals.date, taskRef: goalItem.taskRef,
-                            isComplete: $event, isMilestone: goalItem.isMilestone
-                          })"
-                        />
-                      </v-list-tile-action>
-                      <v-list-tile-content>
-                        <v-list-tile-title :class="{ 'agenda-item-completed': goalItem.isComplete }">
-                          {{ goalItem.body }}
-                        </v-list-tile-title>
-                      </v-list-tile-content>
-                      <v-list-tile-action>
-                        <v-btn icon small
-                          @click.stop="toggleGoalDisplayDialog(
-                            { ...goalItem, period: taskGoals.period, date: taskGoals.date }, true
-                          )">
-                          <v-icon size="18">edit</v-icon>
-                        </v-btn>
-                      </v-list-tile-action>
-                      <v-list-tile-action>
-                        <v-btn icon small @click.stop="deleteAgendaGoalFromList({ id: goalItem.id, period: taskGoals.period, date: taskGoals.date })">
-                          <v-icon size="18">delete</v-icon>
-                        </v-btn>
-                      </v-list-tile-action>
-                    </v-list-tile>
-                  </template>
-                </v-list>
-              </v-card-text>
-            </v-card>
-          </div>
-        </template>
-
-        <atom-card v-else class="modern-card">
-          <atom-card-text class="text-xs-center">
-            <p>No Day Tasks</p>
-          </atom-card-text>
-        </atom-card>
+        <agenda-task-list
+          :groups="nonTodayGoalItems"
+          :loading="$apollo.queries.agendaGoals.loading"
+          :hide-checkbox="isFutureDateSelected"
+          @complete-goal-item="completeAgendaGoalItem"
+          @edit-goal-item="(item) => toggleGoalDisplayDialog(item, true)"
+          @delete-goal-item="deleteAgendaGoalFromList"
+        />
       </div>
     </div>
     <atom-dialog
@@ -444,6 +342,7 @@ import CurrentTaskCard from '@routine-notes/ui/organisms/CurrentTaskCard/Current
 import UpcomingPastTasks from '@routine-notes/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue';
 import WeekGoalStreak from '@routine-notes/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue';
 import { AgentEditModal } from '@routine-notes/ui/organisms';
+import AgendaTaskList from '@routine-notes/ui/organisms/AgendaTaskList/AgendaTaskList.vue';
 import {
   AtomAlert,
   AtomButton,
@@ -519,6 +418,7 @@ export default {
     CurrentTaskCard,
     UpcomingPastTasks,
     WeekGoalStreak,
+    AgendaTaskList,
     AtomAlert,
     AtomButton,
     AtomCard,
