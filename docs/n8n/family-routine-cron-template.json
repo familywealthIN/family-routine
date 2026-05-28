@@ -1,9 +1,9 @@
 {
-  "name": "Family Routine Cron Jobs",
+  "name": "Routine Notes Cron Jobs",
   "nodes": [
     {
       "parameters": {
-        "content": "## Family Routine Cron Jobs\nAll 4 scheduled tasks in one workflow.\n\n### Setup\n1. Place the family-routine project on your n8n server at `/home/node/family-routine`\n2. Run `npm install` or `yarn install` in the project folder\n3. Ensure `.env` and `serviceAccountKey.json` are configured\n4. Adjust paths in Execute Command nodes if needed\n5. Set workflow timezone to America/New_York",
+        "content": "## Routine Notes Cron Jobs\nAll 4 scheduled tasks in one workflow.\n\n### Setup\n1. Place the family-routine project on your n8n server at `/home/node/family-routine`\n2. Run `npm install` or `yarn install` in the project folder\n3. Ensure `.env` and `serviceAccountKey.json` are configured\n4. Adjust paths in Execute Command nodes if needed\n5. Set workflow timezone to America/New_York",
         "height": 240,
         "width": 460
       },

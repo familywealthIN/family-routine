@@ -285,6 +285,7 @@ export default {
 <style>
 .current-task {
   overflow: hidden;
+  min-height: 336px;
 }
 .current-task .active .v-list__tile--avatar:hover {
   background-color: #fff;
@@ -333,7 +334,9 @@ export default {
 }
 .current-task .concentrated-view .active .v-list__tile__title {
   font-size: 24px;
-  height: 28px;
+  height: auto;
+  line-height: 1.3;
+  padding-bottom: 2px;
 }
 .current-task .concentrated-view .active .goal-list .v-list__tile__title {
   font-size: 10px;

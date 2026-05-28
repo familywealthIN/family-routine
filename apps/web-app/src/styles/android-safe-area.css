@@ -75,6 +75,7 @@ body {
 }
 
 @media (max-width: 600px) {
+
   .v-toolbar,
   .v-item-group {
     padding-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top));
@@ -128,6 +129,11 @@ body {
   }
 }
 
+/* NOTE: We previously force-zeroed v-content's padding-top, which
+   defeated Vuetify's auto-reservation for `app` toolbars and made every
+   page's header overlap the content below. Vuetify already pads
+   v-content by the toolbar's measured height (toolbar height +
+   safe-area on mobile), so we leave that alone now. */
 /* Fallback for older Android versions */
 /* Enable this before android build */
 /* .v-content {
@@ -137,7 +143,8 @@ body {
 /* Additional Android 14+ fixes */
 .android14-plus #mobileLayout {
   height: 100vh !important;
-  height: 100dvh !important; /* Dynamic viewport height for better support */
+  height: 100dvh !important;
+  /* Dynamic viewport height for better support */
 }
 
 /* Ensure proper stacking context */
@@ -171,3 +178,14 @@ body {
     bottom: max(var(--safe-area-inset-bottom), 8px) !important;
   }
 }
+
+.animated {
+  padding-top: 0px!important;
+}
+.v-btn-toggle .v-btn {
+  padding: 0 5px!important;
+}
+
+ .prompt-box {
+    padding: 10px 12px 40px 12px!important;
+  }

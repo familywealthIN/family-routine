@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-console.log('\n🔐 Family Routine MCP - OAuth Credential Generator\n');
+console.log('\n🔐 Routine Notes MCP - OAuth Credential Generator\n');
 console.log('='.repeat(60));
 
 // Generate OAuth Client Secret

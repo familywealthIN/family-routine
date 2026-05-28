@@ -1,8 +1,8 @@
-# Copilot Instructions for Family Routine Project
+# Copilot Instructions for Routine Notes Project
 
 ## Project Overview
 
-**Project Name**: Family Routine / Routine Notes  
+**Project Name**: Routine Notes  
 **Framework**: Vue.js 2.x  
 **Backend**: GraphQL with Express and MongoDB (Mongoose)  
 **Architecture**: Full-stack application with atomic design for UI components  
@@ -1397,4 +1397,4 @@ git push origin feature/new-feature
 ---
 
 **Last Updated**: December 22, 2025  
-**Maintainer**: Family Routine Development Team
+**Maintainer**: Routine Notes Development Team
