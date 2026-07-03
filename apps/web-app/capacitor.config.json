@@ -5,10 +5,10 @@
   "bundledWebRuntime": false,
   "ios": {
     "minVersion": "15.0",
-    "path": "../../ios"
+    "path": "../ios"
   },
   "android": {
-    "path": "../../android"
+    "path": "../android"
   },
   "plugins": {
     "LocalNotifications": {
