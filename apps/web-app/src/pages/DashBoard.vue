@@ -264,7 +264,7 @@
             period="day"
             :tasklist="displayTasklist"
             :selectedTaskRef="selectedTaskRef"
-            @start-quick-goal-task="checkClick"
+            @start-quick-goal-task="(task) => checkClick(task, { fireAgent: false })"
             @build-agent="onBuildAgent"
             @start-agent="onStartAgentFromQuick"
           />
@@ -1113,14 +1113,20 @@ export default {
     },
 
     async onStartAgentFromQuick(taskRef) {
+      // Only reached when a day-goal already exists — the container
+      // handles the no-goal case by creating the goal item (which fires
+      // the agent itself). Tick if needed; the tick success handler fires
+      // the agent with the existing goal id. If the routine is already
+      // ticked, fire directly since checkClick early-returns.
       if (!taskRef) return;
       this.quickTaskDialog = false;
       const task = this.displayTasklist.find((t) => t.id === taskRef);
-      if (task) {
+      if (task && !task.ticked && !task.passed && !task.wait) {
         this.checkClick(task);
+        return;
       }
       const goalId = this.findFirstGoalIdForRoutine(taskRef);
-      if (goalId) {
+      if (goalId && !String(goalId).startsWith('temp-')) {
         await this.$agent.fireStartEventIfPresent({
           taskRef, goalId, goalDate: this.date, goalPeriod: 'day',
         });
@@ -1185,9 +1191,14 @@ export default {
       }
 
       if (action === 'start') {
-        if (!routine.ticked) this.checkClick(routine);
+        // Ticking fires the agent in the tick success handler; only fire
+        // directly when the routine is already ticked (checkClick no-ops).
+        if (!routine.ticked) {
+          this.checkClick(routine);
+          return;
+        }
         const goalId = this.findFirstGoalIdForRoutine(routine.id);
-        if (goalId) {
+        if (goalId && !String(goalId).startsWith('temp-')) {
           this.$agent.fireStartEventIfPresent({
             taskRef: routine.id, goalId, goalDate: this.date, goalPeriod: 'day',
           });
@@ -1557,7 +1568,7 @@ export default {
         }
       }
     },
-    checkClick(task) {
+    checkClick(task, { fireAgent = true } = {}) {
       // Track task completion
       this.trackTaskEvent('complete', {
         id: task.id,
@@ -1669,9 +1680,13 @@ export default {
           // Trigger the agent's start event if one is assigned. The
           // {{goal_id}} substitution uses the first day-goal already
           // attached to this routine; it's a no-op when no goal yet
-          // exists (Quick Goal Creation handles that path).
+          // exists (Quick Goal Creation handles that path). Callers pass
+          // fireAgent:false when they fire the event themselves (the
+          // quick-goal flow fires with the freshly created goal id).
+          // Skip Apollo optimistic temp ids — the real id follows once
+          // the addGoalItem mutation resolves.
           const goalId = this.findFirstGoalIdForRoutine(task.id);
-          if (goalId) {
+          if (fireAgent && goalId && !String(goalId).startsWith('temp-')) {
             this.$agent.fireStartEventIfPresent({
               taskRef: task.id, goalId, goalDate: this.date, goalPeriod: 'day',
             }).catch(() => {});

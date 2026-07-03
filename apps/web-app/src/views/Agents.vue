@@ -1,51 +1,78 @@
 <template>
-  <v-container fluid grid-list-md>
-    <v-layout row wrap align-center class="mb-2">
-      <v-flex grow>
-        <h2 class="agents-heading">Agents</h2>
-        <div class="agents-subheading">
-          One agent per routine. Each agent fires a start event when its routine becomes
-          active and (optionally) an end event when its goals are complete.
-        </div>
-      </v-flex>
-      <v-flex shrink>
-        <v-btn color="primary" :loading="$agent.loading" @click="openCreate">
-          <v-icon left>add</v-icon> New agent
-        </v-btn>
-      </v-flex>
-    </v-layout>
-
-    <v-card v-if="!agents.length && !$agent.loading">
-      <v-card-text class="text-xs-center pa-4">
-        <p>No agents yet. Create one to start automating routine actions.</p>
-      </v-card-text>
-    </v-card>
-
-    <v-data-table
-      v-else
-      :headers="headers"
-      :items="agents"
-      hide-actions
-      class="elevation-1"
-    >
-      <template #items="props">
-        <tr>
+  <container-box :isLoading="$agent.loading && !agents.length">
+    <atom-card dark flat class="image-card">
+      <atom-button
+        absolute
+        dark
+        fab
+        bottom
+        right
+        color="info"
+        @click="openCreate"
+      >
+        <atom-icon>add</atom-icon>
+      </atom-button>
+      <atom-img
+        class="image-card-img"
+        src="https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=1400&q=60"
+        gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
+      >
+        <atom-container fill-height>
+          <atom-layout align-center justify-center class="agent-stats-row">
+            <div class="agent-stat-item text-xs-center">
+              <div class="overline white--text stat-label">Agents</div>
+              <div class="display-3 white--text font-weight-medium">{{ agents.length }}</div>
+            </div>
+            <v-divider vertical dark class="agent-stat-divider"></v-divider>
+            <div class="agent-stat-item text-xs-center">
+              <div class="overline white--text stat-label">Active</div>
+              <div class="display-3 white--text font-weight-medium">{{ activeCount }}</div>
+            </div>
+            <v-divider vertical dark class="agent-stat-divider"></v-divider>
+            <div class="agent-stat-item text-xs-center">
+              <div class="overline white--text stat-label">Success</div>
+              <div class="display-3 white--text font-weight-medium">{{ successTotal }}</div>
+            </div>
+            <v-divider vertical dark class="agent-stat-divider"></v-divider>
+            <div class="agent-stat-item text-xs-center">
+              <div class="overline white--text stat-label">Failures</div>
+              <div class="display-3 white--text font-weight-medium">{{ failureTotal }}</div>
+            </div>
+          </atom-layout>
+        </atom-container>
+      </atom-img>
+    </atom-card>
+    <atom-card-text class="image-card-page px-0">
+      <atom-data-table
+        :headers="headers"
+        :items="agents"
+        class="elevation-0 mt-2"
+        hide-actions
+      >
+        <template v-slot:items="props">
           <td>{{ props.item.name }}</td>
           <td>{{ routineName(props.item.taskRef) }}</td>
           <td>{{ statusLabel(props.item) }}</td>
-          <td class="text-xs-right">{{ props.item.successCount || 0 }}</td>
-          <td class="text-xs-right">{{ props.item.failureCount || 0 }}</td>
-          <td>
-            <v-btn icon small @click="openEdit(props.item)">
-              <v-icon small>edit</v-icon>
-            </v-btn>
-            <v-btn icon small @click="confirmRemove(props.item)">
-              <v-icon small>delete</v-icon>
-            </v-btn>
+          <td v-if="!isMobile" class="text-xs-right">{{ props.item.successCount || 0 }}</td>
+          <td v-if="!isMobile" class="text-xs-right">{{ props.item.failureCount || 0 }}</td>
+          <td class="text-xs-right agent-actions-cell">
+            <atom-button flat icon class="mr-0" @click="openEdit(props.item)">
+              <atom-icon>edit</atom-icon>
+            </atom-button>
+            <atom-button flat icon class="ml-0" @click="confirmRemove(props.item)">
+              <atom-icon>delete</atom-icon>
+            </atom-button>
           </td>
-        </tr>
-      </template>
-    </v-data-table>
+        </template>
+        <template v-slot:no-data>
+          <td :colspan="headers.length" class="text-xs-center pa-4">
+            No agents yet. Create one to start automating routine actions —
+            each agent fires a start event when its routine becomes active and
+            (optionally) an end event when its goals are complete.
+          </td>
+        </template>
+      </atom-data-table>
+    </atom-card-text>
 
     <agent-edit-modal
       v-model="modalOpen"
@@ -68,12 +95,23 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-container>
+  </container-box>
 </template>
 
 <script>
 import gql from 'graphql-tag';
+import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import { AgentEditModal } from '@routine-notes/ui/organisms';
+import {
+  AtomButton,
+  AtomCard,
+  AtomCardText,
+  AtomContainer,
+  AtomDataTable,
+  AtomIcon,
+  AtomImg,
+  AtomLayout,
+} from '@routine-notes/ui/atoms';
 
 const ROUTINE_ITEMS_QUERY = gql`
   query agentsRoutineItems {
@@ -85,9 +123,22 @@ const ROUTINE_ITEMS_QUERY = gql`
   }
 `;
 
+const ACTIVE_STATUSES = ['running', 'listening'];
+
 export default {
   name: 'AgentsPage',
-  components: { AgentEditModal },
+  components: {
+    ContainerBox,
+    AgentEditModal,
+    AtomButton,
+    AtomCard,
+    AtomCardText,
+    AtomContainer,
+    AtomDataTable,
+    AtomIcon,
+    AtomImg,
+    AtomLayout,
+  },
   data() {
     return {
       modalOpen: false,
@@ -106,19 +157,40 @@ export default {
   },
   computed: {
     agents() { return this.$agent.agents; },
+    activeCount() {
+      return this.agents.filter((a) => ACTIVE_STATUSES.includes(a.executionStatus)).length;
+    },
+    successTotal() {
+      return this.agents.reduce((total, a) => total + (a.successCount || 0), 0);
+    },
+    failureTotal() {
+      return this.agents.reduce((total, a) => total + (a.failureCount || 0), 0);
+    },
+    isMobile() {
+      return this.$vuetify && this.$vuetify.breakpoint && this.$vuetify.breakpoint.xs;
+    },
     headers() {
-      return [
+      const headers = [
         { text: 'Name', value: 'name', sortable: false },
         { text: 'Routine', value: 'taskRef', sortable: false },
         { text: 'Status', value: 'executionStatus', sortable: false },
-        {
-          text: 'Success', value: 'successCount', sortable: false, align: 'right',
-        },
-        {
-          text: 'Failures', value: 'failureCount', sortable: false, align: 'right',
-        },
-        { text: '', value: 'actions', sortable: false },
       ];
+      // Success/Failures totals already show in the hero stats; drop the
+      // per-agent columns on phones so the Action buttons stay reachable.
+      if (!this.isMobile) {
+        headers.push(
+          {
+            text: 'Success', value: 'successCount', sortable: false, align: 'right',
+          },
+          {
+            text: 'Failures', value: 'failureCount', sortable: false, align: 'right',
+          },
+        );
+      }
+      headers.push({
+        text: 'Action', value: 'actions', sortable: false, align: 'right',
+      });
+      return headers;
     },
     routineOptions() {
       const assigned = new Set(
@@ -178,13 +250,36 @@ export default {
 </script>
 
 <style scoped>
-.agents-heading {
-  margin: 0;
-  font-size: 22px;
+.image-card-img {
+  height: 180px;
+  border-radius: 12px 12px 0 0;
 }
-.agents-subheading {
-  font-size: 13px;
-  color: #777;
-  margin-top: 4px;
+@media (max-width: 600px) {
+  .image-card-img {
+    height: 260px;
+  }
+}
+.agent-stats-row {
+  gap: 0;
+}
+.agent-stat-item {
+  flex: 1;
+  padding: 4px 8px;
+}
+.agent-stat-divider >>> .v-divider--vertical {
+  margin: 8px 0;
+  min-height: 48px;
+  opacity: 0.5;
+}
+.stat-label {
+  letter-spacing: 2px !important;
+  font-size: 11px !important;
+  margin-bottom: 4px;
+  opacity: 0.85;
+}
+.agent-actions-cell {
+  width: 105px;
+  padding: 0 8px 0 0 !important;
+  white-space: nowrap;
 }
 </style>

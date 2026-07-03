@@ -23,13 +23,12 @@
         />
 
         <v-subheader class="pa-0">Start event</v-subheader>
-        <v-layout row wrap>
+        <v-layout row wrap align-start class="agent-event-row">
           <v-flex xs4 pr-2>
             <v-select
               v-model="form.startEvent.kind"
               :items="kindOptions"
               label="Kind"
-              dense
             />
           </v-flex>
           <v-flex xs8>
@@ -37,21 +36,20 @@
               v-model="form.startEvent.value"
               :label="kindLabel(form.startEvent.kind)"
               auto-grow
-              rows="2"
-              hint="Use {{ goal_id }} to substitute the goal item id"
+              rows="1"
+              :hint="goalIdHint"
               persistent-hint
             />
           </v-flex>
         </v-layout>
 
         <v-subheader class="pa-0 mt-3">End event (optional)</v-subheader>
-        <v-layout row wrap>
+        <v-layout row wrap align-start class="agent-event-row">
           <v-flex xs4 pr-2>
             <v-select
               v-model="form.endEvent.kind"
               :items="kindOptions"
               label="Kind"
-              dense
               clearable
             />
           </v-flex>
@@ -60,7 +58,7 @@
               v-model="form.endEvent.value"
               :label="kindLabel(form.endEvent.kind)"
               auto-grow
-              rows="2"
+              rows="1"
               :disabled="!form.endEvent.kind"
             />
           </v-flex>
@@ -90,8 +88,6 @@
 const KIND_OPTIONS = [
   { text: 'URL (GET)', value: 'url' },
   { text: 'cURL command', value: 'curl' },
-  { text: 'Notify (in-app)', value: 'notify' },
-  { text: 'Log (console)', value: 'log' },
 ];
 
 const blankEvent = () => ({ kind: 'url', value: '' });
@@ -123,6 +119,9 @@ export default {
       set(v) { this.$emit('input', v); },
     },
     kindOptions() { return KIND_OPTIONS; },
+    goalIdHint() {
+      return 'Use {{ goal_id }} to substitute the goal item id';
+    },
     titleText() {
       return this.agent && this.agent.id ? 'Edit agent' : 'Build agent';
     },
@@ -149,12 +148,7 @@ export default {
   },
   methods: {
     kindLabel(kind) {
-      switch (kind) {
-        case 'curl': return 'cURL command';
-        case 'notify': return 'Notify body (text after notify:)';
-        case 'log': return 'Log line (text after log:)';
-        default: return 'URL';
-      }
+      return kind === 'curl' ? 'cURL command' : 'URL';
     },
     hydrate() {
       this.errorMessage = '';

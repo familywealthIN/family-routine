@@ -54,7 +54,7 @@
         color="primary"
         outline
         :disabled="buttonLoading"
-        @click="$emit('start-agent')"
+        @click="$emit('start-agent', { ...newGoalItem })"
       >
         Start Agent
       </v-btn>
@@ -182,7 +182,7 @@ export default {
       this.newGoalItem.tags = tags;
     },
     setLocalUserTag(newTags) {
-      const userTags = getJSON(localStorage.getItem(USER_TAGS), []);
+      const userTags = getJSON(localStorage.getItem(USER_TAGS), []) || [];
       newTags.forEach((tag) => {
         if (!userTags.includes(tag)) {
           userTags.push(tag);

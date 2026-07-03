@@ -23,11 +23,11 @@
 </template>
 
 <script>
-import { AtomBottomSheet } from '../../atoms';
+import { AtomBottomSheet, AtomDialog } from '../../atoms';
 
 export default {
   name: 'OrganismAgentResultModal',
-  components: { AtomBottomSheet },
+  components: { AtomBottomSheet, AtomDialog },
   props: {
     value: { type: Boolean, default: false },
     html: { type: String, default: '' },
@@ -42,7 +42,10 @@ export default {
       return this.$vuetify && this.$vuetify.breakpoint && this.$vuetify.breakpoint.name === 'xs';
     },
     wrapperComponent() {
-      return this.isMobile ? 'AtomBottomSheet' : 'v-dialog';
+      // Both wrappers are locally registered components — a raw 'v-dialog'
+      // string here bypasses vuetify-loader's static template scan, so
+      // VDialog never gets registered and the modal renders inert.
+      return this.isMobile ? 'AtomBottomSheet' : 'AtomDialog';
     },
   },
   methods: {

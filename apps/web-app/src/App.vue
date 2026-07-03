@@ -238,6 +238,9 @@ export default {
     },
 
     checkSoftKeys() {
+      // Native WebView only — mobile browsers handle the status bar and
+      // must never receive the android14-plus safe-area classes.
+      if (!Capacitor.isNativePlatform()) return;
       // Android 14+ detection
       const ua = navigator.userAgent || navigator.vendor || window.opera;
       const androidMatch = ua.match(/Android\s([0-9.]+)/);
@@ -258,8 +261,10 @@ export default {
   z-index: 5;
 }
 
-/* Toolbar positioning below safe area */
-.v-toolbar {
+/* Toolbar positioning below safe area — native WebView only. On mobile
+   web the browser owns the status bar and Vuetify sizes the toolbar
+   itself (56px on xs); forcing 64px here made the web header too tall. */
+.capacitor-native .v-toolbar {
   margin-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top)) !important;
   padding-top: 0 !important;
   height: 64px !important;
