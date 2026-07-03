@@ -173,6 +173,7 @@ export default {
       otherItems: [
         { title: 'Progress', icon: 'pie_chart', route: '/progress' },
         { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
+        { title: 'Agents', icon: 'smart_toy', route: '/agents' },
       ],
       yearGoals: [],
       projectTags: [],

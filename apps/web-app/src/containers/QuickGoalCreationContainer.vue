@@ -16,7 +16,7 @@
     @goal-ref-changed="updateCurrentGoalRef"
     @start-quick-goal-task="(task) => $emit('start-quick-goal-task', task)"
     @build-agent="$emit('build-agent', selectedTaskRef)"
-    @start-agent="$emit('start-agent', selectedTaskRef)"
+    @start-agent="startAgent"
   />
 </template>
 
@@ -207,6 +207,40 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+
+    /**
+     * "Start Agent" from the quick modal. An agent needs a goal context: if
+     * the routine has no goal item yet (fresh Build Agent flow) — or the
+     * user typed a new task — create the goal item first via addGoalItem,
+     * which already fires the agent's start event with the fresh goal id.
+     * Only when a goal item already exists do we defer to the dashboard,
+     * which ticks the routine and fires the agent with the existing goal.
+     */
+    async startAgent(newGoalItem) {
+      const taskRef = this.selectedTaskRef;
+      if (!taskRef) return;
+
+      const date = periodGoalDates(this.period, this.date);
+      const goal = this.goals.find((g) => g.period === this.period && g.date === date);
+      const hasGoalItem = !!(goal && Array.isArray(goal.goalItems)
+        && goal.goalItems.some((gi) => gi.taskRef === taskRef));
+      const typedBody = newGoalItem && newGoalItem.body && newGoalItem.body.trim();
+
+      if (typedBody || !hasGoalItem) {
+        const task = this.tasklist
+          ? this.tasklist.find((t) => t.id === taskRef || t.taskId === taskRef)
+          : null;
+        await this.addGoalItem({
+          ...newGoalItem,
+          taskRef,
+          body: typedBody || (task && task.name) || 'Routine task',
+          tags: (newGoalItem && newGoalItem.tags) || [],
+        });
+        return;
+      }
+
+      this.$emit('start-agent', taskRef);
     },
 
     getGoal(period, date) {
