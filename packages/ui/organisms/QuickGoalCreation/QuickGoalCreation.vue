@@ -18,6 +18,7 @@
       <GoalTaskSelector
         :items="tasklist"
         v-model="newGoalItem.taskRef"
+        disabled
       />
     </v-flex>
     <v-flex xs12 d-flex>
@@ -47,6 +48,24 @@
         @click="handleAddGoalItem"
       >
         Start Task
+      </v-btn>
+      <v-btn
+        v-if="agentState === 'assigned'"
+        color="primary"
+        outline
+        :disabled="buttonLoading"
+        @click="$emit('start-agent', { ...newGoalItem })"
+      >
+        Start Agent
+      </v-btn>
+      <v-btn
+        v-else
+        color="primary"
+        outline
+        :disabled="buttonLoading"
+        @click="$emit('build-agent')"
+      >
+        Build Agent
       </v-btn>
     </v-flex>
   </v-layout>
@@ -113,6 +132,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    agentState: {
+      type: String,
+      default: 'none', // 'none' | 'assigned'
+    },
   },
   data() {
     return {
@@ -159,7 +182,7 @@ export default {
       this.newGoalItem.tags = tags;
     },
     setLocalUserTag(newTags) {
-      const userTags = getJSON(localStorage.getItem(USER_TAGS), []);
+      const userTags = getJSON(localStorage.getItem(USER_TAGS), []) || [];
       newTags.forEach((tag) => {
         if (!userTags.includes(tag)) {
           userTags.push(tag);

@@ -253,6 +253,7 @@ export default {
             // { title: 'Agenda', icon: 'assignment_turned_in', route: '/agenda' },
             { title: 'Progress', icon: 'pie_chart', route: '/progress' },
             { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
+            { title: 'Agents', icon: 'smart_toy', route: '/agents' },
           ],
         },
         {
@@ -387,7 +388,10 @@ export default {
     },
   },
   mounted() {
-    if (typeof window !== 'undefined') {
+    // Safe-area classes are native-WebView-only: mobile browsers manage
+    // the status bar themselves, and the android14-plus/android15 rules
+    // would inflate the web header with insets meant for edge-to-edge.
+    if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
       const ua = navigator.userAgent || navigator.vendor || window.opera;
 
       // Extract Android version from user agent

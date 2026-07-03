@@ -8,6 +8,7 @@
  */
 
 const http = require('http');
+const https = require('https');
 const readline = require('readline');
 
 class MCPHttpBridge {
@@ -167,9 +168,11 @@ class MCPHttpBridge {
       });
 
       const url = new URL(this.httpUrl);
+      const isHttps = url.protocol === 'https:';
+      const transport = isHttps ? https : http;
       const options = {
         hostname: url.hostname,
-        port: url.port || 80,
+        port: url.port || (isHttps ? 443 : 80),
         path: url.pathname === '/mcp' ? '/mcp/call' : `${url.pathname}/call`,
         method: 'POST',
         headers: {
@@ -179,7 +182,7 @@ class MCPHttpBridge {
         },
       };
 
-      const req = http.request(options, (res) => {
+      const req = transport.request(options, (res) => {
         let data = '';
 
         res.on('data', (chunk) => {

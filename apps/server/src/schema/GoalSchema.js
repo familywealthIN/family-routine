@@ -40,7 +40,7 @@ const GoalItemSchema = new mongoose.Schema({
   subTasks: [SubTaskItemSchema],
   status: {
     type: String,
-    enum: ['todo', 'progress', 'done', 'missed', 'rescheduled'],
+    enum: ['todo', 'progress', 'ready', 'done', 'missed', 'rescheduled'],
     default: 'todo',
   },
   createdAt: {

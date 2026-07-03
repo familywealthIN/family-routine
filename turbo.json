@@ -31,6 +31,13 @@
         "storybook": {
             "cache": false,
             "persistent": true
-        }
+        },
+         "ios:add": {},
+    "ios:sync": {},
+    "ios:open": {},
+
+    "android:add": {},
+    "android:sync": {},
+    "android:open": {}
     }
 }

@@ -4,7 +4,11 @@
   "webDir": "dist",
   "bundledWebRuntime": false,
   "ios": {
-    "minVersion": "15.0"
+    "minVersion": "15.0",
+    "path": "../ios"
+  },
+  "android": {
+    "path": "../android"
   },
   "plugins": {
     "LocalNotifications": {
