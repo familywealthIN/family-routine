@@ -243,9 +243,15 @@ class PushService {
     // Show feedback notification
     await this.showFeedbackNotification('Starting now! 💪', 'success');
 
-    // Navigate to the specific routine/task
-    if (data.taskId && window.app?.$router) {
-      window.app.$router.push(`/routine/${data.taskId}`);
+    // Navigate to the routine deep-link. Server populates `routineId` and
+    // optionally `action` in the FCM payload (`start` when an agent is
+    // assigned, `complete` otherwise). Older payloads only have `taskId`,
+    // so fall back to that as the routine id and default to `complete`.
+    const router = window.app && window.app.$router;
+    const routineId = data.routineId || data.taskId;
+    const action = data.action || 'complete';
+    if (router && routineId) {
+      router.push(`/home/${routineId}/${action}`);
     }
 
     this.trackAction('do_now', data);

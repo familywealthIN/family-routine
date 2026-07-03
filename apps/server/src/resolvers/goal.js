@@ -1586,6 +1586,36 @@ const mutation = {
       return goal.goalItems.find((aGoalItem) => aGoalItem.id === id);
     },
   },
+  markGoalItemReady: {
+    type: GoalItemType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+      date: { type: GraphQLNonNull(GraphQLString) },
+      period: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      await GoalModel.findOneAndUpdate(
+        {
+          date: args.date,
+          period: args.period,
+          email,
+          'goalItems._id': args.id,
+        },
+        { $set: { 'goalItems.$.status': 'ready' } },
+        { new: true },
+      ).exec();
+
+      const goal = await GoalModel.findOne(
+        { date: args.date, period: args.period, email },
+      ).exec();
+
+      return goal && goal.goalItems
+        ? goal.goalItems.find((item) => item.id === args.id)
+        : null;
+    },
+  },
   rescheduleGoalItem: {
     type: GoalItemType,
     args: {

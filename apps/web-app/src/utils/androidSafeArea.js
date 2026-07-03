@@ -1,7 +1,14 @@
 /**
  * Android Safe Area Utility
- * Handles safe area detection and management for Android 14+ devices
+ * Handles safe area detection and management for Android 14+ devices.
+ *
+ * Native-only: these workarounds compensate for the Capacitor WebView
+ * drawing edge-to-edge under the status bar. Mobile browsers manage the
+ * status bar themselves, so applying the insets there (previously done for
+ * any Android user agent) inflated the web header by the 24px fallback.
  */
+
+import { Capacitor } from '@capacitor/core';
 
 export class AndroidSafeAreaManager {
   constructor() {
@@ -18,6 +25,9 @@ export class AndroidSafeAreaManager {
 
   detectAndroidVersion() {
     if (typeof window === 'undefined') return;
+    // User-agent sniffing alone matches mobile Chrome on any Android phone;
+    // only the native WebView needs (and may apply) safe-area insets.
+    if (!Capacitor.isNativePlatform()) return;
 
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     const androidMatch = ua.match(/Android\s([0-9.]+)/);

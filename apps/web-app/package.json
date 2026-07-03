@@ -9,7 +9,14 @@
         "lint": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service lint",
         "test": "cross-env NODE_OPTIONS=--openssl-legacy-provider jest",
         "test:unit": "cross-env NODE_OPTIONS=--openssl-legacy-provider jest --coverage",
-        "test:watch": "cross-env NODE_OPTIONS=--openssl-legacy-provider jest --watch"
+        "test:watch": "cross-env NODE_OPTIONS=--openssl-legacy-provider jest --watch",
+        "ios:add": "npx cap add ios",
+        "ios:sync": "npx cap sync ios",
+        "ios:open": "npx cap open ios",
+
+        "android:add": "npx cap add android",
+        "android:sync": "npx cap sync android",
+        "android:open": "npx cap open android"
     },
     "dependencies": {
         "@capacitor-community/apple-sign-in": "^7.1.0",

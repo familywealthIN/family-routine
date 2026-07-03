@@ -134,23 +134,14 @@
                     required></atom-text-field>
                   Point Remaining: {{ maxInputPoints() }}
                 </atom-flex>
-                <atom-flex xs12 sm12 md12>
-                  <atom-textarea
-                    v-model="editedItem.startEvent"
-                    label="Start Event"
-                    class="monospace-font"
-                    rows="3"
-                    auto-grow
-                  ></atom-textarea>
-                </atom-flex>
-                <atom-flex xs12 sm12 md12>
-                  <atom-textarea
-                    v-model="editedItem.endEvent"
-                    label="End Event"
-                    class="monospace-font"
-                    rows="3"
-                    auto-grow
-                  ></atom-textarea>
+                <atom-flex xs12 sm12 md12 v-if="linkedAgent">
+                  <atom-subheader class="pa-0">Linked agent</atom-subheader>
+                  <div class="linked-agent-row">
+                    <span class="linked-agent-name">{{ linkedAgent.name }}</span>
+                    <span class="linked-agent-status">{{ linkedAgent.executionStatus || 'idle' }}</span>
+                    <atom-spacer></atom-spacer>
+                    <atom-button flat small color="primary" @click="goToAgents">Manage</atom-button>
+                  </div>
                 </atom-flex>
               </atom-layout>
           </atom-card-text>
@@ -248,8 +239,6 @@ export default {
             points
             ticked
             passed
-            startEvent
-            endEvent
             tags
           }
         }
@@ -271,8 +260,6 @@ export default {
         description: '',
         time: '00:00',
         points: 0,
-        startEvent: '',
-        endEvent: '',
         tags: [],
       },
       defaultItem: {
@@ -282,8 +269,6 @@ export default {
         description: '',
         time: '00:00',
         points: 0,
-        startEvent: '',
-        endEvent: '',
         tags: [],
       },
       nameRules: [
@@ -336,6 +321,11 @@ export default {
     },
     isMobile() {
       return this.$vuetify && this.$vuetify.breakpoint && this.$vuetify.breakpoint.xs;
+    },
+    linkedAgent() {
+      return this.editedItem && this.editedItem.id
+        ? this.$agent.getByTaskRef(this.editedItem.id)
+        : null;
     },
   },
 
@@ -436,6 +426,11 @@ export default {
       }
     },
 
+    goToAgents() {
+      this.close(true);
+      this.$router.push('/agents');
+    },
+
     save() {
       this.$refs.form.validate();
       if (this.valid) {
@@ -464,8 +459,6 @@ export default {
         time: item.time,
         points: Number(item.points),
         steps_count: item.steps ? item.steps.length : 0,
-        has_start_event: !!item.startEvent,
-        has_end_event: !!item.endEvent,
         tags_count: item.tags ? item.tags.length : 0,
       });
 
@@ -477,8 +470,6 @@ export default {
             $time: String!
             $points: Int!
             $steps: [StepInputItem]!
-            $startEvent: String
-            $endEvent: String
             $tags: [String]!
           ) {
             addRoutineItem(
@@ -487,8 +478,6 @@ export default {
               time: $time
               points: $points
               steps: $steps
-              startEvent: $startEvent
-              endEvent: $endEvent
               tags: $tags
             ) {
               id
@@ -500,8 +489,6 @@ export default {
               description
               time
               points
-              startEvent
-              endEvent
               tags
             }
           }
@@ -512,8 +499,6 @@ export default {
           time: item.time,
           points: Number(item.points),
           steps: item.steps.map((step) => ({ id: step.id, name: step.name })),
-          startEvent: item.startEvent,
-          endEvent: item.endEvent,
           tags: item.tags || [],
         },
         update: () => {
@@ -575,8 +560,6 @@ export default {
             $time: String!
             $points: Int!
             $steps: [StepInputItem]!
-            $startEvent: String
-            $endEvent: String
             $tags: [String]!
           ) {
             updateRoutineItem(
@@ -586,8 +569,6 @@ export default {
               description: $description
               time: $time
               points: $points
-              startEvent: $startEvent
-              endEvent: $endEvent
               tags: $tags
             ) {
               id
@@ -610,8 +591,6 @@ export default {
           description: item.description,
           time: item.time,
           points: Number(item.points),
-          startEvent: item.startEvent,
-          endEvent: item.endEvent,
           tags: item.tags || [],
         },
         update: () => {
@@ -636,6 +615,9 @@ export default {
     },
   },
   mounted() {
+    // Load agents so the edit dialog can surface the linked agent
+    this.$agent.fetchAll();
+
     // Track settings page view
     this.trackPageView('routine_settings');
 
@@ -656,6 +638,23 @@ export default {
 
 .steps-section {
   width: 100%;
+}
+
+.linked-agent-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.linked-agent-name {
+  font-weight: 500;
+}
+
+.linked-agent-status {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #777;
+  text-transform: capitalize;
 }
 
 .formStep {

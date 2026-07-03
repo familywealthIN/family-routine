@@ -20,10 +20,11 @@ import './plugins/curl-executor';
 import './styles/ios-input-zoom-fix.css';
 import VueApollo from './plugins/apollo';
 import './styles/android-safe-area.css';
-import './utils/androidSafeArea'; // Initialize Android safe area manager
+import './utils/androidSafeArea'; // Initialize Android safe area manager (native only)
 import currentTaskPlugin from './plugins/currentTask';
 import routinePlugin from './plugins/routine';
 import goalPlugin from './plugins/goal';
+import agentPlugin from './plugins/agent';
 // routineStore import removed - using Apollo cache persistence instead
 import App from './App.vue';
 // Import Google OAuth plugin
@@ -47,6 +48,14 @@ document.head.appendChild(script);
 Vue.use(VueCompositionAPI);
 
 Vue.config.productionTip = false;
+
+// Platform marker for CSS: safe-area/system-inset rules in
+// android-safe-area.css only apply inside the native WebView, never on
+// mobile web where the browser chrome owns the status bar.
+if (Capacitor.isNativePlatform()) {
+  document.documentElement.classList.add('capacitor-native');
+  document.body.classList.add('capacitor-native');
+}
 
 // Install Analytics plugin
 Vue.use(AnalyticsPlugin);
@@ -176,6 +185,7 @@ loadData().then(() => {
   // Install routine and goal plugins for shared state
   Vue.use(routinePlugin);
   Vue.use(goalPlugin);
+  Vue.use(agentPlugin);
 
   // Initialize Apollo cache persistence before mounting app
   setupCachePersistence().then(async () => {

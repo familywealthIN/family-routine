@@ -6,49 +6,20 @@ plugins:
   - serverless-offline
 
 build:
-  esbuild: false
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: false
+    platform: node
+    target: node18
+    external:
+      - '@aws-sdk/*'
+      - 'aws-sdk'
 
 package:
-  excludeDevDependencies: true
   patterns:
-    # Exclude everything by default, then include only what's needed
     - '!**'
-    # Include server code and handlers
-    - src/**
-    - handler.js
-    - serverless-mcp.js
-    - server.js
     - secrets.json
-    # Include only runtime node_modules
-    - node_modules/**
-    # --- Workspace symlink loop ---
-    # apps/server's package name is "server"; yarn hoists a symlink at
-    # node_modules/server → apps/server, which would recurse forever during
-    # packaging. Exclude it explicitly.
-    - '!node_modules/server/**'
-    # --- devDependencies ---
-    - '!node_modules/@babel/**'
-    - '!node_modules/babel*/**'
-    - '!node_modules/cross-env/**'
-    - '!node_modules/jest*/**'
-    - '!node_modules/nodemon/**'
-    - '!node_modules/serverless-offline/**'
-    # --- Large/unused at runtime ---
-    - '!node_modules/aws-sdk/**'
-    - '!node_modules/typescript/**'
-    - '!node_modules/.cache/**'
-    # --- Strip unused files from packages ---
-    - '!node_modules/**/*.md'
-    - '!node_modules/**/*.ts'
-    - '!node_modules/**/*.map'
-    - '!node_modules/**/test/**'
-    - '!node_modules/**/tests/**'
-    - '!node_modules/**/__tests__/**'
-    - '!node_modules/**/.bin/**'
-    - '!node_modules/**/LICENSE'
-    - '!node_modules/**/LICENSE.*'
-    - '!node_modules/**/CHANGELOG*'
-    - '!node_modules/**/.github/**'
 
 custom:
   secrets: ${file(secrets.json)}

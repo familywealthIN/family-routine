@@ -1,4 +1,15 @@
-/* 
+/*
+ * Native WebView safe-area compensation.
+ *
+ * Every rule in this file is scoped to `.capacitor-native` (added by
+ * main.js only when Capacitor.isNativePlatform()) or to the version
+ * classes `android14-plus` / `android15-*` (added by App.checkSoftKeys
+ * and utils/androidSafeArea.js, both native-gated). Mobile web browsers
+ * manage the status bar themselves — unscoped rules here previously
+ * inflated the web header/footer with native-only insets.
+ */
+
+/* Legacy toolbar overrides — kept for reference, intentionally disabled.
 .v-toolbar {
   margin-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top)) !important;
   padding-top: 0 !important;
@@ -11,24 +22,10 @@
 .android15-no-soft-keys .v-toolbar {
   margin-top: var(--status-bar-height, 0px) !important;
 }
-
-.android15-soft-keys .toolbar,
-.v-toolbar__content,
-.android15-no-soft-keys .toolbar,
-.v-toolbar__content {
-  &.ios{
-      padding-top: max(var(--system-bottom-inset, 30px), env(safe-area-inset-bottom)) !important;
-
-  }
-  
-
-
-}
-
-
+*/
 
 /* Footer styles - soft keys handling */
-.v-bottom-nav {
+.capacitor-native .v-bottom-nav {
   padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom)) !important;
   height: calc(64px + max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom))) !important;
 }
@@ -42,7 +39,7 @@
 }
 
 @media screen and (max-width: 600px) {
-  .v-content {
+  .capacitor-native .v-content {
     padding-top: calc(64px + max(var(--system-top-inset, 0px), env(safe-area-inset-top))) !important;
     padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom)) !important;
   }
@@ -52,16 +49,17 @@
   padding-bottom: max(var(--system-bottom-inset, 48px), env(safe-area-inset-bottom)) !important;
 }
 
-body {
+body.capacitor-native {
   padding-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top));
   padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom));
 }
 
-.android15-soft-keys body {
+.android15-soft-keys body,
+body.android15-soft-keys {
   padding-bottom: max(var(--system-bottom-inset, 48px), env(safe-area-inset-bottom));
 }
 
-.v-app {
+.capacitor-native .v-app {
   padding-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top)) !important;
   padding-bottom: max(var(--system-bottom-inset, 0px), env(safe-area-inset-bottom)) !important;
 }
@@ -70,14 +68,10 @@ body {
   padding-bottom: max(var(--system-bottom-inset, 48px), env(safe-area-inset-bottom)) !important;
 }
 
-.nav-header {
-  /* padding-top: max(var(--status-bar-height, 40px), env(safe-area-inset-top)) !important; */
-}
-
 @media (max-width: 600px) {
 
-  .v-toolbar,
-  .v-item-group {
+  .capacitor-native .v-toolbar,
+  .capacitor-native .v-item-group {
     padding-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top));
   }
 
@@ -134,11 +128,6 @@ body {
    page's header overlap the content below. Vuetify already pads
    v-content by the toolbar's measured height (toolbar height +
    safe-area on mobile), so we leave that alone now. */
-/* Fallback for older Android versions */
-/* Enable this before android build */
-/* .v-content {
-  padding-top: 0px !important;
-} */
 
 /* Additional Android 14+ fixes */
 .android14-plus #mobileLayout {
@@ -180,12 +169,13 @@ body {
 }
 
 .animated {
-  padding-top: 0px!important;
-}
-.v-btn-toggle .v-btn {
-  padding: 0 5px!important;
+  padding-top: 0px !important;
 }
 
- .prompt-box {
-    padding: 10px 12px 40px 12px!important;
-  }
+.v-btn-toggle .v-btn {
+  padding: 0 5px !important;
+}
+
+.prompt-box {
+  padding: 10px 12px 40px 12px !important;
+}

@@ -12,6 +12,14 @@
     <!-- Global AI Search Modal -->
     <ai-search-modal v-model="aiSearchModal" :open-mode="aiSearchOpenMode" />
 
+    <!-- Agent HTML response viewer -->
+    <agent-result-modal
+      :value="agentResultOpen"
+      :html="agentResultHtml"
+      :title="agentResultTitle"
+      @input="onAgentResultInput"
+    />
+
     <!-- Timezone backfill + travel detection -->
     <timezone-sync />
   </v-app>
@@ -22,6 +30,7 @@ import firebase from 'firebase/app';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+import { AgentResultModal } from '@routine-notes/ui/organisms';
 import {
   config, publicKey, isDevelopment, netlify,
 } from './blob/config';
@@ -39,6 +48,7 @@ export default {
     MobileLayout,
     DesktopLayout,
     AiSearchModal,
+    AgentResultModal,
     TimezoneSync,
   },
   data() {
@@ -67,6 +77,23 @@ export default {
     isMobile() {
       return this.$vuetify.breakpoint.name === 'xs';
     },
+    activeAgentResultRoutineId() {
+      return this.$agent.state.resultModalRoutineId;
+    },
+    agentResultOpen() {
+      return !!this.activeAgentResultRoutineId
+        && !!this.$agent.lastResultByRoutineId[this.activeAgentResultRoutineId];
+    },
+    agentResultHtml() {
+      const taskRef = this.activeAgentResultRoutineId;
+      const result = taskRef && this.$agent.lastResultByRoutineId[taskRef];
+      return result && result.type === 'html' ? result.body : '';
+    },
+    agentResultTitle() {
+      const taskRef = this.activeAgentResultRoutineId;
+      const agent = taskRef && this.$agent.getByTaskRef(taskRef);
+      return agent ? `${agent.name} — result` : 'Agent result';
+    },
   },
   created() {
     // Listen for AI search open event
@@ -92,6 +119,9 @@ export default {
     document.removeEventListener('visibilitychange', this.handleAppVisibility);
   },
   methods: {
+    onAgentResultInput(open) {
+      if (!open) this.$agent.closeResultModal();
+    },
     handleAppVisibility() {
       if (document.visibilityState === 'hidden') {
         this.lastActiveTime = Date.now();
@@ -208,6 +238,9 @@ export default {
     },
 
     checkSoftKeys() {
+      // Native WebView only — mobile browsers handle the status bar and
+      // must never receive the android14-plus safe-area classes.
+      if (!Capacitor.isNativePlatform()) return;
       // Android 14+ detection
       const ua = navigator.userAgent || navigator.vendor || window.opera;
       const androidMatch = ua.match(/Android\s([0-9.]+)/);
@@ -228,8 +261,10 @@ export default {
   z-index: 5;
 }
 
-/* Toolbar positioning below safe area */
-.v-toolbar {
+/* Toolbar positioning below safe area — native WebView only. On mobile
+   web the browser owns the status bar and Vuetify sizes the toolbar
+   itself (56px on xs); forcing 64px here made the web header too tall. */
+.capacitor-native .v-toolbar {
   margin-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top)) !important;
   padding-top: 0 !important;
   height: 64px !important;

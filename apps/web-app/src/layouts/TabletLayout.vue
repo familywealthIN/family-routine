@@ -74,6 +74,7 @@ export default {
         { title: 'Routine', icon: 'history', route: '/settings' },
         { title: 'Goals', icon: 'assignment', route: '/goals' },
         { title: 'Groups', icon: 'supervisor_account', route: '/groups' },
+        { title: 'Agents', icon: 'smart_toy', route: '/agents' },
         { title: 'History', icon: 'update', route: '/history' },
       ],
     };
