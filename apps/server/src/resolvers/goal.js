@@ -1403,6 +1403,8 @@ const mutation = {
         // eslint-disable-next-line no-underscore-dangle
         const task = routine?.tasklist?.find((t) => t._id.toString() === args.taskRef.toString());
         if (task) {
+          // Redeemed tasks earn K/G like normal ticks — redeeming restores the
+          // task to a full tick, and its earnings settle overnight.
           if (args.isComplete && args.period === 'day') {
             task.stimuli = updateStimulusEarnedPoint('K', task);
             if (args.isMilestone) {

@@ -35,10 +35,11 @@
         <AtomListTileContent>
           <AtomListTileTitle>
             <span>{{ task.name }}</span>
+            <!-- Both float right: info hugs the edge, the badge sits beside it -->
+            <div class="step-info" @click="$emit('toggle-step-modal')"><AtomIcon>info</AtomIcon></div>
             <span v-if="agentStatusBadge" :class="['agent-status-badge', `agent-status-badge--${agentStatusBadge.kind}`]">
               {{ agentStatusBadge.label }}
             </span>
-            <div class="step-info" @click="$emit('toggle-step-modal')"><AtomIcon>info</AtomIcon></div>
           </AtomListTileTitle>
           <AtomListTileSubTitle class="pt-2">
             <div class="time-text">
@@ -439,13 +440,16 @@ export default {
 }
 .current-task .agent-status-badge {
   display: inline-block;
+  float: right;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.4px;
   text-transform: uppercase;
+  line-height: 1.3;
   padding: 2px 8px;
-  border-radius: 10px;
-  margin-left: 8px;
+  border-radius: 999px;
+  margin-right: 8px;
+  margin-top: 3px;
   vertical-align: middle;
   color: #fff;
 }

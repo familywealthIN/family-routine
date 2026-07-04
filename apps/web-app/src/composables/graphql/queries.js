@@ -39,6 +39,8 @@ export const ROUTINE_DATE_QUERY = gql`
         ticked
         passed
         wait
+        redeemed
+        passedPoints
         startEvent
         endEvent
         tags
@@ -66,6 +68,74 @@ export const WEEK_STIMULI_QUERY = gql`
       D
       K
       G
+    }
+  }
+`;
+
+// ============================================================================
+// XP / POINTS QUERIES
+// ============================================================================
+
+/**
+ * Current points balance. Settled server-side (lazy) on every call —
+ * today's earnings show as pendingToday and become available tomorrow.
+ * Used in: DesktopLayout.vue, MobileLayout.vue, DashBoard.vue
+ */
+export const XP_BALANCE_QUERY = gql`
+  query xpBalance {
+    xpBalance {
+      earned
+      used
+      available
+      pendingToday
+      entitled
+    }
+  }
+`;
+
+/**
+ * Redeem a passed (missed) routine task from today using points.
+ * Server validates the day window, the frozen price and the balance.
+ * Used in: DashBoard.vue
+ */
+export const REDEEM_ROUTINE_ITEM_MUTATION = gql`
+  mutation redeemRoutineItem($id: ID!, $taskId: String!, $date: String!) {
+    redeemRoutineItem(id: $id, taskId: $taskId, date: $date) {
+      routine {
+        id
+        date
+        skip
+        tasklist {
+          id
+          name
+          description
+          time
+          points
+          ticked
+          passed
+          wait
+          redeemed
+          passedPoints
+          startEvent
+          endEvent
+          tags
+          steps {
+            name
+          }
+          stimuli {
+            name
+            splitRate
+            earned
+          }
+        }
+      }
+      balance {
+        earned
+        used
+        available
+        pendingToday
+        entitled
+      }
     }
   }
 `;

@@ -56,7 +56,11 @@
 
       <atom-divider></atom-divider>
 
-      <atom-stepper-step step="5">Complete Setup</atom-stepper-step>
+      <atom-stepper-step :complete="currentStep > 5" step="5">Earn Points</atom-stepper-step>
+
+      <atom-divider></atom-divider>
+
+      <atom-stepper-step step="6">Complete Setup</atom-stepper-step>
     </atom-stepper-header>
 
     <atom-stepper-items>
@@ -404,7 +408,60 @@
       </atom-stepper-content>
 
       <!-- Step 5: Complete Setup -->
+      <!-- Step 5: Points system showcase -->
       <atom-stepper-content step="5">
+        <div style="max-width: 600px; margin: 0 auto;">
+          <h2 class="text-xs-center mt-4 mb-3">Miss a Task? Points Save Your Streak</h2>
+          <div class="text-xs-center mb-4">
+            <atom-icon color="primary" size="72">diamond</atom-icon>
+          </div>
+
+          <atom-card class="mb-3">
+            <atom-card-text>
+              <atom-layout row wrap>
+                <atom-flex xs12 sm4 class="text-xs-center pa-2">
+                  <atom-icon color="success" size="36">check_circle</atom-icon>
+                  <h4 class="mt-2">Earn every day</h4>
+                  <p class="text-caption mb-0">
+                    Ticking routine tasks, completing goals and hitting
+                    milestones earns Discipline, Kinetics and Geniuses points —
+                    up to 300 a day.
+                  </p>
+                </atom-flex>
+                <atom-flex xs12 sm4 class="text-xs-center pa-2">
+                  <atom-icon color="info" size="36">nights_stay</atom-icon>
+                  <h4 class="mt-2">Points settle overnight</h4>
+                  <p class="text-caption mb-0">
+                    Today's earnings become spendable tomorrow. Your balance
+                    lives next to the search button, always in reach.
+                  </p>
+                </atom-flex>
+                <atom-flex xs12 sm4 class="text-xs-center pa-2">
+                  <atom-icon color="primary" size="36">diamond</atom-icon>
+                  <h4 class="mt-2">Rescue missed tasks</h4>
+                  <p class="text-caption mb-0">
+                    When a task's time passes today, its button turns into a
+                    diamond — tap it to check the task using your points.
+                  </p>
+                </atom-flex>
+              </atom-layout>
+            </atom-card-text>
+          </atom-card>
+
+          <atom-alert type="info" :value="true" class="mb-4">
+            <atom-icon class="mr-2">card_giftcard</atom-icon>
+            You start with <strong>300 welcome points</strong> — enough to
+            rescue your first missed tasks while you build the habit.
+          </atom-alert>
+        </div>
+
+        <div class="text-xs-right">
+          <atom-button text @click="previousStep()">Back</atom-button>
+          <atom-button color="primary" @click="nextStep()">Next</atom-button>
+        </div>
+      </atom-stepper-content>
+
+      <atom-stepper-content step="6">
         <div style="max-width: 600px; margin: 0 auto;">
           <h2 class="text-xs-center mt-4 mb-3">Your Routine is Ready!</h2>
           <div class="mb-3" style="max-width: 192px; margin: 0 auto;">
@@ -854,7 +911,7 @@ export default {
       });
     },
     nextStep() {
-      if (this.currentStep < 5) {
+      if (this.currentStep < 6) {
         // Track step progression
         this.trackUserInteraction('onboarding_step_next', 'button_click', {
           from_step: this.currentStep,
@@ -883,7 +940,8 @@ export default {
         2: 'work_hours',
         3: 'morning_routine',
         4: 'evening_activities',
-        5: 'complete_setup',
+        5: 'points_intro',
+        6: 'complete_setup',
       };
       return stepNames[stepNumber] || 'unknown';
     },

@@ -16,7 +16,15 @@
 
           <v-list-tile-content>
             <v-list-tile-title>{{ name }}</v-list-tile-title>
-            <v-list-tile-sub-title>{{ email }}</v-list-tile-sub-title>
+            <v-list-tile-sub-title>
+              <points-chip
+                small
+                :available="(xpBalance && xpBalance.available) || 0"
+                :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
+                :entitled="!!(xpBalance && xpBalance.entitled)"
+                :loading="$apollo.queries.xpBalance.loading"
+              />
+            </v-list-tile-sub-title>
           </v-list-tile-content>
         </v-list-tile>
       </v-list>
@@ -141,12 +149,13 @@ import moment from 'moment';
 import ProjectSidebar from '@routine-notes/ui/molecules/ProjectSidebar/ProjectSidebar.vue';
 import AreaSidebar from '@routine-notes/ui/molecules/AreaSidebar/AreaSidebar.vue';
 import YearGoalSidebar from '@routine-notes/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue';
+import PointsChip from '@routine-notes/ui/molecules/PointsChip/PointsChip.vue';
 import localforage from 'localforage';
 import TaskTimingBar from '@routine-notes/ui/atoms/TaskTimingBar/TaskTimingBar.vue';
 import PendingList from '../containers/PendingListContainer.vue';
 import { taskTimingMixin } from '../mixins/taskTimingMixin';
 import eventBus, { EVENTS } from '../utils/eventBus';
-import { ROUTINE_DATE_QUERY, AGENDA_GOALS_QUERY } from '../composables/graphql/queries';
+import { ROUTINE_DATE_QUERY, AGENDA_GOALS_QUERY, XP_BALANCE_QUERY } from '../composables/graphql/queries';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
@@ -159,6 +168,7 @@ export default {
     AreaSidebar,
     YearGoalSidebar,
     TaskTimingBar,
+    PointsChip,
   },
   mixins: [taskTimingMixin],
   data() {
@@ -252,13 +262,19 @@ export default {
         return !this.$root.$data.email;
       },
     },
+    xpBalance: {
+      query: XP_BALANCE_QUERY,
+      update(data) {
+        return data.xpBalance;
+      },
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
   },
   computed: {
     name() {
       return this.$root.$data.name;
-    },
-    email() {
-      return this.$root.$data.email;
     },
     picture() {
       return this.$root.$data.picture;
@@ -306,9 +322,13 @@ export default {
   },
   mounted() {
     eventBus.$on(EVENTS.GOAL_ITEM_CREATED, this.onYearGoalChanged);
+    eventBus.$on(EVENTS.ROUTINE_TICKED, this.refetchXpBalance);
+    eventBus.$on(EVENTS.XP_REDEEMED, this.refetchXpBalance);
   },
   beforeDestroy() {
     eventBus.$off(EVENTS.GOAL_ITEM_CREATED, this.onYearGoalChanged);
+    eventBus.$off(EVENTS.ROUTINE_TICKED, this.refetchXpBalance);
+    eventBus.$off(EVENTS.XP_REDEEMED, this.refetchXpBalance);
   },
   methods: {
     onYearGoalChanged(payload) {
@@ -317,6 +337,11 @@ export default {
       if (payload && payload.period && payload.period !== 'year') return;
       if (this.$apollo.queries.yearGoals) {
         this.$apollo.queries.yearGoals.refetch();
+      }
+    },
+    refetchXpBalance() {
+      if (this.$apollo.queries.xpBalance) {
+        this.$apollo.queries.xpBalance.refetch();
       }
     },
     openAiSearch() {

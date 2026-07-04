@@ -31,10 +31,10 @@ export default {
       remove(id) { return agentStore.remove(apolloFromVm(vm), id); },
 
       fireStartEventIfPresent({
-        taskRef, goalId, goalDate, goalPeriod,
+        taskRef, goalId, goalDate, goalPeriod, implicit,
       }) {
         return agentStore.fireStartEventIfPresent({
-          apollo: apolloFromVm(vm), vm, taskRef, goalId, goalDate, goalPeriod,
+          apollo: apolloFromVm(vm), vm, taskRef, goalId, goalDate, goalPeriod, implicit,
         });
       },
 

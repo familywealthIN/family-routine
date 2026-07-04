@@ -56,6 +56,8 @@ const RoutineItemSchema = new mongoose.Schema({
   ticked: Boolean,
   passed: Boolean,
   wait: Boolean,
+  redeemed: Boolean,
+  passedPoints: Number,
 });
 
 // Encryption middleware for StepItemSchema
@@ -140,6 +142,8 @@ const RoutineItemType = new GraphQLObjectType({
     ticked: { type: GraphQLBoolean },
     passed: { type: GraphQLBoolean },
     wait: { type: GraphQLBoolean },
+    redeemed: { type: GraphQLBoolean },
+    passedPoints: { type: GraphQLInt },
   },
 });
 

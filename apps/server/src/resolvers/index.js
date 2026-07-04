@@ -12,6 +12,7 @@ const motto = require('./motto');
 const progress = require('./progress');
 const ai = require('./ai');
 const agent = require('./agent');
+const xp = require('./xp');
 
 const schema = new GraphQLSchema({
   query: new GraphQLObjectType({
@@ -26,6 +27,7 @@ const schema = new GraphQLSchema({
       ...progress.query,
       ...ai.query,
       ...agent.query,
+      ...xp.query,
     },
   }),
   mutation: new GraphQLObjectType({
@@ -40,6 +42,7 @@ const schema = new GraphQLSchema({
       ...progress.mutation,
       ...ai.mutation,
       ...agent.mutation,
+      ...xp.mutation,
     },
   }),
 });
