@@ -44,6 +44,18 @@
           <AtomListTileContent>
             <AtomListTileTitle>
               <span>{{ task.name }}</span>
+              <!-- Both float right: info hugs the edge, the badge sits beside it -->
+              <div
+                v-if="task.id === selectedTaskRef"
+                class="step-info"
+                @click.stop="$emit('toggle-step-modal', task)"
+              ><AtomIcon>info</AtomIcon></div>
+              <span
+                v-if="agentStatusBadgeFor(task)"
+                :class="['agent-status-badge', `agent-status-badge--${agentStatusBadgeFor(task).kind}`]"
+              >
+                {{ agentStatusBadgeFor(task).label }}
+              </span>
             </AtomListTileTitle>
             <AtomListTileSubTitle v-if="task.id === selectedTaskRef">
               <div class="time-text">
@@ -236,6 +248,16 @@ export default {
     onTabsInput(val) {
       this.$emit('update:tabs', val);
     },
+    // Same status → badge mapping as CurrentTaskCard, per row.
+    agentStatusBadgeFor(task) {
+      switch (task && task.agentStatus) {
+        case 'running': return { kind: 'running', label: 'Agent running' };
+        case 'listening': return { kind: 'listening', label: 'Agent listening' };
+        case 'finished': return { kind: 'finished', label: 'Agent done' };
+        case 'failed': return { kind: 'failed', label: 'Agent failed' };
+        default: return null;
+      }
+    },
     onGoalPeriodInput(val) {
       this.$emit('update:goalPeriod', val);
     },
@@ -276,6 +298,44 @@ export default {
 <style>
 .upcoming-past-card {
   overflow: hidden;
+}
+.upcoming-past-card .step-info {
+  float: right;
+  height: 24px;
+  line-height: 0;
+  cursor: pointer;
+}
+.upcoming-past-card .agent-status-badge {
+  display: inline-block;
+  /* Right-aligned to match the current-task card's badge placement */
+  float: right;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  /* Own line-height: the list tile title's 24px would otherwise inflate the
+     badge to 28px and break the pill shape. */
+  line-height: 1.3;
+  padding: 2px 8px;
+  border-radius: 999px;
+  /* Right-floats space via margin-right — same 8px badge→info gap as the
+     current-task card. margin-left keeps clearance from the task name. */
+  margin-left: 8px;
+  margin-right: 8px;
+  margin-top: 3px;
+  vertical-align: middle;
+  color: #fff;
+}
+.upcoming-past-card .agent-status-badge--running {
+  background: #1976d2;
+  animation: upcoming-agent-status-pulse 1.4s ease-in-out infinite;
+}
+.upcoming-past-card .agent-status-badge--listening { background: #ffb300; }
+.upcoming-past-card .agent-status-badge--finished { background: #43a047; }
+.upcoming-past-card .agent-status-badge--failed { background: #e53935; }
+@keyframes upcoming-agent-status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 .upcoming-past-card .concentrated-view .active {
   background-color: #fff;

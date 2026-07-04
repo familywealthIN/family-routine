@@ -16,6 +16,7 @@ export { default as GoalTaskSelector } from './GoalTaskSelector/GoalTaskSelector
 export { default as GoalItemMilestoneTile } from './GoalItemMilestoneTile/GoalItemMilestoneTile.vue';
 export { default as GoalTagsInput } from './GoalTagsInput/GoalTagsInput.vue';
 export { default as PlanConfigSelector } from './PlanConfigSelector/PlanConfigSelector.vue';
+export { default as PointsChip } from './PointsChip/PointsChip.vue';
 export { default as PriorityQuadrant } from './PriorityQuadrant/PriorityQuadrant.vue';
 export { default as ProjectSidebar } from './ProjectSidebar/ProjectSidebar.vue';
 export { default as RadarChart } from './RadarChart/RadarChart.vue';

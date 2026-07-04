@@ -39,6 +39,16 @@ const UserSchema = new mongoose.Schema({
     default: true,
   },
   timezone: String,
+  // XP settlement cursor. Stored as ISO YYYY-MM-DD (NOT the app's DD-MM-YYYY
+  // day keys, which do not sort lexicographically) so monotonic $lt guards
+  // work. Convert with moment at the boundary.
+  xpLastSettled: String,
+  subscription: {
+    plan: String, // 'monthly' | 'annual'
+    status: String, // 'active' | 'cancelled' | 'expired'
+    provider: String, // 'paypal' | 'apple' | 'google' (future)
+    expiresAt: Date,
+  },
   social: {
     googleProvider: {
       id: String,
@@ -98,6 +108,19 @@ UserSchema.methods.generateJWT = generateAccessToken;
 UserSchema.statics.upsertGoogleUser = upsertGoogleUser;
 UserSchema.statics.upsertAppleUser = upsertAppleUser;
 
+const UserSubscriptionType = new GraphQLObjectType({
+  name: 'UserSubscription',
+  fields: {
+    plan: { type: GraphQLString },
+    status: { type: GraphQLString },
+    provider: { type: GraphQLString },
+    expiresAt: {
+      type: GraphQLString,
+      resolve: (sub) => (sub && sub.expiresAt ? sub.expiresAt.toISOString() : null),
+    },
+  },
+});
+
 const UserItemType = new GraphQLObjectType({
   name: 'UserItem',
   fields: {
@@ -118,9 +141,12 @@ const UserItemType = new GraphQLObjectType({
       type: new GraphQLList(MottoItemType),
     },
     tags: { type: new GraphQLList(GraphQLString) },
+    subscription: { type: UserSubscriptionType },
   },
 });
 
 const UserModel = mongoose.model('User', UserSchema);
 
-module.exports = { UserSchema, UserModel, UserItemType };
+module.exports = {
+  UserSchema, UserModel, UserItemType, UserSubscriptionType,
+};

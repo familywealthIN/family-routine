@@ -7,6 +7,8 @@
         "start:progress": "node src/progress.js",
         "start:weekly-agenda": "node src/weekly-agenda.js",
         "start:update-holidays": "node src/update-holidays.js",
+        "start:settle-xp": "node src/settle-xp.js",
+        "start:backfill-xp": "node src/backfill-xp.js",
         "test": "jest",
         "test:watch": "jest --watch"
     },

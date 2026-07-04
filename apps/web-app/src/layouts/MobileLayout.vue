@@ -105,6 +105,13 @@
     <v-toolbar v-if="$route.name !== 'login'" class="elevation-0 fixed-toolbar safe-area-top" color="white" app>
       <v-toolbar-title style="font-size: 24px">{{ pageTitle }}</v-toolbar-title>
       <v-spacer></v-spacer>
+      <points-chip
+        small
+        :available="(xpBalance && xpBalance.available) || 0"
+        :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
+        :entitled="!!(xpBalance && xpBalance.entitled)"
+        :loading="$apollo.queries.xpBalance.loading"
+      />
       <v-btn icon @click="openAiSearch">
         <v-icon size="28">search</v-icon>
       </v-btn>
@@ -172,11 +179,12 @@ import { Capacitor } from '@capacitor/core';
 import TaskTimingBar from '@routine-notes/ui/atoms/TaskTimingBar/TaskTimingBar.vue';
 import AreaSidebar from '@routine-notes/ui/molecules/AreaSidebar/AreaSidebar.vue';
 import ProjectSidebar from '@routine-notes/ui/molecules/ProjectSidebar/ProjectSidebar.vue';
+import PointsChip from '@routine-notes/ui/molecules/PointsChip/PointsChip.vue';
 import PendingList from '../containers/PendingListContainer.vue';
 import { taskTimingMixin } from '../mixins/taskTimingMixin';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import { threshold } from '../utils/getDates';
-import { AGENDA_GOALS_QUERY, ROUTINE_DATE_QUERY } from '../composables/graphql/queries';
+import { AGENDA_GOALS_QUERY, ROUTINE_DATE_QUERY, XP_BALANCE_QUERY } from '../composables/graphql/queries';
 import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
@@ -189,6 +197,7 @@ export default {
     TaskTimingBar,
     AreaSidebar,
     ProjectSidebar,
+    PointsChip,
   },
   mixins: [taskTimingMixin],
   watch: {
@@ -234,6 +243,15 @@ export default {
       },
       update(data) {
         return data.routineDate || {};
+      },
+      skip() {
+        return !this.$root.$data.email;
+      },
+    },
+    xpBalance: {
+      query: XP_BALANCE_QUERY,
+      update(data) {
+        return data.xpBalance;
       },
       skip() {
         return !this.$root.$data.email;
@@ -320,6 +338,11 @@ export default {
     },
   },
   methods: {
+    refetchXpBalance() {
+      if (this.$apollo.queries.xpBalance) {
+        this.$apollo.queries.xpBalance.refetch();
+      }
+    },
     countStimulusTotal(stimulus = 'D') {
       const tasklist = this.$currentTaskList || [];
       const aggregatePoints = tasklist.reduce((total, num) => {
@@ -388,6 +411,9 @@ export default {
     },
   },
   mounted() {
+    eventBus.$on(EVENTS.ROUTINE_TICKED, this.refetchXpBalance);
+    eventBus.$on(EVENTS.XP_REDEEMED, this.refetchXpBalance);
+
     // Safe-area classes are native-WebView-only: mobile browsers manage
     // the status bar themselves, and the android14-plus/android15 rules
     // would inflate the web header with insets meant for edge-to-edge.
@@ -414,6 +440,10 @@ export default {
         }
       }
     }
+  },
+  beforeDestroy() {
+    eventBus.$off(EVENTS.ROUTINE_TICKED, this.refetchXpBalance);
+    eventBus.$off(EVENTS.XP_REDEEMED, this.refetchXpBalance);
   },
 };
 </script>

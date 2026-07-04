@@ -18,6 +18,8 @@ const { RoutineModel } = require('../schema/RoutineSchema');
 const { RoutineItemModel } = require('../schema/RoutineItemSchema');
 const { GoalModel } = require('../schema/GoalSchema');
 const { ProgressModel } = require('../schema/ProgressSchema');
+const { ReferralModel } = require('../schema/ReferralSchema');
+const { grantWelcomePoints } = require('../utils/xpLedger');
 
 const query = {
   getUserTags: {
@@ -210,6 +212,22 @@ const mutation = {
         throw new ApiError(403, '403:Group Not Found');
       }
 
+      // Record the referral (points reward). One lifetime referral per
+      // invitee (unique inviteeEmail) — re-invites and group-hopping never
+      // create a second pending reward. Credited only after the invitee has
+      // 3 settled nonzero-earning days (see xpLedger.maybeRewardReferral).
+      if (inviterEmail !== email) {
+        try {
+          await ReferralModel.updateOne(
+            { inviteeEmail: email },
+            { $setOnInsert: { inviterEmail, status: 'pending', createdAt: new Date() } },
+            { upsert: true },
+          ).exec();
+        } catch (err) {
+          if (!err || err.code !== 11000) throw err;
+        }
+      }
+
       return UserModel.findOneAndUpdate(
         { email },
         { groupId, inviterEmail: '' },
@@ -335,11 +353,23 @@ const mutation = {
         update.name = trimmedName;
       }
 
-      return UserModel.findOneAndUpdate(
+      const user = await UserModel.findOneAndUpdate(
         { email },
         update,
         { new: true },
       );
+
+      // Welcome grant: 300 pre-settled points so the first passed task is a
+      // working diamond moment, not a paywall. Idempotent (refKey 'welcome')
+      // even if the wizard re-submits.
+      try {
+        await grantWelcomePoints(email, user && user.timezone);
+      } catch (err) {
+        // Never block onboarding on a ledger hiccup.
+        console.error('welcome grant failed:', err.message);
+      }
+
+      return user;
     },
   },
   deleteAccount: {

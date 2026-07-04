@@ -108,6 +108,10 @@ function stimuliWeekOfMonth(d) {
 /**
  * Aggregate stimulus totals for a routine's tasklist
  * Uses the same formula as the frontend countTotal / server getProgressReport countTotal
+ *
+ * Redeemed ticks count like normal ticks: redeeming spends settled points and
+ * the tick then earns stimulus points that stay pending until the next day's
+ * settlement — the overnight rule is what prevents same-day loops.
  */
 function aggregateStimuliForRoutine(routine) {
   const result = { D: 0, K: 0, G: 0 };
@@ -250,6 +254,8 @@ const query = {
             task.passed = foundTask.passed;
             task.wait = foundTask.wait;
             task.ticked = foundTask.ticked;
+            task.redeemed = foundTask.redeemed;
+            task.passedPoints = foundTask.passedPoints;
             task.stimuli = foundTask.stimuli && foundTask.stimuli.length
               ? foundTask.stimuli
               : buildStimuliForRoutineItem(task._id, tasklist);
@@ -379,6 +385,9 @@ const mutation = {
 
       const routine = await findIdandSort(args, email);
       const task = routine.tasklist.find((t) => t._id.toString() === args.taskId.toString());
+      if (!task || task.ticked || task.redeemed) {
+        return routine;
+      }
       task.stimuli = updateStimulusEarnedPoint('D', task);
 
       return RoutineModel.findOneAndUpdate(
@@ -426,9 +435,16 @@ const mutation = {
         return routine;
       }
 
+      // Freeze the redemption price at the moment the task passes so later
+      // edits to the task cannot change what a redeem costs.
+      const set = { 'tasklist.$.passed': args.passed };
+      if (args.passed && taskToUpdate && typeof taskToUpdate.points === 'number') {
+        set['tasklist.$.passedPoints'] = taskToUpdate.points;
+      }
+
       return RoutineModel.findOneAndUpdate(
         { _id: args.id, email, 'tasklist._id': args.taskId },
-        { $set: { 'tasklist.$.passed': args.passed } },
+        { $set: set },
         { new: true },
       ).exec();
     },
@@ -452,4 +468,6 @@ const mutation = {
   },
 };
 
-module.exports = { query, mutation, buildStimuliForRoutineItem };
+module.exports = {
+  query, mutation, buildStimuliForRoutineItem, aggregateStimuliForRoutine,
+};

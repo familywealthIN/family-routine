@@ -11,6 +11,7 @@
     :relatedTasks="relatedTasks"
     :loading="loading"
     :buttonLoading="buttonLoading"
+    :loading-action="loadingAction"
     :agent-state="agentState"
     @add-goal-item="addGoalItem"
     @goal-ref-changed="updateCurrentGoalRef"
@@ -71,6 +72,9 @@ export default {
       relatedGoalsData: [],
       loading: true,
       buttonLoading: false,
+      // 'task' | 'agent' — which button kicked off the in-flight work, so
+      // only that button shows its loading spinner.
+      loadingAction: '',
       currentGoalRef: '',
     };
   },
@@ -231,12 +235,14 @@ export default {
         const task = this.tasklist
           ? this.tasklist.find((t) => t.id === taskRef || t.taskId === taskRef)
           : null;
+        // User pressed Start Agent — this fire is explicit and may report
+        // failure loudly.
         await this.addGoalItem({
           ...newGoalItem,
           taskRef,
           body: typedBody || (task && task.name) || 'Routine task',
           tags: (newGoalItem && newGoalItem.tags) || [],
-        });
+        }, { explicitAgent: true });
         return;
       }
 
@@ -260,14 +266,16 @@ export default {
     /**
      * Add goal item using shared composable
      */
-    async addGoalItem(newGoalItem) {
+    async addGoalItem(newGoalItem, { explicitAgent = false } = {}) {
       this.buttonLoading = true;
+      this.loadingAction = explicitAgent ? 'agent' : 'task';
       const value = newGoalItem.body && newGoalItem.body.trim();
       const date = periodGoalDates(this.period, this.date);
       const goal = this.getGoal(this.period, date);
 
       if (!value) {
         this.buttonLoading = false;
+        this.loadingAction = '';
         return;
       }
 
@@ -311,7 +319,10 @@ export default {
             body: addedItem.body,
           });
 
-          // If an agent is assigned, fire the start event using the freshly created goal id
+          // If an agent is assigned, fire the start event using the freshly
+          // created goal id. Unless the user explicitly pressed Start Agent,
+          // this is an implicit fire — failures stay quiet (no "Agent failed"
+          // badge), recorded only on the Agents page.
           if (this.agentState === 'assigned' && newGoalItem.taskRef) {
             try {
               await this.$agent.fireStartEventIfPresent({
@@ -319,6 +330,7 @@ export default {
                 goalId: addedItem.id,
                 goalDate: date,
                 goalPeriod: this.period,
+                implicit: !explicitAgent,
               });
             } catch (err) {
               console.warn('[QuickGoalCreationContainer] fireStartEventIfPresent failed:', err);
@@ -338,6 +350,7 @@ export default {
         });
       } finally {
         this.buttonLoading = false;
+        this.loadingAction = '';
       }
     },
     updateCurrentGoalRef(goalRef) {
