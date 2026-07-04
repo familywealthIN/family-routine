@@ -82,7 +82,7 @@
                 :last-complete-item-goal-ref="lastCompleteItemGoalRef"
                 @click="updateSelectedTaskRef($event.id)"
                 @action-click="checkDialogClick($event.event, $event.task)"
-                @toggle-step-modal="toggleStepModal = true"
+                @toggle-step-modal="openStepModal(currentTask)"
                 @set-goal-period="onSetGoalPeriod"
                 @delete-task-goal="deleteTaskGoal"
                 @refresh-task-goal="refreshTaskGoal"
@@ -160,6 +160,7 @@
               :last-complete-item-goal-ref="lastCompleteItemGoalRef"
               @task-click="updateSelectedTaskRef($event.id)"
               @action-click="checkDialogClick($event.event, $event.task)"
+              @toggle-step-modal="openStepModal($event)"
               @set-goal-period="onSetGoalPeriod($event.period)"
               @delete-task-goal="deleteTaskGoal"
               @refresh-task-goal="refreshTaskGoal"
@@ -289,9 +290,9 @@
           Routine Steps
         </atom-card-title>
 
-        <atom-card-text v-if="currentTask && currentTask.steps">
+        <atom-card-text v-if="stepModalTask && stepModalTask.steps">
           <ul>
-            <li v-for="step in currentTask.steps" v-bind:key="step.name">{{ step.name }}</li>
+            <li v-for="step in stepModalTask.steps" v-bind:key="step.name">{{ step.name }}</li>
           </ul>
         </atom-card-text>
 
@@ -309,6 +310,12 @@
         </atom-card-actions>
       </atom-card>
     </atom-dialog>
+    <paywall-drawer
+      v-model="paywallDrawerOpen"
+      :cost="paywallCost"
+      :available="(xpBalance && xpBalance.available) || 0"
+      :show-purchase="showPaywallPurchase"
+    />
     </container-box>
 
     <!-- Dashboard FAB for AI Search -->
@@ -341,7 +348,7 @@ import WakeCheck from '@routine-notes/ui/atoms/WakeCheck/WakeCheck.vue';
 import CurrentTaskCard from '@routine-notes/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue';
 import UpcomingPastTasks from '@routine-notes/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue';
 import WeekGoalStreak from '@routine-notes/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue';
-import { AgentEditModal } from '@routine-notes/ui/organisms';
+import { AgentEditModal, PaywallDrawer } from '@routine-notes/ui/organisms';
 import AgendaTaskList from '@routine-notes/ui/organisms/AgendaTaskList/AgendaTaskList.vue';
 import {
   AtomAlert,
@@ -371,7 +378,10 @@ import {
   AGENDA_GOALS_QUERY,
   DAILY_GOALS_QUERY,
   ROUTINE_DATE_QUERY,
+  XP_BALANCE_QUERY,
+  REDEEM_ROUTINE_ITEM_MUTATION,
 } from '../composables/graphql/queries';
+import { XP_PAYWALL_PURCHASE } from '../config/featureFlags';
 import {
   updateRoutineTaskInCache,
   updateRoutineTaskKEarnedInCache,
@@ -438,6 +448,7 @@ export default {
     AtomToolbar,
     AtomToolbarTitle,
     AgentEditModal,
+    PaywallDrawer,
   },
   apollo: {
     // Routine data query - Apollo cache persistence handles offline caching
@@ -493,6 +504,18 @@ export default {
         this.isLoading = false;
       },
     },
+    xpBalance: {
+      query: XP_BALANCE_QUERY,
+      skip() {
+        return !this.$root.$data.email;
+      },
+      update(data) {
+        return data.xpBalance;
+      },
+      error(error) {
+        console.error('[DashBoard] xpBalance query error:', error);
+      },
+    },
     goals: {
       query: DAILY_GOALS_QUERY,
       skip() {
@@ -536,6 +559,14 @@ export default {
       activeSelectionId: '',
       tabs: null,
       toggleStepModal: false,
+      // Task whose steps the step modal shows — the current task or any
+      // expanded upcoming/past row.
+      stepModalTask: null,
+      // Paywall drawer state — opened when a diamond redeem is unaffordable
+      // or when a redemption drains the balance to zero.
+      paywallDrawerOpen: false,
+      paywallCost: 0,
+      showPaywallPurchase: XP_PAYWALL_PURCHASE,
       // Track first load for skeleton display
       goalsFirstLoad: true,
       // Track first load for routine skeleton display
@@ -1106,10 +1137,30 @@ export default {
       return null;
     },
 
+    // End-event rule: a listening agent completes when the routine task's
+    // goal-item counter is full — completedCount === totalCount (the same
+    // stimulus-derived numbers shown on the card). Works for any of today's
+    // tasks, current or past.
+    maybeFireAgentEndEvent(taskRef, goalId) {
+      const task = (this.displayTasklist || []).find((t) => t.id === taskRef);
+      if (!task) return;
+      const total = this.countTaskTotal(task);
+      const completed = this.countTaskCompleted(task);
+      if (total > 0 && completed >= total) {
+        const gid = goalId || this.findFirstGoalIdForRoutine(taskRef);
+        this.$agent.fireEndEvent({ taskRef, goalId: gid }).catch(() => {});
+      }
+    },
+
     onBuildAgent(taskRef) {
       if (!taskRef) return;
       this.agentEditTaskRef = taskRef;
       this.agentEditModalOpen = true;
+    },
+
+    openStepModal(task) {
+      this.stepModalTask = task || this.currentTask;
+      this.toggleStepModal = true;
     },
 
     async onStartAgentFromQuick(taskRef) {
@@ -1122,7 +1173,15 @@ export default {
       this.quickTaskDialog = false;
       const task = this.displayTasklist.find((t) => t.id === taskRef);
       if (task && !task.ticked && !task.passed && !task.wait) {
-        this.checkClick(task);
+        // Explicit Start Agent press — failures may report loudly.
+        this.checkClick(task, { agentImplicit: false });
+        return;
+      }
+      if (task && this.isRedeemable(task)) {
+        // Passed task: Start Agent must not bypass the points system — the
+        // redeem runs first (pays the frozen price, ticks the task), and its
+        // success handler fires the agent for this non-current task.
+        this.redeemClick(task, { fireAgent: true, agentImplicit: false });
         return;
       }
       const goalId = this.findFirstGoalIdForRoutine(taskRef);
@@ -1252,7 +1311,8 @@ export default {
           return 'success';
         }
         if (task.passed) {
-          return 'error';
+          // Redeemable: diamond on a white background.
+          return this.isRedeemable(task) ? 'white' : 'error';
         }
       }
       return 'grey';
@@ -1262,23 +1322,42 @@ export default {
         return 'success';
       }
       if (task.passed) {
-        return 'error';
+        return this.isRedeemable(task) ? 'white' : 'error';
       }
       return '';
     },
     getButtonIcon(task) {
       if (task) {
         if (task.ticked) {
+          // Redeemed ticks resume the normal check icon.
           return 'check';
         }
         if (task.passed && !task.ticked) {
-          return 'close';
+          return this.isRedeemable(task) ? 'diamond' : 'close';
         }
         if (!task.passed && !task.ticked && !task.wait) {
           return 'alarm';
         }
       }
       return 'more_horiz';
+    },
+    // A passed, unticked task on TODAY's routine can be rescued with points.
+    // Past dates stay locked (crossed button) — redemption is today-only.
+    isRedeemable(task) {
+      return !!task && task.passed && !task.ticked && !task.redeemed && this.isTodaySelected;
+    },
+    // Frozen redemption price (snapshotted when the task passed); falls back
+    // to live points for tasks passed before the snapshot deploy.
+    getRedeemCost(task) {
+      return typeof task.passedPoints === 'number' ? task.passedPoints : (task.points || 0);
+    },
+    canAffordRedeem(task) {
+      const balance = this.xpBalance;
+      // Balance still loading — let the flow proceed; redeemClick and the
+      // server's 402 remain the backstop.
+      if (!balance) return true;
+      if (balance.entitled) return true;
+      return balance.available >= this.getRedeemCost(task);
     },
     newGoalItem(task, period) {
       this.selectedTaskRef = task.id;
@@ -1335,6 +1414,8 @@ export default {
         buttonIcon: this.getButtonIcon(task),
         buttonColor: this.getCurrentButtonColor(task),
         buttonDisabled: this.getButtonDisabled(task),
+        // Agent running/listening/done badge — same as the current-task card.
+        agentStatus: this.$agent.statusByRoutineId[task.id] || '',
       }));
     },
     onSetGoalPeriod(period) {
@@ -1448,17 +1529,14 @@ export default {
           // refetch.
           eventBus.$emit(EVENTS.ROUTINE_TICKED);
           // Mirror the K-stimulus completion semantics into the agent
-          // domain: when every day-goal for this routine is complete,
-          // fire the agent's end event. The agent store no-ops if no
-          // agent is assigned or no end event is configured.
+          // domain: the end event fires when the task's goal-item counter
+          // is FULL (completedCount === totalCount, i.e. K fully earned) —
+          // the same numbers the card displays. Applies to any of today's
+          // tasks, current or past. The agent store no-ops if no agent is
+          // assigned or no end event is configured.
           if (isComplete && taskRef && period === 'day') {
             this.$nextTick(() => {
-              const dayGoals = this.filterTaskGoalsPeriod(taskRef, this.displayGoals, 'day');
-              const allItems = dayGoals.flatMap((g) => g.goalItems || []);
-              const everyDone = allItems.length > 0 && allItems.every((gi) => gi.isComplete);
-              if (everyDone) {
-                this.$agent.fireEndEvent({ taskRef, goalId: id }).catch(() => {});
-              }
+              this.maybeFireAgentEndEvent(taskRef, id);
             });
           }
 
@@ -1493,6 +1571,20 @@ export default {
           // in turn moves K on the routine task. Fan out a routine-ticked
           // event so the WeekdaySelector refetches its aggregate.
           eventBus.$emit(EVENTS.ROUTINE_TICKED);
+          // A subtask can auto-complete its parent goal item and fill the
+          // task's counter — apply the same end-event rule as goal items.
+          // Note: payload.taskId is the parent GOAL ITEM id; resolve the
+          // routine taskRef through it.
+          if (isComplete && taskId) {
+            this.$nextTick(() => {
+              const parentItem = (this.displayGoals || [])
+                .flatMap((g) => (g && Array.isArray(g.goalItems) ? g.goalItems : []))
+                .find((gi) => gi.id === taskId);
+              if (parentItem && parentItem.taskRef) {
+                this.maybeFireAgentEndEvent(parentItem.taskRef);
+              }
+            });
+          }
         })
         .catch(() => {
           if (onError) onError();
@@ -1535,6 +1627,10 @@ export default {
       return '';
     },
     getButtonDisabled(task) {
+      // Redeemable-passed tasks keep an enabled (diamond) button.
+      if (this.isRedeemable(task)) {
+        return false;
+      }
       if (!task.ticked && (task.passed || task.wait)) {
         return true;
       }
@@ -1551,7 +1647,20 @@ export default {
         has_goals: this.filterTaskGoalsPeriod(task.id, this.displayGoals, 'day').length > 0,
       });
 
-      if (!task.passed && !task.wait && !task.ticked) {
+      // Affordability pre-flight BEFORE the modal: the quick-goal flow
+      // persists the goal before the redeem runs, so an unaffordable redeem
+      // must be stopped here or a failed redemption strands an orphan goal
+      // on the unticked task (and steals its Build Agent path).
+      if (this.isRedeemable(task) && !this.canAffordRedeem(task)) {
+        this.paywallCost = this.getRedeemCost(task);
+        this.paywallDrawerOpen = true;
+        return;
+      }
+
+      // Redeemable (passed, today) tasks go through the SAME flow as a normal
+      // tick — the quick-task modal is where goals get created and agents get
+      // started, and redeeming must keep that intact.
+      if ((!task.passed && !task.wait && !task.ticked) || this.isRedeemable(task)) {
         if (this.filterTaskGoalsPeriod(task.id, this.displayGoals, 'day').length) {
           this.checkClick(task);
         } else {
@@ -1568,7 +1677,152 @@ export default {
         }
       }
     },
-    checkClick(task, { fireAgent = true } = {}) {
+    redeemClick(task, { fireAgent = true, agentImplicit = true } = {}) {
+      this.quickTaskDialog = false;
+      const cost = this.getRedeemCost(task);
+      const balance = this.xpBalance;
+      const entitled = !!(balance && balance.entitled);
+
+      this.trackButtonClick('task_redeem_button', {
+        task_id: task.id,
+        task_name: task.name,
+        cost,
+        available: (balance && balance.available) || 0,
+      });
+
+      // Local affordability check — the server re-validates authoritatively.
+      if (balance && !entitled && balance.available < cost) {
+        this.paywallCost = cost;
+        this.paywallDrawerOpen = true;
+        return;
+      }
+
+      const pendingKey = `redeem:${task.id}`;
+      if (pendingMutations.has(pendingKey)) return;
+      pendingMutations.add(pendingKey);
+
+      const redeemedAt = Date.now();
+
+      // Optimistic response only when both routine and balance are in cache —
+      // the shape must match the mutation selection set field-for-field.
+      const canOptimize = !!(this.routineDate && balance);
+      const optimisticResponse = canOptimize
+        ? {
+          __typename: 'Mutation',
+          redeemRoutineItem: {
+            __typename: 'RedeemResult',
+            routine: {
+              ...this.routineDate,
+              tasklist: (this.tasklist || []).map((t) => {
+                if (t.id !== task.id) return { ...t };
+                const stimuli = (t.stimuli || []).map((s) => {
+                  if (s.name !== 'D') return { ...s };
+                  return { ...s, earned: t.points || s.earned };
+                });
+                return {
+                  ...t, ticked: true, redeemed: true, stimuli,
+                };
+              }),
+            },
+            balance: {
+              ...balance,
+              used: balance.used + (entitled ? 0 : cost),
+              available: balance.available - (entitled ? 0 : cost),
+            },
+          },
+        }
+        : undefined;
+
+      this.$apollo
+        .mutate({
+          mutation: REDEEM_ROUTINE_ITEM_MUTATION,
+          variables: {
+            id: this.did,
+            taskId: task.id,
+            date: this.date,
+          },
+          optimisticResponse,
+          update: (cache, { data: payload }) => {
+            const result = payload && payload.redeemRoutineItem;
+            if (!result) return;
+            if (result.routine) {
+              try {
+                cache.writeQuery({
+                  query: ROUTINE_DATE_QUERY,
+                  variables: { date: this.date },
+                  data: { routineDate: result.routine },
+                });
+              } catch (e) {
+                updateRoutineTaskInCache(cache, {
+                  date: this.date,
+                  taskId: task.id,
+                  ticked: true,
+                });
+              }
+            }
+            if (result.balance) {
+              cache.writeQuery({
+                query: XP_BALANCE_QUERY,
+                data: { xpBalance: result.balance },
+              });
+            }
+          },
+        })
+        .then(({ data: payload }) => {
+          this.trackMutationPerformance('redeemRoutineItem', {
+            id: this.did,
+            taskId: task.id,
+          }, redeemedAt);
+
+          eventBus.$emit(EVENTS.ROUTINE_TICKED);
+          eventBus.$emit(EVENTS.XP_REDEEMED);
+
+          // A redeemed tick is a full tick — fire the agent's start event
+          // exactly like checkClick does for an on-time tick. Works for any
+          // of today's passed tasks, not just the current one. agentImplicit
+          // stays quiet on failure unless the user pressed Start Agent.
+          const goalId = this.findFirstGoalIdForRoutine(task.id);
+          if (fireAgent && goalId && !String(goalId).startsWith('temp-')) {
+            this.$agent.fireStartEventIfPresent({
+              taskRef: task.id, goalId, goalDate: this.date, goalPeriod: 'day', implicit: agentImplicit,
+            }).catch(() => {});
+          }
+
+          const newBalance = payload
+            && payload.redeemRoutineItem
+            && payload.redeemRoutineItem.balance;
+          if (newBalance && !newBalance.entitled && newBalance.available <= 0) {
+            // Soft touchpoint: the redemption that drains the balance.
+            this.$notify({
+              title: "You're out of points",
+              text: 'Earn more by completing your routine, goals and milestones — points settle overnight.',
+              group: 'notify',
+              type: 'info',
+              duration: 5000,
+            });
+          }
+        })
+        .catch((error) => {
+          const message = (error && error.message) || '';
+          if (message.includes('402')) {
+            // Server-side affordability check failed — pitch the subscription.
+            this.paywallCost = cost;
+            this.paywallDrawerOpen = true;
+            return;
+          }
+          this.$notify({
+            title: 'Error',
+            text: 'Could not redeem this task. Please try again.',
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+        })
+        .finally(() => {
+          pendingMutations.remove(pendingKey);
+        });
+    },
+    checkClick(task, { fireAgent = true, agentImplicit = true } = {}) {
       // Track task completion
       this.trackTaskEvent('complete', {
         id: task.id,
@@ -1579,6 +1833,12 @@ export default {
       });
 
       this.quickTaskDialog = false;
+      // Passed tasks tick through the points redemption path — same modal
+      // flow, same agent side effects, but paid with points.
+      if (this.isRedeemable(task)) {
+        this.redeemClick(task, { fireAgent, agentImplicit });
+        return;
+      }
       if (task.passed || task.wait || task.ticked) return;
 
       const pendingKey = `routine:${task.id}`;
@@ -1687,8 +1947,11 @@ export default {
           // the addGoalItem mutation resolves.
           const goalId = this.findFirstGoalIdForRoutine(task.id);
           if (fireAgent && goalId && !String(goalId).startsWith('temp-')) {
+            // agentImplicit (default): the user ticked a task, they didn't
+            // press Start Agent — a failing event must not surface an
+            // "Agent failed" state. Explicit Start Agent passes false.
             this.$agent.fireStartEventIfPresent({
-              taskRef: task.id, goalId, goalDate: this.date, goalPeriod: 'day',
+              taskRef: task.id, goalId, goalDate: this.date, goalPeriod: 'day', implicit: agentImplicit,
             }).catch(() => {});
           }
         })
@@ -1797,6 +2060,9 @@ export default {
                       id
                       name
                       ticked
+                      passed
+                      redeemed
+                      passedPoints
                     }
                   }
                 }

@@ -15,6 +15,7 @@ export const EVENTS = {
   OPEN_AI_SEARCH: 'open-ai-search',
   DASHBOARD_CACHING_STATUS: 'dashboard-caching-status', // Emitted during dashboard cache population
   ROUTINE_TICKED: 'routine-ticked', // Emitted after a routine task is ticked to trigger weekStimuli refetch
+  XP_REDEEMED: 'xp-redeemed', // Emitted after a passed task is redeemed with points (refresh balance chips)
   DASHBOARD_REFRESH: 'dashboard-refresh', // Emitted when the refresh button is clicked
   AGENT_STATUS_CHANGED: 'agent:status-changed', // Emitted when an agent moves between idle/running/listening/finished/failed
 };

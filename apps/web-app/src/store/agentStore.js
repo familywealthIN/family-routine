@@ -258,7 +258,7 @@ const actions = {
   },
 
   async fireStartEventIfPresent({
-    apollo, vm, taskRef, goalId, goalDate, goalPeriod,
+    apollo, vm, taskRef, goalId, goalDate, goalPeriod, implicit = false,
   }) {
     const agent = state.agentsByTaskRef[taskRef];
     if (!agent || !agent.startEvent || !agent.startEvent.value) return null;
@@ -271,7 +271,12 @@ const actions = {
 
       const ok = result && (result.ok !== false);
       let nextStatus;
-      if (!ok) nextStatus = 'failed';
+      // Implicit fires (auto-triggered by Start Task / tick / redeem) must not
+      // surface a scary "Agent failed" state the user never asked for — the
+      // failure is still recorded (counts + lastError) for the Agents page,
+      // but the visible status quietly returns to idle. Only an explicit
+      // "Start Agent" reports failure loudly.
+      if (!ok) nextStatus = implicit ? 'idle' : 'failed';
       else if (agent.endEvent && agent.endEvent.value) nextStatus = 'listening';
       else nextStatus = 'finished';
       const resultData = result && result.data;
@@ -311,10 +316,11 @@ const actions = {
       return result;
     } catch (err) {
       console.error('[agentStore.fireStartEventIfPresent]', err);
-      setStatus(taskRef, 'failed');
+      const failStatus = implicit ? 'idle' : 'failed';
+      setStatus(taskRef, failStatus);
       await recordExecution(apollo, {
         id: agent.id,
-        status: 'failed',
+        status: failStatus,
         lastError: cap(err.message || 'Start event error', ERROR_MAX),
         incrementFailure: 1,
       }).catch(() => {});
@@ -328,6 +334,9 @@ const actions = {
     const agent = state.agentsByTaskRef[taskRef];
     if (!agent || !agent.endEvent || !agent.endEvent.value) return null;
 
+    // While the end event is in flight the badge shows "running" (not
+    // "listening") — same as the start-event dispatch.
+    setStatus(taskRef, 'running');
     try {
       const result = await dispatchEvent({
         vm, event: stripGraphqlMeta(agent.endEvent), goalId,

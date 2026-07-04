@@ -16,6 +16,7 @@ export { default as GoalItemList } from './GoalItemList/GoalItemList.vue';
 export { default as GoalList } from './GoalList/GoalList.vue';
 export { default as GoalsFilterTime } from './GoalsFilterTime/GoalsFilterTime.vue';
 export { default as GoalTaskToolbar } from './GoalTaskToolbar/GoalTaskToolbar.vue';
+export { default as PaywallDrawer } from './PaywallDrawer/PaywallDrawer.vue';
 export { default as PendingList } from './PendingList/PendingList.vue';
 export { default as PriorityMatrix } from './PriorityMatrix/PriorityMatrix.vue';
 export { default as UserHistory } from './UserHistory/UserHistory.vue';

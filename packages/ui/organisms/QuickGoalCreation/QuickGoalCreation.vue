@@ -43,7 +43,7 @@
     <v-flex x12 d-flex>
       <v-btn
         color="success"
-        :loading="buttonLoading"
+        :loading="buttonLoading && loadingAction !== 'agent'"
         :disabled="buttonLoading"
         @click="handleAddGoalItem"
       >
@@ -53,6 +53,7 @@
         v-if="agentState === 'assigned'"
         color="primary"
         outline
+        :loading="buttonLoading && loadingAction === 'agent'"
         :disabled="buttonLoading"
         @click="$emit('start-agent', { ...newGoalItem })"
       >
@@ -131,6 +132,12 @@ export default {
     buttonLoading: {
       type: Boolean,
       default: false,
+    },
+    // Which action initiated the in-flight work ('task' | 'agent') — the
+    // spinner shows only on the button the user actually clicked.
+    loadingAction: {
+      type: String,
+      default: '',
     },
     agentState: {
       type: String,
