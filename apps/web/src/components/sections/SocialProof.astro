@@ -1,0 +1,51 @@
+---
+import { Icon } from 'astro-icon/components';
+
+// Placeholder until real testimonials are wired in pre-launch.
+const quotes = [
+  {
+    body: 'The Routine points changed how I think about a day. It’s the first system where showing up actually pays off — literally.',
+    name: 'Beta tester',
+    role: 'Indie founder',
+  },
+  {
+    body: 'I used to drown in Notion templates. Routine Notes is one screen, one loop. That’s it. And it works.',
+    name: 'Beta tester',
+    role: 'Software engineer',
+  },
+  {
+    body: 'Cascading goals into milestones is genius. I planned a quarter in 15 minutes and the daily tasks follow on their own.',
+    name: 'Beta tester',
+    role: 'Product designer',
+  },
+];
+---
+
+<section class="py-24">
+  <div class="container-page">
+    <div class="max-w-2xl mx-auto text-center" data-reveal>
+      <span class="pill">
+        <Icon name="ph:chat-circle-text" width={14} height={14} />
+        From the beta
+      </span>
+      <h2 class="mt-5 text-4xl sm:text-5xl font-semibold">
+        People showing up <span class="italic font-display text-[color:var(--color-brand-600)]">say it best.</span>
+      </h2>
+    </div>
+
+    <div data-reveal-group class="mt-14 grid gap-6 md:grid-cols-3">
+      {quotes.map((q) => (
+        <figure data-reveal-item class="card-soft p-7 flex flex-col">
+          <Icon name="ph:quotes" width={28} height={28} class="text-[color:var(--color-brand-200)]" />
+          <blockquote class="mt-4 text-[15.5px] leading-relaxed text-[color:var(--color-ink-700)] flex-1">
+            “{q.body}”
+          </blockquote>
+          <figcaption class="mt-6 pt-5 border-t border-[color:var(--color-ink-100)]">
+            <p class="font-semibold text-[color:var(--color-ink-900)]">{q.name}</p>
+            <p class="text-sm text-[color:var(--color-ink-500)]">{q.role}</p>
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  </div>
+</section>

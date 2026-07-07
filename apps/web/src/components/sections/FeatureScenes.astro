@@ -1,0 +1,419 @@
+---
+import { Icon } from 'astro-icon/components';
+import PhoneFrame from '~/components/PhoneFrame.astro';
+import zoomTimings from '../../../public/videos/zoom-timings.json';
+
+/**
+ * Todoist-style "scene container": a column of feature copy blocks drives a
+ * sticky stage where real product recordings cross-fade. Recordings are
+ * bifurcated by device: desktop + tablet see the desktop recording in a
+ * browser frame (sticky stage on lg+, inline on md), phones see the mobile
+ * recording in a phone frame. Recordings zoom into the action area so the
+ * feature reads at any render size.
+ */
+const scenes = [
+  {
+    id: 'routines',
+    icon: 'ph:list-checks',
+    eyebrow: 'Show up on time',
+    title: 'Daily routines that keep score',
+    body: 'Time-box your day into routines with a 1h 30m punctuality window. Every on-time tick earns Discipline — show up late and the app knows.',
+    bullets: [
+      'Week strip with a live day timeline',
+      'Steps and quick tasks on every routine',
+      'Punctuality tracked per task',
+    ],
+  },
+  {
+    id: 'goals',
+    icon: 'ph:tree-structure',
+    eyebrow: 'Plan the cascade',
+    title: 'Goals that cascade year → day',
+    body: 'Set a yearly ambition, then break it into month, week and day milestones. Day goals roll up — knock them out and the parent goals auto-complete.',
+    bullets: [
+      'Calendar view of every day’s goals',
+      'Week / month / year accordions',
+      'Milestones auto-complete upward',
+    ],
+  },
+  {
+    id: 'agents',
+    icon: 'ph:sparkle',
+    eyebrow: 'Automate the loop',
+    title: 'AI agents attached to your routines',
+    body: 'Attach an agent to any routine. It fires when you start the task, listens while you work, and reports success or failure when the counter fills.',
+    bullets: [
+      'Start → listening → finished lifecycle',
+      'Success and failure counts per agent',
+      'Event hooks to your own endpoints',
+    ],
+  },
+  {
+    id: 'points',
+    icon: 'ph:coins',
+    eyebrow: 'Miss it? Redeem it',
+    title: 'A points economy with real stakes',
+    body: 'Earn up to 300 points a day by showing up. Missed checking a routine on time? Spend points to check it in anyway — your streak stays intact and your agents still run.',
+    bullets: [
+      'Live balance with overnight settlement',
+      'Check in missed routines with points',
+      'Streak stays intact, agents still run',
+    ],
+  },
+];
+
+const extras = [
+  {
+    icon: 'ph:users-three',
+    title: 'Group Sharing',
+    body: 'Share routines and goals with the people you trust. Accountability that actually compounds.',
+  },
+  {
+    icon: 'ph:shield-check',
+    title: 'End-to-end Encryption',
+    body: 'AES-256-GCM at rest. Your routine data is yours alone — encrypted before it ever hits a database.',
+  },
+];
+
+const video = (id: string, variant: 'desktop' | 'mobile') => ({
+  src: `/videos/${id}-${variant}.webm`,
+  poster: `/videos/${id}-${variant}-poster.jpg`,
+});
+
+// When the recording zooms into the action, the phone frame zooms with it
+// (recorded windows on the trimmed video timeline, seconds).
+const zoomWindows = (id: string) =>
+  JSON.stringify((zoomTimings as Record<string, { start: number; end: number }[]>)[`${id}-mobile`] ?? []);
+---
+
+<section id="features" class="py-24 relative" data-feature-scenes>
+  <div class="container-page">
+    <div class="max-w-2xl" data-reveal>
+      <span class="pill">
+        <Icon name="ph:squares-four" width={14} height={14} />
+        Everything you need to evolve
+      </span>
+      <h2 class="mt-5 text-4xl sm:text-5xl font-semibold">
+        Built around a measurable framework — <span class="text-[color:var(--color-brand-600)]">not feature creep.</span>
+      </h2>
+      <p class="mt-4 text-lg text-[color:var(--color-ink-600)]">
+        Routines, goals, AI, points, sharing, encryption. Six surfaces, one loop:
+        show up, earn points, evolve. Watch it work — recorded straight from the app,
+        on desktop and on your phone.
+      </p>
+    </div>
+
+    <div class="lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16 mt-6 lg:mt-0">
+      <!-- Copy rail — each block activates its scene on the sticky stage -->
+      <div>
+        {scenes.map((s, i) => (
+          <article
+            class="flex flex-col justify-center py-16 lg:py-0 lg:min-h-[78vh]"
+            data-scene-copy
+            data-scene-index={i}
+          >
+            <span class="pill">
+              <Icon name={s.icon} width={14} height={14} />
+              {s.eyebrow}
+            </span>
+            <h3 class="mt-5 text-3xl sm:text-4xl font-semibold text-[color:var(--color-ink-900)]">
+              {s.title}
+            </h3>
+            <p class="mt-4 text-lg leading-relaxed text-[color:var(--color-ink-600)]">{s.body}</p>
+            <ul class="mt-6 space-y-2.5">
+              {s.bullets.map((b) => (
+                <li class="flex items-start gap-2.5 text-[15px] text-[color:var(--color-ink-700)]">
+                  <Icon
+                    name="ph:check-circle-fill"
+                    width={18}
+                    height={18}
+                    class="mt-0.5 shrink-0 text-[color:var(--color-brand-500)]"
+                  />
+                  {b}
+                </li>
+              ))}
+            </ul>
+
+            <!-- Inline recordings for < lg (the sticky stage is hidden there).
+                 Tablet (md+) gets the desktop recording in a browser frame;
+                 phones get the mobile recording in a phone frame, rendered at
+                 its native 320×692 and scaled so the status bar keeps its
+                 proportions. -->
+            <div class="mt-10 hidden md:block lg:hidden">
+              <div class="feature-scene__browser feature-scene__browser--inline">
+                <div class="feature-scene__chrome" aria-hidden="true">
+                  <span class="feature-scene__dot" style="background:#ff5f57"></span>
+                  <span class="feature-scene__dot" style="background:#febc2e"></span>
+                  <span class="feature-scene__dot" style="background:#28c840"></span>
+                  <span class="feature-scene__address">routine notes — {s.id}</span>
+                </div>
+                <video
+                  muted
+                  loop
+                  playsinline
+                  preload="metadata"
+                  poster={video(s.id, 'desktop').poster}
+                  src={video(s.id, 'desktop').src}
+                  data-inline-video
+                  aria-label={`${s.title} — recorded in the Routine Notes web app`}
+                ></video>
+              </div>
+            </div>
+            <div class="mt-10 flex justify-center md:hidden">
+              <div class="feature-scene__scale feature-scene__scale--inline">
+                <PhoneFrame width={320} height={692}>
+                  <video
+                    muted
+                    loop
+                    playsinline
+                    preload="metadata"
+                    poster={video(s.id, 'mobile').poster}
+                    src={video(s.id, 'mobile').src}
+                    data-inline-video
+                    data-zoom-windows={zoomWindows(s.id)}
+                    aria-label={`${s.title} — recorded in the Routine Notes mobile app`}
+                  ></video>
+                </PhoneFrame>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <!-- Sticky stage (lg+) -->
+      <div class="hidden lg:block">
+        <div class="feature-stage sticky top-24 h-[78vh] max-h-[720px] min-h-[520px]" data-scene-stage>
+          {scenes.map((s, i) => (
+            <div class="feature-scene" data-scene-visual data-scene-index={i}>
+              <div class="feature-scene__browser">
+                <div class="feature-scene__chrome" aria-hidden="true">
+                  <span class="feature-scene__dot" style="background:#ff5f57"></span>
+                  <span class="feature-scene__dot" style="background:#febc2e"></span>
+                  <span class="feature-scene__dot" style="background:#28c840"></span>
+                  <span class="feature-scene__address">routine notes — {s.id}</span>
+                </div>
+                <video
+                  muted
+                  loop
+                  playsinline
+                  preload="metadata"
+                  poster={video(s.id, 'desktop').poster}
+                  src={video(s.id, 'desktop').src}
+                  data-stage-video
+                  aria-label={`${s.title} — recorded in the Routine Notes web app`}
+                ></video>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <!-- The two surfaces that don't need a movie -->
+    <div data-reveal-group class="mt-16 lg:mt-8 grid gap-6 sm:grid-cols-2">
+      {extras.map((f) => (
+        <article data-reveal-item class="card-soft p-6">
+          <span class="inline-flex h-11 w-11 items-center justify-center rounded-[12px] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-600)] ring-1 ring-[color:var(--color-brand-100)]">
+            <Icon name={f.icon} width={22} height={22} />
+          </span>
+          <h3 class="mt-5 text-xl font-semibold text-[color:var(--color-ink-900)]">{f.title}</h3>
+          <p class="mt-2 text-[15px] leading-relaxed text-[color:var(--color-ink-600)]">{f.body}</p>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .feature-stage {
+    position: sticky;
+    border-radius: 24px;
+    background:
+      radial-gradient(120% 90% at 85% 10%, rgba(184, 217, 238, 0.55), rgba(184, 217, 238, 0) 60%),
+      radial-gradient(110% 90% at 10% 90%, rgba(40, 139, 213, 0.14), rgba(40, 139, 213, 0) 55%),
+      linear-gradient(160deg, var(--color-brand-50), var(--color-surface-dim));
+    border: 1px solid var(--color-ink-100);
+    overflow: hidden;
+  }
+
+  .feature-scene {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.35s ease-in-out;
+    pointer-events: none;
+  }
+  .feature-scene.is-active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .feature-scene__browser {
+    width: min(92%, 720px);
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--color-ink-100);
+    box-shadow: var(--shadow-lift);
+  }
+  .feature-scene__browser--inline {
+    width: 100%;
+    max-width: 720px;
+    margin-inline: auto;
+  }
+  .feature-scene__chrome {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    background: var(--color-ink-50);
+    border-bottom: 1px solid var(--color-ink-100);
+  }
+  .feature-scene__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .feature-scene__address {
+    margin-inline: auto;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--color-ink-400);
+    background: #fff;
+    border: 1px solid var(--color-ink-100);
+    border-radius: 999px;
+    padding: 3px 14px;
+  }
+  .feature-scene__browser video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    background: #fff;
+  }
+
+  /* PhoneFrame renders at 336×708 (320×692 + bezel); scale it as one unit so
+     the status bar / Dynamic Island keep their designed proportions. The
+     wrapper reserves the zoomed-in footprint, and the whole frame zooms from
+     0.78 → 0.94 while its recording is on screen (class toggled by the
+     inline observer below). */
+  .feature-scene__scale {
+    position: relative;
+  }
+  .feature-scene__scale--inline {
+    width: calc(336px * 0.94);
+    height: calc(708px * 0.94);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .feature-scene__scale--inline > :global(*) {
+    flex-shrink: 0;
+    transform: scale(0.78);
+    transform-origin: top center;
+    transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .feature-scene__scale--inline.is-live > :global(*) {
+    transform: scale(0.94);
+  }
+  /* the recording is zoomed into the action right now — zoom the whole frame
+     with it, full width and above the surrounding copy */
+  .feature-scene__scale--inline.is-zoomed {
+    z-index: 5;
+  }
+  .feature-scene__scale--inline.is-zoomed > :global(*) {
+    transform: scale(1.16);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .feature-scene__scale--inline > :global(*) {
+      transition: none;
+      transform: scale(0.94) !important;
+    }
+  }
+</style>
+
+<script>
+  function initFeatureScenes() {
+    document.querySelectorAll<HTMLElement>('[data-feature-scenes]').forEach((section) => {
+      if (section.dataset.scenesInit) return;
+      section.dataset.scenesInit = 'true';
+
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const visuals = Array.from(section.querySelectorAll<HTMLElement>('[data-scene-visual]'));
+      const copies = Array.from(section.querySelectorAll<HTMLElement>('[data-scene-copy]'));
+
+      const setPlayback = (video: HTMLVideoElement, play: boolean) => {
+        if (reduceMotion) {
+          video.controls = true;
+          return;
+        }
+        if (play) video.play().catch(() => {});
+        else video.pause();
+      };
+
+      const setActive = (index: number) => {
+        visuals.forEach((visual) => {
+          const active = Number(visual.dataset.sceneIndex) === index;
+          visual.classList.toggle('is-active', active);
+          visual
+            .querySelectorAll<HTMLVideoElement>('[data-stage-video]')
+            .forEach((v) => setPlayback(v, active));
+        });
+      };
+
+      setActive(0);
+
+      // A copy block owns the stage while it crosses the middle of the viewport.
+      const copyObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            setActive(Number((entry.target as HTMLElement).dataset.sceneIndex));
+          });
+        },
+        { rootMargin: '-45% 0px -45% 0px', threshold: 0 }
+      );
+      copies.forEach((c) => copyObserver.observe(c));
+
+      // Inline (< lg) recordings play only while on screen; phone frames zoom
+      // in as a whole (bezel included) while their recording is live.
+      const inlineObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            setPlayback(entry.target as HTMLVideoElement, entry.isIntersecting);
+            entry.target
+              .closest('.feature-scene__scale--inline')
+              ?.classList.toggle('is-live', entry.isIntersecting);
+          });
+        },
+        { threshold: 0.35 }
+      );
+      section.querySelectorAll<HTMLVideoElement>('[data-inline-video]').forEach((v) => {
+        inlineObserver.observe(v);
+        // zoom the phone frame in sync with the recording's own zoom moments
+        const wrap = v.closest('.feature-scene__scale--inline');
+        const windows: { start: number; end: number }[] = JSON.parse(v.dataset.zoomWindows || '[]');
+        if (wrap && windows.length && !reduceMotion) {
+          v.addEventListener('timeupdate', () => {
+            const t = v.currentTime;
+            const zoomed = windows.some((w) => t >= w.start && t <= w.end);
+            wrap.classList.toggle('is-zoomed', zoomed);
+          });
+        }
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFeatureScenes);
+  } else {
+    initFeatureScenes();
+  }
+  document.addEventListener('astro:page-load', initFeatureScenes);
+</script>

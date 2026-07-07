@@ -1,0 +1,54 @@
+---
+import { Icon } from 'astro-icon/components';
+import { LINKS } from '~/lib/links';
+---
+
+<section class="py-24 relative overflow-hidden bg-[color:var(--color-ink-900)] text-white">
+  <div class="absolute inset-0 -z-0 pointer-events-none">
+    <div class="absolute -top-40 left-1/2 -translate-x-1/2 h-[640px] w-[640px] rounded-full blur-3xl opacity-20"
+      style="background:radial-gradient(circle, #288bd5 0%, rgba(40,139,213,0) 70%)"></div>
+    <div class="absolute inset-0 opacity-[0.04]" style="background-image:radial-gradient(rgba(255,255,255,0.6) 1px,transparent 1px);background-size:24px 24px"></div>
+  </div>
+
+  <div class="container-page relative">
+    <div class="max-w-3xl mx-auto text-center" data-reveal>
+      <span class="pill !bg-white/10 !text-white !border-white/15">
+        <Icon name="ph:coins" width={14} height={14} />
+        Earn-your-way pricing
+      </span>
+
+      <h2 class="mt-6 text-5xl sm:text-6xl lg:text-7xl font-semibold leading-[1.02]">
+        Free if you <span class="italic font-display text-[color:var(--color-brand-300)]">show up.</span><br />
+        Subscribe only when you <span class="italic font-display text-[color:var(--color-brand-300)]">don’t.</span>
+      </h2>
+
+      <p class="mt-8 text-lg text-white/70 max-w-2xl mx-auto leading-relaxed">
+        Every day you earn up to 300 Routine points by doing the work. Missed checking a routine on
+        time? Spend your points to check it in anyway — keep the streak, and its agents still run.
+        Run out? Subscribe for <b class="text-white">$4.99/month</b>. Or don’t — and just show up tomorrow.
+      </p>
+
+      <div class="mt-12 grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+        <div class="rounded-2xl bg-white/5 border border-white/10 p-6 text-left backdrop-blur-sm">
+          <p class="font-display text-4xl font-semibold text-white">300</p>
+          <p class="mt-2 text-sm text-white/60">Routine points to earn per day. 100 each for K, D, G.</p>
+        </div>
+        <div class="rounded-2xl bg-white/5 border border-white/10 p-6 text-left backdrop-blur-sm">
+          <p class="font-display text-4xl font-semibold text-white">$0</p>
+          <p class="mt-2 text-sm text-white/60">Forever, as long as your points cover your missed tasks.</p>
+        </div>
+        <div class="rounded-2xl bg-white/5 border border-white/10 p-6 text-left backdrop-blur-sm">
+          <p class="font-display text-4xl font-semibold text-white">$4.99<span class="text-lg text-white/50">/mo</span></p>
+          <p class="mt-2 text-sm text-white/60">Or $49.99/yr. Redeem any missed task when points run dry.</p>
+        </div>
+      </div>
+
+      <div class="mt-12">
+        <a href={LINKS.pricing} class="inline-flex items-center gap-2 rounded-2xl bg-white text-[color:var(--color-ink-900)] px-6 py-3.5 font-semibold shadow-lg hover:translate-y-[-1px] transition-transform">
+          See full pricing
+          <Icon name="ph:arrow-right" width={16} height={16} />
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

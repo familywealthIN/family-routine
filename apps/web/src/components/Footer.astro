@@ -1,0 +1,56 @@
+---
+import Logo from '~/components/Logo.astro';
+import { LINKS, SITE } from '~/lib/links';
+import { Icon } from 'astro-icon/components';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-[color:var(--color-ink-100)] bg-[color:var(--color-surface-soft)] mt-32">
+  <div class="container-page py-14 grid gap-10 md:grid-cols-3">
+    <div>
+      <Logo />
+      <p class="mt-4 text-sm text-[color:var(--color-ink-500)] max-w-xs">
+        {SITE.tagline}
+      </p>
+      <div class="mt-5 flex items-center gap-3">
+        <a aria-label="LinkedIn" href={LINKS.linkedin} target="_blank" rel="noopener" class="text-[color:var(--color-ink-400)] hover:text-[color:var(--color-brand-600)] transition-colors">
+          <Icon name="ph:linkedin-logo" width={20} height={20} />
+        </a>
+        <a aria-label="GitHub" href={LINKS.github} target="_blank" rel="noopener" class="text-[color:var(--color-ink-400)] hover:text-[color:var(--color-brand-600)] transition-colors">
+          <Icon name="ph:github-logo" width={20} height={20} />
+        </a>
+        <a aria-label="Email" href={LINKS.support} class="text-[color:var(--color-ink-400)] hover:text-[color:var(--color-brand-600)] transition-colors">
+          <Icon name="ph:envelope-simple" width={20} height={20} />
+        </a>
+      </div>
+    </div>
+
+    <div>
+      <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-ink-500)]">Product</h4>
+      <ul class="mt-4 space-y-2 text-sm">
+        <li><a class="text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)]" href="/#features">Features</a></li>
+        <li><a class="text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)]" href={LINKS.pricing}>Pricing</a></li>
+        <li><a class="text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)]" href={LINKS.about}>About</a></li>
+        <li><a class="text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)]" href={LINKS.appLogin}>Login</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-ink-500)]">Resources</h4>
+      <ul class="mt-4 space-y-2 text-sm">
+        <li><a class="text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)]" href={LINKS.appLogin + 'guide'} target="_blank" rel="noopener">Guide</a></li>
+        <li><a class="text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)]" href={LINKS.privacy} target="_blank" rel="noopener">Privacy</a></li>
+        <li><a class="text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)]" href={LINKS.terms} target="_blank" rel="noopener">Terms</a></li>
+        <li><a class="text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)]" href={LINKS.support}>Contact</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="border-t border-[color:var(--color-ink-100)]">
+    <div class="container-page py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-[color:var(--color-ink-500)]">
+      <span>&copy; {year} {SITE.name}. All rights reserved.</span>
+      <span>Made with <span aria-hidden="true">🩵</span> by Gaurav Panchal.</span>
+    </div>
+  </div>
+</footer>

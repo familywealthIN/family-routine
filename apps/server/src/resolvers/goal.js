@@ -89,6 +89,41 @@ function periodGoalDates(period, date) {
   return date;
 }
 
+/**
+ * All child-period document dates that roll up into `currentPeriod` for the
+ * given date. A week goal's children are the 7 day docs of that week; a month
+ * goal's are the week docs (keyed by each week's Friday); a year goal's are the
+ * 12 month-end docs. Progress/streak counting must scan the WHOLE range —
+ * scoping to a single date (as callers used to) capped week progress at 1 and
+ * is the recurring "streak broken" bug.
+ */
+function periodChildDates(currentPeriod, date) {
+  const m = moment(date, 'DD-MM-YYYY');
+  if (currentPeriod === 'week') {
+    // The week goal streak runs Sunday → Saturday. Anchor explicitly with
+    // day() (0=Sun..6=Sat, locale-independent) instead of weekday(), which
+    // flips to Monday-start under many moment locales.
+    const sunday = m.clone().subtract(m.day(), 'days');
+    return Array.from({ length: 7 }, (unused, i) => sunday.clone().add(i, 'days').format('DD-MM-YYYY'));
+  }
+  if (currentPeriod === 'month') {
+    // Week docs are keyed by their Friday (periodGoalDates('week') → weekday(5)).
+    const end = m.clone().endOf('month');
+    const fridays = new Set();
+    const cur = m.clone().startOf('month');
+    while (cur.isSameOrBefore(end, 'day')) {
+      fridays.add(cur.clone().weekday(5).format('DD-MM-YYYY'));
+      cur.add(1, 'week');
+    }
+    fridays.add(end.clone().weekday(5).format('DD-MM-YYYY'));
+    return Array.from(fridays);
+  }
+  if (currentPeriod === 'year') {
+    return Array.from({ length: 12 }, (unused, i) => m.clone().month(i).endOf('month').format('DD-MM-YYYY'));
+  }
+  return [date];
+}
+
 function enlistGDays(gRoutineTasks, cleanGoals) {
   const gRoutineTasksMonth = Array.from(gRoutineTasks.values()).filter((gtask) => gtask.period === 'month');
 
@@ -161,13 +196,22 @@ async function autoCheckTaskPeriod({
   currentPeriod, stepDownPeriod, cleanGoals, completionThreshold, date, email, gRoutineTasks = null,
 }) {
   const periodGoals = await GoalModel.find({ period: currentPeriod, date: periodGoalDates(currentPeriod, date), email }).exec();
-  // console.log('periodGoals', currentPeriod, periodGoalDates(currentPeriod, date), periodGoals);
+
+  // Fetch the child-period docs for the FULL current period so progress counts
+  // every completed child across the week/month/year — not just the single date
+  // the calling resolver happened to fetch. Owning this query here is the
+  // permanent fix: no caller can starve the streak by scoping too narrowly.
+  const childDates = periodChildDates(currentPeriod, date);
+  const childPeriodGoals = await GoalModel.find({
+    period: stepDownPeriod, date: { $in: childDates }, email,
+  }).exec();
+
   const updatePromises = [];
   periodGoals.forEach((periodGoal) => {
     periodGoal.goalItems.forEach((periodGoalItem) => {
       periodGoalItem.progress = 0;
 
-      const dayCleanGoals = cleanGoals.filter((cleanGoal) => cleanGoal.period === stepDownPeriod);
+      const dayCleanGoals = childPeriodGoals.filter((g) => g.goalItems && g.goalItems.length);
 
       if (dayCleanGoals && dayCleanGoals.length) {
         const tempGRoutineTasks = [];
@@ -189,13 +233,16 @@ async function autoCheckTaskPeriod({
             });
 
             if (periodGoalItem.progress === completionThreshold && !periodGoalItem.isComplete) {
-              const cleanGoalsGoalItem = cleanGoals
-                .find((cleanGoal) => String(cleanGoal.id) === String(periodGoal.id))
-                .goalItems
+              // Mirror completion into cleanGoals so a caller that re-uses it
+              // (completeGoalItem's month→year backtrack) sees the parent as
+              // done. Guarded: a caller may not include the parent doc.
+              const cleanGoalsParent = cleanGoals
+                .find((cleanGoal) => String(cleanGoal.id) === String(periodGoal.id));
+              const cleanGoalsGoalItem = cleanGoalsParent && cleanGoalsParent.goalItems
                 .find((cleanGoalItem) => String(cleanGoalItem.id) === String(periodGoalItem.id));
 
               periodGoalItem.isComplete = true;
-              cleanGoalsGoalItem.isComplete = true;
+              if (cleanGoalsGoalItem) cleanGoalsGoalItem.isComplete = true;
 
               updatePromises.push(GoalModel.findOneAndUpdate(
                 {
@@ -763,9 +810,15 @@ const query = {
         'goalItems.goalRef': args.goalRef,
       }).exec();
 
-      // Filter the goals to only include goalItems that match the goalRef
+      // Filter the goals to only include goalItems that match the goalRef.
+      // toObject() drops the mongoose `id` virtual, so map `_id` back onto
+      // `id` — without it every Goal resolves id:null and Apollo normalizes
+      // all of them into a single cached entity, collapsing the timeline to
+      // one day's activity.
       const filteredGoals = goals.map((goal) => ({
         ...goal.toObject(),
+        // eslint-disable-next-line no-underscore-dangle
+        id: goal._id,
         goalItems: goal.goalItems.filter((item) => item.goalRef === args.goalRef),
       })).filter((goal) => goal.goalItems.length > 0);
 

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300" width="480" height="300">
+  <rect width="480" height="300" fill="#f7f9fb"/>
+  <text x="24" y="34" fill="#0d1b2a" font-family="Fraunces" font-size="18" font-weight="600">AI agents</text>
+  <text x="24" y="54" fill="#5b6e8e" font-family="Plus Jakarta Sans" font-size="11">Powered by KDG points · 181 available today</text>
+
+  <rect x="24" y="72" width="432" height="80" rx="14" fill="#fff" stroke="#e9edf2"/>
+  <circle cx="52" cy="112" r="14" fill="#dbecf7"/>
+  <text x="52" y="117" fill="#288bd5" font-family="Plus Jakarta Sans" font-size="13" font-weight="700" text-anchor="middle">AI</text>
+  <text x="80" y="100" fill="#0d1b2a" font-family="Plus Jakarta Sans" font-size="13" font-weight="600">Summary — Today’s wins</text>
+  <text x="80" y="120" fill="#5b6e8e" font-family="Plus Jakarta Sans" font-size="11">3 routines done. Streak +1. Deep work block was 92% efficient. Reading streak 14 days.</text>
+  <text x="80" y="138" fill="#288bd5" font-family="Plus Jakarta Sans" font-size="11" font-weight="600">-15 KDG</text>
+
+  <rect x="24" y="166" width="432" height="60" rx="14" fill="#fff" stroke="#e9edf2"/>
+  <circle cx="52" cy="196" r="14" fill="#dbecf7"/>
+  <text x="52" y="201" fill="#288bd5" font-family="Plus Jakarta Sans" font-size="13" font-weight="700" text-anchor="middle">AI</text>
+  <text x="80" y="194" fill="#0d1b2a" font-family="Plus Jakarta Sans" font-size="13" font-weight="600">Next step — Build session</text>
+  <text x="80" y="212" fill="#5b6e8e" font-family="Plus Jakarta Sans" font-size="11">Implement Hero section with iPhone 17 Pro CSS frame · ~45 min</text>
+
+  <rect x="24" y="240" width="432" height="40" rx="12" fill="#288bd5"/>
+  <text x="240" y="265" fill="#fff" font-family="Plus Jakarta Sans" font-size="13" font-weight="600" text-anchor="middle">Run another AI agent · 12 KDG</text>
+</svg>

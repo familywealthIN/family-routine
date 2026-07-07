@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 692" width="320" height="692">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="692" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f0f7fc"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="692" fill="url(#bg)"/>
+  <!-- status bar -->
+  <text x="20" y="32" fill="#0d1b2a" font-family="Plus Jakarta Sans, system-ui" font-size="13" font-weight="600">9:41</text>
+  <circle cx="280" cy="28" r="3" fill="#0d1b2a"/>
+  <circle cx="292" cy="28" r="3" fill="#0d1b2a"/>
+  <circle cx="304" cy="28" r="3" fill="#0d1b2a" opacity="0.4"/>
+
+  <!-- header -->
+  <text x="20" y="86" fill="#5b6e8e" font-family="Plus Jakarta Sans, system-ui" font-size="12" font-weight="600" letter-spacing="1.5">TODAY · MON</text>
+  <text x="20" y="124" fill="#0d1b2a" font-family="Fraunces, Georgia, serif" font-size="32" font-weight="600">Good morning, Gaurav</text>
+
+  <!-- KDG card -->
+  <rect x="20" y="150" width="280" height="130" rx="16" fill="#ffffff" stroke="#e9edf2"/>
+  <text x="36" y="178" fill="#5b6e8e" font-family="Plus Jakarta Sans" font-size="11" font-weight="600" letter-spacing="1.5">KDG TODAY</text>
+  <text x="36" y="216" fill="#0d1b2a" font-family="Fraunces" font-size="34" font-weight="600">181<tspan fill="#8696b0" font-size="18">/300</tspan></text>
+  <text x="36" y="240" fill="#5b6e8e" font-family="Plus Jakarta Sans" font-size="12">14-day streak · keep showing up</text>
+
+  <!-- D bar -->
+  <text x="36" y="266" font-family="Plus Jakarta Sans" font-size="11" fill="#5b6e8e" font-weight="600">D 78</text>
+  <rect x="68" y="259" width="60" height="6" rx="3" fill="#e9edf2"/>
+  <rect x="68" y="259" width="47" height="6" rx="3" fill="#288bd5"/>
+  <text x="138" y="266" font-family="Plus Jakarta Sans" font-size="11" fill="#5b6e8e" font-weight="600">K 62</text>
+  <rect x="160" y="259" width="50" height="6" rx="3" fill="#e9edf2"/>
+  <rect x="160" y="259" width="31" height="6" rx="3" fill="#5aa3d3"/>
+  <text x="218" y="266" font-family="Plus Jakarta Sans" font-size="11" fill="#5b6e8e" font-weight="600">G 41</text>
+  <rect x="240" y="259" width="50" height="6" rx="3" fill="#e9edf2"/>
+  <rect x="240" y="259" width="21" height="6" rx="3" fill="#b8d9ee"/>
+
+  <!-- routines list -->
+  <text x="20" y="318" fill="#0d1b2a" font-family="Plus Jakarta Sans" font-size="15" font-weight="600">Your routines</text>
+  <text x="280" y="318" fill="#288bd5" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" text-anchor="end">3 of 5 done</text>
+
+  <!-- 06:00 -->
+  <rect x="20" y="334" width="280" height="62" rx="14" fill="#ffffff" stroke="#e9edf2"/>
+  <circle cx="48" cy="365" r="14" fill="#288bd5"/>
+  <path d="M41 365 L46 370 L55 360" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="72" y="361" fill="#0d1b2a" font-family="Plus Jakarta Sans" font-size="14" font-weight="600">Morning movement</text>
+  <text x="72" y="380" fill="#8696b0" font-family="Plus Jakarta Sans" font-size="11">06:00 · 3/3 tasks</text>
+  <text x="284" y="370" fill="#288bd5" font-family="Fraunces" font-size="13" font-weight="600" text-anchor="end">+30</text>
+
+  <!-- 09:00 -->
+  <rect x="20" y="408" width="280" height="62" rx="14" fill="#ffffff" stroke="#e9edf2"/>
+  <circle cx="48" cy="439" r="14" fill="#288bd5"/>
+  <path d="M41 439 L46 444 L55 434" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="72" y="435" fill="#0d1b2a" font-family="Plus Jakarta Sans" font-size="14" font-weight="600">Deep work block</text>
+  <text x="72" y="454" fill="#8696b0" font-family="Plus Jakarta Sans" font-size="11">09:00 · 2/3 tasks</text>
+  <text x="284" y="444" fill="#288bd5" font-family="Fraunces" font-size="13" font-weight="600" text-anchor="end">+45</text>
+
+  <!-- 12:30 -->
+  <rect x="20" y="482" width="280" height="62" rx="14" fill="#ffffff" stroke="#e9edf2"/>
+  <circle cx="48" cy="513" r="14" fill="#288bd5"/>
+  <path d="M41 513 L46 518 L55 508" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="72" y="509" fill="#0d1b2a" font-family="Plus Jakarta Sans" font-size="14" font-weight="600">Reading &amp; reset</text>
+  <text x="72" y="528" fill="#8696b0" font-family="Plus Jakarta Sans" font-size="11">12:30 · 2/2 tasks</text>
+  <text x="284" y="518" fill="#288bd5" font-family="Fraunces" font-size="13" font-weight="600" text-anchor="end">+25</text>
+
+  <!-- 16:00 -->
+  <rect x="20" y="556" width="280" height="62" rx="14" fill="#ffffff" stroke="#e9edf2"/>
+  <circle cx="48" cy="587" r="14" fill="#ffffff" stroke="#b3becf" stroke-width="2"/>
+  <text x="72" y="583" fill="#0d1b2a" font-family="Plus Jakarta Sans" font-size="14" font-weight="600">Build session</text>
+  <text x="72" y="602" fill="#8696b0" font-family="Plus Jakarta Sans" font-size="11">16:00 · 0/4 tasks</text>
+  <text x="284" y="592" fill="#8696b0" font-family="Fraunces" font-size="13" font-weight="600" text-anchor="end">+0</text>
+
+  <!-- 21:00 -->
+  <rect x="20" y="630" width="280" height="44" rx="14" fill="#ffffff" stroke="#e9edf2"/>
+  <circle cx="48" cy="652" r="14" fill="#ffffff" stroke="#d6dce5" stroke-width="2"/>
+  <text x="72" y="649" fill="#5b6e8e" font-family="Plus Jakarta Sans" font-size="14" font-weight="500">Wind-down — 21:00</text>
+</svg>

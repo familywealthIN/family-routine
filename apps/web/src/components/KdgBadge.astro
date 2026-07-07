@@ -1,0 +1,64 @@
+---
+// Tiny floating Routine points pill — used to overlay the phone frame in the hero
+// when no screenshot is present yet.
+---
+<div class="kdg-badge">
+  <div class="kdg-badge__row">
+    <span class="kdg-badge__label">Today</span>
+    <span class="kdg-badge__total"><b>181</b><i>/300</i></span>
+  </div>
+  <div class="kdg-badge__bars">
+    <div class="kdg-badge__bar"><span style="--p:78%;background:#288bd5"></span><em>D</em></div>
+    <div class="kdg-badge__bar"><span style="--p:62%;background:#5aa3d3"></span><em>K</em></div>
+    <div class="kdg-badge__bar"><span style="--p:41%;background:#b8d9ee"></span><em>G</em></div>
+  </div>
+</div>
+
+<style>
+  .kdg-badge {
+    position: absolute;
+    border-radius: 16px;
+    background: #fff;
+    padding: 14px 16px;
+    box-shadow: 0 24px 48px -16px rgba(13, 27, 42, 0.25),
+      0 0 0 1px rgba(13, 27, 42, 0.04);
+    font-family: var(--font-sans);
+    width: 220px;
+  }
+  .kdg-badge__row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  .kdg-badge__label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5b6e8e; }
+  .kdg-badge__total { font-family: var(--font-display); }
+  .kdg-badge__total b { font-size: 22px; font-weight: 600; color: #0d1b2a; }
+  .kdg-badge__total i { font-style: normal; color: #8696b0; font-size: 13px; }
+  .kdg-badge__bars { display: grid; gap: 6px; }
+  .kdg-badge__bar {
+    display: grid;
+    grid-template-columns: 14px 1fr;
+    align-items: center;
+    gap: 8px;
+  }
+  .kdg-badge__bar em {
+    font-style: normal;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 11px;
+    color: #5b6e8e;
+    text-align: center;
+  }
+  .kdg-badge__bar span {
+    height: 6px;
+    border-radius: 999px;
+    background: #e9edf2;
+    position: relative;
+    overflow: hidden;
+    display:block;
+  }
+  .kdg-badge__bar span::before {
+    content:'';
+    position:absolute;
+    inset:0;
+    width: var(--p);
+    background: inherit;
+    border-radius: 999px;
+  }
+</style>

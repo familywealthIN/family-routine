@@ -1,0 +1,120 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import FinalCta from '~/components/sections/FinalCta.astro';
+import EvolutionLoop from '~/components/EvolutionLoop.astro';
+import { Icon } from 'astro-icon/components';
+import { LINKS } from '~/lib/links';
+
+const githubAvatar = 'https://avatars.githubusercontent.com/grvpanchal';
+---
+
+<BaseLayout title="About — Routine Notes" description="I built Routine Notes on the belief that incremental daily achievement compounds into outcomes that seemed impossible.">
+  <section class="relative pt-20 pb-12 overflow-hidden">
+    <div class="absolute inset-0 -z-10 pointer-events-none">
+      <div class="absolute top-0 left-1/4 h-[420px] w-[640px] rounded-full blur-3xl opacity-40"
+        style="background:radial-gradient(circle, rgba(40,139,213,0.2), rgba(40,139,213,0) 70%)"></div>
+    </div>
+
+    <div class="container-page max-w-3xl mx-auto" data-reveal>
+      <span class="pill">
+        <Icon name="ph:user-circle" width={14} height={14} />
+        About
+      </span>
+
+      <div class="mt-8 flex items-center gap-5">
+        <img
+          src={githubAvatar}
+          alt="Gaurav Panchal"
+          class="h-16 w-16 rounded-full ring-2 ring-white shadow-md object-cover"
+          onerror="this.style.display='none'"
+          loading="eager"
+          width="64"
+          height="64"
+        />
+        <div>
+          <h1 class="text-4xl sm:text-5xl font-semibold leading-[1.05]">
+            Hi, I’m <span class="italic font-display text-[color:var(--color-brand-600)]">Gaurav.</span>
+          </h1>
+          <p class="mt-2 text-[color:var(--color-ink-500)] text-sm">Founder · Routine Notes</p>
+        </div>
+      </div>
+
+      <div class="prose prose-lg mt-12 max-w-none text-[color:var(--color-ink-700)] leading-relaxed">
+        <p class="text-[1.15rem] text-[color:var(--color-ink-900)] font-medium">
+          I built Routine Notes on the belief that incremental daily achievement compounds into
+          outcomes that seemed impossible.
+        </p>
+
+        <h2 class="text-2xl font-semibold mt-12 mb-3">The problem with productivity apps</h2>
+        <p>
+          Most productivity tools optimize for capture — endless inboxes, weekly reviews, kanban
+          boards, nested templates. They tell you what to think about, but not whether you actually
+          <em>moved</em> today. After years of trying every system, I realized I had no measure of
+          my own evolution. Just a tidier backlog.
+        </p>
+
+        <h2 class="text-2xl font-semibold mt-12 mb-3">Why Point based evolution system</h2>
+        <p>
+          So I built a framework around three things that I could measure every single day:
+          <b>Discipline</b> (showing up on time), <b>Kinetics</b> (acting with full dedication), and
+          <b>Geniuses</b> (gradually improving the plan toward the goal). 100 points each, 300 total
+          per day. Earn them by doing the work. Watch them compound into week, month, and year wins
+          automatically.
+        </p>
+        <p>
+          The order matters. Showing up on time removes the deliberation that kills most habits.
+          Acting with full dedication turns the show-up into measurable progress. Improving the plan
+          means every next loop starts a step closer to the goal — and because points settle
+          overnight and fund tomorrow, the loop feeds itself. That’s the amplifier:
+        </p>
+
+        <EvolutionLoop />
+
+        <p class="mt-10">
+          My own goals are big enough that I can’t reach them without an AI that both assists and
+          measures — so Routine Notes does both. The AI helps you plan, summarize, and surface the
+          next move. The Routine points fund that AI: you earn it by showing up.
+        </p>
+
+        <h2 class="text-2xl font-semibold mt-12 mb-3">Why I’ll only charge when you stop earning</h2>
+        <p>
+          We live in a world full of psyops — feeds, ads and outrage loops engineered to hijack
+          your attention and decide your day for you. In that world, natural selection becomes
+          limited: your environment no longer rewards the fittest, it rewards the most captured.
+          Breaking through takes <b>integrity</b> — and integrity is maintained by showing up on
+          time, again and again, for the things you chose.
+        </p>
+        <p>
+          That’s what this app builds. Every on-time check-in is a small act of breaking through
+          the psyops imposed on you by the world, and re-orienting your life toward your goals and
+          your own evolution.
+        </p>
+        <p>
+          The pricing follows the same principle. Paying me for a subscription helps <em>me</em>
+          evolve — but you showing up on time helps <em>you</em> evolve, and that’s the outcome the
+          app rewards. Show up daily, earn your points, run your AI agents free. Stall out?
+          Subscribe for <b>$5/month</b> and AI is unlimited. Pick back up tomorrow and your
+          subscription becomes optional again. It’s positive reinforcement, built into the pricing.
+        </p>
+        <p>
+          This is the pricing I’d want as a user — pay for what you can’t earn, not for what the
+          marketplace decided to bundle.
+        </p>
+
+        <h2 class="text-2xl font-semibold mt-12 mb-3">What’s next</h2>
+        <p>
+          The web-app is live at <a href={LINKS.appLogin}>routine.familywealth.in</a>. iOS and
+          Android builds via Capacitor are in beta. The roadmap: deeper AI workflows, custom agent
+          templates, group challenges. If you want to shape what comes next — or you just want to
+          talk — reach me at <a href={LINKS.support}>support@familywealth.in</a>.
+        </p>
+
+        <p class="mt-12 italic text-[color:var(--color-ink-600)]">
+          — Gaurav Panchal
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <FinalCta />
+</BaseLayout>
