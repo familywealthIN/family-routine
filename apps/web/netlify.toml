@@ -1,13 +1,22 @@
 [build]
-  command = "npm run build"
+  command = "yarn build"
   publish = "dist"
 
 [build.environment]
-  NODE_OPTIONS = "--openssl-legacy-provider"
   NODE_VERSION = "20"
   YARN_FLAGS = "--ignore-engines"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/screenshots/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/videos/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

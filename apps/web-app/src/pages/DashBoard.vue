@@ -260,6 +260,7 @@
             {{ quickTaskDescription }}
           </p>
           <quick-goal-creation
+            :key="quickModalKey"
             :goals="displayGoals"
             :date="date"
             period="day"
@@ -559,6 +560,10 @@ export default {
       activeSelectionId: '',
       tabs: null,
       toggleStepModal: false,
+      // Bumped each time the quick-task modal opens so <quick-goal-creation>
+      // remounts fresh — clears any stale loading state and refetches the
+      // Goal Task dropdown (picks up newly-added week goals).
+      quickModalKey: 0,
       // Task whose steps the step modal shows — the current task or any
       // expanded upcoming/past row.
       stepModalTask: null,
@@ -597,6 +602,13 @@ export default {
     };
   },
   watch: {
+    // Remount the quick-task modal each time it opens so it never shows a
+    // stale loading state and always refetches the Goal Task dropdown.
+    quickTaskDialog(isOpen) {
+      if (isOpen) {
+        this.quickModalKey += 1;
+      }
+    },
     date(newVal, oldVal) {
       if (newVal !== oldVal) {
         // Apollo automatically refetches routineDate when date changes

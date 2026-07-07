@@ -66,8 +66,28 @@ const setStatus = (taskRef, status) => {
   eventBus.$emit(EVENTS.AGENT_STATUS_CHANGED, { taskRef, status });
 };
 
+const clearStatus = (taskRef) => {
+  if (state.statusByRoutineId[taskRef] === undefined) return;
+  Vue.delete(state.statusByRoutineId, taskRef);
+  eventBus.$emit(EVENTS.AGENT_STATUS_CHANGED, { taskRef, status: '' });
+};
+
+// Task refs whose agent was started by an explicit "Start Agent" press. Only
+// these show the running/listening/done badges. Implicit fires (Start Task,
+// tick, redeem auto-firing an assigned agent) run and record silently — the
+// user never asked to watch an agent, so no tag flashes on their screen.
+const explicitTaskRefs = new Set();
+
 const setResult = (taskRef, result) => {
   Vue.set(state.lastResultByRoutineId, taskRef, result);
+};
+
+// Status to persist to the agent doc. Implicit (silent) failures never write a
+// "failed" state — the user didn't start the agent — but the failure count
+// still increments for diagnostics.
+const recordedStatus = (visible, ok, okStatus) => {
+  if (ok) return okStatus;
+  return visible ? 'failed' : 'idle';
 };
 
 const sniffResultType = (response) => {
@@ -263,7 +283,17 @@ const actions = {
     const agent = state.agentsByTaskRef[taskRef];
     if (!agent || !agent.startEvent || !agent.startEvent.value) return null;
 
-    setStatus(taskRef, 'running');
+    // Only an explicit Start Agent shows badges. An implicit fire runs
+    // silently and clears any stale badge so nothing flashes.
+    const visible = !implicit;
+    if (visible) {
+      explicitTaskRefs.add(taskRef);
+      setStatus(taskRef, 'running');
+    } else {
+      explicitTaskRefs.delete(taskRef);
+      clearStatus(taskRef);
+    }
+    const show = (s) => { if (visible) setStatus(taskRef, s); };
     try {
       const result = await dispatchEvent({
         vm, event: stripGraphqlMeta(agent.startEvent), goalId,
@@ -271,12 +301,7 @@ const actions = {
 
       const ok = result && (result.ok !== false);
       let nextStatus;
-      // Implicit fires (auto-triggered by Start Task / tick / redeem) must not
-      // surface a scary "Agent failed" state the user never asked for — the
-      // failure is still recorded (counts + lastError) for the Agents page,
-      // but the visible status quietly returns to idle. Only an explicit
-      // "Start Agent" reports failure loudly.
-      if (!ok) nextStatus = implicit ? 'idle' : 'failed';
+      if (!ok) nextStatus = 'failed';
       else if (agent.endEvent && agent.endEvent.value) nextStatus = 'listening';
       else nextStatus = 'finished';
       const resultData = result && result.data;
@@ -287,7 +312,7 @@ const actions = {
 
       const updated = await recordExecution(apollo, {
         id: agent.id,
-        status: nextStatus,
+        status: recordedStatus(visible, ok, nextStatus),
         lastResultType: resultType || null,
         lastResultBody,
         lastError: ok ? null : cap((result && result.statusText) || 'Start event failed', ERROR_MAX),
@@ -295,7 +320,7 @@ const actions = {
         incrementFailure: ok ? 0 : 1,
       });
       if (updated) upsertAgent(updated);
-      setStatus(taskRef, nextStatus);
+      show(nextStatus);
 
       if (ok && goalId && goalDate && goalPeriod && apollo) {
         try {
@@ -316,11 +341,10 @@ const actions = {
       return result;
     } catch (err) {
       console.error('[agentStore.fireStartEventIfPresent]', err);
-      const failStatus = implicit ? 'idle' : 'failed';
-      setStatus(taskRef, failStatus);
+      show('failed');
       await recordExecution(apollo, {
         id: agent.id,
-        status: failStatus,
+        status: visible ? 'failed' : 'idle',
         lastError: cap(err.message || 'Start event error', ERROR_MAX),
         incrementFailure: 1,
       }).catch(() => {});
@@ -334,9 +358,14 @@ const actions = {
     const agent = state.agentsByTaskRef[taskRef];
     if (!agent || !agent.endEvent || !agent.endEvent.value) return null;
 
+    // Badges only for agents the user explicitly started (Start Agent). An
+    // agent that auto-started on Start Task runs its end event silently too.
+    const visible = explicitTaskRefs.has(taskRef);
+    const show = (s) => { if (visible) setStatus(taskRef, s); };
+
     // While the end event is in flight the badge shows "running" (not
     // "listening") — same as the start-event dispatch.
-    setStatus(taskRef, 'running');
+    show('running');
     try {
       const result = await dispatchEvent({
         vm, event: stripGraphqlMeta(agent.endEvent), goalId,
@@ -350,7 +379,8 @@ const actions = {
 
       const updated = await recordExecution(apollo, {
         id: agent.id,
-        status: ok ? 'finished' : 'failed',
+        // Silent (implicit) end-event failures don't persist a "failed" state.
+        status: recordedStatus(visible, ok, 'finished'),
         lastResultType: resultType || null,
         lastResultBody,
         lastError: ok ? null : cap((result && result.statusText) || 'End event failed', ERROR_MAX),
@@ -358,7 +388,8 @@ const actions = {
         incrementFailure: ok ? 0 : 1,
       });
       if (updated) upsertAgent(updated);
-      setStatus(taskRef, ok ? 'finished' : 'failed');
+      show(ok ? 'finished' : 'failed');
+      if (ok) explicitTaskRefs.delete(taskRef);
 
       if (ok) {
         if (resultType === 'html' && typeof resultData === 'string') {
@@ -378,10 +409,10 @@ const actions = {
       return result;
     } catch (err) {
       console.error('[agentStore.fireEndEvent]', err);
-      setStatus(taskRef, 'failed');
+      show('failed');
       await recordExecution(apollo, {
         id: agent.id,
-        status: 'failed',
+        status: visible ? 'failed' : 'idle',
         lastError: cap(err.message || 'End event error', ERROR_MAX),
         incrementFailure: 1,
       }).catch(() => {});
@@ -397,6 +428,7 @@ const actions = {
     state.loading = false;
     state.error = null;
     state.resultModalRoutineId = null;
+    explicitTaskRefs.clear();
   },
 };
 

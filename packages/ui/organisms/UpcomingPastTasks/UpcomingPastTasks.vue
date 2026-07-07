@@ -250,6 +250,11 @@ export default {
     },
     // Same status → badge mapping as CurrentTaskCard, per row.
     agentStatusBadgeFor(task) {
+      // A completed task stays done regardless of its agent — never show a red
+      // "failed" badge on a ticked/redeemed task (it reads as task failure).
+      if (task && task.agentStatus === 'failed' && task.ticked) {
+        return null;
+      }
       switch (task && task.agentStatus) {
         case 'running': return { kind: 'running', label: 'Agent running' };
         case 'listening': return { kind: 'listening', label: 'Agent listening' };
@@ -285,8 +290,12 @@ export default {
       const mainTaskGoalRef = taskGoals.goalItems.length === 1 ? taskGoals.goalItems[0].goalRef : 0;
       if (this.allGoals && this.allGoals.length) {
         const week = this.allGoals.find((g) => g.period === 'week');
+        // Match the week goal item this task's day-goal rolls up to — with
+        // parens, so a truthy mainTaskGoalRef doesn't short-circuit .find to
+        // the first item.
         const matched = week
-          && week.goalItems.find((gi) => gi.id === this.lastCompleteItemGoalRef || mainTaskGoalRef);
+          && week.goalItems.find((gi) => gi.id === this.lastCompleteItemGoalRef
+            || gi.id === mainTaskGoalRef);
         return (matched && matched.progress) || 0;
       }
       return 0;
@@ -300,31 +309,28 @@ export default {
   overflow: hidden;
 }
 .upcoming-past-card .step-info {
-  float: right;
+  flex: 0 0 auto;
+  order: 3;
   height: 24px;
   line-height: 0;
+  margin-left: 8px;
   cursor: pointer;
 }
 .upcoming-past-card .agent-status-badge {
-  display: inline-block;
-  /* Right-aligned to match the current-task card's badge placement */
-  float: right;
+  flex: 0 0 auto;
+  order: 2;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  /* Own line-height: the list tile title's 24px would otherwise inflate the
-     badge to 28px and break the pill shape. */
   line-height: 1.3;
   padding: 2px 8px;
   border-radius: 999px;
-  /* Right-floats space via margin-right — same 8px badge→info gap as the
-     current-task card. margin-left keeps clearance from the task name. */
+  /* Sits between the (ellipsised) name and the info icon */
   margin-left: 8px;
-  margin-right: 8px;
-  margin-top: 3px;
   vertical-align: middle;
   color: #fff;
+  white-space: nowrap;
 }
 .upcoming-past-card .agent-status-badge--running {
   background: #1976d2;
@@ -370,11 +376,19 @@ export default {
   min-width: 0;
   overflow: hidden;
 }
+/* Flex row so a long task name shrinks (ellipsis) instead of pushing the
+   agent badge onto a clipped second line where it vanishes. Only the name
+   shrinks; badge + info stay pinned right and always visible. */
 .upcoming-past-card .concentrated-view .v-list__tile__title {
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+.upcoming-past-card .concentrated-view .v-list__tile__title > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: block;
+  white-space: nowrap;
 }
 .upcoming-past-card .concentrated-view .active .v-list__tile__content {
   justify-content: start;
@@ -476,6 +490,13 @@ export default {
 }
 .upcoming-past-card .circular-task .v-avatar {
   margin: 0 auto;
+}
+/* The avatar ring is a flex child of the list tile. Without this it inherits
+   flex-shrink:1 and gets squashed (48px → ~24px, ring clipped to a sliver)
+   whenever a long task name competes for horizontal space. Pin it. */
+.upcoming-past-card .circular-task {
+  flex: 0 0 auto;
+  min-width: 48px;
 }
 .upcoming-past-card .text-white { color: #fff; }
 

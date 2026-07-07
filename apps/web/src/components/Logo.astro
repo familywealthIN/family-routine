@@ -1,0 +1,23 @@
+---
+interface Props {
+  size?: number;
+  withWordmark?: boolean;
+}
+const { size = 28, withWordmark = true } = Astro.props;
+---
+
+<a href="/" class="inline-flex items-center gap-2 group" aria-label="Routine Notes">
+  <img
+    src="/logo.png"
+    alt=""
+    width={size}
+    height={size}
+    style={`width:${size}px;height:${size}px;`}
+    aria-hidden="true"
+  />
+  {withWordmark && (
+    <span class="font-display text-[1.05rem] font-semibold tracking-tight text-[color:var(--color-ink-900)] group-hover:text-[color:var(--color-brand-600)] transition-colors">
+      Routine Notes
+    </span>
+  )}
+</a>

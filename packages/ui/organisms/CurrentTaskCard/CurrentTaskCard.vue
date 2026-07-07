@@ -245,6 +245,12 @@ export default {
       return filterByTaskPeriod(this.goals, this.task && this.task.id, this.goalPeriod);
     },
     agentStatusBadge() {
+      // A completed task is done regardless of its agent. An agent failure on
+      // a ticked/redeemed task must not show a red "failed" badge that reads
+      // as the task itself failing — the green tick is the source of truth.
+      if (this.agentStatus === 'failed' && this.task && this.task.ticked) {
+        return null;
+      }
       switch (this.agentStatus) {
         case 'running': return { kind: 'running', label: 'Agent running' };
         case 'listening': return { kind: 'listening', label: 'Agent listening' };
@@ -273,8 +279,13 @@ export default {
       const mainTaskGoalRef = taskGoals.goalItems.length === 1 ? taskGoals.goalItems[0].goalRef : 0;
       if (this.allGoals && this.allGoals.length) {
         const week = this.allGoals.find((g) => g.period === 'week');
+        // Match the week goal item this task's day-goal rolls up to. The
+        // parens matter: `gi.id === X || mainTaskGoalRef` (no parens) is
+        // always truthy when mainTaskGoalRef is a non-empty ref, so .find
+        // would return the first item regardless.
         const matched = week
-          && week.goalItems.find((gi) => gi.id === this.lastCompleteItemGoalRef || mainTaskGoalRef);
+          && week.goalItems.find((gi) => gi.id === this.lastCompleteItemGoalRef
+            || gi.id === mainTaskGoalRef);
         return (matched && matched.progress) || 0;
       }
       return 0;
