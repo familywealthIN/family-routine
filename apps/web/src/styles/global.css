@@ -1,0 +1,167 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@theme {
+  --color-brand-50: #f0f7fc;
+  --color-brand-100: #dbecf7;
+  --color-brand-200: #b8d9ee;
+  --color-brand-300: #8bbfe1;
+  --color-brand-400: #5aa3d3;
+  --color-brand-500: #288bd5;
+  --color-brand-600: #1f6fb0;
+  --color-brand-700: #1a5a8f;
+  --color-brand-800: #174a76;
+  --color-brand-900: #143d60;
+  --color-brand-950: #0a223a;
+
+  --color-ink-900: #0d1b2a;
+  --color-ink-800: #1b263b;
+  --color-ink-700: #2a3a55;
+  --color-ink-600: #415374;
+  --color-ink-500: #5b6e8e;
+  --color-ink-400: #8696b0;
+  --color-ink-300: #b3becf;
+  --color-ink-200: #d6dce5;
+  --color-ink-100: #e9edf2;
+  --color-ink-50: #f5f7fa;
+
+  --color-surface: #ffffff;
+  --color-surface-soft: #f7f9fb;
+  --color-surface-dim: #eef2f6;
+
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI',
+    sans-serif;
+  --font-display: 'Montserrat', 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  --radius-card: 16px;
+  --radius-pill: 999px;
+
+  --shadow-card:
+    0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -1px rgb(0 0 0 / 0.05);
+  --shadow-lift:
+    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
+  --shadow-glow: 0 0 0 1px rgb(40 139 213 / 0.18),
+    0 24px 48px -16px rgb(40 139 213 / 0.35);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --container-page: 1200px;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  html {
+    background: var(--color-surface);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  body {
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--color-brand-500);
+    color: #fff;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  h4,
+  h5 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* Reveal-on-scroll is added by motion.ts at runtime, not declared here —
+     so non-JS and screenshot/SEO crawlers see content immediately. */
+  [data-reveal],
+  [data-reveal-item] {
+    will-change: transform, opacity;
+  }
+  html.js-ready [data-reveal]:not(.is-visible),
+  html.js-ready [data-reveal-item]:not(.is-visible) {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@utility container-page {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  max-width: var(--container-page);
+  @media (min-width: 640px) {
+    padding-inline: 2rem;
+  }
+}
+
+@utility pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-pill);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  background: var(--color-brand-50);
+  color: var(--color-brand-700);
+  border: 1px solid var(--color-brand-100);
+}
+
+@utility btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-card);
+  padding: 0.875rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  background: var(--color-brand-500);
+  color: #fff;
+  box-shadow: var(--shadow-card);
+  transition: transform 200ms var(--ease-out-soft),
+    box-shadow 200ms var(--ease-out-soft), background 200ms var(--ease-out-soft);
+}
+.btn-primary:hover {
+  background: var(--color-brand-600);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lift);
+}
+
+@utility btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-weight: 500;
+  color: var(--color-ink-700);
+  transition: color 160ms var(--ease-out-soft);
+}
+.btn-ghost:hover {
+  color: var(--color-brand-600);
+}
+
+@utility card-soft {
+  background: var(--color-surface);
+  border: 1px solid var(--color-ink-100);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}

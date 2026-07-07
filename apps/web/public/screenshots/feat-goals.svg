@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300" width="480" height="300">
+  <rect width="480" height="300" fill="#f7f9fb"/>
+  <text x="24" y="34" fill="#0d1b2a" font-family="Fraunces" font-size="18" font-weight="600">Goals — cascading</text>
+
+  <g font-family="Plus Jakarta Sans" font-size="12" fill="#0d1b2a">
+    <!-- year -->
+    <rect x="24" y="60" width="432" height="36" rx="10" fill="#288bd5"/>
+    <text x="40" y="83" fill="#fff" font-weight="600">YEAR · Ship Routine Notes 1.0 to App Store</text>
+    <text x="440" y="83" fill="#fff" font-family="Fraunces" text-anchor="end" font-weight="600">25%</text>
+
+    <!-- month -->
+    <rect x="48" y="104" width="408" height="32" rx="9" fill="#fff" stroke="#b8d9ee"/>
+    <text x="64" y="124" font-weight="600">MONTH · Public marketing site launch</text>
+    <text x="440" y="124" fill="#288bd5" font-family="Fraunces" text-anchor="end" font-weight="600">in progress</text>
+
+    <!-- week -->
+    <rect x="72" y="144" width="384" height="32" rx="9" fill="#fff" stroke="#dbecf7"/>
+    <text x="88" y="164" font-weight="600">WEEK · Ship marketing site rebuild</text>
+    <text x="440" y="164" fill="#288bd5" font-family="Fraunces" text-anchor="end" font-weight="600">2/5 days</text>
+
+    <!-- days -->
+    <rect x="96" y="184" width="360" height="28" rx="8" fill="#fff" stroke="#e9edf2"/>
+    <text x="112" y="202" fill="#5b6e8e">DAY · Lock design system — done</text>
+    <rect x="96" y="220" width="360" height="28" rx="8" fill="#fff" stroke="#e9edf2"/>
+    <text x="112" y="238" fill="#5b6e8e">DAY · Capture demo screenshots — done</text>
+    <rect x="96" y="256" width="360" height="28" rx="8" fill="#fff" stroke="#e9edf2"/>
+    <text x="112" y="274" fill="#5b6e8e">DAY · Deploy to Netlify — today</text>
+  </g>
+</svg>

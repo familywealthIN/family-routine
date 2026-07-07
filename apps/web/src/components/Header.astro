@@ -1,0 +1,30 @@
+---
+import Logo from '~/components/Logo.astro';
+import { LINKS, NAV } from '~/lib/links';
+---
+
+<header
+  class="sticky top-0 z-40 backdrop-blur-md bg-white/75 border-b border-[color:var(--color-ink-100)]/70"
+>
+  <div class="container-page flex h-16 items-center justify-between">
+    <Logo />
+
+    <nav class="hidden md:flex items-center gap-1">
+      {NAV.map((item) => (
+        <a
+          href={item.href}
+          class="px-3 py-2 text-sm font-medium text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)] transition-colors"
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <a href={LINKS.appLogin} class="btn-ghost hidden sm:inline-flex text-sm px-3 py-2">Login</a>
+      <a href={LINKS.appStarted} class="btn-primary text-sm !py-2 !px-4">
+        Get Started
+      </a>
+    </div>
+  </div>
+</header>

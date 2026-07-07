@@ -1,0 +1,34 @@
+---
+import { Icon } from 'astro-icon/components';
+import { LINKS } from '~/lib/links';
+---
+
+<section class="relative overflow-hidden">
+  <div class="container-page py-4">
+    <div class="rounded-[28px] overflow-hidden relative shadow-2xl"
+      style="background:linear-gradient(135deg,#1a5a8f 0%,#288bd5 45%,#5aa3d3 100%)">
+
+      <!-- decorative dots -->
+      <div class="absolute inset-0 opacity-[0.08] pointer-events-none"
+        style="background-image:radial-gradient(rgba(255,255,255,0.7) 1px,transparent 1px);background-size:28px 28px"></div>
+
+      <div class="relative px-8 sm:px-14 py-16 sm:py-20 text-center text-white">
+        <h2 class="text-5xl sm:text-6xl lg:text-7xl font-semibold leading-[1.02]">
+          Start your evolution. <span class="italic font-display">Free.</span>
+        </h2>
+        <p class="mt-5 text-lg sm:text-xl text-white/85 max-w-2xl mx-auto">
+          Show up daily. Earn Routine points. Run AI agents on points you actually earned.
+        </p>
+        <div class="mt-10 flex flex-wrap justify-center gap-3">
+          <a href={LINKS.appStarted} class="inline-flex items-center gap-2 rounded-2xl bg-white text-[color:var(--color-brand-700)] px-7 py-4 font-semibold text-base shadow-xl hover:translate-y-[-1px] transition-transform">
+            Get started
+            <Icon name="ph:arrow-right" width={18} height={18} />
+          </a>
+          <a href={LINKS.pricing} class="inline-flex items-center gap-2 rounded-2xl bg-white/10 text-white border border-white/30 px-6 py-4 font-semibold backdrop-blur-sm hover:bg-white/20 transition-colors">
+            See pricing
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

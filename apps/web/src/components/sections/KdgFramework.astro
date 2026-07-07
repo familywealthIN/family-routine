@@ -1,0 +1,73 @@
+---
+import { Icon } from 'astro-icon/components';
+
+const pillars = [
+  {
+    letter: 'K',
+    name: 'Kinetics',
+    icon: 'ph:person-simple-run',
+    tagline: 'Action under the hood.',
+    body: 'Every routine has sub-tasks paced every 2 hours. Mark them off to earn Kinetics — because showing up without doing reaps nothing.',
+    example: 'Workout → stretch, run, mobility. Each ticked = Kinetics points.',
+    accent: '#288bd5',
+  },
+  {
+    letter: 'D',
+    name: 'Discipline',
+    icon: 'ph:clock',
+    tagline: 'Punctuality wins.',
+    body: 'Tick a routine within its 1h 30m window — opens 60m before, closes 30m after. Miss the window, miss the points. Once checked, you’re committed.',
+    example: 'Morning movement starts at 06:00 → window 05:00–06:30.',
+    accent: '#5aa3d3',
+  },
+  {
+    letter: 'G',
+    name: 'Geniuses',
+    icon: 'ph:brain',
+    tagline: 'Plans that compound.',
+    body: 'Link daily tasks to weekly, monthly and yearly milestones. 5 daily checks auto-complete a week, 3 weeks a month, 9 months a year. Compounding rewards.',
+    example: 'Ship Routine Notes 1.0 — yearly goal, cascading down to today.',
+    accent: '#1a5a8f',
+  },
+];
+---
+
+<section id="kdg" class="py-24">
+  <div class="container-page">
+    <div class="max-w-2xl mx-auto text-center" data-reveal>
+      <span class="pill">
+        <Icon name="ph:atom" width={14} height={14} />
+        The KDG framework
+      </span>
+      <h2 class="mt-5 text-4xl sm:text-5xl font-semibold">
+        Three measurable aspects of <span class="italic font-display text-[color:var(--color-brand-600)]">your evolution.</span>
+      </h2>
+      <p class="mt-4 text-lg text-[color:var(--color-ink-600)]">
+        100 points per sector per day. 300 total. Allocated by routine priority — earned by what you actually do.
+      </p>
+    </div>
+
+    <div data-reveal-group class="mt-16 grid gap-6 md:grid-cols-3">
+      {pillars.map((p) => (
+        <article data-reveal-item class="card-soft p-7 relative overflow-hidden">
+          <div class="absolute -top-12 -right-12 h-40 w-40 rounded-full opacity-10 blur-2xl" style={`background:${p.accent}`}></div>
+          <div class="flex items-center gap-4">
+            <span class="font-display text-[3.5rem] font-semibold leading-none" style={`color:${p.accent}`}>{p.letter}</span>
+            <div>
+              <h3 class="text-xl font-semibold">{p.name}</h3>
+              <p class="text-sm text-[color:var(--color-ink-500)] mt-0.5">{p.tagline}</p>
+            </div>
+            <span class="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full ring-1 ring-[color:var(--color-ink-100)] text-[color:var(--color-ink-700)]">
+              <Icon name={p.icon} width={20} height={20} />
+            </span>
+          </div>
+          <p class="mt-6 text-[15px] leading-relaxed text-[color:var(--color-ink-600)]">{p.body}</p>
+          <div class="mt-5 pt-5 border-t border-dashed border-[color:var(--color-ink-100)]">
+            <p class="text-xs uppercase tracking-[0.14em] text-[color:var(--color-ink-400)] font-semibold">What counts</p>
+            <p class="mt-2 text-[13.5px] text-[color:var(--color-ink-700)] italic">{p.example}</p>
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>

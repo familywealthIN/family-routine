@@ -124,11 +124,11 @@ export default {
       this.relatedGoalsData.forEach((goal) => {
         if (!goal.goalItems || !Array.isArray(goal.goalItems)) return;
 
-        // Exclude today (and future) — the timeline shows PAST activity so the
-        // user can align today's task against what was done on prior days.
+        // Show the whole week's activity for this goal ref — today's earlier
+        // completions included. Only future-dated items are excluded.
         if (goal.date) {
           const goalDate = moment(goal.date, 'DD-MM-YYYY');
-          if (goalDate.isValid() && !goalDate.isBefore(today, 'day')) return;
+          if (goalDate.isValid() && goalDate.isAfter(today, 'day')) return;
         }
 
         goal.goalItems.forEach((goalItem) => {
@@ -192,8 +192,12 @@ export default {
       this.loading = true;
       try {
         const stepUp = stepupMilestonePeriodDate(this.period, this.date);
+        // useCache:false so the Goal Task dropdown reflects week/parent-period
+        // goals added since the app loaded — the modal is remounted on each
+        // open (see quickModalKey in DashBoard), so this fetches fresh data
+        // every time it's shown.
         const data = await this.$goals.fetchGoalDatePeriod(stepUp.period, stepUp.date, {
-          useCache: true,
+          useCache: false,
         });
 
         if (data && data.goalItems) {
