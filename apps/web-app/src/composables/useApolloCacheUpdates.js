@@ -912,7 +912,9 @@ export function updateRoutineTaskMetricsInCache(apolloClient, { taskId, date, st
     // Update stimuli with proper typename
     if (stimuli && Array.isArray(stimuli)) {
       task.stimuli = stimuli.map((stimulus) => ({
-        __typename: 'Stimulus',
+        // Must match the cache's real stimulus type; 'Stimulus' would mint a
+        // mistyped embedded object and can corrupt the routine entry.
+        __typename: 'StimuliItem',
         name: stimulus.name,
         splitRate: stimulus.splitRate,
         earned: stimulus.earned,

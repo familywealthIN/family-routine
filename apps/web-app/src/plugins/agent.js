@@ -20,6 +20,7 @@ export default {
 
       getByTaskRef: agentStore.getByTaskRef,
       setLocalStatus: agentStore.setLocalStatus,
+      clearDayStatuses: agentStore.clearDayStatuses,
       clearResult: agentStore.clearResult,
       openResultModal: agentStore.openResultModal,
       closeResultModal: agentStore.closeResultModal,
