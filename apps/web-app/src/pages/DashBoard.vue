@@ -1765,11 +1765,23 @@ export default {
                   data: { routineDate: result.routine },
                 });
               } catch (e) {
-                updateRoutineTaskInCache(cache, {
-                  date: this.date,
-                  taskId: task.id,
-                  ticked: true,
-                });
+                // Never lose the redeemed tick — write the flags directly to
+                // the normalized RoutineItem so a redeemed (green) task can't
+                // revert to a redeemable (white) diamond after a successful
+                // redeem when the full-query write can't apply.
+                try {
+                  cache.writeFragment({
+                    id: `RoutineItem:${task.id}`,
+                    fragment: gql`fragment RedeemedFlags on RoutineItem { ticked redeemed }`,
+                    data: { __typename: 'RoutineItem', ticked: true, redeemed: true },
+                  });
+                } catch (e2) {
+                  updateRoutineTaskInCache(cache, {
+                    date: this.date,
+                    taskId: task.id,
+                    ticked: true,
+                  });
+                }
               }
             }
             if (result.balance) {
@@ -1900,18 +1912,23 @@ export default {
               // Build a synthetic tasklist that flips just this task to
               // ticked: true, and bumps its D-stimulus earned to its
               // points value (matches server logic).
+              // __typename MUST match the cache's real types (RoutineItem /
+              // StimuliItem). Writing the wrong typename (e.g. 'Task') mints
+              // phantom `Task:<id>` entities that the routine tasklist then
+              // references; when Apollo GCs them the routine reverts to its
+              // base ticked:false — a green tick silently flips back to white.
               tasklist: (this.tasklist || []).map((t) => {
-                if (t.id !== task.id) return { ...t, __typename: 'Task' };
+                if (t.id !== task.id) return { ...t, __typename: 'RoutineItem' };
                 const stimuli = (t.stimuli || []).map((s) => {
-                  if (s.name !== 'D') return { ...s, __typename: 'Stimulus' };
+                  if (s.name !== 'D') return { ...s, __typename: 'StimuliItem' };
                   return {
                     ...s,
-                    __typename: 'Stimulus',
+                    __typename: 'StimuliItem',
                     earned: t.points || s.earned,
                   };
                 });
                 return {
-                  ...t, __typename: 'Task', ticked: true, stimuli,
+                  ...t, __typename: 'RoutineItem', ticked: true, stimuli,
                 };
               }),
             },
@@ -1926,13 +1943,23 @@ export default {
                 data: { routineDate: result },
               });
             } catch (e) {
-              // Routine cache may not exist yet — fall back to the
-              // helper which is more permissive.
-              updateRoutineTaskInCache(cache, {
-                date: this.date,
-                taskId: task.id,
-                ticked: true,
-              });
+              // Never lose the tick. Write the flag straight onto the
+              // normalized RoutineItem entity — this avoids re-reading the
+              // whole routine query (which can throw on a partially-populated
+              // cache) so a successful tick can't silently revert to white.
+              try {
+                cache.writeFragment({
+                  id: `RoutineItem:${task.id}`,
+                  fragment: gql`fragment TickedFlag on RoutineItem { ticked }`,
+                  data: { __typename: 'RoutineItem', ticked: true },
+                });
+              } catch (e2) {
+                updateRoutineTaskInCache(cache, {
+                  date: this.date,
+                  taskId: task.id,
+                  ticked: true,
+                });
+              }
             }
           },
         })
@@ -2288,6 +2315,9 @@ export default {
       // Update both date and todayDate so isTodaySelected stays true
       this.todayDate = newDate;
       this.date = newDate;
+
+      // Yesterday's agent badges must not carry into the new day.
+      this.$agent.clearDayStatuses();
 
       // Add new routine for the new day
       this.addNewDayRoutine();

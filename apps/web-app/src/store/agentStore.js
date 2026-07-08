@@ -1,4 +1,5 @@
 import Vue from 'vue';
+import moment from 'moment';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import {
   AGENTS_QUERY,
@@ -61,22 +62,71 @@ const removeAgentLocal = (id) => {
   indexAgents();
 };
 
+// Agent status badges (running/listening/done) are day-scoped and persisted to
+// localStorage so they survive closing and reopening the app. A new day starts
+// clean — yesterday's badges never leak into today.
+const STATUS_STORAGE_KEY = 'agent-status-by-day';
+const todayKey = () => moment().format('DD-MM-YYYY');
+
+const persistStatus = () => {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(STATUS_STORAGE_KEY, JSON.stringify({
+      day: todayKey(),
+      statuses: state.statusByRoutineId,
+    }));
+  } catch (e) {
+    // ignore quota / serialization errors — persistence is best-effort
+  }
+};
+
 const setStatus = (taskRef, status) => {
   Vue.set(state.statusByRoutineId, taskRef, status);
+  persistStatus();
   eventBus.$emit(EVENTS.AGENT_STATUS_CHANGED, { taskRef, status });
 };
 
 const clearStatus = (taskRef) => {
   if (state.statusByRoutineId[taskRef] === undefined) return;
   Vue.delete(state.statusByRoutineId, taskRef);
+  persistStatus();
   eventBus.$emit(EVENTS.AGENT_STATUS_CHANGED, { taskRef, status: '' });
 };
 
-// Task refs whose agent was started by an explicit "Start Agent" press. Only
-// these show the running/listening/done badges. Implicit fires (Start Task,
-// tick, redeem auto-firing an assigned agent) run and record silently — the
-// user never asked to watch an agent, so no tag flashes on their screen.
-const explicitTaskRefs = new Set();
+// Wipe all badges (a new day, or logout). Persists the empty state under today.
+const clearDayStatuses = () => {
+  Object.keys(state.statusByRoutineId).forEach((taskRef) => Vue.delete(state.statusByRoutineId, taskRef));
+  persistStatus();
+};
+
+// Restore day-scoped badges on load — but only for the SAME day, so reopening
+// the app on a new day shows no stale agent tags.
+const hydrateStatus = () => {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const raw = localStorage.getItem(STATUS_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.day === todayKey() && parsed.statuses) {
+      Object.keys(parsed.statuses).forEach((taskRef) => {
+        Vue.set(state.statusByRoutineId, taskRef, parsed.statuses[taskRef]);
+      });
+    } else {
+      localStorage.removeItem(STATUS_STORAGE_KEY);
+    }
+  } catch (e) {
+    // ignore malformed storage
+  }
+};
+
+hydrateStatus();
+
+// A task is "visible" (shows badges) once it has a status — only explicit
+// "Start Agent" presses set one; implicit fires (Start Task/tick/redeem) run
+// silently and never set a status. Because the status is persisted, the
+// visibility survives reload, so an end event still shows running/done after
+// reopening the app. Presence-of-status replaces the old in-memory Set.
+const isStatusVisible = (taskRef) => state.statusByRoutineId[taskRef] !== undefined;
 
 const setResult = (taskRef, result) => {
   Vue.set(state.lastResultByRoutineId, taskRef, result);
@@ -284,13 +334,12 @@ const actions = {
     if (!agent || !agent.startEvent || !agent.startEvent.value) return null;
 
     // Only an explicit Start Agent shows badges. An implicit fire runs
-    // silently and clears any stale badge so nothing flashes.
+    // silently and clears any stale badge so nothing flashes. Setting a status
+    // is what marks the task "visible" — persisted, so it survives reload.
     const visible = !implicit;
     if (visible) {
-      explicitTaskRefs.add(taskRef);
       setStatus(taskRef, 'running');
     } else {
-      explicitTaskRefs.delete(taskRef);
       clearStatus(taskRef);
     }
     const show = (s) => { if (visible) setStatus(taskRef, s); };
@@ -358,9 +407,12 @@ const actions = {
     const agent = state.agentsByTaskRef[taskRef];
     if (!agent || !agent.endEvent || !agent.endEvent.value) return null;
 
-    // Badges only for agents the user explicitly started (Start Agent). An
-    // agent that auto-started on Start Task runs its end event silently too.
-    const visible = explicitTaskRefs.has(taskRef);
+    // Badges only for agents the user explicitly started — detected by the
+    // presence of a (persisted) status like "listening". An agent that
+    // auto-started on Start Task has no status, so its end event runs silently.
+    // Because status is persisted, this still shows running/done after the app
+    // was closed and reopened while the agent was listening.
+    const visible = isStatusVisible(taskRef);
     const show = (s) => { if (visible) setStatus(taskRef, s); };
 
     // While the end event is in flight the badge shows "running" (not
@@ -388,8 +440,9 @@ const actions = {
         incrementFailure: ok ? 0 : 1,
       });
       if (updated) upsertAgent(updated);
+      // Leaves the badge on "Agent done" (persisted, day-scoped) as the final
+      // visible state.
       show(ok ? 'finished' : 'failed');
-      if (ok) explicitTaskRefs.delete(taskRef);
 
       if (ok) {
         if (resultType === 'html' && typeof resultData === 'string') {
@@ -420,6 +473,11 @@ const actions = {
     }
   },
 
+  // Wipe agent badges — call on a new day so yesterday's tags don't linger.
+  clearDayStatuses() {
+    clearDayStatuses();
+  },
+
   reset() {
     state.agents = [];
     state.agentsByTaskRef = {};
@@ -428,7 +486,7 @@ const actions = {
     state.loading = false;
     state.error = null;
     state.resultModalRoutineId = null;
-    explicitTaskRefs.clear();
+    clearDayStatuses();
   },
 };
 
