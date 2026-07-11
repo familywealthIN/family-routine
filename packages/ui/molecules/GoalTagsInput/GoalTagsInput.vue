@@ -49,6 +49,7 @@
 
 <script>
 import AtomChip from '../../atoms/Chip/Chip.vue';
+import { handleTagInputKeydown } from '../../utils/tagKeydown';
 
 export default {
   name: 'GoalTagsInput',
@@ -123,17 +124,18 @@ export default {
       });
     },
     handleKeydown(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        if (this.activeSuggestion) {
-          this.addTag(this.activeSuggestion);
-        } else if (this.inputValue.trim()) {
-          this.addTag(this.inputValue);
-        }
-      } else if (e.key === 'Backspace' && !this.inputValue && this.normalizedTags.length) {
-        const lastTag = this.normalizedTags[this.normalizedTags.length - 1];
-        this.removeTag(lastTag);
-      } else if (e.key === 'ArrowDown') {
+      // Enter / Tab / comma / space commit; Backspace removes the last tag.
+      // Shared with every other tag input via the common helper.
+      const handled = handleTagInputKeydown(e, {
+        getValue: () => this.activeSuggestion || this.inputValue,
+        commit: (value) => this.addTag(value),
+        canRemoveLast: () => !this.inputValue && this.normalizedTags.length > 0,
+        removeLast: () => this.removeTag(this.normalizedTags[this.normalizedTags.length - 1]),
+      });
+      if (handled) return;
+
+      // Autocomplete navigation is specific to this input.
+      if (e.key === 'ArrowDown') {
         e.preventDefault();
         if (this.filteredSuggestions.length) {
           this.activeSuggestionIndex = Math.min(

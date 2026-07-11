@@ -10,6 +10,12 @@ import {
   RECORD_AGENT_EXECUTION_MUTATION,
   MARK_GOAL_ITEM_READY_MUTATION,
 } from '../composables/useAgentQueries';
+import {
+  bgSyncSupported, enqueueAgentJob, settleAgentJob, drainDoneJobs, onSyncResult,
+} from '../utils/agentSync';
+import { graphQLUrl } from '../blob/config';
+import { getSessionItem } from '../token';
+import { GC_AUTH_TOKEN } from '../constants/settings';
 
 const RESULT_BODY_MAX = 65536;
 const ERROR_MAX = 2048;
@@ -67,6 +73,14 @@ const removeAgentLocal = (id) => {
 // clean — yesterday's badges never leak into today.
 const STATUS_STORAGE_KEY = 'agent-status-by-day';
 const todayKey = () => moment().format('DD-MM-YYYY');
+const now = () => (typeof Date !== 'undefined' ? Date.now() : 0);
+
+// Per-task metadata for a 'running' badge: when it started and where it should
+// resolve to. 'running' is an in-flight, page-owned state — the fetch that set
+// it lives in this tab. If the tab dies mid-flight the badge would stick on
+// 'running' forever, so we remember what it should become and un-stick it on
+// the next load (which, by definition, has no in-flight dispatch).
+let statusMeta = {};
 
 const persistStatus = () => {
   try {
@@ -74,14 +88,22 @@ const persistStatus = () => {
     localStorage.setItem(STATUS_STORAGE_KEY, JSON.stringify({
       day: todayKey(),
       statuses: state.statusByRoutineId,
+      meta: statusMeta,
     }));
   } catch (e) {
     // ignore quota / serialization errors — persistence is best-effort
   }
 };
 
-const setStatus = (taskRef, status) => {
+// resolveTo is only meaningful for a 'running' status — where the badge should
+// land if this page dies before the dispatch resolves.
+const setStatus = (taskRef, status, resolveTo) => {
   Vue.set(state.statusByRoutineId, taskRef, status);
+  if (status === 'running') {
+    statusMeta[taskRef] = { at: now(), resolveTo: resolveTo || 'finished' };
+  } else {
+    delete statusMeta[taskRef];
+  }
   persistStatus();
   eventBus.$emit(EVENTS.AGENT_STATUS_CHANGED, { taskRef, status });
 };
@@ -89,6 +111,7 @@ const setStatus = (taskRef, status) => {
 const clearStatus = (taskRef) => {
   if (state.statusByRoutineId[taskRef] === undefined) return;
   Vue.delete(state.statusByRoutineId, taskRef);
+  delete statusMeta[taskRef];
   persistStatus();
   eventBus.$emit(EVENTS.AGENT_STATUS_CHANGED, { taskRef, status: '' });
 };
@@ -96,6 +119,7 @@ const clearStatus = (taskRef) => {
 // Wipe all badges (a new day, or logout). Persists the empty state under today.
 const clearDayStatuses = () => {
   Object.keys(state.statusByRoutineId).forEach((taskRef) => Vue.delete(state.statusByRoutineId, taskRef));
+  statusMeta = {};
   persistStatus();
 };
 
@@ -108,9 +132,27 @@ const hydrateStatus = () => {
     if (!raw) return;
     const parsed = JSON.parse(raw);
     if (parsed && parsed.day === todayKey() && parsed.statuses) {
+      const meta = parsed.meta || {};
+      let resolvedAny = false;
       Object.keys(parsed.statuses).forEach((taskRef) => {
-        Vue.set(state.statusByRoutineId, taskRef, parsed.statuses[taskRef]);
+        let status = parsed.statuses[taskRef];
+        // A persisted 'running' is stale: the dispatch that set it died with
+        // the previous page. Resolve it to where it was headed — a start event
+        // with an end trigger becomes 'listening'; anything else 'finished' —
+        // so a badge never sticks on 'running' after close/reopen. When the
+        // Service Worker completes a dispatch in the background it overwrites
+        // this with the real outcome.
+        if (status === 'running') {
+          status = (meta[taskRef] && meta[taskRef].resolveTo) || 'finished';
+          resolvedAny = true;
+        } else if (meta[taskRef]) {
+          statusMeta[taskRef] = meta[taskRef];
+        }
+        Vue.set(state.statusByRoutineId, taskRef, status);
       });
+      // Persist the resolved view so storage matches what's shown (and a stale
+      // 'running' isn't re-resolved on every future load).
+      if (resolvedAny) persistStatus();
     } else {
       localStorage.removeItem(STATUS_STORAGE_KEY);
     }
@@ -120,6 +162,21 @@ const hydrateStatus = () => {
 };
 
 hydrateStatus();
+
+// Adopt an outcome the Service Worker produced for a dispatch the page couldn't
+// finish (closed mid-flight). Only overwrites a badge that's actually shown —
+// silent/implicit runs stay silent, and a cleared badge stays cleared.
+const applySyncResult = (taskRef, resolvedStatus) => {
+  if (!taskRef || !resolvedStatus) return;
+  if (state.statusByRoutineId[taskRef] !== undefined) setStatus(taskRef, resolvedStatus);
+};
+
+// Live results from an in-flight SW dispatch (page reopened while it ran).
+onSyncResult((data) => applySyncResult(data.taskRef, data.resolvedStatus));
+// Results the SW completed entirely while the app was closed.
+drainDoneJobs().then((jobs) => {
+  jobs.forEach((j) => applySyncResult(j.taskRef, j.outcome && j.outcome.resolvedStatus));
+}).catch(() => {});
 
 // A task is "visible" (shows badges) once it has a status — only explicit
 // "Start Agent" presses set one; implicit fires (Start Task/tick/redeem) run
@@ -162,6 +219,41 @@ const inferKind = (value) => {
   if (trimmed.toLowerCase().startsWith('curl ')) return 'curl';
   if (isHttpUrl(trimmed)) return 'url';
   return null;
+};
+
+// Background Sync can only replay a plain URL GET (not curl/log/notify). Returns
+// the final, goal-id-substituted URL for a url-kind event, else null.
+const resolveUrlEvent = (event, goalId) => {
+  if (!event || !event.value) return null;
+  const value = substituteGoalId(event.value, goalId);
+  const kind = event.kind || inferKind(value);
+  return (kind === 'url' || isHttpUrl(value)) ? value : null;
+};
+
+// Enqueue a background-sync safety-net job for a url-kind dispatch. Returns the
+// job id (or null when unsupported / not a url event) so the caller can settle
+// it once the page finishes the dispatch itself.
+const enqueueDispatchJob = ({
+  taskRef, agent, event, phase, hasEnd, goalId, goalDate, goalPeriod,
+}) => {
+  if (!bgSyncSupported()) return Promise.resolve(null);
+  const url = resolveUrlEvent(event, goalId);
+  if (!url) return Promise.resolve(null);
+  const at = (typeof Date !== 'undefined') ? Date.now() : 0;
+  return enqueueAgentJob({
+    id: `${taskRef}:${phase}:${at}`,
+    taskRef,
+    agentId: agent.id,
+    phase,
+    hasEnd: !!hasEnd,
+    url,
+    goalId: goalId || null,
+    goalDate: goalDate || null,
+    goalPeriod: goalPeriod || null,
+    graphqlUrl: graphQLUrl,
+    token: getSessionItem(GC_AUTH_TOKEN) || null,
+    createdAt: at,
+  });
 };
 
 const dispatchEvent = async ({ vm, event, goalId }) => {
@@ -337,16 +429,30 @@ const actions = {
     // silently and clears any stale badge so nothing flashes. Setting a status
     // is what marks the task "visible" — persisted, so it survives reload.
     const visible = !implicit;
+    const hasEnd = !!(agent.endEvent && agent.endEvent.value);
     if (visible) {
-      setStatus(taskRef, 'running');
+      // If this start dies mid-flight, a reopen should land on 'listening'
+      // (start fired, waiting for the end trigger) or 'finished' if there is
+      // no end event.
+      setStatus(taskRef, 'running', hasEnd ? 'listening' : 'finished');
     } else {
       clearStatus(taskRef);
     }
+    // Safety net: if this tab dies before the dispatch resolves, the Service
+    // Worker replays the job and reports the real outcome. Only for visible
+    // (user-started) url dispatches; settled below once the page finishes.
+    const jobIdP = visible
+      ? enqueueDispatchJob({
+        taskRef, agent, event: agent.startEvent, phase: 'start', hasEnd, goalId, goalDate, goalPeriod,
+      })
+      : Promise.resolve(null);
+    const settleJob = () => jobIdP.then((jid) => (jid ? settleAgentJob(jid) : null)).catch(() => {});
     const show = (s) => { if (visible) setStatus(taskRef, s); };
     try {
       const result = await dispatchEvent({
         vm, event: stripGraphqlMeta(agent.startEvent), goalId,
       });
+      settleJob();
 
       const ok = result && (result.ok !== false);
       let nextStatus;
@@ -390,6 +496,7 @@ const actions = {
       return result;
     } catch (err) {
       console.error('[agentStore.fireStartEventIfPresent]', err);
+      settleJob();
       show('failed');
       await recordExecution(apollo, {
         id: agent.id,
@@ -416,12 +523,21 @@ const actions = {
     const show = (s) => { if (visible) setStatus(taskRef, s); };
 
     // While the end event is in flight the badge shows "running" (not
-    // "listening") — same as the start-event dispatch.
-    show('running');
+    // "listening") — same as the start-event dispatch. If the page dies now, a
+    // reopen resolves it to 'finished'.
+    if (visible) setStatus(taskRef, 'running', 'finished');
+    // Same background-sync safety net as the start event.
+    const jobIdP = visible
+      ? enqueueDispatchJob({
+        taskRef, agent, event: agent.endEvent, phase: 'end', hasEnd: false, goalId,
+      })
+      : Promise.resolve(null);
+    const settleJob = () => jobIdP.then((jid) => (jid ? settleAgentJob(jid) : null)).catch(() => {});
     try {
       const result = await dispatchEvent({
         vm, event: stripGraphqlMeta(agent.endEvent), goalId,
       });
+      settleJob();
       const ok = result && (result.ok !== false);
       const resultData = result && result.data;
       const resultType = result && result.type;
@@ -462,6 +578,7 @@ const actions = {
       return result;
     } catch (err) {
       console.error('[agentStore.fireEndEvent]', err);
+      settleJob();
       show('failed');
       await recordExecution(apollo, {
         id: agent.id,

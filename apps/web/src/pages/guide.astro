@@ -1,0 +1,224 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import FinalCta from '~/components/sections/FinalCta.astro';
+import { Icon } from 'astro-icon/components';
+import { chapters } from '~/lib/guide';
+import { LINKS } from '~/lib/links';
+
+/**
+ * The Routines field guide — overview hub. Each chapter (Dashboard, Priority,
+ * Goals, Agents) has its own page under /guide/<id>; this page sells the
+ * concept and routes into them.
+ */
+---
+
+<BaseLayout
+  title="The Routines Guide — Routine Notes"
+  description="How Routine Notes thinks about your day: the Dashboard timeline, the Priority matrix, the Goals cascade and Agents — one concept, four surfaces."
+>
+  <!-- hero -->
+  <section class="relative pt-20 pb-16 overflow-hidden">
+    <div class="absolute inset-0 -z-10 pointer-events-none">
+      <div
+        class="absolute -top-24 left-1/2 -translate-x-1/2 h-[480px] w-[760px] rounded-full blur-3xl opacity-45"
+        style="background:radial-gradient(circle, rgba(40,139,213,0.20), rgba(40,139,213,0) 70%)"
+      >
+      </div>
+      <div class="absolute inset-0 opacity-[0.5]" style="background-image:radial-gradient(rgba(40,139,213,0.10) 1px,transparent 1px);background-size:28px 28px"></div>
+    </div>
+
+    <div class="container-page" data-reveal>
+      <span class="pill">
+        <Icon name="ph:compass" width={14} height={14} />
+        The field guide
+      </span>
+      <h1 class="mt-6 max-w-3xl text-5xl sm:text-6xl lg:text-7xl font-semibold leading-[1.02]">
+        One concept.<br />
+        <span class="italic font-display text-[color:var(--color-brand-600)]">Four surfaces.</span>
+      </h1>
+      <p class="mt-6 max-w-2xl text-lg text-[color:var(--color-ink-600)] leading-relaxed">
+        Everything in Routine Notes is the same idea wearing four outfits: <b>a routine is a
+        promise with a timestamp.</b> The Dashboard holds the promise, Priority orders it, Goals
+        gives it a destination, and Agents make sure the machinery runs even when you wobble.
+      </p>
+
+      <!-- the day timeline motif -->
+      <div class="guide-timeline mt-12" aria-hidden="true" data-reveal>
+        <div class="guide-timeline__track">
+          {['06:00', '06:40', '09:00', '11:30', '14:00', '18:30', '23:00'].map((t, i) => (
+            <div class={`guide-timeline__stop ${i === 2 ? 'is-now' : ''} ${i < 2 ? 'is-done' : ''}`}>
+              <span class="guide-timeline__dot"></span>
+              <span class="guide-timeline__time">{t}</span>
+            </div>
+          ))}
+          <div class="guide-timeline__window">
+            <span>1h 30m window</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- chapter index -->
+      <div data-reveal-group class="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {chapters.map((c) => (
+          <a data-reveal-item href={`/guide/${c.id}`} class="guide-index card-soft group p-5">
+            <div class="flex items-start justify-between">
+              <span class="font-display text-3xl font-bold" style={`color:${c.accent}`}>{c.num}</span>
+              <Icon name={c.icon} width={22} height={22} class="text-[color:var(--color-ink-400)] group-hover:text-[color:var(--color-brand-600)] transition-colors" />
+            </div>
+            <p class="mt-4 font-semibold text-[color:var(--color-ink-900)]">{c.label}</p>
+            <p class="mt-1 text-sm text-[color:var(--color-ink-500)]">{c.eyebrow}</p>
+            <p class="mt-4 text-sm leading-relaxed text-[color:var(--color-ink-600)]">{c.lead.split('. ')[0]}.</p>
+            <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[color:var(--color-brand-600)]">
+              Read the chapter
+              <Icon name="ph:arrow-right" width={14} height={14} class="transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- the loop, in one line -->
+  <section class="container-page pb-4" data-reveal>
+    <div class="card-soft px-6 py-8 sm:px-10 flex flex-col lg:flex-row items-start lg:items-center gap-6">
+      <p class="text-xl sm:text-2xl font-display font-semibold leading-snug max-w-xl">
+        Show up on time → act with full dedication → improve the plan.
+        <span class="text-[color:var(--color-brand-600)]">Every surface serves that loop.</span>
+      </p>
+      <div class="lg:ml-auto flex flex-wrap gap-3 text-sm">
+        {[
+          ['Dashboard', 'holds the promise'],
+          ['Priority', 'orders it'],
+          ['Goals', 'aims it'],
+          ['Agents', 'automate it'],
+        ].map(([name, role], i) => (
+          <a href={`/guide/${chapters[i].id}`} class="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-ink-100)] bg-[color:var(--color-surface-soft)] px-4 py-2 hover:border-[color:var(--color-brand-300)] hover:text-[color:var(--color-brand-700)] transition-colors">
+            <b>{name}</b>
+            <span class="text-[color:var(--color-ink-500)]">{role}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- quick start -->
+  <section class="mt-20 py-20 relative overflow-hidden bg-[color:var(--color-ink-900)] text-white">
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute -top-40 right-0 h-[520px] w-[520px] rounded-full blur-3xl opacity-20" style="background:radial-gradient(circle,#288bd5,transparent 70%)"></div>
+      <div class="absolute inset-0 opacity-[0.04]" style="background-image:radial-gradient(rgba(255,255,255,0.6) 1px,transparent 1px);background-size:24px 24px"></div>
+    </div>
+    <div class="container-page relative" data-reveal>
+      <div class="max-w-2xl">
+        <span class="pill !bg-white/10 !text-white !border-white/15">
+          <Icon name="ph:rocket-launch" width={14} height={14} />
+          Quick start
+        </span>
+        <h2 class="mt-6 text-4xl sm:text-5xl font-semibold leading-[1.05]">Your first loop, in fifteen minutes</h2>
+      </div>
+      <ol class="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4 max-w-5xl" data-reveal-group>
+        {[
+          ['Box the day', 'Add 4–6 routines with honest start times. Morning first — that’s where Discipline is cheapest.'],
+          ['Write one year goal', 'Then cascade it: one month milestone, one week milestone, one day goal for tomorrow.'],
+          ['Tag today', 'Open Priority and give every day goal a quadrant. Three Do-nows, max.'],
+          ['Attach one agent', 'Pick your most repetitive routine and wire a start event at it. Let the machine carry one thing.'],
+        ].map(([head, body], i) => (
+          <li data-reveal-item class="rounded-2xl bg-white/5 border border-white/10 p-5 backdrop-blur-sm">
+            <span class="font-display text-3xl font-bold text-[color:var(--color-brand-300)]">{i + 1}</span>
+            <p class="mt-3 font-semibold">{head}</p>
+            <p class="mt-1.5 text-sm text-white/65 leading-relaxed">{body}</p>
+          </li>
+        ))}
+      </ol>
+      <p class="relative mt-10 text-sm text-white/60">
+        Fifteen minutes in, you have a promise with a timestamp. <a href={LINKS.appStarted} class="font-semibold text-white underline decoration-white/30 hover:decoration-white">Go keep it →</a>
+      </p>
+    </div>
+  </section>
+
+  <FinalCta />
+</BaseLayout>
+
+<style>
+  /* ---- hero timeline motif ---- */
+  .guide-timeline {
+    max-width: 720px;
+  }
+  .guide-timeline__track {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    padding: 18px 6px 6px;
+    border-top: 2px dashed var(--color-ink-200);
+  }
+  .guide-timeline__stop {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .guide-timeline__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-surface);
+    border: 2.5px solid var(--color-ink-300);
+    margin-top: -26px;
+  }
+  .guide-timeline__stop.is-done .guide-timeline__dot {
+    background: var(--color-brand-500);
+    border-color: var(--color-brand-500);
+  }
+  .guide-timeline__stop.is-now .guide-timeline__dot {
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 5px rgb(40 139 213 / 0.18);
+    animation: guide-pulse 2.4s ease-in-out infinite;
+  }
+  .guide-timeline__time {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-ink-500);
+    font-variant-numeric: tabular-nums;
+  }
+  .guide-timeline__window {
+    position: absolute;
+    top: -2px;
+    left: 24%;
+    width: 22%;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--color-brand-400), var(--color-brand-500));
+  }
+  .guide-timeline__window span {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-brand-600);
+  }
+  @keyframes guide-pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgb(40 139 213 / 0.16); }
+    50% { box-shadow: 0 0 0 9px rgb(40 139 213 / 0.06); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .guide-timeline__stop.is-now .guide-timeline__dot { animation: none; }
+  }
+
+  .guide-index {
+    display: flex;
+    flex-direction: column;
+    transition: transform 200ms var(--ease-out-soft), box-shadow 200ms var(--ease-out-soft);
+  }
+  .guide-index:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+  }
+  .guide-index > span:last-child {
+    margin-top: auto;
+    padding-top: 1rem;
+  }
+</style>
