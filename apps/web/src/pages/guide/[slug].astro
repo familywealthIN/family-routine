@@ -1,0 +1,202 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import FinalCta from '~/components/sections/FinalCta.astro';
+import GuideChapterBody from '~/components/guide/GuideChapterBody.astro';
+import AccordionShowcase from '~/components/guide/AccordionShowcase.astro';
+import { Icon } from 'astro-icon/components';
+import { chapters } from '~/lib/guide';
+import { LINKS } from '~/lib/links';
+
+export function getStaticPaths() {
+  return chapters.map((c) => ({ params: { slug: c.id } }));
+}
+
+const { slug } = Astro.params;
+const index = chapters.findIndex((c) => c.id === slug);
+const chapter = chapters[index];
+const prev = index > 0 ? chapters[index - 1] : null;
+const next = index < chapters.length - 1 ? chapters[index + 1] : null;
+---
+
+<BaseLayout
+  title={`${chapter.title.split(' — ')[0]} — The Routines Guide`}
+  description={chapter.lead}
+>
+  <section class="relative pt-16 pb-8 overflow-hidden">
+    <div class="absolute inset-0 -z-10 pointer-events-none">
+      <div
+        class="absolute -top-32 left-1/3 h-[380px] w-[620px] rounded-full blur-3xl opacity-35"
+        style={`background:radial-gradient(circle, ${chapter.accent}2e, transparent 70%)`}
+      >
+      </div>
+    </div>
+
+    <div class="container-page">
+      <!-- breadcrumb -->
+      <nav class="flex items-center gap-2 text-sm text-[color:var(--color-ink-500)]" aria-label="Breadcrumb" data-reveal>
+        <a href={LINKS.guide} class="hover:text-[color:var(--color-brand-600)] font-medium">The field guide</a>
+        <Icon name="ph:caret-right" width={12} height={12} />
+        <span class="font-semibold text-[color:var(--color-ink-800)]">{chapter.label}</span>
+      </nav>
+
+      <div class="mt-10 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-14">
+        <!-- chapter rail -->
+        <aside class="hidden lg:block">
+          <nav class="sticky top-28" aria-label="Guide chapters">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-ink-400)]">Chapters</p>
+            <ul class="mt-4 space-y-1">
+              {chapters.map((c) => (
+                <li>
+                  <a
+                    href={`/guide/${c.id}`}
+                    class={`guide-rail__link ${c.id === chapter.id ? 'is-current' : ''}`}
+                    aria-current={c.id === chapter.id ? 'page' : undefined}
+                  >
+                    <span class="guide-rail__num font-display">{c.num}</span>
+                    {c.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <div class="mt-6 pt-5 border-t border-[color:var(--color-ink-100)] space-y-3">
+              <a href={LINKS.guide} class="block text-sm font-medium text-[color:var(--color-ink-600)] hover:text-[color:var(--color-brand-600)]">← Overview</a>
+              <a href={LINKS.appStarted} class="block text-sm font-semibold text-[color:var(--color-brand-600)] hover:text-[color:var(--color-brand-700)]">Open the app →</a>
+            </div>
+          </nav>
+        </aside>
+
+        <!-- chapter -->
+        <article>
+          <header class="relative" data-reveal>
+            <span class="guide-chapter__watermark font-display" aria-hidden="true" style={`color:${chapter.accent}`}>{chapter.num}</span>
+            <span class="pill relative">
+              <Icon name={chapter.icon} width={14} height={14} />
+              {chapter.eyebrow}
+            </span>
+            <h1 class="relative mt-5 text-4xl sm:text-5xl font-semibold leading-[1.06]">{chapter.title}</h1>
+            <p class="relative mt-5 max-w-2xl text-lg leading-relaxed text-[color:var(--color-ink-600)]">{chapter.lead}</p>
+          </header>
+
+          <div class="mt-10">
+            <GuideChapterBody chapter={chapter} />
+          </div>
+
+          <AccordionShowcase
+            heading={chapter.details.heading}
+            intro={chapter.details.intro}
+            accent={chapter.accent}
+            items={chapter.details.items}
+          />
+
+          <!-- prev / next -->
+          <nav class="mt-16 grid gap-4 sm:grid-cols-2" aria-label="Chapter pagination">
+            {prev ? (
+              <a href={`/guide/${prev.id}`} class="guide-pager card-soft group p-5">
+                <span class="guide-pager__dir">
+                  <Icon name="ph:arrow-left" width={13} height={13} />
+                  Previous
+                </span>
+                <p class="mt-2 font-semibold text-[color:var(--color-ink-900)] group-hover:text-[color:var(--color-brand-600)] transition-colors">
+                  <span class="font-display mr-2" style={`color:${prev.accent}`}>{prev.num}</span>{prev.label}
+                </p>
+              </a>
+            ) : (
+              <a href={LINKS.guide} class="guide-pager card-soft group p-5">
+                <span class="guide-pager__dir">
+                  <Icon name="ph:arrow-left" width={13} height={13} />
+                  Back to
+                </span>
+                <p class="mt-2 font-semibold text-[color:var(--color-ink-900)] group-hover:text-[color:var(--color-brand-600)] transition-colors">The field guide</p>
+              </a>
+            )}
+            {next ? (
+              <a href={`/guide/${next.id}`} class="guide-pager card-soft group p-5 text-right">
+                <span class="guide-pager__dir justify-end">
+                  Next
+                  <Icon name="ph:arrow-right" width={13} height={13} />
+                </span>
+                <p class="mt-2 font-semibold text-[color:var(--color-ink-900)] group-hover:text-[color:var(--color-brand-600)] transition-colors">
+                  <span class="font-display mr-2" style={`color:${next.accent}`}>{next.num}</span>{next.label}
+                </p>
+              </a>
+            ) : (
+              <a href={LINKS.appStarted} class="guide-pager card-soft group p-5 text-right">
+                <span class="guide-pager__dir justify-end">
+                  Done reading
+                  <Icon name="ph:arrow-right" width={13} height={13} />
+                </span>
+                <p class="mt-2 font-semibold text-[color:var(--color-ink-900)] group-hover:text-[color:var(--color-brand-600)] transition-colors">Run your first loop</p>
+              </a>
+            )}
+          </nav>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <FinalCta />
+</BaseLayout>
+
+<style>
+  .guide-chapter__watermark {
+    position: absolute;
+    top: -2.4rem;
+    right: -0.5rem;
+    font-size: clamp(6rem, 14vw, 10rem);
+    font-weight: 800;
+    line-height: 1;
+    opacity: 0.07;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .guide-rail__link {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-ink-600);
+    border-left: 2px solid transparent;
+    transition: color 160ms var(--ease-out-soft), background 160ms var(--ease-out-soft);
+  }
+  .guide-rail__num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-ink-400);
+  }
+  .guide-rail__link:hover {
+    color: var(--color-brand-600);
+    background: var(--color-brand-50);
+  }
+  .guide-rail__link.is-current {
+    color: var(--color-brand-700);
+    background: var(--color-brand-50);
+    border-left-color: var(--color-brand-500);
+    border-radius: 0 10px 10px 0;
+  }
+  .guide-rail__link.is-current .guide-rail__num {
+    color: var(--color-brand-500);
+  }
+
+  .guide-pager {
+    display: block;
+    transition: transform 200ms var(--ease-out-soft), box-shadow 200ms var(--ease-out-soft);
+  }
+  .guide-pager:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
+  }
+  .guide-pager__dir {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink-400);
+  }
+</style>

@@ -643,6 +643,7 @@ import { blurActiveElement } from '../../utils/blurActiveElement';
 import { getAllCachedDashboards, filterAreaProjectTags } from '../../utils/dashboardCache';
 import { readAiSearchSettings, writeAiSearchSettings } from '../../utils/aiSearchSettings';
 import eventBus, { EVENTS } from '../../utils/eventBus';
+import { handleTagInputKeydown } from '../../utils/tagKeydown';
 import GoalTaskToolbar from '../GoalTaskToolbar/GoalTaskToolbar.vue';
 import MobileSubDrawer from '../../molecules/MobileSubDrawer/MobileSubDrawer.vue';
 import { stepupMilestonePeriodDate } from '../../utils/getDates';
@@ -1729,17 +1730,16 @@ export default {
 
     /**
      * Handle keydown in the inline tag input.
-     * Enter or comma adds the tag.
-     * Backspace on empty input removes the last tag.
+     * Enter / Tab / comma / space commit; Backspace on empty removes the last.
+     * Shared with every other tag input via the common helper.
      */
     handleTagKeydown(e) {
-      if (e.key === 'Enter' || e.key === ',') {
-        e.preventDefault();
-        this.addTag(this.tagInput);
-      } else if (e.key === 'Backspace' && !this.tagInput && this.promptTags.length) {
-        const lastTag = this.promptTags[this.promptTags.length - 1];
-        this.removeTag(lastTag);
-      }
+      handleTagInputKeydown(e, {
+        getValue: () => this.tagInput,
+        commit: (value) => this.addTag(value),
+        canRemoveLast: () => !this.tagInput && this.promptTags.length > 0,
+        removeLast: () => this.removeTag(this.promptTags[this.promptTags.length - 1]),
+      });
     },
 
     /**

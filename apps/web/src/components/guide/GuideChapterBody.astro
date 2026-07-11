@@ -1,0 +1,361 @@
+---
+import { Icon } from 'astro-icon/components';
+import { matrix, kdgColor, type GuideChapter } from '~/lib/guide';
+
+/**
+ * One field-guide chapter: media (product recording or the built Priority
+ * matrix diagram), the numbered how-it-works list, field notes and the KDG
+ * points strip. The chapter header lives in the page so each surface can
+ * frame it differently.
+ */
+interface Props {
+  chapter: GuideChapter;
+}
+const { chapter: c } = Astro.props;
+---
+
+<div>
+  <!-- media -->
+  <div data-reveal>
+    {c.media.type === 'video' ? (
+      <div class="guide-browser">
+        <div class="guide-browser__chrome" aria-hidden="true">
+          <span class="guide-browser__dot" style="background:#ff5f57"></span>
+          <span class="guide-browser__dot" style="background:#febc2e"></span>
+          <span class="guide-browser__dot" style="background:#28c840"></span>
+          <span class="guide-browser__address">{c.media.label}</span>
+        </div>
+        <video
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          poster={c.media.poster}
+          src={c.media.src}
+          data-guide-video
+          aria-label={`${c.title} — recorded in the Routine Notes web app`}
+        ></video>
+      </div>
+    ) : (
+      <figure class="guide-matrix card-soft" role="img" aria-label="The Priority matrix: Do now, Plan, Delegate and Automate quadrants with tagged day goals.">
+        <div class="guide-matrix__stats">
+          {matrix.stats.map((s) => (
+            <div class="guide-matrix__stat" style={`border-top-color:${s.color}`}>
+              <span class="font-display" style={`color:${s.color}`}>{s.count}</span>
+              <small>{s.label}</small>
+            </div>
+          ))}
+        </div>
+        <div class="guide-matrix__grid">
+          {matrix.quads.map((q) => (
+            <div class="guide-matrix__quad">
+              <p class="guide-matrix__title" style={`color:${q.color}`}>
+                <span class="guide-matrix__swatch" style={`background:${q.color}`}></span>
+                {q.title}
+              </p>
+              {q.items.map((it) => (
+                <div class={`guide-matrix__item ${it.done ? 'is-done' : ''}`}>
+                  <span class="guide-matrix__check" style={it.done ? `background:${q.color};border-color:${q.color}` : ''}>
+                    {it.done && <Icon name="ph:check-bold" width={10} height={10} />}
+                  </span>
+                  <span class="guide-matrix__text">{it.t}</span>
+                </div>
+              ))}
+              <code class="guide-matrix__tag">#{q.tag}</code>
+            </div>
+          ))}
+        </div>
+        <span class="guide-matrix__axis guide-matrix__axis--x">urgency →</span>
+        <span class="guide-matrix__axis guide-matrix__axis--y">importance →</span>
+      </figure>
+    )}
+  </div>
+
+  <!-- how it works -->
+  <ol class="mt-10 space-y-6" data-reveal-group>
+    {c.steps.map(([head, body], i) => (
+      <li data-reveal-item class="flex gap-4">
+        <span class="guide-step font-display" style={`color:${c.accent};border-color:${c.accent}33`}>{i + 1}</span>
+        <div>
+          <h3 class="text-[1.05rem] font-semibold text-[color:var(--color-ink-900)]">{head}</h3>
+          <p class="mt-1 text-[15px] leading-relaxed text-[color:var(--color-ink-600)]">{body}</p>
+        </div>
+      </li>
+    ))}
+  </ol>
+
+  <!-- field notes -->
+  <div class="mt-10 grid gap-4 sm:grid-cols-2" data-reveal-group>
+    {c.notes.map(([head, body]) => (
+      <aside data-reveal-item class="guide-note">
+        <p class="guide-note__label">
+          <Icon name="ph:notebook" width={13} height={13} />
+          Field note
+        </p>
+        <p class="mt-2 font-semibold text-[color:var(--color-ink-900)] text-[15px]">{head}</p>
+        <p class="mt-1 text-sm leading-relaxed text-[color:var(--color-ink-600)]">{body}</p>
+      </aside>
+    ))}
+  </div>
+
+  <!-- points strip -->
+  <div class="mt-10" data-reveal>
+    <span class="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-ink-500)]">Feeds your points</span>
+    <div class="mt-3 flex flex-wrap gap-3">
+      {c.points.map(([letter, name, how]) => (
+        <span class="guide-points__token">
+          <b class="font-display" style={`color:${kdgColor[letter]}`}>{letter}</b>
+          <span class="font-semibold text-[color:var(--color-ink-800)]">{name}</span>
+          <span class="text-[color:var(--color-ink-500)]">— {how}</span>
+        </span>
+      ))}
+    </div>
+  </div>
+</div>
+
+<style>
+  .guide-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1.5px solid;
+    font-size: 14px;
+    font-weight: 700;
+    background: var(--color-surface);
+  }
+
+  .guide-note {
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-ink-100);
+    border-radius: var(--radius-card);
+    padding: 1.1rem 1.25rem;
+  }
+  .guide-note__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-brand-600);
+  }
+
+  .guide-points__token {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 13.5px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-ink-100);
+    border-radius: 999px;
+    padding: 7px 14px;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* ---- browser frame ---- */
+  .guide-browser {
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--color-ink-100);
+    box-shadow: var(--shadow-lift);
+  }
+  .guide-browser__chrome {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    background: var(--color-ink-50);
+    border-bottom: 1px solid var(--color-ink-100);
+  }
+  .guide-browser__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .guide-browser__address {
+    margin-inline: auto;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-ink-400);
+    background: #fff;
+    border: 1px solid var(--color-ink-100);
+    border-radius: 999px;
+    padding: 3px 14px;
+  }
+  .guide-browser video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    background: #fff;
+  }
+
+  /* ---- priority matrix diagram ---- */
+  .guide-matrix {
+    position: relative;
+    padding: 1.5rem 1.5rem 2.4rem 2.4rem;
+  }
+  .guide-matrix__stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 1.25rem;
+  }
+  .guide-matrix__stat {
+    background: var(--color-surface);
+    border: 1px solid var(--color-ink-100);
+    border-top: 3px solid;
+    border-radius: 10px;
+    padding: 10px 6px 8px;
+    text-align: center;
+    box-shadow: var(--shadow-card);
+  }
+  .guide-matrix__stat span {
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .guide-matrix__stat small {
+    display: block;
+    margin-top: 5px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--color-ink-400);
+  }
+  .guide-matrix__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .guide-matrix__quad {
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-ink-100);
+    border-radius: 12px;
+    padding: 14px;
+    min-height: 132px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .guide-matrix__title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .guide-matrix__swatch {
+    width: 8px;
+    height: 8px;
+    border-radius: 3px;
+  }
+  .guide-matrix__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-ink-100);
+    border-radius: 8px;
+    padding: 7px 10px;
+  }
+  .guide-matrix__check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    border-radius: 5px;
+    border: 1.5px solid var(--color-ink-300);
+    color: #fff;
+  }
+  .guide-matrix__text {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--color-ink-800);
+  }
+  .guide-matrix__item.is-done .guide-matrix__text {
+    text-decoration: line-through;
+    color: var(--color-ink-400);
+  }
+  .guide-matrix__tag {
+    margin-top: auto;
+    align-self: flex-start;
+    font-size: 10.5px;
+    color: var(--color-ink-500);
+    background: var(--color-ink-50);
+    border: 1px solid var(--color-ink-100);
+    border-radius: 999px;
+    padding: 2px 9px;
+  }
+  .guide-matrix__axis {
+    position: absolute;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-ink-300);
+  }
+  .guide-matrix__axis--x {
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .guide-matrix__axis--y {
+    left: 12px;
+    top: 58%;
+    transform: rotate(-90deg) translateX(50%);
+    transform-origin: left center;
+  }
+  @media (max-width: 560px) {
+    .guide-matrix__stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .guide-matrix__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  function initGuideVideos() {
+    const videos = document.querySelectorAll<HTMLVideoElement>('[data-guide-video]:not([data-video-init])');
+    if (!videos.length) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const player = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const v = entry.target as HTMLVideoElement;
+          if (reduceMotion) {
+            v.controls = true;
+            return;
+          }
+          if (entry.isIntersecting) v.play().catch(() => {});
+          else v.pause();
+        });
+      },
+      { threshold: 0.3 }
+    );
+    videos.forEach((v) => {
+      v.dataset.videoInit = 'true';
+      player.observe(v);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGuideVideos);
+  } else {
+    initGuideVideos();
+  }
+  document.addEventListener('astro:page-load', initGuideVideos);
+</script>

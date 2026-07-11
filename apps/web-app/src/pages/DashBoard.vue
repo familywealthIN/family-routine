@@ -455,6 +455,12 @@ export default {
     // Routine data query - Apollo cache persistence handles offline caching
     routineDate: {
       query: ROUTINE_DATE_QUERY,
+      // cache-and-network so the viewed day always reconciles against the
+      // server. Routine tasks reuse the same _id across days, so Apollo
+      // normalises them to one entity per task; without a network reconcile a
+      // new day could show the previous day's cached stimuli (the server is
+      // always correct — it builds each day's tasks with earned:0).
+      fetchPolicy: 'cache-and-network',
       skip() {
         // Skip query if user is not authenticated
         return !this.$root.$data.email;
@@ -1476,7 +1482,20 @@ export default {
     },
     addNewDayRoutine() {
       this.$routine.addRoutine(this.date)
-        .then(() => this.$routine.fetchRoutine(this.date, { useCache: false }))
+        .then(() => {
+          // Refetch through the dashboard's OWN routine query, which selects the
+          // full task shape (stimuli, redeemed, passedPoints). $routine.fetchRoutine
+          // uses a lighter query WITHOUT stimuli, so on a new day it refreshes
+          // ticked/passed but leaves stimuli untouched — and because routine tasks
+          // reuse the same _id across days, Apollo normalises them to one cache
+          // entity per task, so yesterday's stimulus values would linger on the
+          // new day. Refetching the full query zeroes them out.
+          const routineQuery = this.$apollo.queries.routineDate;
+          if (routineQuery && typeof routineQuery.refetch === 'function') {
+            return routineQuery.refetch();
+          }
+          return this.$routine.fetchRoutine(this.date, { useCache: false });
+        })
         .then(() => {
           this.isLoading = false;
         })

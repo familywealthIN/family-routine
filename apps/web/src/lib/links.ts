@@ -12,6 +12,7 @@ export const SITE = {
 export const LINKS = {
   appLogin: APP_LOGIN_URL,
   appStarted: APP_LOGIN_URL,
+  guide: '/guide',
   pricing: '/pricing',
   about: '/about',
   privacy: 'https://familywealth.in/privacy-policy',
@@ -22,6 +23,7 @@ export const LINKS = {
 } as const;
 
 export const NAV = [
+  { label: 'Guide', href: LINKS.guide },
   { label: 'Pricing', href: LINKS.pricing },
   { label: 'About', href: LINKS.about },
 ] as const;
