@@ -1,0 +1,208 @@
+---
+import { Icon } from 'astro-icon/components';
+import type { GuideDetailItem } from '~/lib/guide';
+
+/**
+ * Todoist-style detail block: an accordion of feature items drives a sticky
+ * media stage — opening an item cross-fades its screenshot in. Below lg the
+ * stage hides and each open panel carries its own inline screenshot.
+ */
+interface Props {
+  heading: string;
+  intro: string;
+  accent: string;
+  items: GuideDetailItem[];
+}
+const { heading, intro, accent, items } = Astro.props;
+---
+
+<section class="acc mt-16" data-accordion>
+  <header data-reveal>
+    <h2 class="text-2xl sm:text-3xl font-semibold">{heading}</h2>
+    <p class="mt-3 max-w-2xl text-[15.5px] leading-relaxed text-[color:var(--color-ink-600)]">{intro}</p>
+  </header>
+
+  <div class="mt-8 lg:grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-10 lg:items-start">
+    <!-- accordion -->
+    <ul class="acc__list" data-reveal>
+      {items.map((it, i) => (
+        <li class={`acc__item ${i === 0 ? 'is-open' : ''}`} data-acc-item={i} style={`--acc:${accent}`}>
+          <button type="button" class="acc__head" data-acc-btn={i} aria-expanded={i === 0 ? 'true' : 'false'}>
+            <span class="acc__num font-display">{String(i + 1).padStart(2, '0')}</span>
+            <span class="acc__title">{it.title}</span>
+            <Icon name="ph:caret-down" width={16} height={16} class="acc__caret" />
+          </button>
+          <div class="acc__panel">
+            <div class="acc__inner">
+              <p class="acc__body">{it.body}</p>
+              <!-- inline media below lg -->
+              <div class="acc__inline-media lg:hidden">
+                <img src={it.img} alt={it.alt} loading="lazy" decoding="async" />
+              </div>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+
+    <!-- sticky stage (lg+) -->
+    <div class="hidden lg:block sticky top-24" data-reveal>
+      <div class="acc__stage card-soft">
+        {items.map((it, i) => (
+          <img
+            src={it.img}
+            alt={it.alt}
+            loading={i === 0 ? 'eager' : 'lazy'}
+            decoding="async"
+            class={`acc__media ${i === 0 ? 'is-active' : ''}`}
+            data-acc-media={i}
+          />
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .acc__list {
+    border-top: 1px solid var(--color-ink-100);
+  }
+  .acc__item {
+    border-bottom: 1px solid var(--color-ink-100);
+  }
+  .acc__head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 18px 4px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .acc__num {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-ink-300);
+    transition: color 180ms var(--ease-out-soft);
+  }
+  .acc__title {
+    flex: 1;
+    font-size: 16.5px;
+    font-weight: 600;
+    color: var(--color-ink-700);
+    transition: color 180ms var(--ease-out-soft);
+  }
+  .acc__caret {
+    color: var(--color-ink-400);
+    transition: transform 220ms var(--ease-out-soft);
+    flex-shrink: 0;
+  }
+  .acc__head:hover .acc__title {
+    color: var(--color-brand-600);
+  }
+
+  .acc__item.is-open .acc__num {
+    color: var(--acc);
+  }
+  .acc__item.is-open .acc__title {
+    color: var(--color-ink-900);
+  }
+  .acc__item.is-open .acc__caret {
+    transform: rotate(180deg);
+  }
+  .acc__item.is-open {
+    border-bottom-color: color-mix(in srgb, var(--acc) 35%, var(--color-ink-100));
+  }
+
+  /* animated open/close via the grid-rows trick */
+  .acc__panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 320ms var(--ease-out-soft);
+  }
+  .acc__item.is-open .acc__panel {
+    grid-template-rows: 1fr;
+  }
+  .acc__inner {
+    overflow: hidden;
+  }
+  .acc__body {
+    padding: 0 4px 18px 43px;
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--color-ink-600);
+  }
+  .acc__inline-media {
+    margin: 0 4px 18px 43px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--color-ink-100);
+    box-shadow: var(--shadow-card);
+  }
+  .acc__inline-media img {
+    display: block;
+    width: 100%;
+  }
+
+  /* stage */
+  .acc__stage {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+  }
+  .acc__media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    opacity: 0;
+    transform: scale(1.015);
+    transition: opacity 320ms var(--ease-out-soft), transform 480ms var(--ease-out-soft);
+  }
+  .acc__media.is-active {
+    opacity: 1;
+    transform: scale(1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .acc__panel,
+    .acc__media,
+    .acc__caret {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  function initAccordions() {
+    document.querySelectorAll<HTMLElement>('[data-accordion]:not([data-acc-init])').forEach((section) => {
+      section.dataset.accInit = 'true';
+      const items = Array.from(section.querySelectorAll<HTMLElement>('[data-acc-item]'));
+      const media = Array.from(section.querySelectorAll<HTMLElement>('[data-acc-media]'));
+
+      const open = (index: number) => {
+        items.forEach((item) => {
+          const active = Number(item.dataset.accItem) === index;
+          item.classList.toggle('is-open', active);
+          item.querySelector('[data-acc-btn]')?.setAttribute('aria-expanded', String(active));
+        });
+        media.forEach((m) => {
+          m.classList.toggle('is-active', Number(m.dataset.accMedia) === index);
+        });
+      };
+
+      section.querySelectorAll<HTMLElement>('[data-acc-btn]').forEach((btn) => {
+        btn.addEventListener('click', () => open(Number(btn.dataset.accBtn)));
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAccordions);
+  } else {
+    initAccordions();
+  }
+  document.addEventListener('astro:page-load', initAccordions);
+</script>

@@ -1,6 +1,8 @@
 ---
 import Logo from '~/components/Logo.astro';
+import { Icon } from 'astro-icon/components';
 import { LINKS, NAV } from '~/lib/links';
+import { chapters } from '~/lib/guide';
 ---
 
 <header
@@ -10,7 +12,42 @@ import { LINKS, NAV } from '~/lib/links';
     <Logo />
 
     <nav class="hidden md:flex items-center gap-1">
-      {NAV.map((item) => (
+      <!-- Guide dropdown: one page per surface -->
+      <div class="nav-drop relative">
+        <a
+          href={LINKS.guide}
+          class="nav-drop__trigger px-3 py-2 text-sm font-medium text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)] transition-colors inline-flex items-center gap-1"
+          aria-haspopup="true"
+        >
+          Guide
+          <Icon name="ph:caret-down" width={12} height={12} class="nav-drop__caret" />
+        </a>
+        <div class="nav-drop__menu" role="menu">
+          <a href={LINKS.guide} role="menuitem" class="nav-drop__item">
+            <span class="nav-drop__icon">
+              <Icon name="ph:compass" width={16} height={16} />
+            </span>
+            <span>
+              <b>Overview</b>
+              <small>One concept, four surfaces</small>
+            </span>
+          </a>
+          <div class="nav-drop__rule" role="separator"></div>
+          {chapters.map((c) => (
+            <a href={`/guide/${c.id}`} role="menuitem" class="nav-drop__item">
+              <span class="nav-drop__icon" style={`color:${c.accent}`}>
+                <Icon name={c.icon} width={16} height={16} />
+              </span>
+              <span>
+                <b>{c.label}</b>
+                <small>{c.eyebrow}</small>
+              </span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      {NAV.filter((item) => item.label !== 'Guide').map((item) => (
         <a
           href={item.href}
           class="px-3 py-2 text-sm font-medium text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)] transition-colors"
@@ -28,3 +65,86 @@ import { LINKS, NAV } from '~/lib/links';
     </div>
   </div>
 </header>
+
+<style>
+  .nav-drop__menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    min-width: 264px;
+    padding: 8px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-ink-100);
+    border-radius: 14px;
+    box-shadow: var(--shadow-lift);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 160ms var(--ease-out-soft), transform 160ms var(--ease-out-soft),
+      visibility 0s linear 160ms;
+  }
+  /* bridge the hover gap between trigger and menu */
+  .nav-drop::after {
+    content: '';
+    position: absolute;
+    inset: 100% 0 -10px;
+  }
+  .nav-drop:hover .nav-drop__menu,
+  .nav-drop:focus-within .nav-drop__menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+    transition-delay: 0s;
+  }
+  .nav-drop:hover .nav-drop__caret,
+  .nav-drop:focus-within .nav-drop__caret {
+    transform: rotate(180deg);
+  }
+  .nav-drop__caret {
+    transition: transform 160ms var(--ease-out-soft);
+  }
+
+  .nav-drop__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    transition: background 140ms var(--ease-out-soft);
+  }
+  .nav-drop__item:hover,
+  .nav-drop__item:focus-visible {
+    background: var(--color-brand-50);
+  }
+  .nav-drop__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-ink-100);
+    color: var(--color-brand-600);
+  }
+  .nav-drop__item b {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--color-ink-900);
+    line-height: 1.2;
+  }
+  .nav-drop__item small {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: var(--color-ink-500);
+    line-height: 1.3;
+  }
+  .nav-drop__rule {
+    height: 1px;
+    margin: 6px 8px;
+    background: var(--color-ink-100);
+  }
+</style>
