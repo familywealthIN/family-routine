@@ -184,6 +184,20 @@ export const UPDATE_GOAL_ITEM_CONTRIBUTION_MUTATION = gql`
 `;
 
 /**
+ * Update goal item reward mutation. Used to persist an agent end-event's HTML
+ * transcript onto the goal item so it survives an app close and can be
+ * re-opened later; a non-empty reward also signals the end event completed.
+ */
+export const UPDATE_GOAL_ITEM_REWARD_MUTATION = gql`
+  mutation updateGoalItemReward($id: ID!, $reward: String) {
+    updateGoalItemReward(id: $id, reward: $reward) {
+      id
+      reward
+    }
+  }
+`;
+
+/**
  * Complete sub-task item mutation
  */
 export const COMPLETE_SUB_TASK_ITEM_MUTATION = gql`
@@ -734,6 +748,39 @@ export function useGoalMutations(apolloClient, options = {}) {
   };
 
   /**
+   * Persist the agent end-event HTML transcript onto a goal item's reward.
+   *
+   * @param {string} id - Goal item ID
+   * @param {string} reward - HTML transcript (or '' to clear)
+   * @param {Object} mutationOptions - Additional options
+   * @returns {Promise<Object>} Updated goal item
+   */
+  const updateReward = async (id, reward, mutationOptions = {}) => {
+    const { onSuccess, onError } = mutationOptions;
+
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: UPDATE_GOAL_ITEM_REWARD_MUTATION,
+        variables: { id, reward },
+      });
+
+      const result = data?.updateGoalItemReward;
+
+      if (onSuccess) {
+        onSuccess(result);
+      }
+
+      return result;
+    } catch (err) {
+      if (onError) {
+        onError(err);
+      }
+
+      throw err;
+    }
+  };
+
+  /**
    * Complete/uncomplete a sub-task item
    *
    * @param {Object} params - Sub-task parameters
@@ -912,6 +959,7 @@ export function useGoalMutations(apolloClient, options = {}) {
     deleteGoalItem,
     updateGoalItem,
     updateContribution,
+    updateReward,
 
     // Sub-task mutations
     completeSubTaskItem,

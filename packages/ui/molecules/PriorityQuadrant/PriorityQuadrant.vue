@@ -10,52 +10,26 @@
     </v-card-title>
     <v-divider></v-divider>
     <v-card-text class="pa-0">
-      <v-list dense class="transparent">
-        <template v-if="items.length">
-          <v-list-tile
-            v-for="item in items"
-            :key="item.id"
-            @click="$emit('item-click', item)"
-            class="quadrant-item"
-          >
-            <v-list-tile-action @click.stop>
-              <v-checkbox
-                :input-value="item.isComplete"
-                @change="$emit('toggle-complete', item)"
-                :color="color"
-              />
-            </v-list-tile-action>
-            <v-list-tile-content>
-              <v-list-tile-title :class="{ 'completed': item.isComplete }">
-                {{ item.body }}
-              </v-list-tile-title>
-              <v-list-tile-sub-title class="caption grey--text">
-                {{ formatPeriod(item.period) }}
-                <span v-if="item.taskRef"> • {{ getTaskName(item.taskRef) }}</span>
-              </v-list-tile-sub-title>
-            </v-list-tile-content>
-            <v-list-tile-action>
-              <v-btn icon small @click.stop="$emit('edit-item', item)">
-                <v-icon size="18">edit</v-icon>
-              </v-btn>
-            </v-list-tile-action>
-          </v-list-tile>
-        </template>
-        <v-list-tile v-else>
-          <v-list-tile-content>
-            <v-list-tile-title class="grey--text text-xs-center pa-3">
-              No {{ title.toLowerCase() }} items
-            </v-list-tile-title>
-          </v-list-tile-content>
-        </v-list-tile>
-      </v-list>
+      <priority-goal-list
+        :items="items"
+        :tasklist="tasklist"
+        :color="color"
+        :empty-text="`No ${title.toLowerCase()} items`"
+        @item-click="$emit('item-click', $event)"
+        @toggle-complete="$emit('toggle-complete', $event)"
+        @edit-item="$emit('edit-item', $event)"
+        @open-transcript="$emit('open-transcript', $event)"
+      />
     </v-card-text>
   </v-card>
 </template>
 
 <script>
+import PriorityGoalList from '../PriorityGoalList/PriorityGoalList.vue';
+
 export default {
   name: 'MoleculePriorityQuadrant',
+  components: { PriorityGoalList },
   props: {
     title: {
       type: String,
@@ -93,17 +67,6 @@ export default {
       return map[this.color] || '#1976D2';
     },
   },
-  methods: {
-    formatPeriod(period) {
-      if (!period) return '';
-      return period.charAt(0).toUpperCase() + period.slice(1);
-    },
-    getTaskName(taskRef) {
-      if (!taskRef || !this.tasklist) return '';
-      const task = this.tasklist.find((t) => t.id === taskRef || t.taskId === taskRef);
-      return task ? task.name : '';
-    },
-  },
 };
 </script>
 
@@ -112,23 +75,6 @@ export default {
   min-height: 350px;
   display: flex;
   flex-direction: column;
-}
-
-.quadrant-item {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.quadrant-item:last-child {
-  border-bottom: none;
-}
-
-.quadrant-item:hover {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-
-.completed {
-  text-decoration: line-through;
-  opacity: 0.6;
 }
 
 .flex-grow-1 {

@@ -124,11 +124,13 @@
                     :goal="taskGoals"
                     :progress="getWeekProgress(taskGoals)"
                     :passive="showGoalsSkeleton"
+                    :busy="busy"
                     @delete-task-goal="$emit('delete-task-goal', $event)"
                     @refresh-task-goal="$emit('refresh-task-goal', $event)"
                     @toggle-goal-display-dialog="forwardToggleGoalDisplayDialog"
                     @complete-goal-item="$emit('complete-goal-item', $event)"
                     @complete-sub-task="$emit('complete-sub-task', $event)"
+                    @open-transcript="$emit('open-transcript', $event)"
                   />
                 </AtomList>
               </div>
@@ -216,6 +218,8 @@ export default {
   },
   props: {
     task: { type: Object, default: null },
+    // True while a feeding query is refetching; disables goal-item checkboxes.
+    busy: { type: Boolean, default: false },
     goals: { type: Array, default: () => [] },
     allGoals: { type: Array, default: () => [] },
     goalPeriod: { type: String, default: 'day' },

@@ -307,11 +307,17 @@ export default {
             this.createSession(accessToken, notificationId);
           })
           .catch((error) => {
+            this.isLoading = false;
+            // User dismissed the Google consent popup — not an error. Just
+            // return them to the login screen (the button re-shows) instead of
+            // reloading or leaving the loading spinner hanging.
+            if (error && error.type === 'popup_closed') {
+              return;
+            }
             this.trackError('login_error', error, {
               provider: 'google',
               error_type: 'auth_failure',
             });
-            this.isLoading = false;
             window.location.reload();
           });
       }

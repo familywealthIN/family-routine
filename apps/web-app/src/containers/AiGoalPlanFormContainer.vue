@@ -34,6 +34,7 @@ import {
   getTimelineEntryPeriod,
   getTimelineEntryDate,
 } from '../utils/getDates';
+import { applyPriorityTags } from '../utils/taskPriority';
 import { addMultipleGoalItemsToCache } from '../composables/useApolloCacheUpdates';
 
 // Modern shape — server has MilestonePlan.description after the
@@ -374,7 +375,11 @@ export default {
             taskRef: this.selectedTaskRef,
             isMilestone: !!selectedGoalRef,
             goalRef: selectedGoalRef || null,
-            tags: [...this.promptTags],
+            tags: applyPriorityTags(this.promptTags, {
+              period: planTitlePeriod,
+              date: planTitleDate,
+              body: milestoneData.title,
+            }),
           });
 
           if (planTitleResult && planTitleResult.id) {
@@ -411,7 +416,12 @@ export default {
             taskRef: this.selectedTaskRef,
             isMilestone: true,
             goalRef: planGoalRef,
-            tags: [...this.promptTags],
+            // Plan entries are future/non-day by construction -> priority:plan.
+            tags: applyPriorityTags(this.promptTags, {
+              period: entryPeriod,
+              date: timelineDate,
+              body: entry.title,
+            }),
           };
         });
 
@@ -490,6 +500,11 @@ export default {
               taskRef: this.selectedTaskRef,
               isMilestone: true,
               goalRef: planGoalRef,
+              tags: applyPriorityTags(this.promptTags, {
+                period: entryPeriod,
+                date: timelineDate,
+                body: entry.title,
+              }),
             });
           });
 

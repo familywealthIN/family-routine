@@ -1272,19 +1272,11 @@ export default {
       }
 
       // Task mode with AI Enhanced OFF: create the task INSTANTLY.
-      // We previously awaited the AI classify call here, which added up
-      // to ~1.5 s before the modal closed. Now we ship with a safe
-      // `priority:do` placeholder and pass `_aiClassifyBody` so the
-      // container can refine the priority tag in the background after
-      // the goal item is saved. UX is immediate; the priority dashboard
-      // self-corrects within ~1 s.
+      // The container stamps the deterministic priority tag from the creation
+      // context (date / @mention), so the organism just forwards the raw
+      // payload — no priority guessing, no background AI refinement.
       if (this.isTaskMode && !this.aiEnhancedTask) {
         const queryText = this.searchQuery.trim();
-        const tags = [...this.promptTags];
-        const hasPriorityTag = tags.some((t) => t.startsWith('priority:'));
-        if (!hasPriorityTag) {
-          tags.push('priority:do');
-        }
         const goalItemData = {
           date: this.toolbarDate || this.todayFormatted,
           period: 'day',
@@ -1292,9 +1284,8 @@ export default {
           contribution: '',
           taskRef: this.toolbarTaskRef || '',
           goalRef: this.toolbarGoalRef || null,
-          tags,
+          tags: [...this.promptTags],
           isMilestone: !!this.toolbarGoalRef,
-          _aiClassifyBody: hasPriorityTag ? null : queryText,
         };
         this.$emit('direct-task-create', goalItemData);
         return;

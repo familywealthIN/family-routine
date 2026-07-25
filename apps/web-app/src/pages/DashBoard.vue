@@ -52,6 +52,7 @@
             <agenda-task-list
               :groups="todayGoalItemsGrouped"
               :loading="$apollo.queries.goals && $apollo.queries.goals.loading && goalsFirstLoad"
+              :busy="isGoalsBusy"
               @complete-goal-item="completeGoalItem"
               @edit-goal-item="(item) => toggleGoalDisplayDialog(item, true)"
               @delete-goal-item="deleteTaskGoal"
@@ -74,7 +75,8 @@
                 :time-label="displayTime(currentTask && currentTask.time)"
                 :button-icon="getButtonIcon(currentTask)"
                 :button-color="getCurrentButtonColor(currentTask)"
-                :button-disabled="getButtonDisabled(currentTask)"
+                :button-disabled="getButtonDisabled(currentTask) || isRoutineBusy"
+                :busy="isGoalsBusy"
                 :agent-status="currentAgentStatus"
                 :show-goals-skeleton="showGoalsSkeleton"
                 :show-routine-skeleton="showRoutineSkeleton"
@@ -89,6 +91,7 @@
                 @toggle-goal-display-dialog="toggleGoalDisplayDialog"
                 @complete-goal-item="completeGoalItem"
                 @complete-sub-task="completeSubTask"
+                @open-transcript="openTranscript"
               />
             </div>
           </atom-flex>
@@ -151,6 +154,7 @@
             <upcoming-past-tasks
               :upcoming-tasks="upcomingTasksMeta"
               :past-tasks="pastTasksMeta"
+              :busy="isGoalsBusy"
               :tabs.sync="tabs"
               :selected-task-ref="selectedTaskRef"
               :goal-period.sync="currentGoalPeriod"
@@ -167,6 +171,7 @@
               @toggle-goal-display-dialog="toggleGoalDisplayDialog"
               @complete-goal-item="completeGoalItem"
               @complete-sub-task="completeSubTask"
+              @open-transcript="openTranscript"
             />
           </atom-flex>
         </atom-layout>
@@ -186,6 +191,7 @@
           :groups="nonTodayGoalItems"
           :loading="$apollo.queries.agendaGoals.loading"
           :hide-checkbox="isFutureDateSelected"
+          :busy="isGoalsBusy"
           @complete-goal-item="completeAgendaGoalItem"
           @edit-goal-item="(item) => toggleGoalDisplayDialog(item, true)"
           @delete-goal-item="deleteAgendaGoalFromList"
@@ -273,6 +279,32 @@
         </atom-card-text>
       </atom-card>
     </atom-dialog>
+    <atom-dialog v-model="goalActionDialog" max-width="600px">
+      <atom-card v-if="goalActionTask">
+        <atom-card-title>
+          <span class="headline">{{ goalActionTask.name }}</span>
+        </atom-card-title>
+        <atom-card-text>
+          <p>{{ goalActionTask.description }}</p>
+          <div v-if="goalActionItem" class="goal-action-item mb-3">
+            <div class="subheading font-weight-medium">{{ goalActionItem.body }}</div>
+            <div v-if="goalActionItem.contribution" class="grey--text">{{ goalActionItem.contribution }}</div>
+          </div>
+          <related-tasks-timeline-container
+            v-if="goalActionItem && goalActionItem.goalRef"
+            :goal-ref="goalActionItem.goalRef"
+            :date="date"
+            :tasklist="displayTasklist"
+          />
+          <task-action-buttons
+            :agent-state="goalActionAgentState"
+            @start-task="onGoalActionStartTask"
+            @start-agent="onGoalActionStartAgent"
+            @build-agent="onGoalActionBuildAgent"
+          />
+        </atom-card-text>
+      </atom-card>
+    </atom-dialog>
     <agent-edit-modal
       v-model="agentEditModalOpen"
       :prefilled-task-ref="agentEditTaskRef"
@@ -351,6 +383,7 @@ import UpcomingPastTasks from '@routine-notes/ui/organisms/UpcomingPastTasks/Upc
 import WeekGoalStreak from '@routine-notes/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue';
 import { AgentEditModal, PaywallDrawer } from '@routine-notes/ui/organisms';
 import AgendaTaskList from '@routine-notes/ui/organisms/AgendaTaskList/AgendaTaskList.vue';
+import TaskActionButtons from '@routine-notes/ui/molecules/TaskActionButtons/TaskActionButtons.vue';
 import {
   AtomAlert,
   AtomButton,
@@ -393,6 +426,7 @@ import { pendingMutations } from '../utils/pendingMutations';
 import GoalList from '../containers/GoalListContainer.vue';
 import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
 import QuickGoalCreation from '../containers/QuickGoalCreationContainer.vue';
+import RelatedTasksTimelineContainer from '../containers/RelatedTasksTimelineContainer.vue';
 import GoalCreation from '../containers/GoalCreationContainer.vue';
 import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue';
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
@@ -424,6 +458,8 @@ export default {
     ContainerBox,
     WakeCheck,
     QuickGoalCreation,
+    RelatedTasksTimelineContainer,
+    TaskActionButtons,
     GoalCreation,
     WeekdaySelectorContainer,
     CurrentTaskCard,
@@ -551,6 +587,12 @@ export default {
       quickTaskDialog: false,
       quickTaskTitle: '',
       quickTaskDescription: '',
+      // Existing-goal action modal: when a routine task already has a day goal
+      // item, tapping its action opens this modal (first goal item + the shared
+      // Start Task / Start Agent buttons) instead of ticking directly.
+      goalActionDialog: false,
+      goalActionItem: null,
+      goalActionTask: null,
       defaultGoalItem,
       selectedGoalItem: { ...defaultGoalItem }, // Initialize with all default fields
       // Routine data now comes from $routine store ($routineTasklist, $routine.skipDay)
@@ -1155,6 +1197,28 @@ export default {
       return null;
     },
 
+    // The agent end event has completed for this task when its day goal item
+    // carries a saved transcript (reward) — the same signal the transcript
+    // button keys on, persisted server-side so it survives reload.
+    taskAgentEndEventDone(taskRef) {
+      if (!taskRef) return false;
+      return (this.displayGoals || []).some((goal) => goal
+        && goal.period === 'day'
+        && Array.isArray(goal.goalItems)
+        && goal.goalItems.some((gi) => gi.taskRef === taskRef && gi.reward));
+    },
+
+    // Badge status to actually display. A 'listening' agent is still waiting
+    // for its end event; once that end event has finished (transcript saved)
+    // the agent is done, so never leave the badge stuck on 'listening' — e.g.
+    // when a late start-event dispatch resolves after the end event already
+    // completed, or after a reload restores a pre-completion 'listening'.
+    effectiveAgentStatus(taskRef) {
+      const status = (taskRef && this.$agent.statusByRoutineId[taskRef]) || '';
+      if (status === 'listening' && this.taskAgentEndEventDone(taskRef)) return 'finished';
+      return status;
+    },
+
     // End-event rule: a listening agent completes when the routine task's
     // goal-item counter is full — completedCount === totalCount (the same
     // stimulus-derived numbers shown on the card). Works for any of today's
@@ -1431,9 +1495,9 @@ export default {
         timeLabel: this.displayTime(task.time),
         buttonIcon: this.getButtonIcon(task),
         buttonColor: this.getCurrentButtonColor(task),
-        buttonDisabled: this.getButtonDisabled(task),
+        buttonDisabled: this.getButtonDisabled(task) || this.isRoutineBusy,
         // Agent running/listening/done badge — same as the current-task card.
-        agentStatus: this.$agent.statusByRoutineId[task.id] || '',
+        agentStatus: this.effectiveAgentStatus(task.id),
       }));
     },
     onSetGoalPeriod(period) {
@@ -1693,7 +1757,9 @@ export default {
       // started, and redeeming must keep that intact.
       if ((!task.passed && !task.wait && !task.ticked) || this.isRedeemable(task)) {
         if (this.filterTaskGoalsPeriod(task.id, this.displayGoals, 'day').length) {
-          this.checkClick(task);
+          // A goal item already exists → show the action modal (first goal
+          // item + Start Task / Start Agent) instead of ticking directly.
+          this.openGoalActionModal(task);
         } else {
           this.selectedTaskRef = task.id;
           this.quickTaskTitle = task.name;
@@ -1706,6 +1772,43 @@ export default {
             task_name: task.name,
           });
         }
+      }
+    },
+    openGoalActionModal(task) {
+      const goals = this.filterTaskGoalsPeriod(task.id, this.displayGoals, 'day');
+      const firstGoal = goals && goals[0];
+      const firstItem = firstGoal && firstGoal.goalItems && firstGoal.goalItems[0];
+      if (!firstItem) {
+        // No goal item to display — fall back to the original direct tick.
+        this.checkClick(task);
+        return;
+      }
+      this.goalActionTask = task;
+      this.goalActionItem = firstItem;
+      this.goalActionDialog = true;
+    },
+    onGoalActionStartTask() {
+      const task = this.goalActionTask;
+      this.goalActionDialog = false;
+      // Start Task: complete the routine task, do NOT fire the agent.
+      if (task) this.checkClick(task, { fireAgent: false });
+    },
+    onGoalActionStartAgent() {
+      const task = this.goalActionTask;
+      this.goalActionDialog = false;
+      // Start Agent: complete the task AND fire the agent's start event.
+      if (task) this.onStartAgentFromQuick(task.id);
+    },
+    onGoalActionBuildAgent() {
+      const task = this.goalActionTask;
+      this.goalActionDialog = false;
+      if (task) this.onBuildAgent(task.id);
+    },
+    openTranscript(goalItem) {
+      // Re-open the saved agent end-event transcript (the goal item's reward
+      // HTML) in the shared AgentResultModal.
+      if (goalItem && goalItem.reward) {
+        this.$agent.showSavedResult(goalItem.taskRef || goalItem.id, goalItem.reward);
       }
     },
     redeemClick(task, { fireAgent = true, agentImplicit = true } = {}) {
@@ -2359,6 +2462,12 @@ export default {
     },
   },
   computed: {
+    // 'assigned' when the goal-action modal's task has an agent → shows
+    // "Start Agent"; otherwise "Build Agent".
+    goalActionAgentState() {
+      if (!this.goalActionTask) return 'none';
+      return this.$agent.getByTaskRef(this.goalActionTask.id) ? 'assigned' : 'none';
+    },
     /**
      * Week goals filtered for the current task.
      * Consumed by the WeekGoalStreak organism and by the dashboard's
@@ -2372,7 +2481,7 @@ export default {
     currentAgentStatus() {
       const id = this.currentTask && this.currentTask.id;
       if (!id) return '';
-      return this.$agent.statusByRoutineId[id] || '';
+      return this.effectiveAgentStatus(id);
     },
     agentEditRoutineOptions() {
       const tasklist = this.displayTasklist || [];
@@ -2439,6 +2548,26 @@ export default {
     showGoalsSkeleton() {
       const isLoading = this.$apollo.queries.goals && this.$apollo.queries.goals.loading;
       return isLoading && this.goalsFirstLoad;
+    },
+    /**
+     * True while the routine query is fetching from the network — including the
+     * cache-and-network refetch that runs on app-open/date-change while cached
+     * data is already on screen. The tick "circle" is disabled during this
+     * window so a tap can't be reverted by an in-flight response that started
+     * before the tap. (See ARCHITECTURE.md §3 principle #4 / the caching diagram.)
+     */
+    isRoutineBusy() {
+      return !!(this.$apollo.queries.routineDate && this.$apollo.queries.routineDate.loading);
+    },
+    /**
+     * True while either goals query (today `goals` or `agendaGoals`) is fetching
+     * from the network. Goal-item checkboxes are disabled during this window for
+     * the same reason.
+     */
+    isGoalsBusy() {
+      const goalsLoading = this.$apollo.queries.goals && this.$apollo.queries.goals.loading;
+      const agendaLoading = this.$apollo.queries.agendaGoals && this.$apollo.queries.agendaGoals.loading;
+      return !!(goalsLoading || agendaLoading);
     },
     /**
      * Goals to display - Apollo cache-and-network handles persistence and updates automatically.
