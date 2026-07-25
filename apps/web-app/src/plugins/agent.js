@@ -23,6 +23,7 @@ export default {
       clearDayStatuses: agentStore.clearDayStatuses,
       clearResult: agentStore.clearResult,
       openResultModal: agentStore.openResultModal,
+      showSavedResult: agentStore.showSavedResult,
       closeResultModal: agentStore.closeResultModal,
 
       fetchAll() { return agentStore.fetchAll(apolloFromVm(vm)); },

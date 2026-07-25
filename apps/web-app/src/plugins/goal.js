@@ -356,6 +356,15 @@ export default {
         return null;
       },
 
+      async updateReward(id, reward, options) {
+        const composable = getGoalMutationsComposable(vm);
+        if (composable) {
+          return composable.updateReward(id, reward, options);
+        }
+        console.warn('Apollo client not available for updateReward');
+        return null;
+      },
+
       async completeSubTaskItem(params, options) {
         const composable = getGoalMutationsComposable(vm);
         if (composable) {

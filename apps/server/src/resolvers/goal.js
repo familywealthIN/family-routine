@@ -1404,6 +1404,37 @@ const mutation = {
       return goal.goalItems.find((aGoalItem) => aGoalItem.id === id);
     },
   },
+  updateGoalItemReward: {
+    type: GoalItemType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+      reward: { type: GraphQLString },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const { id, reward } = args;
+
+      await GoalModel.findOneAndUpdate(
+        {
+          email,
+          'goalItems._id': id,
+        },
+        {
+          $set: {
+            'goalItems.$.reward': reward,
+          },
+        },
+        { new: true },
+      ).exec();
+
+      const goal = await GoalModel.findOne({
+        email,
+        'goalItems._id': id,
+      }).exec();
+
+      return goal.goalItems.find((aGoalItem) => aGoalItem.id === id);
+    },
+  },
   deleteGoal: {
     type: GoalType,
     args: {

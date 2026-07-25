@@ -13,7 +13,7 @@
           <AtomCheckbox
             :key="`checkbox-${goalItem.id}`"
             :value="goalItem.isComplete"
-            :disabled="passive"
+            :disabled="passive || busy"
             @input="completeGoalItem(
               goalItem.id,
               !goalItem.isComplete,
@@ -69,6 +69,20 @@
           </AtomButton>
         </AtomListTileAction>
 
+        <!-- Transcript: re-open the agent end-event HTML result saved on the
+             goal item's reward. Presence of a reward also signals the agent
+             end event completed. -->
+        <AtomListTileAction v-if="goalItem.reward">
+          <AtomButton
+            flat
+            icon
+            title="View agent transcript"
+            @click="$emit('open-transcript', goalItem)"
+          >
+            <AtomIcon>receipt_long</AtomIcon>
+          </AtomButton>
+        </AtomListTileAction>
+
         <AtomListTileAction>
           <AtomButton
             flat
@@ -92,7 +106,7 @@
                 <AtomCheckbox
                   :key="`checkbox-${subTask.id}`"
                   :value="subTask.isComplete"
-                  :disabled="passive"
+                  :disabled="passive || busy"
                   @click.stop="handleSubTaskClick(subTask.id, goalItem)"
                   dense
                 />
@@ -124,7 +138,7 @@ import {
 
 export default {
   name: 'OrganismGoalItemList',
-  props: ['goal', 'editMode', 'newGoalItem', 'passive'],
+  props: ['goal', 'editMode', 'newGoalItem', 'passive', 'busy'],
   components: {
     AtomButton,
     AtomCheckbox,
@@ -449,6 +463,20 @@ export default {
 
   .subtask-title.completed {
     color: #90a4ae !important;
+  }
+
+  /* Keep icon action buttons a square touch target so the hover/ripple overlay
+     (a border-radius:50% ::before) renders as a circle instead of an oval. */
+  >>> .v-list__tile .v-btn--icon {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    margin: 0 2px;
+    padding: 0;
+  }
+
+  >>> .v-list__tile .v-btn--icon::before {
+    border-radius: 50%;
   }
 
   /* Week and month goal action buttons styling */

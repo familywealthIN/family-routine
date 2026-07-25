@@ -21,7 +21,8 @@
   "resolutions": {
     "node-libs-browser/readable-stream": "^2.3.8",
     "memory-fs/readable-stream": "^2.3.8",
-    "concat-stream/readable-stream": "^2.3.8"
+    "concat-stream/readable-stream": "^2.3.8",
+    "eslint": "5.16.0"
   },
   "overrides": {
     "node-libs-browser": {

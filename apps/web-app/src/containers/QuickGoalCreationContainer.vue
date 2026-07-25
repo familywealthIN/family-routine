@@ -323,18 +323,17 @@ export default {
             body: addedItem.body,
           });
 
-          // If an agent is assigned, fire the start event using the freshly
-          // created goal id. Unless the user explicitly pressed Start Agent,
-          // this is an implicit fire — failures stay quiet (no "Agent failed"
-          // badge), recorded only on the Agents page.
-          if (this.agentState === 'assigned' && newGoalItem.taskRef) {
+          // Only the explicit "Start Agent" button fires the agent's start
+          // event. "Start Task" (explicitAgent:false) just creates the goal
+          // item + ticks the routine — it must NOT fire the start event.
+          if (explicitAgent && this.agentState === 'assigned' && newGoalItem.taskRef) {
             try {
               await this.$agent.fireStartEventIfPresent({
                 taskRef: newGoalItem.taskRef,
                 goalId: addedItem.id,
                 goalDate: date,
                 goalPeriod: this.period,
-                implicit: !explicitAgent,
+                implicit: false,
               });
             } catch (err) {
               console.warn('[QuickGoalCreationContainer] fireStartEventIfPresent failed:', err);
