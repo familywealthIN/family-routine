@@ -26,6 +26,7 @@ import moment from 'moment';
 import QuickGoalCreation from '@routine-notes/ui/organisms/QuickGoalCreation/QuickGoalCreation.vue';
 import { GOALS_BY_GOAL_REF_QUERY } from '../composables/useGoalQueries';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
+import { applyPriorityTags } from '../utils/taskPriority';
 import eventBus, { EVENTS } from '../utils/eventBus';
 
 const ADD_GOAL_ITEM_TIMEOUT_MS = 12000;
@@ -286,6 +287,16 @@ export default {
       // Update currentGoalRef for related tasks query
       this.currentGoalRef = newGoalItem.goalRef;
 
+      // Stamp the deterministic priority tag from the creation context:
+      // Start Agent -> automate, future date -> plan, @mention -> delegate,
+      // today's Start Task -> do.
+      const tags = applyPriorityTags(newGoalItem.tags, {
+        period: this.period,
+        date,
+        explicitAgent,
+        body: newGoalItem.body,
+      });
+
       try {
         const addedItem = await this.addGoalItemWithTimeout({
           body: newGoalItem.body,
@@ -295,7 +306,7 @@ export default {
           isMilestone: !!newGoalItem.goalRef || newGoalItem.isMilestone,
           goalRef: newGoalItem.goalRef,
           taskRef: newGoalItem.taskRef,
-          tags: newGoalItem.tags,
+          tags,
           originalDate: newGoalItem.originalDate || null,
         });
 
@@ -307,7 +318,7 @@ export default {
             isComplete: false,
             goalRef: newGoalItem.goalRef,
             taskRef: newGoalItem.taskRef,
-            tags: [...newGoalItem.tags],
+            tags: [...tags],
           });
 
           const task = this.tasklist

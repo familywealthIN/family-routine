@@ -30,6 +30,7 @@ import eventBus, { EVENTS } from '../utils/eventBus';
 import getJSON from '../utils/getJSON';
 import { USER_TAGS } from '../constants/settings';
 import { notifyNonCurrentTaskGoalCreation } from '../utils/taskCreationNotification';
+import { applyPriorityTags } from '../utils/taskPriority';
 
 export default {
   name: 'AiTaskCreationFormContainer',
@@ -228,14 +229,21 @@ export default {
 
       this.saving = true;
 
+      const taskDate = this.getTaskDate();
       const goalItemData = {
-        date: this.getTaskDate(),
+        date: taskDate,
         period: 'day',
         body: this.taskData.title,
         contribution: this.taskData.description,
         taskRef: this.selectedTaskRef || '',
         goalRef: this.selectedGoalRef || null,
-        tags: this.promptTags || [],
+        // Deterministic priority from creation context wins over the AI's own
+        // priority tag: future dueDate -> plan, @mention -> delegate, else do.
+        tags: applyPriorityTags(this.promptTags || [], {
+          period: 'day',
+          date: taskDate,
+          body: this.taskData.title,
+        }),
         isMilestone: !!this.selectedGoalRef,
       };
 

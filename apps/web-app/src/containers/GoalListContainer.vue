@@ -19,6 +19,7 @@
 <script>
 import GoalList from '@routine-notes/ui/organisms/GoalList/GoalList.vue';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
+import { applyPriorityTags } from '../utils/taskPriority';
 
 const ADD_GOAL_ITEM_TIMEOUT_MS = 12000;
 
@@ -160,6 +161,14 @@ export default {
         return;
       }
 
+      // Deterministic priority from creation context (no agent on this path):
+      // future date / non-day period -> plan, @mention -> delegate, else do.
+      const tags = applyPriorityTags(newGoalItem.tags, {
+        period: this.period,
+        date,
+        body: newGoalItem.body,
+      });
+
       try {
         const addedItem = await this.addGoalItemWithTimeout({
           body: newGoalItem.body,
@@ -169,7 +178,7 @@ export default {
           isMilestone: newGoalItem.isMilestone,
           goalRef: newGoalItem.isMilestone ? newGoalItem.goalRef : null,
           taskRef: newGoalItem.taskRef,
-          tags: newGoalItem.tags,
+          tags,
         });
 
         if (addedItem) {
@@ -180,7 +189,7 @@ export default {
             isComplete: false,
             goalRef: newGoalItem.goalRef,
             taskRef: newGoalItem.taskRef,
-            tags: [...newGoalItem.tags],
+            tags: [...tags],
           });
           // Refetch goal items to update the list
           await this.fetchGoalItemsRef();
