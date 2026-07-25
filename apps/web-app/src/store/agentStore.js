@@ -10,6 +10,7 @@ import {
   RECORD_AGENT_EXECUTION_MUTATION,
   MARK_GOAL_ITEM_READY_MUTATION,
 } from '../composables/useAgentQueries';
+import { UPDATE_GOAL_ITEM_REWARD_MUTATION } from '../composables/useGoalMutations';
 import {
   bgSyncSupported, enqueueAgentJob, settleAgentJob, drainDoneJobs, onSyncResult,
 } from '../utils/agentSync';
@@ -166,9 +167,17 @@ hydrateStatus();
 // Adopt an outcome the Service Worker produced for a dispatch the page couldn't
 // finish (closed mid-flight). Only overwrites a badge that's actually shown —
 // silent/implicit runs stay silent, and a cleared badge stays cleared.
+const TERMINAL_STATUSES = ['finished', 'failed'];
 const applySyncResult = (taskRef, resolvedStatus) => {
   if (!taskRef || !resolvedStatus) return;
-  if (state.statusByRoutineId[taskRef] !== undefined) setStatus(taskRef, resolvedStatus);
+  if (state.statusByRoutineId[taskRef] === undefined) return;
+  // Don't regress a task that already reached a terminal state — e.g. its end
+  // event finished — back to an in-flight 'running'/'listening' just because a
+  // background-sync replay of the earlier START job reports late. The end
+  // event's outcome is the more recent truth.
+  const current = state.statusByRoutineId[taskRef];
+  if (TERMINAL_STATUSES.includes(current) && !TERMINAL_STATUSES.includes(resolvedStatus)) return;
+  setStatus(taskRef, resolvedStatus);
 };
 
 // Live results from an in-flight SW dispatch (page reopened while it ran).
@@ -415,6 +424,14 @@ const actions = {
     state.resultModalRoutineId = taskRef;
   },
 
+  // Open the result modal with a previously-saved transcript (a goal item's
+  // reward HTML), independent of any live agent run.
+  showSavedResult(taskRef, html) {
+    if (!html) return;
+    setResult(taskRef, { type: 'html', body: html });
+    state.resultModalRoutineId = taskRef;
+  },
+
   closeResultModal() {
     state.resultModalRoutineId = null;
   },
@@ -562,8 +579,18 @@ const actions = {
 
       if (ok) {
         if (resultType === 'html' && typeof resultData === 'string') {
-          setResult(taskRef, { type: 'html', body: cap(resultData, RESULT_BODY_MAX) });
+          const html = cap(resultData, RESULT_BODY_MAX);
+          setResult(taskRef, { type: 'html', body: html });
           actions.openResultModal(taskRef);
+          // Persist the transcript onto the goal item's reward so it survives an
+          // app close and can be re-opened later (the transcript button); a
+          // non-empty reward also signals the end event completed.
+          if (goalId && !String(goalId).startsWith('temp-')) {
+            apollo.mutate({
+              mutation: UPDATE_GOAL_ITEM_REWARD_MUTATION,
+              variables: { id: goalId, reward: html },
+            }).catch((e) => console.warn('[agentStore.fireEndEvent] persist reward failed', e));
+          }
         } else if (vm && vm.$notify) {
           vm.$notify({
             title: 'Agent finished',

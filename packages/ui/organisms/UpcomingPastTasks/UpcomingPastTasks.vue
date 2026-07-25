@@ -124,11 +124,13 @@
                       :goal="taskGoals"
                       :progress="getWeekProgress(taskGoals)"
                       :passive="showGoalsSkeleton"
+                      :busy="busy"
                       @delete-task-goal="$emit('delete-task-goal', $event)"
                       @refresh-task-goal="$emit('refresh-task-goal', $event)"
                       @toggle-goal-display-dialog="forwardToggleGoalDisplayDialog"
                       @complete-goal-item="$emit('complete-goal-item', $event)"
                       @complete-sub-task="$emit('complete-sub-task', $event)"
+                      @open-transcript="$emit('open-transcript', $event)"
                     />
                   </AtomList>
                 </div>
@@ -230,6 +232,8 @@ export default {
   },
   props: {
     upcomingTasks: { type: Array, default: () => [] },
+    // True while a feeding query is refetching; disables goal-item checkboxes.
+    busy: { type: Boolean, default: false },
     pastTasks: { type: Array, default: () => [] },
     tabs: { type: Number, default: 0 },
     selectedTaskRef: { type: String, default: '' },
@@ -466,6 +470,14 @@ export default {
 }
 .upcoming-past-card .concentrated-view .task-goals .v-list__tile__title {
   font-size: 14px;
+  /* Undo the task-name flex/centering rule above (it targets the row title,
+     not these nested goal-item titles). Without this the goal text inherits
+     line-height:24px and is flex-centered, so it sits ~1.5px below the
+     slightly-high checkbox — visibly misaligned on text with descenders.
+     Match the current-task card's goal-item title metrics (line-height 1.3)
+     so both sections render identically. */
+  display: block;
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -74,6 +74,7 @@
             @item-click="handleItemClick"
             @toggle-complete="handleToggleComplete"
             @edit-item="handleEditItem"
+            @open-transcript="openTranscript"
           />
         </atom-flex>
       </atom-layout>
@@ -109,7 +110,6 @@
 <script>
 import moment from 'moment';
 import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
-import { defaultGoalItem } from '@/constants/goals';
 import {
   AtomButton,
   AtomCard,
@@ -122,6 +122,8 @@ import {
   AtomToolbar,
 } from '@routine-notes/ui/atoms';
 import PriorityMatrix from '@routine-notes/ui/organisms/PriorityMatrix/PriorityMatrix.vue';
+import { defaultGoalItem } from '@/constants/goals';
+import { DAILY_GOALS_QUERY } from '@/composables/graphql/queries';
 import GoalCreation from '../containers/GoalCreationContainer.vue';
 
 export default {
@@ -195,16 +197,37 @@ export default {
     async loadAllGoals() {
       this.isFirstLoad = true;
       try {
-        // Single query for all priority goals + routine fetch in parallel
-        const [priorityData, routineData] = await Promise.all([
+        // Priority buckets + routine + all-period goals (for parent names), in parallel
+        const [priorityData, routineData, dailyGoals] = await Promise.all([
           this.$goals.fetchPriorityGoals(this.currentDate, { useCache: true }),
           this.$routine.fetchRoutine(this.currentDate, { useCache: true }),
+          this.$apollo
+            .query({
+              query: DAILY_GOALS_QUERY,
+              variables: { date: this.currentDate },
+              fetchPolicy: 'cache-first',
+            })
+            .then((res) => (res.data ? res.data.optimizedDailyGoals : null))
+            .catch(() => null),
         ]);
 
-        this.doGoals = priorityData?.do || [];
-        this.planGoals = priorityData?.plan || [];
-        this.delegateGoals = priorityData?.delegate || [];
-        this.automateGoals = priorityData?.automate || [];
+        // Map every goal-item id -> its body across all periods, so a day
+        // milestone's goalRef can be shown as its linked (parent) goal name.
+        const bodyByGoalItemId = {};
+        (dailyGoals || []).forEach((goal) => {
+          (goal.goalItems || []).forEach((gi) => {
+            if (gi && gi.id) bodyByGoalItemId[gi.id] = gi.body;
+          });
+        });
+        const withParentName = (items) => (items || []).map((item) => ({
+          ...item,
+          parentGoalBody: item.goalRef ? bodyByGoalItemId[item.goalRef] || null : null,
+        }));
+
+        this.doGoals = withParentName(priorityData?.do);
+        this.planGoals = withParentName(priorityData?.plan);
+        this.delegateGoals = withParentName(priorityData?.delegate);
+        this.automateGoals = withParentName(priorityData?.automate);
         this.tasklist = routineData?.tasklist || [];
       } catch (error) {
         console.error('Error loading goals:', error);
@@ -215,6 +238,13 @@ export default {
     handleItemClick(item) {
       // Open edit dialog
       this.handleEditItem(item);
+    },
+    openTranscript(item) {
+      // Re-open the saved agent end-event transcript (the item's reward HTML)
+      // in the shared AgentResultModal.
+      if (item && item.reward) {
+        this.$agent.showSavedResult(item.taskRef || item.id, item.reward);
+      }
     },
     handleEditItem(item) {
       this.selectedGoalItem = {

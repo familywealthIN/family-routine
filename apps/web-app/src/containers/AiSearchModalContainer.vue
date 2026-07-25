@@ -18,23 +18,14 @@
 
 <script>
 import moment from 'moment';
-import gql from 'graphql-tag';
 import AiSearchModal from '@routine-notes/ui/organisms/AiSearchModal/AiSearchModal.vue';
 import { stepupMilestonePeriodDate } from '@routine-notes/ui/utils/getDates';
 import eventBus, { EVENTS } from '@routine-notes/ui/utils/eventBus';
 import { GOAL_DATE_PERIOD_QUERY, GOALS_BY_GOAL_REF_QUERY } from '../composables/graphql/queries';
 import { notifyNonCurrentTaskGoalCreation } from '../utils/taskCreationNotification';
+import { applyPriorityTags } from '../utils/taskPriority';
 import AiTaskCreationFormContainer from './AiTaskCreationFormContainer.vue';
 import AiGoalPlanFormContainer from './AiGoalPlanFormContainer.vue';
-
-const CLASSIFY_PRIORITY_MUTATION = gql`
-  mutation classifyTaskPriority($body: String!, $context: String) {
-    classifyTaskPriority(body: $body, context: $context) {
-      priority
-    }
-  }
-`;
-const ALLOWED_PRIORITIES = ['do', 'plan', 'delegate', 'automate'];
 
 export default {
   name: 'AiSearchModalContainer',
@@ -232,18 +223,22 @@ export default {
 
     /**
      * Handle direct task creation (AI Enhanced Task OFF).
-     * Creates a goal item immediately without AI processing — UI is
-     * instant. If `_aiClassifyBody` is set on the payload, the modal is
-     * asking us to refine the placeholder `priority:do` tag in the
-     * background after the goal item is saved.
+     * Creates a goal item immediately without AI processing — UI is instant.
+     * The priority quadrant is decided deterministically from the creation
+     * context (future date -> plan, @mention -> delegate, else do); there is
+     * no background AI reclassification.
      *
-     * @param {Object} goalItemData - The task data to save (may carry
-     *   the internal `_aiClassifyBody` hint).
+     * @param {Object} goalItemData - The task data to save.
      */
     handleDirectTaskCreate(goalItemData) {
-      // Strip the internal hint before it touches the GraphQL mutation —
-      // the server doesn't know about it.
-      const { _aiClassifyBody: aiClassifyBody, ...payload } = goalItemData;
+      const payload = {
+        ...goalItemData,
+        tags: applyPriorityTags(goalItemData.tags, {
+          period: goalItemData.period,
+          date: goalItemData.date,
+          body: goalItemData.body,
+        }),
+      };
 
       // Close modal immediately
       this.$emit('input', false);
@@ -260,70 +255,10 @@ export default {
           if (addedItem) {
             eventBus.$emit(EVENTS.TASK_CREATED, addedItem);
           }
-          if (aiClassifyBody && addedItem && addedItem.id) {
-            // The addGoalItem response doesn't echo back `period` / `date`,
-            // which the heavier updateGoalItem mutation requires — so
-            // layer the original payload underneath the saved item to
-            // fill those gaps. id + final tags from the server win.
-            this.refinePriorityInBackground(
-              { ...payload, ...addedItem },
-              aiClassifyBody,
-            );
-          }
         })
         .catch((error) => {
           console.error('Error saving direct task:', error);
         });
-    },
-
-    /**
-     * Background-only: classify the freshly saved goal item via the AI
-     * mutation and, if the model picks something other than the default
-     * `do`, patch the goal item's tags in place. Failures are swallowed
-     * — the user already has a usable task with `priority:do`.
-     */
-    async refinePriorityInBackground(savedItem, body) {
-      try {
-        const routine = savedItem.taskRef
-          && Array.isArray(this.tasklist)
-          && this.tasklist.find((t) => t.id === savedItem.taskRef || t.taskId === savedItem.taskRef);
-        const contextLine = routine && routine.name ? `Routine: ${routine.name}` : null;
-
-        const res = await this.$apollo.mutate({
-          mutation: CLASSIFY_PRIORITY_MUTATION,
-          variables: { body, context: contextLine },
-          fetchPolicy: 'no-cache',
-        });
-        const priority = res
-          && res.data
-          && res.data.classifyTaskPriority
-          && res.data.classifyTaskPriority.priority;
-        if (!priority || !ALLOWED_PRIORITIES.includes(priority) || priority === 'do') {
-          return;
-        }
-
-        const currentTags = Array.isArray(savedItem.tags) ? savedItem.tags : [];
-        const nextTags = currentTags.filter((t) => !String(t).startsWith('priority:'));
-        nextTags.push(`priority:${priority}`);
-
-        // Heavy mutation — pass through every required field unchanged
-        // so we only end up replacing the priority tag.
-        await this.$goals.updateGoalItem(savedItem.id, {
-          body: savedItem.body || '',
-          period: savedItem.period || 'day',
-          date: savedItem.date || '',
-          isMilestone: !!savedItem.isMilestone,
-          deadline: savedItem.deadline || '',
-          contribution: savedItem.contribution || '',
-          reward: savedItem.reward || '',
-          taskRef: savedItem.taskRef || '',
-          goalRef: savedItem.goalRef || '',
-          tags: nextTags,
-        });
-      } catch (err) {
-        // Non-fatal: the task already saved with priority:do.
-        console.warn('[AiSearchModal] AI priority refinement skipped:', err && err.message);
-      }
     },
   },
 };

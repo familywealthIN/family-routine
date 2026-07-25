@@ -103,18 +103,19 @@ export const chapters: GuideChapter[] = [
     icon: 'ph:squares-four',
     label: 'Priority',
     eyebrow: 'Where the day gets ordered',
-    title: 'Priority — an Eisenhower matrix for day goals',
+    title: 'Priority — a self-sorting Do / Plan / Delegate / Automate matrix',
     lead:
-      'Priority takes today’s goal items and sorts them into four quadrants — Do now, Plan, Delegate, Automate. You classify with a single tag; the matrix does the arguing for you.',
+      'Priority sorts today’s goal items into four quadrants — Do now, Plan, Delegate, Automate — and it fills itself in. How and where you create a task decides its quadrant, so the matrix mirrors the shape of your day without you classifying a thing.',
     media: { type: 'matrix' },
     steps: [
-      ['Tag it once', 'Add a priority:do, priority:plan, priority:delegate or priority:automate tag to any day goal — from the goal editor or straight from the matrix.'],
+      ['It tags itself', 'Every task lands in a quadrant automatically, decided by how you made it. Start it today → Do now. Schedule it for a future day → Plan. @mention a person → Delegate. Kick it off with an agent → Automate.'],
       ['Read the counts', 'Four scorecards up top tell you the shape of your day at a glance. A tall Do-now column before 9am is a warning, not a badge.'],
       ['Work the quadrants', 'Tick items complete without leaving the matrix, or tap one to open the full goal editor — sub-tasks, contribution, reward and all.'],
       ['Automate means automate', 'The fourth quadrant isn’t a graveyard. Recurring drudge work belongs in a routine with an agent attached — see chapter 04.'],
     ],
     notes: [
-      ['Do-now is a budget', 'Keep it to three or fewer. Everything can’t be urgent and important — that’s the matrix’s one rule.'],
+      ['Do-now is a budget', 'It fills with whatever you actually started today — keep it to three or fewer, or the day was planned by yesterday’s procrastination.'],
+      ['Future always wins', 'Date a task ahead and it’s Plan, whoever’s assigned or however it starts — Delegate and Automate only claim today’s work.'],
       ['Plan feeds the cascade', 'Items you park in Plan are the raw material for next week’s milestones on the Goals page.'],
     ],
     points: [
@@ -122,7 +123,7 @@ export const chapters: GuideChapter[] = [
     ],
     details: {
       heading: 'The matrix, in detail',
-      intro: 'Four quadrants, straight from the app — each one is just a tag on a day goal.',
+      intro: 'Four quadrants, straight from the app — each one a tag the app writes for you the moment a task is created.',
       items: [
         {
           title: 'Four counts, one glance',
@@ -131,14 +132,14 @@ export const chapters: GuideChapter[] = [
           alt: 'The Priority page with Do, Plan, Delegate and Automate scorecards',
         },
         {
-          title: 'Quadrants that argue for you',
-          body: 'Important + urgent lands in Do; important but not urgent in Plan; urgent but not yours in Delegate; neither in Automate. Ticking an item complete happens right in the quadrant — the strikethrough is the day’s most honest chart.',
+          title: 'Quadrants that sort themselves',
+          body: 'You never pick a quadrant. Start a task today and it’s Do now; schedule it for a future day and it’s Plan; @mention a person and it’s Delegate; launch it with an agent and it’s Automate. Ticking an item complete happens right in the quadrant — the strikethrough is the day’s most honest chart.',
           img: '/screenshots/guide/priority-quadrants.jpg',
           alt: 'The four priority quadrants with tagged day goals',
         },
         {
           title: 'Edit without leaving',
-          body: 'Tap any item and the full goal editor slides up — sub-tasks, contribution notes, reward, tags. Reclassify by swapping the priority tag and the item walks itself to the right quadrant on the next refresh.',
+          body: 'Tap any item and the full goal editor slides up — sub-tasks, contribution notes, reward, tags. Change how the task is set up — move its date, @mention someone, attach an agent — and it re-files itself into the right quadrant on the next refresh.',
           img: '/screenshots/guide/priority-editor.jpg',
           alt: 'The goal editor opened from a matrix item',
         },
@@ -222,7 +223,7 @@ export const chapters: GuideChapter[] = [
       ['Redeemed check-ins still fire', 'Check in a missed routine with points and its agents run anyway — automation should not punish a late human.'],
     ],
     notes: [
-      ['Agents are the Automate quadrant', 'If something shows up in Priority’s fourth quadrant twice, it is telling you to build an agent.'],
+      ['Agents are the Automate quadrant', 'Start a task with an agent and it lands in Priority’s fourth quadrant — that column is your automation, listed back to you. See the same manual chore fill Do-now twice a week? That’s the one to wire up.'],
       ['Build from the task', 'The quick-task modal has a Build Agent button — automate at the exact moment you notice the repetition.'],
     ],
     points: [
@@ -266,7 +267,7 @@ export const matrix = {
   quads: [
     { title: 'Do now', tag: 'priority:do', color: '#f44336', items: [{ t: 'Ship the pricing fix', done: false }, { t: 'Call the bank before noon', done: true }] },
     { title: 'Plan', tag: 'priority:plan', color: '#1976d2', items: [{ t: 'Outline week 29 milestones', done: false }, { t: 'Draft the launch email', done: false }] },
-    { title: 'Delegate', tag: 'priority:delegate', color: '#ff9800', items: [{ t: 'Collect screenshots for review', done: false }] },
+    { title: 'Delegate', tag: 'priority:delegate', color: '#ff9800', items: [{ t: '@sam collect screenshots for review', done: false }] },
     { title: 'Automate', tag: 'priority:automate', color: '#757575', items: [{ t: 'Daily focus-session log', done: true }, { t: 'Morning briefing digest', done: false }] },
   ],
 };

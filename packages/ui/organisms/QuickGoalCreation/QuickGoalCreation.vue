@@ -40,35 +40,14 @@
         @update-new-tag-items="updateNewTagItems"
       ></goal-tags-input>
     </v-flex>
-    <v-flex x12 d-flex>
-      <v-btn
-        color="success"
-        :loading="buttonLoading && loadingAction !== 'agent'"
-        :disabled="buttonLoading"
-        @click="handleAddGoalItem"
-      >
-        Start Task
-      </v-btn>
-      <v-btn
-        v-if="agentState === 'assigned'"
-        color="primary"
-        outline
-        :loading="buttonLoading && loadingAction === 'agent'"
-        :disabled="buttonLoading"
-        @click="$emit('start-agent', { ...newGoalItem })"
-      >
-        Start Agent
-      </v-btn>
-      <v-btn
-        v-else
-        color="primary"
-        outline
-        :disabled="buttonLoading"
-        @click="$emit('build-agent')"
-      >
-        Build Agent
-      </v-btn>
-    </v-flex>
+    <task-action-buttons
+      :agent-state="agentState"
+      :loading="buttonLoading"
+      :loading-action="loadingAction"
+      @start-task="handleAddGoalItem"
+      @start-agent="$emit('start-agent', { ...newGoalItem })"
+      @build-agent="$emit('build-agent')"
+    />
   </v-layout>
 </template>
 
@@ -78,6 +57,7 @@ import GoalTagsInput from '../../molecules/GoalTagsInput/GoalTagsInput.vue';
 import GoalRefSelector from '../../molecules/GoalRefSelector/GoalRefSelector.vue';
 import GoalTaskSelector from '../../molecules/GoalTaskSelector/GoalTaskSelector.vue';
 import RelatedTasksTimeline from '../../molecules/RelatedTasksTimeline/RelatedTasksTimeline.vue';
+import TaskActionButtons from '../../molecules/TaskActionButtons/TaskActionButtons.vue';
 import { USER_TAGS } from '../../constants/settings';
 
 export default {
@@ -87,6 +67,7 @@ export default {
     GoalRefSelector,
     GoalTaskSelector,
     RelatedTasksTimeline,
+    TaskActionButtons,
   },
   props: {
     goals: {

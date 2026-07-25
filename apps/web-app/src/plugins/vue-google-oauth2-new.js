@@ -80,6 +80,19 @@ const googleAuth = (function googleAuth() {
               reject(error);
             }
           },
+          error_callback: (err) => {
+            // GIS calls the success `callback` only when a token is returned.
+            // When the user dismisses/closes the consent popup (err.type ===
+            // 'popup_closed') or it fails to open, GIS calls THIS instead.
+            // Without it the signIn() promise never settles, leaving the login
+            // screen stuck on its loading spinner (the login page "doesn't come
+            // back" after a cancel).
+            this.isAuthorized = false;
+            const error = new Error((err && err.type) || 'popup_closed');
+            error.type = err && err.type;
+            if (typeof errorCallback === 'function') errorCallback(error);
+            reject(error);
+          },
         });
 
         // Request access token via popup

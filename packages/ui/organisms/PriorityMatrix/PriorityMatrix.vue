@@ -14,6 +14,7 @@
             @item-click="handleItemClick"
             @toggle-complete="handleToggleComplete"
             @edit-item="handleEditItem"
+            @open-transcript="handleOpenTranscript"
           />
         </AtomFlex>
 
@@ -29,6 +30,7 @@
             @item-click="handleItemClick"
             @toggle-complete="handleToggleComplete"
             @edit-item="handleEditItem"
+            @open-transcript="handleOpenTranscript"
           />
         </AtomFlex>
 
@@ -44,6 +46,7 @@
             @item-click="handleItemClick"
             @toggle-complete="handleToggleComplete"
             @edit-item="handleEditItem"
+            @open-transcript="handleOpenTranscript"
           />
         </AtomFlex>
 
@@ -59,6 +62,7 @@
             @item-click="handleItemClick"
             @toggle-complete="handleToggleComplete"
             @edit-item="handleEditItem"
+            @open-transcript="handleOpenTranscript"
           />
         </AtomFlex>
       </AtomLayout>
@@ -115,6 +119,9 @@ export default {
     },
     handleEditItem(item) {
       this.$emit('edit-item', item);
+    },
+    handleOpenTranscript(item) {
+      this.$emit('open-transcript', item);
     },
   },
 };

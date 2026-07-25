@@ -24,6 +24,7 @@ export { default as RelatedTasksTimeline } from './RelatedTasksTimeline/RelatedT
 export { default as StreakChecks } from './StreakChecks/StreakChecks.vue';
 export { default as SubTaskItemList } from './SubTaskItemList/SubTaskItemList.vue';
 export { default as TableCard } from './TableCard/TableCard.vue';
+export { default as TaskActionButtons } from './TaskActionButtons/TaskActionButtons.vue';
 export { default as TimelineEntryEditor } from './TimelineEntryEditor/TimelineEntryEditor.vue';
 export { default as TimelineItemList } from './TimelineItemList/TimelineItemList.vue';
 export { default as YearGoalSidebar } from './YearGoalSidebar/YearGoalSidebar.vue';

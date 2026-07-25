@@ -177,21 +177,30 @@
     </atom-dialog>
     <atom-dialog v-model="goalDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
       <atom-card>
-        <atom-toolbar dark color="primary">
-          <atom-button icon dark @click="goalDialog = false">
-            <atom-icon>close</atom-icon>
-          </atom-button>
+        <atom-toolbar color="white">
           <atom-toolbar-title>{{selectedDayGoalTitle}}</atom-toolbar-title>
           <atom-spacer></atom-spacer>
+          <atom-button icon @click="goalDialog = false">
+            <atom-icon>close</atom-icon>
+          </atom-button>
         </atom-toolbar>
-        <goal-item-list
-          @update-new-goal-item="updateNewGoalItem"
-          @delete-task-goal="deleteTaskGoal"
-          @complete-goal-item="completeGoalItem"
-          @complete-sub-task="completeSubTask"
-          :goal="selectedDayGoal"
-          :editMode="true"
-        />
+        <atom-card class="no-shadow">
+          <atom-card-text class="pa-0">
+            <priority-goal-list
+              :items="selectedDayItems"
+              :tasklist="dayTasklist"
+              :show-delete="true"
+              :show-subtasks="true"
+              empty-text="No goals for this day"
+              @item-click="onDayEditItem"
+              @toggle-complete="onDayToggleComplete"
+              @toggle-subtask="onDaySubtaskToggle"
+              @edit-item="onDayEditItem"
+              @delete-item="onDayDeleteItem"
+              @open-transcript="onDayOpenTranscript"
+            />
+          </atom-card-text>
+        </atom-card>
       </atom-card>
     </atom-dialog>
   </container-box>
@@ -204,8 +213,8 @@ import { MeasurementMixin } from '@/utils/measurementMixins.js';
 
 import { defaultGoalItem, periodsArray } from '../constants/goals';
 
-import GoalItemList from '@routine-notes/ui/organisms/GoalItemList/GoalItemList.vue';
 import GoalsFilterTime from '@routine-notes/ui/organisms/GoalsFilterTime/GoalsFilterTime.vue';
+import PriorityGoalList from '@routine-notes/ui/molecules/PriorityGoalList/PriorityGoalList.vue';
 
 import {
   AtomButton,
@@ -230,7 +239,7 @@ import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.
 export default {
   mixins: [MeasurementMixin],
   components: {
-    GoalItemList,
+    PriorityGoalList,
     GoalCreation,
     GoalsFilterTime,
     ContainerBox,
@@ -397,6 +406,25 @@ export default {
       }
       return this.goalsMap[this.selectedDayDate][0];
     },
+    // Day-drawer items shaped for PriorityGoalList: resolve each item's parent
+    // goal name (via goalRef, from all loaded goals) and carry the owning goal's
+    // period/date so the complete/edit/delete handlers have what they need.
+    selectedDayItems() {
+      const goal = this.selectedDayGoal;
+      const items = (goal && goal.goalItems) || [];
+      const bodyById = {};
+      (this.allGoals || []).forEach((g) => {
+        (g.goalItems || []).forEach((gi) => {
+          if (gi && gi.id) bodyById[gi.id] = gi.body;
+        });
+      });
+      return items.map((item) => ({
+        ...item,
+        period: item.period || (goal && goal.period),
+        date: item.date || (goal && goal.date),
+        parentGoalBody: item.goalRef ? bodyById[item.goalRef] || null : null,
+      }));
+    },
   },
   data: () => ({
     type: 'month',
@@ -418,6 +446,7 @@ export default {
     goalDialog: false,
     selectedDayGoalTitle: '',
     selectedDayDate: null, // Store the selected date instead of the goal object
+    dayTasklist: [], // Routine tasks for the selected day (to show linked task names)
   }),
   methods: {
     calendarPrev() {
@@ -449,6 +478,37 @@ export default {
             duration: 3000,
           });
         });
+    },
+    // --- Day drawer (PriorityGoalList) event handlers ---
+    onDayToggleComplete(item) {
+      this.completeGoalItem({
+        id: item.id,
+        period: item.period,
+        date: item.date,
+        taskRef: item.taskRef,
+        isComplete: !item.isComplete,
+        isMilestone: item.isMilestone,
+      });
+    },
+    onDayEditItem(item) {
+      this.updateNewGoalItem(item, item.period, item.date);
+    },
+    onDayDeleteItem(item) {
+      this.deleteTaskGoal({ id: item.id, period: item.period, date: item.date });
+    },
+    onDaySubtaskToggle({ item, subTask }) {
+      this.completeSubTask({
+        id: subTask.id,
+        taskId: item.id,
+        period: item.period,
+        date: item.date,
+        isComplete: !subTask.isComplete,
+      });
+    },
+    onDayOpenTranscript(item) {
+      if (item && item.reward) {
+        this.$agent.showSavedResult(item.taskRef || item.id, item.reward);
+      }
     },
     completeGoalItem(payload) {
       console.log('[GoalsTime] completeGoalItem received:', payload);
@@ -505,6 +565,17 @@ export default {
     },
     formatCalendarDate(date) {
       return moment(date, 'DD-MM-YYYY').format('YYYY-MM-DD');
+    },
+    // Human-friendly title for the day drawer, e.g. "Today, 14th July 2026" or
+    // "Tuesday, 14th July 2026" — instead of the raw "14-07-2026".
+    formatDayTitle(date) {
+      const day = moment(date, 'DD-MM-YYYY');
+      if (!day.isValid()) return date;
+      const diff = day.clone().startOf('day').diff(moment().startOf('day'), 'days');
+      const relative = { 0: 'Today', 1: 'Tomorrow', '-1': 'Yesterday' }[diff];
+      return relative
+        ? `${relative}, ${day.format('Do MMMM YYYY')}`
+        : day.format('dddd, Do MMMM YYYY');
     },
     getGoal(period, date) {
       const goal = this.allGoals.find((aGoal) => aGoal.period === period && aGoal.date === date);
@@ -600,11 +671,19 @@ export default {
       this.addGoalItemDialog = false;
       this.newGoalItem = { ...this.defaultGoalItem };
     },
-    showGoalDialog({ date }) {
-      if(date in this.goalsMap) {
-        this.selectedDayGoalTitle = this.goalsMap[date][0].date
+    async showGoalDialog({ date }) {
+      if (date in this.goalsMap) {
+        const dayGoal = this.goalsMap[date][0];
+        this.selectedDayGoalTitle = this.formatDayTitle(dayGoal.date);
         this.selectedDayDate = date; // Store the date, computed property will look up the goal
         this.goalDialog = true;
+        // Fetch the day's routine so items can show their linked task name.
+        try {
+          const routine = await this.$routine.fetchRoutine(dayGoal.date, { useCache: true });
+          this.dayTasklist = (routine && routine.tasklist) || [];
+        } catch (e) {
+          this.dayTasklist = [];
+        }
       }
     },
   },
