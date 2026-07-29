@@ -91,26 +91,42 @@ describe('GoalItemListContainer', () => {
   });
 
   describe('onCompleteSubTask', () => {
-    it('delegates to $goals.completeSubTaskItem and passes the result to onSuccess', async () => {
+    // The organism no longer supplies onSuccess/onError callbacks — those
+    // existed only so it could patch the cached SubTaskItem itself. It now
+    // emits intent plus a read-only `subTasks` snapshot, which the container
+    // forwards so the mutation can build an optimistic response.
+    it('forwards the subTasks snapshot to $goals.completeSubTaskItem', async () => {
       const ctx = makeCtx();
-      const onSuccess = jest.fn();
+      const subTasks = [
+        { id: 's1', body: 'a', isComplete: false },
+        { id: 's2', body: 'b', isComplete: true },
+      ];
       Container.methods.onCompleteSubTask.call(ctx, {
-        id: 's1', taskId: 'g1', period: 'day', date: '11-07-2026', isComplete: true, onSuccess,
+        id: 's1', taskId: 'g1', period: 'day', date: '11-07-2026', isComplete: true, subTasks,
       });
       await flush();
       expect(ctx.goals.completeSubTaskItem).toHaveBeenCalledWith({
-        id: 's1', taskId: 'g1', period: 'day', date: '11-07-2026', isComplete: true, dayDate: '11-07-2026',
+        id: 's1',
+        taskId: 'g1',
+        period: 'day',
+        date: '11-07-2026',
+        isComplete: true,
+        subTasks,
+        dayDate: '11-07-2026',
       });
-      expect(onSuccess).toHaveBeenCalledWith({ ok: true });
+      expect(ctx.emitted).toContainEqual({
+        evt: 'changed', payload: { op: 'complete-subtask', id: 's1' },
+      });
     });
 
-    it('calls onError and notifies on failure', async () => {
+    it('notifies on failure and lets Apollo roll the optimistic write back', async () => {
       const ctx = makeCtx({ completeSubTaskItem: jest.fn(() => Promise.reject(new Error('x'))) });
-      const onError = jest.fn();
-      Container.methods.onCompleteSubTask.call(ctx, { id: 's1', taskId: 'g1', onError });
+      Container.methods.onCompleteSubTask.call(ctx, { id: 's1', taskId: 'g1' });
       await flush();
-      expect(onError).toHaveBeenCalled();
       expect(ctx.notified[0].type).toBe('error');
+      expect(ctx.emitted).not.toContainEqual({
+        evt: 'changed', payload: { op: 'complete-subtask', id: 's1' },
+      });
     });
   });
 

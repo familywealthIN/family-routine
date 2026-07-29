@@ -18,6 +18,7 @@
 import { ref, computed } from '@vue/composition-api';
 import gql from 'graphql-tag';
 import goalStore from '../store/goalStore';
+import { scopeGoalsToRef } from '../utils/goalRefScope';
 import {
   GOAL_ITEM_STANDARD_FIELDS_STRING,
   GOAL_ITEM_FULL_FIELDS_STRING,
@@ -471,7 +472,10 @@ export function useGoalsByGoalRef(apolloClient, options = {}) {
         fetchPolicy: 'network-only',
       });
 
-      const goalsData = data?.goalsByGoalRef || [];
+      // The server returns each Goal's COMPLETE goalItems list — filtering it
+      // server-side truncated the shared normalized Goal entity in the Apollo
+      // cache (see utils/goalRefScope). Scope to the requested ref here.
+      const goalsData = scopeGoalsToRef(data?.goalsByGoalRef, goalRef);
 
       if (useSharedStore) {
         goalStore.setGoalsByGoalRef(goalsData);

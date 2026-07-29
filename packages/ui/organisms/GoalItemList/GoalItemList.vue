@@ -107,7 +107,7 @@
                   :key="`checkbox-${subTask.id}`"
                   :value="subTask.isComplete"
                   :disabled="passive || busy"
-                  @click.stop="handleSubTaskClick(subTask.id, goalItem)"
+                  @click.stop="completeSubTask(subTask, goalItem)"
                   dense
                 />
               </AtomListTileAction>
@@ -150,20 +150,15 @@ export default {
     AtomListTileTitle,
   },
   mixins: [taskStatusMixin],
-  data() {
-    return {
-      show: true,
-      newGoalItemBody: '',
-      pendingSubTaskUpdates: new Set(),
-    };
-  },
+  // No `data()`. This organism is a pure function of its props: same props in,
+  // same render out. It previously kept a `pendingSubTaskUpdates` Set and wrote
+  // straight onto the goal items it was handed — which are Apollo's normalized
+  // cache objects, so those writes edited the cache behind Apollo's back and
+  // left the store disagreeing with what components read. In-flight tracking
+  // belongs to the container (see utils/pendingMutations).
   computed: {
     goalItems() {
       return this.goal && this.goal.goalItems ? this.goal.goalItems : [];
-    },
-    componentKey() {
-      // Create a stable key for this component instance
-      return `goal-list-${this.goal.id || 'new'}-${this.goal.period || 'unknown'}`;
     },
   },
   methods: {
@@ -176,115 +171,29 @@ export default {
       const total = subTasks.length;
       return `${completed}/${total} subtasks`;
     },
-    handleSubTaskClick(subTaskId, goalItem) {
-      // Don't proceed if component is in passive state
-      if (this.passive) {
-        console.log('Component is passive, ignoring subtask click');
-        return;
-      }
+    /**
+     * Ask the parent to toggle a sub-task. Emits intent only.
+     *
+     * `subTasks` is passed so the container can build an optimistic response
+     * for the whole list — the checkbox still flips instantly, but the write
+     * goes through Apollo instead of `$set`-ing the cached SubTaskItem, which
+     * is what used to desynchronise the store from the rendered result.
+     */
+    completeSubTask(subTask, goalItem) {
+      if (this.passive || this.busy) return;
+      if (!subTask || !goalItem || !goalItem.id) return;
+      if (!this.goal.period || !this.goal.date) return;
 
-      console.log('handleSubTaskClick called:', { subTaskId });
-
-      const subTask = goalItem.subTasks.find((st) => st.id === subTaskId);
-      if (!subTask) {
-        console.error('SubTask not found:', subTaskId);
-        return;
-      }
-
-      // Check if update is already pending
-      if (this.pendingSubTaskUpdates.has(subTaskId)) {
-        console.log('Update already pending for subtask:', subTaskId);
-        return;
-      }
-
-      // Toggle the current value
-      const newValue = !subTask.isComplete;
-      console.log('SubTask toggling from:', subTask.isComplete, 'to:', newValue);
-
-      // Immediately update the UI for better responsiveness
-      this.$set(subTask, 'isComplete', newValue);
-
-      // Sync with the server
-      this.completeSubTask(subTaskId, newValue, goalItem);
-    },
-    completeSubTask(subTaskId, isComplete, goalItem) {
-      console.log('completeSubTask called:', {
-        subTaskId,
-        isComplete,
-        goalItemId: goalItem.id,
-        taskRef: goalItem.taskRef,
-        goalPeriod: this.goal.period,
-        goalDate: this.goal.date,
-        goalItem,
-      });
-
-      // Prevent double calls
-      if (this.pendingSubTaskUpdates.has(subTaskId)) {
-        console.log('Update already pending for subtask:', subTaskId);
-        return;
-      }
-
-      // Find the subtask to update
-      const subTask = goalItem.subTasks.find((st) => st.id === subTaskId);
-      if (!subTask) {
-        console.error('SubTask not found in completeSubTask:', subTaskId);
-        return;
-      }
-
-      // Store the original value for rollback
-      const originalValue = subTask.isComplete;
-      console.log('Original value:', originalValue, 'New value:', isComplete);
-
-      // Validate required parameters
-      if (!subTaskId) {
-        console.error('Missing subTaskId');
-        return;
-      }
-      if (!goalItem.id) {
-        console.error('Missing goalItem.id');
-        return;
-      }
-      if (!this.goal.period) {
-        console.error('Missing goal.period');
-        return;
-      }
-      if (!this.goal.date) {
-        console.error('Missing goal.date');
-        return;
-      }
-
-      // Add to pending updates
-      this.pendingSubTaskUpdates.add(subTaskId);
-
-      // Emit event with all data needed for mutation - parent handles GraphQL
       this.$emit('complete-sub-task', {
-        id: subTaskId,
+        id: subTask.id,
         taskId: goalItem.id,
         period: this.goal.period,
         date: this.goal.date,
-        isComplete: Boolean(isComplete),
-        subTask,
-        originalValue,
-        onSuccess: (result) => {
-          console.log('Mutation successful:', result);
-          // Remove from pending updates
-          this.pendingSubTaskUpdates.delete(subTaskId);
-          // Ensure UI matches server response if different
-          if (result && subTask.isComplete !== result.isComplete) {
-            this.$set(subTask, 'isComplete', result.isComplete);
-          }
-          // Force update to refresh the subtask progress counter
-          this.$forceUpdate();
-          // Emit event to parent to potentially refresh data
-          this.$emit('subtask-updated', { subTaskId, isComplete, goalItem });
-        },
-        onError: () => {
-          console.error('Mutation error in parent');
-          // Remove from pending updates
-          this.pendingSubTaskUpdates.delete(subTaskId);
-          // Revert the change on error using $set to ensure reactivity
-          this.$set(subTask, 'isComplete', originalValue);
-        },
+        isComplete: !subTask.isComplete,
+        // Read-only snapshot for the optimistic response — never mutated here.
+        subTasks: (goalItem.subTasks || []).map((st) => ({
+          id: st.id, body: st.body, isComplete: !!st.isComplete,
+        })),
       });
     },
     deleteGoalItem(index, period, date) {
@@ -321,22 +230,17 @@ export default {
       this.$emit('delete-task-goal', { id, period, date });
     },
     completeGoalItemText(goalItem, period, date) {
-      // eslint-disable-next-line no-param-reassign
-      goalItem.period = period;
-      // eslint-disable-next-line no-param-reassign
-      goalItem.date = date;
-      this.$emit('toggle-goal-display-dialog', goalItem, true);
+      // Emit a COPY carrying the period/date context the editor needs.
+      // This used to assign `goalItem.period` / `goalItem.date` onto the item
+      // itself — but that object is Apollo's normalized `GoalItem:<id>` record,
+      // and `period`/`date` are not fields of the GoalItem type. Writing them
+      // polluted the cached entity (and its memoized read result) with fields
+      // no query can ever refresh.
+      this.$emit('toggle-goal-display-dialog', { ...goalItem, period, date }, true);
     },
     completeGoalItem(id, isComplete, period, date, taskRef, isMilestone, goalRef) {
       // Don't proceed if component is in passive state
-      if (this.passive) {
-        console.log('Component is passive, ignoring goal item completion');
-        return;
-      }
-
-      console.log('[GoalItemList] completeGoalItem called:', {
-        id, isComplete, period, date, taskRef, isMilestone, goalRef,
-      });
+      if (this.passive) return;
 
       // Emit event with all data needed for mutation - parent handles GraphQL
       this.$emit('complete-goal-item', {
@@ -355,61 +259,11 @@ export default {
     editGoalItem(goalItem, period, date) {
       this.$emit('update-new-goal-item', goalItem, period, date);
     },
-    // Method to reset component state (can be called from parent)
-    resetState() {
-      this.pendingSubTaskUpdates.clear();
-      console.log('GoalItemList state reset');
-    },
   },
-  watch: {
-    // Watch for goal changes and reset local state if needed
-    'goal.id': function watchGoalId(newId, oldId) {
-      if (newId !== oldId && newId && oldId) {
-        console.log('GoalItemList: Goal ID changed, resetting state', { newId, oldId });
-        this.resetState();
-      }
-    },
-    // Watch for goal period changes
-    'goal.period': function watchGoalPeriod(newPeriod, oldPeriod) {
-      if (newPeriod !== oldPeriod && newPeriod && oldPeriod) {
-        console.log('GoalItemList: Goal period changed, resetting state', { newPeriod, oldPeriod });
-        this.resetState();
-      }
-    },
-    // Watch for goal date changes
-    'goal.date': function watchGoalDate(newDate, oldDate) {
-      if (newDate !== oldDate && newDate && oldDate) {
-        console.log('GoalItemList: Goal date changed, resetting state', { newDate, oldDate });
-        this.resetState();
-      }
-    },
-    // Watch for passive state changes
-    passive(newVal, oldVal) {
-      if (newVal !== oldVal) {
-        console.log('GoalItemList: Passive state changed', { newVal, oldVal });
-        // Clear any pending operations when passive state changes
-        if (newVal) {
-          this.pendingSubTaskUpdates.clear();
-        }
-      }
-    },
-  },
-  created() {
-    console.log('GoalItemList created:', {
-      goalId: this.goal.id,
-      goalPeriod: this.goal.period,
-      goalDate: this.goal.date,
-      passive: this.passive,
-    });
-  },
-  beforeDestroy() {
-    console.log('GoalItemList being destroyed:', {
-      goalId: this.goal.id,
-      pendingUpdates: this.pendingSubTaskUpdates.size,
-    });
-    // Clear any pending updates when component is destroyed
-    this.pendingSubTaskUpdates.clear();
-  },
+  // No watchers, no lifecycle hooks, no $forceUpdate. All three existed only to
+  // paper over the local state and prop mutations removed above: a component
+  // with no state of its own has nothing to reset when its props change, and
+  // rendering straight off props keeps reactivity intact on its own.
 };
 </script>
 

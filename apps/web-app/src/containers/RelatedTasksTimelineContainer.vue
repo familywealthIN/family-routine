@@ -12,6 +12,7 @@
 import moment from 'moment';
 import RelatedTasksTimeline from '@routine-notes/ui/molecules/RelatedTasksTimeline/RelatedTasksTimeline.vue';
 import { GOALS_BY_GOAL_REF_QUERY } from '../composables/useGoalQueries';
+import { scopeGoalsToRef } from '../utils/goalRefScope';
 
 export default {
   name: 'RelatedTasksTimelineContainer',
@@ -45,7 +46,9 @@ export default {
         return !this.goalRef;
       },
       update(data) {
-        return data && data.goalsByGoalRef ? data.goalsByGoalRef : [];
+        // The server returns each Goal's COMPLETE goalItems list (returning a
+        // filtered one truncated the shared normalized entity). Scope here.
+        return scopeGoalsToRef(data && data.goalsByGoalRef, this.goalRef);
       },
     },
   },

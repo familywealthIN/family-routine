@@ -12,6 +12,7 @@
     :edit-mode="editMode"
     :new-goal-item="newGoalItem"
     :passive="passive"
+    :busy="busy"
     @complete-goal-item="onCompleteGoalItem"
     @delete-task-goal="onDeleteTaskGoal"
     @complete-sub-task="onCompleteSubTask"
@@ -48,6 +49,15 @@ export default {
       default: null,
     },
     passive: {
+      type: Boolean,
+      default: false,
+    },
+    // Gates the checkboxes while the feeding query is in flight, so a
+    // cache-and-network read that started before a tap can't land after it and
+    // revert the tick (ARCHITECTURE.md §3 principle #7). The organism has
+    // always declared this prop; the container simply never passed it, so the
+    // guard was dead on every container-rendered path.
+    busy: {
       type: Boolean,
       default: false,
     },
@@ -88,19 +98,16 @@ export default {
 
     onCompleteSubTask(payload) {
       const {
-        id, taskId, period, date, isComplete, onSuccess, onError,
+        id, taskId, period, date, isComplete, subTasks,
       } = payload;
+      // `subTasks` is the organism's read-only snapshot of the parent's list;
+      // it drives the optimistic response so the checkbox flips instantly
+      // without anyone writing to the cached SubTaskItem directly.
       this.$goals.completeSubTaskItem({
-        id, taskId, period, date, isComplete, dayDate: this.date,
+        id, taskId, period, date, isComplete, subTasks, dayDate: this.date,
       })
-        .then((result) => {
-          if (onSuccess) onSuccess(result);
-          this.$emit('changed', { op: 'complete-subtask', id });
-        })
-        .catch((error) => {
-          if (onError) onError(error);
-          this.notifyError('An unexpected error occurred while updating subtask');
-        });
+        .then(() => this.$emit('changed', { op: 'complete-subtask', id }))
+        .catch(() => this.notifyError('An unexpected error occurred while updating subtask'));
     },
 
     // ---- Presentation events bubble to the parent unchanged ----------------

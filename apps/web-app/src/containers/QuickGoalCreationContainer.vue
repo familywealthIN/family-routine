@@ -25,6 +25,7 @@
 import moment from 'moment';
 import QuickGoalCreation from '@routine-notes/ui/organisms/QuickGoalCreation/QuickGoalCreation.vue';
 import { GOALS_BY_GOAL_REF_QUERY } from '../composables/useGoalQueries';
+import { scopeGoalsToRef } from '../utils/goalRefScope';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 import { applyPriorityTags } from '../utils/taskPriority';
 import eventBus, { EVENTS } from '../utils/eventBus';
@@ -89,7 +90,9 @@ export default {
         return !this.currentGoalRef;
       },
       update(data) {
-        return data && data.goalsByGoalRef ? data.goalsByGoalRef : [];
+        // Server returns the complete goalItems list (a filtered one truncated
+        // the shared normalized Goal entity); scope to this goalRef here.
+        return scopeGoalsToRef(data && data.goalsByGoalRef, this.currentGoalRef);
       },
     },
   },
