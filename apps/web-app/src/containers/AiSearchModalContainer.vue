@@ -24,6 +24,7 @@ import eventBus, { EVENTS } from '@routine-notes/ui/utils/eventBus';
 import { GOAL_DATE_PERIOD_QUERY, GOALS_BY_GOAL_REF_QUERY } from '../composables/graphql/queries';
 import { notifyNonCurrentTaskGoalCreation } from '../utils/taskCreationNotification';
 import { applyPriorityTags } from '../utils/taskPriority';
+import { scopeGoalsToRef } from '../utils/goalRefScope';
 import AiTaskCreationFormContainer from './AiTaskCreationFormContainer.vue';
 import AiGoalPlanFormContainer from './AiGoalPlanFormContainer.vue';
 
@@ -164,7 +165,9 @@ export default {
         return !this.activeGoalRef;
       },
       update(data) {
-        return data && data.goalsByGoalRef ? data.goalsByGoalRef : [];
+        // Server returns the complete goalItems list (a filtered one truncated
+        // the shared normalized Goal entity); scope to this goalRef here.
+        return scopeGoalsToRef(data && data.goalsByGoalRef, this.activeGoalRef);
       },
     },
   },

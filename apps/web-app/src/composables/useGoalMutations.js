@@ -25,10 +25,10 @@ import { pendingMutations } from '../utils/pendingMutations';
 import {
   addGoalItemToCache,
   updateGoalItemCompletionInCache,
-  updateSubTaskCompletionInCache,
   deleteGoalItemFromCache,
   deleteSubTaskFromCache,
 } from './useApolloCacheUpdates';
+import { readEntity } from './useEntityCache';
 
 // ============================================================================
 // MUTATION DEFINITIONS
@@ -217,6 +217,14 @@ export const COMPLETE_SUB_TASK_ITEM_MUTATION = gql`
     ) {
       id
       isComplete
+      progress
+      status
+      completedAt
+      subTasks {
+        id
+        body
+        isComplete
+      }
     }
   }
 `;
@@ -792,11 +800,59 @@ export function useGoalMutations(apolloClient, options = {}) {
    * @param {Object} mutationOptions - Additional options
    * @returns {Promise<Object>} Updated sub-task item
    */
+  /**
+   * Toggle a sub-task.
+   *
+   * NOTE the mutation returns the PARENT GoalItem (that is the server's type),
+   * so the selection set asks for the parent's complete shape *including* its
+   * subTasks list. Apollo then normalizes `GoalItem:<taskId>` and every
+   * `SubTaskItem:<id>` in one write, and every query holding them re-renders —
+   * no manual cache surgery, and no component has to patch anything locally.
+   *
+   * Previously the selection set was `{ id, isComplete }` — the PARENT's
+   * completion — which callers then wrote onto the SUB-task, flipping it to
+   * whatever the parent's state was.
+   *
+   * @param {Array} [params.subTasks] the parent's current subTasks, used to
+   *   synthesise the optimistic response. Pass it and the checkbox flips
+   *   instantly; omit it (or if the parent isn't cached yet) and the UI simply
+   *   waits for the server.
+   */
   const completeSubTaskItem = async (params, mutationOptions = {}) => {
     const {
-      id, taskId, date, period, isComplete,
+      id, taskId, date, period, isComplete, subTasks,
     } = params;
     const { onSuccess, onError } = mutationOptions;
+
+    // The mutation returns the PARENT GoalItem, so an optimistic response has
+    // to supply every field in the selection set. The parent's own
+    // completion/progress are server-derived (a subtask can auto-complete its
+    // parent), so we must ECHO its current cached values rather than guess —
+    // writing nulls here would visibly uncheck the parent goal item for the
+    // duration of the request.
+    const parent = readEntity(apolloClient, {
+      typename: 'GoalItem',
+      id: taskId,
+      fieldNames: ['isComplete', 'progress', 'status', 'completedAt'],
+    });
+
+    const optimisticResponse = (Array.isArray(subTasks) && parent) ? {
+      __typename: 'Mutation',
+      completeSubTaskItem: {
+        __typename: 'GoalItem',
+        id: taskId,
+        isComplete: parent.isComplete,
+        progress: parent.progress,
+        status: parent.status,
+        completedAt: parent.completedAt,
+        subTasks: subTasks.map((st) => ({
+          __typename: 'SubTaskItem',
+          id: st.id,
+          body: st.body,
+          isComplete: st.id === id ? isComplete : !!st.isComplete,
+        })),
+      },
+    } : undefined;
 
     try {
       const { data } = await apolloClient.mutate({
@@ -804,21 +860,10 @@ export function useGoalMutations(apolloClient, options = {}) {
         variables: {
           id, taskId, date, period, isComplete,
         },
+        ...(optimisticResponse ? { optimisticResponse } : {}),
       });
 
       const result = data?.completeSubTaskItem;
-
-      // Update Apollo cache optimistically
-      if (result) {
-        updateSubTaskCompletionInCache(apolloClient, {
-          goalItemId: taskId,
-          subTaskId: id,
-          isComplete,
-          date,
-          period,
-          dayDate: params.dayDate,
-        });
-      }
 
       if (onSuccess) {
         onSuccess(result);
