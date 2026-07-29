@@ -42,3 +42,6 @@ nohup.out
 
 android
 ios
+# Playwright
+apps/web-app/test-results/
+apps/web-app/playwright-report/

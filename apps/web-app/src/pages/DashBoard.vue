@@ -1003,17 +1003,14 @@ export default {
     // Complete subtask in agenda view (past days)
     completeAgendaSubTask(payload) {
       const {
-        id, taskId, period, date, isComplete, onSuccess, onError,
+        id, taskId, period, date, isComplete, subTasks,
       } = payload;
 
       this.$goals.completeSubTaskItem({
-        id, taskId, period, date, isComplete, dayDate: this.date,
+        id, taskId, period, date, isComplete, subTasks, dayDate: this.date,
       })
-        .then((result) => {
-          if (onSuccess) onSuccess(result);
-        })
         .catch(() => {
-          if (onError) onError();
+          // Apollo rolls the optimistic response back on error.
           this.$notify({
             title: 'Error',
             text: 'An unexpected error occurred while updating subtask',
@@ -1544,8 +1541,28 @@ export default {
       if (task.wait) return 'waiting';
       return 'pending';
     },
+    /**
+     * Create the routine for `this.date` — at most once per date, no matter how
+     * many times we're asked.
+     *
+     * This is called from the `routineDate` query's `update()` callback, which
+     * Apollo runs for EVERY result: the cache pass, the network pass, and each
+     * of the 30-second `refreshApolloQueries()` refetches. Unguarded, a single
+     * new-day open fired `addRoutine` three times, and those concurrent creates
+     * raced the goal-tick path's own routine auto-create — producing two Routine
+     * documents for one date, after which `routineDate()` (a `findOne`) returned
+     * an arbitrary one and a tick written to the other silently vanished.
+     *
+     * Memoizing the in-flight promise per date collapses the burst to one call.
+     * (The server is now idempotent too — atomic upsert plus a unique index —
+     * so this is defence in depth, not the only guard.)
+     */
     addNewDayRoutine() {
-      this.$routine.addRoutine(this.date)
+      const { date } = this;
+      if (!this.pendingRoutineCreates) this.pendingRoutineCreates = {};
+      if (this.pendingRoutineCreates[date]) return this.pendingRoutineCreates[date];
+
+      const inFlight = this.$routine.addRoutine(date)
         .then(() => {
           // Refetch through the dashboard's OWN routine query, which selects the
           // full task shape (stimuli, redeemed, passedPoints). $routine.fetchRoutine
@@ -1572,7 +1589,15 @@ export default {
             type: 'error',
             duration: 3000,
           });
+        })
+        .finally(() => {
+          // Release the guard so a genuine later need (e.g. the routine was
+          // deleted) can create it again.
+          delete this.pendingRoutineCreates[date];
         });
+
+      this.pendingRoutineCreates[date] = inFlight;
+      return inFlight;
     },
     deleteTaskGoal({ id, period, date }) {
       // Apollo cache optimistic update handles instant UI removal
@@ -1638,6 +1663,11 @@ export default {
           // Week-goal streak progress is no longer optimistically
           // updated — refetch the daily goals so the streak reflects the
           // server's recomputed value (autoCheckTaskPeriod).
+          //
+          // This is the ONLY refetch a tick needs. `refreshTaskGoal` used to
+          // fire a second `goals.refetch()` plus a `fetchRoutine` for the same
+          // tick; each is a cache-and-network read that can land after a later
+          // tap and revert it, so the duplicates were pure race surface.
           if (period === 'day' && this.$apollo.queries.goals) {
             this.$apollo.queries.goals.refetch();
           }
@@ -1654,14 +1684,16 @@ export default {
     },
     completeSubTask(payload) {
       const {
-        id, taskId, period, date, isComplete, onSuccess, onError,
+        id, taskId, period, date, isComplete, subTasks,
       } = payload;
 
+      // `subTasks` is the organism's read-only snapshot of the parent's list.
+      // It drives the optimistic response, so the checkbox flips instantly
+      // through Apollo rather than by mutating the cached SubTaskItem.
       this.$goals.completeSubTaskItem({
-        id, taskId, period, date, isComplete, dayDate: this.date,
+        id, taskId, period, date, isComplete, subTasks, dayDate: this.date,
       })
-        .then((result) => {
-          if (onSuccess) onSuccess(result);
+        .then(() => {
           // Subtasks contribute to their parent goal item's completion which
           // in turn moves K on the routine task. Fan out a routine-ticked
           // event so the WeekdaySelector refetches its aggregate.
@@ -1682,7 +1714,7 @@ export default {
           }
         })
         .catch(() => {
-          if (onError) onError();
+          // Apollo rolls the optimistic response back on error; nothing to undo.
           this.$notify({
             title: 'Error',
             text: 'An unexpected error occurred while updating subtask',
@@ -1692,9 +1724,18 @@ export default {
           });
         });
     },
+    /**
+     * Remember which week goal the last completed day item rolled up to, so the
+     * streak strip can highlight it.
+     *
+     * It used to also `fetchRoutine(useCache:false)` + `goals.refetch()`. Both
+     * were redundant — `completeGoalItem`'s own `.then()` already refetches
+     * `goals`, and the routine's stimuli come back through the normalized
+     * entity. Firing them here meant every tick launched three overlapping
+     * cache-and-network reads, any of which could resolve after the NEXT tick
+     * and overwrite it.
+     */
     refreshTaskGoal(taskRef) {
-      this.$routine.fetchRoutine(this.date, { useCache: false });
-      this.$apollo.queries.goals.refetch();
       this.lastCompleteItemGoalRef = taskRef;
     },
     getWeekProgress(currentGoalPeriod, taskGoals) {
@@ -1987,6 +2028,24 @@ export default {
       }
       if (task.passed || task.wait || task.ticked) return;
 
+      // `this.did` is the routine DOCUMENT id, and it is only set once the
+      // routineDate query resolves. Ticking before that sends id:'' (server
+      // CastError -> optimistic rollback: the circle goes green and flips back),
+      // and after a mid-session midnight rollover it still holds YESTERDAY's
+      // routine id, so the tick would land on the wrong day's document.
+      // `skipClick` already guards this; `checkClick` did not — which is the
+      // "new day: first check goes green but is not saved" report.
+      if (!this.did) {
+        this.$notify({
+          title: 'Please wait',
+          text: 'Routine is still loading. Try again in a moment.',
+          group: 'notify',
+          type: 'warning',
+          duration: 3000,
+        });
+        return;
+      }
+
       const pendingKey = `routine:${task.id}`;
       // Per-item coalescing — if a tick mutation for this task is
       // already in flight, ignore further taps. The tick is monotonic
@@ -2201,11 +2260,30 @@ export default {
         });
     },
     passedTime(item) {
+      // Guards, in order:
+      //  - `did`: without the routine document id the mutation 500s.
+      //  - pendingMutations: a tick for this task may be in flight. Reading
+      //    `item.ticked` while it is would mark a task the user completed ON
+      //    TIME as passed — permanently, server-side — which is the reported
+      //    "routine shows missed even though I ticked in time".
+      //  - `passedInFlight`: this runs from the `routineDate.tasklist` watcher,
+      //    and passRoutineItem's own `update()` writes the cache, which re-fires
+      //    that watcher. Unguarded, one app-open fired ~20 pass/wait mutations.
+      if (!this.did) return;
+      if (pendingMutations.has(`routine:${item.id}`)) return;
+      if (!this.passedInFlight) this.passedInFlight = {};
+      if (this.passedInFlight[item.id]) return;
+
       if (!item.ticked) {
         const timestamp = moment(item.time, 'HH:mm');
         const exp = timestamp.diff(moment());
         if (moment.duration(exp).asMinutes() < -TIMES_UP_TIME && !item.passed) {
-          item.passed = true;
+          // NOTE: no `item.passed = true` here. `item` is Apollo's normalized
+          // RoutineItem result object — assigning to it edits the cache's own
+          // memoized copy behind Apollo's back, so the store and what
+          // components read drift apart. The optimistic/real response below is
+          // the only thing allowed to change it.
+          this.passedInFlight[item.id] = true;
           this.$apollo
             .mutate({
               mutation: gql`
@@ -2232,30 +2310,15 @@ export default {
                 id: this.did,
                 taskId: item.id,
                 ticked: item.ticked,
-                passed: item.passed,
+                passed: true,
               },
-              update: (store, { data: { passRoutineItem } }) => {
-                if (passRoutineItem.tasklist) {
-                  const currentTask = passRoutineItem.tasklist.find((task) => task.id === item.id);
-                  if (currentTask.ticked) {
-                    item.passed = false;
-                    item.ticked = true;
-                  }
-                }
-
-                // Update Apollo cache for instant UI update
-                updateRoutineTaskInCache(
-                  this.$apollo.provider.defaultClient,
-                  {
-                    date: this.date,
-                    taskId: item.id,
-                    passed: item.passed,
-                  },
-                );
-              },
+              // No `update` callback. The mutation returns RoutineItem entities
+              // by id, so Apollo normalizes `passed`/`ticked` into every query
+              // that holds them. The old callback both assigned to `item` (an
+              // Apollo result object) and ran query-level cache surgery on top
+              // — two extra writers for a fact the response already carries.
             })
             .catch(() => {
-              item.passed = false;
               this.$notify({
                 title: 'Error',
                 text: 'An unexpected error occured',
@@ -2263,16 +2326,25 @@ export default {
                 type: 'error',
                 duration: 3000,
               });
+            })
+            .finally(() => {
+              delete this.passedInFlight[item.id];
             });
         }
       }
     },
     waitTime(item) {
+      // Same guards as passedTime — see the note there.
+      if (!this.did) return;
+      if (pendingMutations.has(`routine:${item.id}`)) return;
+      if (!this.waitInFlight) this.waitInFlight = {};
+      if (this.waitInFlight[item.id]) return;
+
       if (!item.ticked) {
         const timestamp = moment(item.time, 'HH:mm');
         const exp = timestamp.diff(moment());
         if (moment.duration(exp).asMinutes() < PROACTIVE_START_TIME && item.wait) {
-          item.wait = false;
+          this.waitInFlight[item.id] = true;
           this.$apollo
             .mutate({
               mutation: gql`
@@ -2280,6 +2352,7 @@ export default {
                   waitRoutineItem(id: $id, taskId: $taskId, wait: $wait) {
                     id
                     tasklist {
+                      id
                       name
                       wait
                     }
@@ -2289,22 +2362,15 @@ export default {
               variables: {
                 id: this.did,
                 taskId: item.id,
-                wait: item.wait,
+                wait: false,
               },
-              update: () => {
-                // Update Apollo cache for instant UI update
-                updateRoutineTaskInCache(
-                  this.$apollo.provider.defaultClient,
-                  {
-                    date: this.date,
-                    taskId: item.id,
-                    wait: item.wait,
-                  },
-                );
-              },
+              // The selection set now includes `id` on each task, so Apollo can
+              // normalize the response into RoutineItem:<id> instead of storing
+              // an unidentifiable list. That is what makes the manual cache
+              // write unnecessary — and its absence is why `wait` used to
+              // oscillate true/false/true across a burst of these mutations.
             })
             .catch(() => {
-              item.wait = false;
               this.$notify({
                 title: 'Error',
                 text: 'An unexpected error occured',
@@ -2312,6 +2378,9 @@ export default {
                 type: 'error',
                 duration: 3000,
               });
+            })
+            .finally(() => {
+              delete this.waitInFlight[item.id];
             });
         }
       }

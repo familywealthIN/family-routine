@@ -34,6 +34,7 @@ import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, GC_AUTH_TOKEN,
 } from './constants/settings';
 import redirectOnError from './utils/redirectOnError';
+import { sanitizePersistedCache } from './utils/cacheHygiene';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
@@ -134,6 +135,19 @@ loadData().then(() => {
   // Persist Apollo cache to localforage before creating client
   const setupCachePersistence = async () => {
     try {
+      // Clean the persisted blob BEFORE it is restored. persistCache has no
+      // schema version and no purge, so without this one bad write lives in
+      // IndexedDB forever: leaked `Goal:temp-*` placeholders and phantom
+      // entities from mistyped __typenames were found still shadowing real
+      // goals days later. Everything dropped here is re-fetchable — the
+      // display queries are all cache-and-network.
+      const hygiene = await sanitizePersistedCache(localforage);
+      if (hygiene.purged) {
+        console.log('[Main] Persisted Apollo cache purged (schema version bump)');
+      } else if (hygiene.removed.length) {
+        console.log(`[Main] Dropped ${hygiene.removed.length} unrepairable cache entries:`, hygiene.removed);
+      }
+
       await persistCache({
         cache,
         storage: localforage,

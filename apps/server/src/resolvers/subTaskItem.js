@@ -51,8 +51,8 @@ const mutation = {
           .find((goalItem) => goalItem._id.toString() === taskId.toString());
 
       if (previousGoalItem
-          && previousGoalItem.subTasks
-          && previousGoalItem.subTasks.length) {
+        && previousGoalItem.subTasks
+        && previousGoalItem.subTasks.length) {
         await GoalModel.findOneAndUpdate(
           {
             date,
@@ -160,13 +160,13 @@ const mutation = {
         period,
         email,
       },
-      {
-        goalItems: {
-          $elemMatch: {
-            _id: args.taskId,
+        {
+          goalItems: {
+            $elemMatch: {
+              _id: args.taskId,
+            },
           },
-        },
-      }).exec();
+        }).exec();
 
       const previousGoalItem = goalEntry
         && goalEntry.goalItems
@@ -174,8 +174,8 @@ const mutation = {
           .find((goalItem) => goalItem._id.toString() === taskId.toString());
 
       if (previousGoalItem
-          && previousGoalItem.subTasks
-          && previousGoalItem.subTasks.length) {
+        && previousGoalItem.subTasks
+        && previousGoalItem.subTasks.length) {
         const returnSubTasks = previousGoalItem.subTasks
           .find((subTask) => subTask._id.toString() === id.toString());
 
@@ -224,13 +224,13 @@ const mutation = {
         period,
         email,
       },
-      {
-        goalItems: {
-          $elemMatch: {
-            _id: args.taskId,
+        {
+          goalItems: {
+            $elemMatch: {
+              _id: args.taskId,
+            },
           },
-        },
-      }).exec();
+        }).exec();
 
       const previousGoalItem = goalEntry
         && goalEntry.goalItems
@@ -238,23 +238,17 @@ const mutation = {
           .find((goalItem) => goalItem._id.toString() === taskId.toString());
 
       if (previousGoalItem
-          && previousGoalItem.subTasks
-          && previousGoalItem.subTasks.length) {
-        let returnSubTasks = {};
+        && previousGoalItem.subTasks
+        && previousGoalItem.subTasks.length) {
         const updatedSubTasks = previousGoalItem.subTasks
           .map((subTask) => {
             if (subTask._id.toString() === id.toString()) {
-              returnSubTasks = {
-                _id: subTask._id,
-                body: subTask.body,
-                isComplete,
-              };
-              return returnSubTasks;
+              return { _id: subTask._id, body: subTask.body, isComplete };
             }
             return subTask;
           });
 
-        await GoalModel.findOneAndUpdate(
+        const updatedGoal = await GoalModel.findOneAndUpdate(
           {
             date: args.date,
             period: args.period,
@@ -265,10 +259,34 @@ const mutation = {
           { new: true },
         ).exec();
 
-        return returnSubTasks;
+        // Return the COMPLETE parent goal item.
+        //
+        // This field is typed `GoalItemType`, but it used to return the
+        // sub-task shape `{ _id, body, isComplete }`. Against a GoalItem that
+        // resolves to `id: null`, `subTasks: null`, and an `isComplete` that is
+        // the SUB-task's — so Apollo could not normalize the response at all
+        // and the client had to patch the cache by hand (and, reading
+        // `result.isComplete`, wrote the parent's completion onto the
+        // sub-task). Returning the real parent lets Apollo normalize
+        // `GoalItem:<taskId>` plus every `SubTaskItem:<id>` in one write, and
+        // every query holding them updates for free.
+        // See containers/ARCHITECTURE.md §3 principle #2.
+        //
+        // Falls back to null, never to `previousGoalItem`: that copy predates
+        // the update, so returning it would hand the client the OLD sub-task
+        // states and visibly revert the toggle it just made. A null here means
+        // the goal item vanished mid-request, and the client's next
+        // cache-and-network read is the right way to resolve that.
+        return (updatedGoal
+          && updatedGoal.goalItems
+          && updatedGoal.goalItems.find(
+            (goalItem) => goalItem._id.toString() === taskId.toString(),
+          )) || null;
       }
 
-      return args;
+      // No sub-tasks to update — still return the parent goal item (or null),
+      // never the raw args, so the response is always a valid GoalItem.
+      return previousGoalItem || null;
     },
   },
 };

@@ -29,6 +29,7 @@ const { RoutineItemModel } = require('../schema/RoutineItemSchema');
 const { RoutineModel } = require('../schema/RoutineSchema');
 const { buildStimuliForRoutineItem } = require('./routine');
 const { threshold } = require('../utils/getProgressReport');
+const { deriveGoalItemStatus } = require('../utils/goalItemStatus');
 
 const getDaysArray = (year, month) => {
   let firstMonday = '';
@@ -54,6 +55,23 @@ const getDaysArray = (year, month) => {
   return { result, threeFridays };
 };
 
+/**
+ * The day's routine, creating it if this is the first thing to touch that date.
+ *
+ * Must be atomic. This runs when a goal is completed before the routine exists
+ * (a new day), concurrently with the dashboard's own `addRoutine` call. A plain
+ * `new RoutineModel(...).save()` here produced a SECOND document for the same
+ * (email, date): `routineDate()` is a `findOne`, so it then returned an
+ * arbitrary one of the two and a tick written to the other silently vanished.
+ *
+ * `$setOnInsert` + `upsert` means the loser of the race reads the winner's
+ * document instead of inserting its own. The unique index on
+ * {email, date} (see schema/RoutineSchema.js) is the backstop.
+ *
+ * NOTE: only `args.date` is used. `args` also carries goal fields (id, period,
+ * taskRef…) when called from completeGoalItem — those must never reach the
+ * Routine document, so the fields are listed explicitly rather than spread.
+ */
 async function findTodayandSort(args, email) {
   const todaysRoutine = await RoutineModel.findOne({ date: args.date, email }).exec();
   if (todaysRoutine && todaysRoutine.tasklist) {
@@ -65,15 +83,22 @@ async function findTodayandSort(args, email) {
   tasklist.forEach((task) => {
     task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
   });
-  const routine = new RoutineModel({
-    ...args,
-    email,
-    tasklist,
-  });
 
-  await routine.save();
+  try {
+    await RoutineModel.findOneAndUpdate(
+      { date: args.date, email },
+      { $setOnInsert: { date: args.date, email, tasklist } },
+      { upsert: true },
+    ).exec();
+  } catch (e) {
+    // E11000 duplicate key: another request inserted the document between our
+    // findOne and this upsert. That is the success case — read it below.
+    if (!e || e.code !== 11000) throw e;
+  }
 
-  return findTodayandSort(args, email);
+  const created = await RoutineModel.findOne({ date: args.date, email }).exec();
+  if (created && created.tasklist) sortTimes(created.tasklist);
+  return created;
 }
 
 function periodGoalDates(period, date) {
@@ -811,19 +836,34 @@ const query = {
         'goalItems.goalRef': args.goalRef,
       }).exec();
 
-      // Filter the goals to only include goalItems that match the goalRef.
-      // toObject() drops the mongoose `id` virtual, so map `_id` back onto
-      // `id` — without it every Goal resolves id:null and Apollo normalizes
-      // all of them into a single cached entity, collapsing the timeline to
-      // one day's activity.
-      const filteredGoals = goals.map((goal) => ({
-        ...goal.toObject(),
-        // eslint-disable-next-line no-underscore-dangle
-        id: goal._id,
-        goalItems: goal.goalItems.filter((item) => item.goalRef === args.goalRef),
-      })).filter((goal) => goal.goalItems.length > 0);
-
-      return filteredGoals;
+      // Return the COMPLETE goalItems list for each matching Goal — do not
+      // filter it here.
+      //
+      // These Goal ids are the same ids `optimizedDailyGoals` and `agendaGoals`
+      // return, so Apollo normalizes them into the SAME cache entity. Returning
+      // a filtered `goalItems` array replaced the normalized list and silently
+      // dropped every sibling item from the dashboard: a day Goal with 14 items
+      // collapsed to the 2 that matched the goalRef, and the current-task card
+      // rendered "No goal or activity logged." until the next refetch healed it
+      // (the reported flicker) — or until the app was closed inside that window,
+      // at which point cache-persist wrote the truncated list to IndexedDB and
+      // it survived restarts ("they dont show until refresh").
+      //
+      // See containers/ARCHITECTURE.md §3 principle #2: never return a partial
+      // list field for a normalized entity. Consumers
+      // (RelatedTasksTimelineContainer, QuickGoalCreationContainer,
+      // AiSearchModalContainer) filter by goalRef client-side.
+      //
+      // `toObject()` drops the mongoose `id` virtual, so map `_id` back onto
+      // `id` — without it every Goal resolves id:null and Apollo normalizes all
+      // of them into a single cached entity.
+      return goals
+        .map((goal) => ({
+          ...goal.toObject(),
+          // eslint-disable-next-line no-underscore-dangle
+          id: goal._id,
+        }))
+        .filter((goal) => (goal.goalItems || []).length > 0);
     },
   },
   goal: {
@@ -1521,24 +1561,20 @@ const mutation = {
         if (args.isComplete) {
           updateFields['goalItems.$.completedAt'] = resolvedCompletedAt;
 
-          // Determine correct status using task timing context
+          // Determine correct status using task timing context.
+          // The rule lives in utils/goalItemStatus so it can be unit-tested: it
+          // closes the window at the next DISTINCT start time (tasks sharing a
+          // time used to get a zero-width window and always graded 'missed')
+          // and grades in the USER's timezone rather than the server's.
           if (routine && routine.tasklist && args.taskRef) {
-            const taskFromList = routine.tasklist.find(
-              (t) => t._id.toString() === args.taskRef.toString(),
-            );
-            if (taskFromList) {
-              const taskIndex = routine.tasklist.findIndex(
-                (t) => t._id.toString() === args.taskRef.toString(),
-              );
-              const taskTime = moment(taskFromList.time, 'HH:mm');
-              const nextTask = routine.tasklist[taskIndex + 1];
-              const nextTime = nextTask ? moment(nextTask.time, 'HH:mm') : moment('23:59', 'HH:mm');
-              const completedMoment = moment(resolvedCompletedAt);
-
-              if (completedMoment.isAfter(nextTime)) {
-                resolvedStatus = 'missed';
-              }
-            }
+            const user = await UserModel.findOne({ email }).exec();
+            resolvedStatus = deriveGoalItemStatus({
+              tasklist: routine.tasklist,
+              taskRef: args.taskRef,
+              completedAt: resolvedCompletedAt,
+              timezone: user && user.timezone,
+              routineDate: args.date,
+            });
           }
           updateFields['goalItems.$.status'] = resolvedStatus;
         } else {
