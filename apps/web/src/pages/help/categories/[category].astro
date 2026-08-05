@@ -1,0 +1,74 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import HelpSidebar from '~/components/help/HelpSidebar.astro';
+import HelpSearch from '~/components/help/HelpSearch.astro';
+import HelpArticleCard from '~/components/help/HelpArticleCard.astro';
+import { Icon } from 'astro-icon/components';
+import '~/styles/help.css';
+import { articlesInSubcategory, categories, populatedSubcategories } from '~/lib/help';
+
+export function getStaticPaths() {
+  return categories.map((category) => ({ params: { category: category.id } }));
+}
+
+const { category: categoryId } = Astro.params;
+const category = categories.find((c) => c.id === categoryId)!;
+const subs = populatedSubcategories(category);
+---
+
+<BaseLayout
+  title={`${category.label} — Routine Notes Help Centre`}
+  description={category.blurb}
+>
+  <section class="help-page">
+    <div class="container-page">
+      <nav class="help-crumbs" aria-label="Breadcrumb">
+        <a href="/help">Help centre</a>
+        <Icon name="ph:caret-right" width={11} height={11} />
+        <span aria-current="page">{category.label}</span>
+      </nav>
+
+      <div class="help-layout">
+        <aside class="help-layout__rail">
+          <HelpSidebar currentCategory={category.id} />
+        </aside>
+
+        <div class="help-layout__main">
+          <header class="help-cat-head">
+            <span class="help-cat-head__icon" style={`color:${category.accent}`}>
+              <Icon name={category.icon} width={22} height={22} />
+            </span>
+            <h1 class="help-cat-head__title">{category.label}</h1>
+            <p class="help-cat-head__blurb">{category.blurb}</p>
+          </header>
+
+          <div class="help-cat-search">
+            <HelpSearch placeholder={`Search ${category.label.toLowerCase()}…`} />
+          </div>
+
+          {
+            subs.map((sub) => {
+              const list = articlesInSubcategory(category.id, sub.id);
+              return (
+                <section class="help-subsection" id={sub.id}>
+                  <h2 class="help-subsection__title">
+                    <a href={`#${sub.id}`} class="help-anchor" aria-label={`Link to ${sub.label}`}>
+                      #
+                    </a>
+                    {sub.label}
+                  </h2>
+                  {sub.blurb && <p class="help-subsection__blurb">{sub.blurb}</p>}
+                  <div class="help-grid help-grid--2">
+                    {list.map((article) => (
+                      <HelpArticleCard article={article} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

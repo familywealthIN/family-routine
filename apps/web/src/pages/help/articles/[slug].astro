@@ -1,0 +1,125 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import HelpSidebar from '~/components/help/HelpSidebar.astro';
+import HelpSearch from '~/components/help/HelpSearch.astro';
+import HelpBlocks from '~/components/help/HelpBlocks.astro';
+import { Icon } from 'astro-icon/components';
+import '~/styles/help.css';
+import { articles, breadcrumbFor, relatedArticles } from '~/lib/help';
+import { inlineMarkdown } from '~/lib/help/inline';
+import { LINKS } from '~/lib/links';
+
+export function getStaticPaths() {
+  return articles.map((article) => ({ params: { slug: article.slug } }));
+}
+
+const { slug } = Astro.params;
+const article = articles.find((a) => a.slug === slug)!;
+const { category, subcategory } = breadcrumbFor(article);
+const related = relatedArticles(article);
+
+const updated = new Date(article.updated).toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+---
+
+<BaseLayout title={`${article.title} — Routine Notes Help`} description={article.summary}>
+  <section class="help-page">
+    <div class="container-page">
+      <nav class="help-crumbs" aria-label="Breadcrumb">
+        <a href="/help">Help centre</a>
+        <Icon name="ph:caret-right" width={11} height={11} />
+        <a href={`/help/categories/${category?.id}`}>{category?.label}</a>
+        {
+          subcategory && (
+            <>
+              <Icon name="ph:caret-right" width={11} height={11} />
+              <a href={`/help/categories/${category?.id}#${subcategory.id}`}>{subcategory.label}</a>
+            </>
+          )
+        }
+      </nav>
+
+      <div class="help-layout">
+        <aside class="help-layout__rail">
+          <HelpSidebar currentCategory={article.category} currentSubcategory={article.subcategory} />
+        </aside>
+
+        <div class="help-layout__main">
+          <div class="help-article-search">
+            <HelpSearch />
+          </div>
+
+          <article class="help-article">
+            <header>
+              <h1 class="help-article__title">{article.title}</h1>
+              <p class="help-article__intro" set:html={inlineMarkdown(article.intro)} />
+              <p class="help-article__meta">
+                <Icon name="ph:clock-counter-clockwise" width={13} height={13} />
+                Last updated {updated}
+              </p>
+            </header>
+
+            {
+              article.sections.length > 1 && (
+                <nav class="help-toc" aria-label="On this page">
+                  <p class="help-toc__title">On this page</p>
+                  <ul>
+                    {article.sections.map((section) => (
+                      <li>
+                        <a href={`#${section.id}`}>{section.heading}</a>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              )
+            }
+
+            {
+              article.sections.map((section) => (
+                <section class="help-section-body" id={section.id}>
+                  <h2 class="help-h2 help-h2--article">
+                    <a href={`#${section.id}`} class="help-anchor" aria-label={`Link to ${section.heading}`}>
+                      #
+                    </a>
+                    {section.heading}
+                  </h2>
+                  <HelpBlocks blocks={section.blocks} scope={section.id} />
+                </section>
+              ))
+            }
+
+            <div class="help-article__foot">
+              <p class="help-article__foot-title">Was this article helpful?</p>
+              <p class="help-article__foot-body">
+                If it did not answer your question, email
+                <a href={LINKS.support}>support@familywealth.in</a> — include your platform and what
+                you expected to happen.
+              </p>
+            </div>
+
+            {
+              related.length > 0 && (
+                <aside class="help-related" aria-label="Related articles">
+                  <p class="help-related__title">Related articles</p>
+                  <ul>
+                    {related.map((item) => (
+                      <li>
+                        <a href={`/help/articles/${item.slug}`}>
+                          {item.title}
+                          <Icon name="ph:arrow-right" width={13} height={13} />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </aside>
+              )
+            }
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

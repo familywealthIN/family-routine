@@ -1,0 +1,55 @@
+---
+import { Icon } from 'astro-icon/components';
+import { categories, populatedSubcategories } from '~/lib/help';
+
+interface Props {
+  /** Category id of the page being viewed, so it can be expanded and marked. */
+  currentCategory?: string;
+  currentSubcategory?: string;
+}
+
+const { currentCategory, currentSubcategory } = Astro.props;
+---
+
+<nav class="help-sidebar" aria-label="Help categories">
+  <p class="help-sidebar__title">Categories</p>
+  <ul class="help-sidebar__list">
+    {
+      categories.map((category) => {
+        const isCurrent = category.id === currentCategory;
+        const subs = populatedSubcategories(category);
+        return (
+          <li>
+            <a
+              href={`/help/categories/${category.id}`}
+              class={`help-sidebar__link ${isCurrent ? 'is-current' : ''}`}
+              aria-current={isCurrent ? 'page' : undefined}
+            >
+              <Icon name={category.icon} width={15} height={15} style={`color:${category.accent}`} />
+              {category.label}
+            </a>
+            {isCurrent && subs.length > 0 && (
+              <ul class="help-sidebar__subs">
+                {subs.map((sub) => (
+                  <li>
+                    <a
+                      href={`/help/categories/${category.id}#${sub.id}`}
+                      class={`help-sidebar__sub ${sub.id === currentSubcategory ? 'is-current' : ''}`}
+                    >
+                      {sub.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        );
+      })
+    }
+  </ul>
+
+  <div class="help-sidebar__foot">
+    <a class="help-sidebar__foot-link" href="/guide">The field guide →</a>
+    <a class="help-sidebar__foot-link" href="mailto:support@familywealth.in">Contact support →</a>
+  </div>
+</nav>

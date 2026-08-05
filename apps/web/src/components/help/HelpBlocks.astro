@@ -1,0 +1,226 @@
+---
+import { Icon } from 'astro-icon/components';
+import { inlineMarkdown } from '~/lib/help/inline';
+import { PLATFORM_LABELS, type Block } from '~/lib/help/types';
+
+interface Props {
+  blocks: Block[];
+  /** Unique per section, so platform tab groups do not collide on one page. */
+  scope: string;
+}
+
+const { blocks, scope } = Astro.props;
+
+const CALLOUT = {
+  tip: { icon: 'ph:lightbulb', label: 'Quick tip' },
+  note: { icon: 'ph:info', label: 'Note' },
+  warning: { icon: 'ph:warning', label: 'Warning' },
+} as const;
+
+const PLATFORM_ICONS = {
+  web: 'ph:monitor',
+  ios: 'ph:apple-logo',
+  android: 'ph:android-logo',
+} as const;
+---
+
+{
+  blocks.map((block, i) => {
+    const key = `${scope}-${i}`;
+
+    if (block.kind === 'p') {
+      return <p class="help-p" set:html={inlineMarkdown(block.text)} />;
+    }
+
+    if (block.kind === 'list') {
+      return (
+        <ul class="help-ul">
+          {block.items.map((item) => (
+            <li set:html={inlineMarkdown(item)} />
+          ))}
+        </ul>
+      );
+    }
+
+    if (block.kind === 'steps') {
+      return (
+        <ol class="help-ol">
+          {block.items.map((item) => (
+            <li set:html={inlineMarkdown(item)} />
+          ))}
+        </ol>
+      );
+    }
+
+    if (block.kind === 'callout') {
+      const meta = CALLOUT[block.tone];
+      return (
+        <aside class={`help-callout help-callout--${block.tone}`}>
+          <p class="help-callout__label">
+            <Icon name={meta.icon} width={15} height={15} />
+            {block.title ?? meta.label}
+          </p>
+          <p class="help-callout__body" set:html={inlineMarkdown(block.text)} />
+        </aside>
+      );
+    }
+
+    if (block.kind === 'table') {
+      return (
+        <div class="help-table-wrap">
+          <table class="help-table">
+            <thead>
+              <tr>
+                {block.head.map((cell) => (
+                  <th scope="col" set:html={inlineMarkdown(cell)} />
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {block.rows.map((row) => (
+                <tr>
+                  {row.map((cell) => (
+                    <td set:html={inlineMarkdown(cell)} />
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (block.kind === 'terms') {
+      return (
+        <dl class="help-terms">
+          {block.items.map((item) => (
+            <div class="help-terms__row">
+              <dt set:html={inlineMarkdown(item.term)} />
+              <dd set:html={inlineMarkdown(item.def)} />
+            </div>
+          ))}
+        </dl>
+      );
+    }
+
+    if (block.kind === 'platformSteps') {
+      return (
+        <div class="help-platform" data-platform-group>
+          <div class="help-platform__bar" role="tablist" aria-label="Select platform">
+            {block.groups.map((group, gi) => (
+              <button
+                type="button"
+                role="tab"
+                class="help-platform__tab"
+                data-platform={group.platform}
+                id={`${key}-tab-${group.platform}`}
+                aria-controls={`${key}-panel-${group.platform}`}
+                aria-selected={gi === 0 ? 'true' : 'false'}
+                tabindex={gi === 0 ? 0 : -1}
+              >
+                <Icon name={PLATFORM_ICONS[group.platform]} width={14} height={14} />
+                {PLATFORM_LABELS[group.platform]}
+              </button>
+            ))}
+          </div>
+          {block.groups.map((group, gi) => (
+            <div
+              role="tabpanel"
+              class="help-platform__panel"
+              id={`${key}-panel-${group.platform}`}
+              aria-labelledby={`${key}-tab-${group.platform}`}
+              data-platform-panel={group.platform}
+              hidden={gi !== 0}
+            >
+              <ol class="help-ol">
+                {group.steps.map((step) => (
+                  <li set:html={inlineMarkdown(step)} />
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return null;
+  })
+}
+
+<script>
+  // Platform tabs. Selecting one switches every group on the page, so a reader
+  // on Android does not have to re-pick their platform in each section, and the
+  // choice is remembered for the next article.
+  const KEY = 'rn-help-platform';
+
+  function applyPlatform(platform: string) {
+    document.querySelectorAll<HTMLElement>('[data-platform-group]').forEach((group) => {
+      const tabs = group.querySelectorAll<HTMLButtonElement>('[data-platform]');
+      const available = Array.from(tabs).map((t) => t.dataset.platform);
+      // A group may not offer the remembered platform; fall back to its first.
+      const target = available.includes(platform) ? platform : available[0];
+
+      tabs.forEach((tab) => {
+        const selected = tab.dataset.platform === target;
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      });
+      group.querySelectorAll<HTMLElement>('[data-platform-panel]').forEach((panel) => {
+        panel.hidden = panel.dataset.platformPanel !== target;
+      });
+    });
+  }
+
+  function initPlatformTabs() {
+    const groups = document.querySelectorAll<HTMLElement>('[data-platform-group]');
+    if (!groups.length) return;
+
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(KEY);
+    } catch {
+      // Storage can be unavailable (private mode, blocked cookies) — tabs still work.
+    }
+    if (!stored) {
+      const ua = navigator.userAgent;
+      if (/iPhone|iPad|iPod|Macintosh/.test(ua) && !/Android/.test(ua)) stored = 'ios';
+      else if (/Android/.test(ua)) stored = 'android';
+      else stored = 'web';
+    }
+    applyPlatform(stored);
+
+    groups.forEach((group) => {
+      group.addEventListener('click', (event) => {
+        const tab = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-platform]');
+        if (!tab?.dataset.platform) return;
+        const platform = tab.dataset.platform;
+        applyPlatform(platform);
+        try {
+          localStorage.setItem(KEY, platform);
+        } catch {
+          // Non-fatal: the choice just will not persist.
+        }
+      });
+
+      group.addEventListener('keydown', (event) => {
+        const key = (event as KeyboardEvent).key;
+        if (key !== 'ArrowLeft' && key !== 'ArrowRight') return;
+        const tabs = Array.from(group.querySelectorAll<HTMLButtonElement>('[data-platform]'));
+        const current = tabs.findIndex((t) => t.getAttribute('aria-selected') === 'true');
+        const next = tabs[(current + (key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+        if (!next?.dataset.platform) return;
+        event.preventDefault();
+        applyPlatform(next.dataset.platform);
+        try {
+          localStorage.setItem(KEY, next.dataset.platform);
+        } catch {
+          // Non-fatal.
+        }
+        next.focus();
+      });
+    });
+  }
+
+  initPlatformTabs();
+  document.addEventListener('astro:page-load', initPlatformTabs);
+</script>

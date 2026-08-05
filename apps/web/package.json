@@ -9,6 +9,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",
+    "check:help": "node scripts/check-help.mjs",
     "seed": "node scripts/seed-demo.mjs"
   },
   "engines": {

@@ -1,0 +1,22 @@
+---
+import { Icon } from 'astro-icon/components';
+import type { HelpArticle } from '~/lib/help';
+
+interface Props {
+  article: HelpArticle;
+  /** Show which category the article lives in — used on mixed lists. */
+  showCategory?: boolean;
+  categoryLabel?: string;
+}
+
+const { article, showCategory = false, categoryLabel } = Astro.props;
+---
+
+<a class="help-card" href={`/help/articles/${article.slug}`}>
+  <span class="help-card__body">
+    {showCategory && categoryLabel && <span class="help-card__cat">{categoryLabel}</span>}
+    <span class="help-card__title">{article.title}</span>
+    <span class="help-card__summary">{article.summary}</span>
+  </span>
+  <Icon name="ph:arrow-right" width={15} height={15} class="help-card__arrow" />
+</a>

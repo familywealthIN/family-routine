@@ -1,0 +1,109 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import HelpSearch from '~/components/help/HelpSearch.astro';
+import HelpArticleCard from '~/components/help/HelpArticleCard.astro';
+import { Icon } from 'astro-icon/components';
+import '~/styles/help.css';
+import { articlesInCategory, categories, getArticle, popularArticles } from '~/lib/help';
+import { LINKS } from '~/lib/links';
+
+const popular = popularArticles();
+
+// The three articles a brand-new account needs, in the order they need them.
+const firstSteps = ['what-is-routine-notes', 'the-welcome-wizard', 'get-the-apps']
+  .map((slug) => getArticle(slug))
+  .filter(Boolean);
+---
+
+<BaseLayout
+  title="Help Centre — Routine Notes"
+  description="Guides and answers for Routine Notes — routines, goals, points, agents and your account."
+>
+  <section class="help-hero">
+    <div class="container-page">
+      <p class="pill" data-reveal>
+        <Icon name="ph:lifebuoy" width={14} height={14} />
+        Help centre
+      </p>
+      <h1 class="help-hero__title" data-reveal>How can we help?</h1>
+      <p class="help-hero__lead" data-reveal>
+        Search the whole help centre, or start with a category below.
+      </p>
+      <div class="help-hero__search" data-reveal>
+        <HelpSearch variant="hero" placeholder="Search — try “redeem”, “skip day”, “points”…" />
+      </div>
+    </div>
+  </section>
+
+  <section class="container-page help-section">
+    <h2 class="help-h2" data-reveal>Browse by category</h2>
+    <div class="help-tiles" data-reveal-group>
+      {
+        categories.map((category) => {
+          const count = articlesInCategory(category.id).length;
+          return (
+            <a class="help-tile" href={`/help/categories/${category.id}`} data-reveal-item>
+              <span class="help-tile__icon" style={`color:${category.accent}`}>
+                <Icon name={category.icon} width={20} height={20} />
+              </span>
+              <span class="help-tile__label">{category.label}</span>
+              <span class="help-tile__blurb">{category.blurb}</span>
+              <span class="help-tile__count">
+                {count} {count === 1 ? 'article' : 'articles'}
+              </span>
+            </a>
+          );
+        })
+      }
+    </div>
+  </section>
+
+  <section class="container-page help-section">
+    <h2 class="help-h2" data-reveal>Get up and running</h2>
+    <p class="help-section__lead" data-reveal>New here? These three, in this order.</p>
+    <div class="help-grid help-grid--3" data-reveal-group>
+      {
+        firstSteps.map((article, i) => (
+          <a class="help-step" href={`/help/articles/${article!.slug}`} data-reveal-item>
+            <span class="help-step__num font-display">{String(i + 1).padStart(2, '0')}</span>
+            <span class="help-step__title">{article!.title}</span>
+            <span class="help-step__summary">{article!.summary}</span>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="container-page help-section">
+    <h2 class="help-h2" data-reveal>Popular articles</h2>
+    <div class="help-grid help-grid--2" data-reveal-group>
+      {
+        popular.map((article) => (
+          <div data-reveal-item>
+            <HelpArticleCard
+              article={article}
+              showCategory
+              categoryLabel={categories.find((c) => c.id === article.category)?.label}
+            />
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="container-page help-section">
+    <div class="help-contact" data-reveal>
+      <div>
+        <h2 class="help-contact__title">Still stuck?</h2>
+        <p class="help-contact__body">
+          If the answer is not here, email us — a person reads it. Tell us your platform and what
+          you expected to happen.
+        </p>
+      </div>
+      <div class="help-contact__actions">
+        <a class="btn-primary" href={LINKS.support}>Email support</a>
+        <a class="btn-ghost" href={LINKS.guide}>Read the field guide →</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
