@@ -12,7 +12,6 @@
     :edit-mode="editMode"
     :new-goal-item="newGoalItem"
     :passive="passive"
-    :busy="busy"
     @complete-goal-item="onCompleteGoalItem"
     @delete-task-goal="onDeleteTaskGoal"
     @complete-sub-task="onCompleteSubTask"
@@ -49,15 +48,6 @@ export default {
       default: null,
     },
     passive: {
-      type: Boolean,
-      default: false,
-    },
-    // Gates the checkboxes while the feeding query is in flight, so a
-    // cache-and-network read that started before a tap can't land after it and
-    // revert the tick (ARCHITECTURE.md §3 principle #7). The organism has
-    // always declared this prop; the container simply never passed it, so the
-    // guard was dead on every container-rendered path.
-    busy: {
       type: Boolean,
       default: false,
     },

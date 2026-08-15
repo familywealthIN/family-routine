@@ -40,7 +40,6 @@
                   >
                     <v-checkbox
                       :input-value="goalItem.isComplete"
-                      :disabled="busy"
                       color="primary"
                       hide-details
                       class="agenda-day-checkbox ma-0 pa-0"
@@ -105,12 +104,6 @@ export default {
       default: false,
     },
     hideCheckbox: {
-      type: Boolean,
-      default: false,
-    },
-    // Disable the completion checkbox while the feeding query is refetching, so
-    // a tick can't be clobbered by an in-flight cache-and-network response.
-    busy: {
       type: Boolean,
       default: false,
     },

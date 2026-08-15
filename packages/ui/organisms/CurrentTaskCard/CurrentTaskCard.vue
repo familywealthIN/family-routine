@@ -22,6 +22,7 @@
               fab
               small
               class="elevation-0 task-action-btn"
+              data-testid="routine-tick-button"
               :disabled="buttonDisabled"
               :color="buttonColor"
               @click="$emit('action-click', { event: $event, task })"
@@ -37,7 +38,12 @@
             <span>{{ task.name }}</span>
             <!-- Both float right: info hugs the edge, the badge sits beside it -->
             <div class="step-info" @click="$emit('toggle-step-modal')"><AtomIcon>info</AtomIcon></div>
-            <span v-if="agentStatusBadge" :class="['agent-status-badge', `agent-status-badge--${agentStatusBadge.kind}`]">
+            <span
+              v-if="agentStatusBadge"
+              :class="['agent-status-badge', `agent-status-badge--${agentStatusBadge.kind}`]"
+              data-testid="agent-status-badge"
+              :data-agent-status="agentStatusBadge.kind"
+            >
               {{ agentStatusBadge.label }}
             </span>
           </AtomListTileTitle>
@@ -124,7 +130,6 @@
                     :goal="taskGoals"
                     :progress="getWeekProgress(taskGoals)"
                     :passive="showGoalsSkeleton"
-                    :busy="busy"
                     @delete-task-goal="$emit('delete-task-goal', $event)"
                     @refresh-task-goal="$emit('refresh-task-goal', $event)"
                     @toggle-goal-display-dialog="forwardToggleGoalDisplayDialog"
@@ -218,8 +223,6 @@ export default {
   },
   props: {
     task: { type: Object, default: null },
-    // True while a feeding query is refetching; disables goal-item checkboxes.
-    busy: { type: Boolean, default: false },
     goals: { type: Array, default: () => [] },
     allGoals: { type: Array, default: () => [] },
     goalPeriod: { type: String, default: 'day' },
@@ -256,6 +259,10 @@ export default {
         return null;
       }
       switch (this.agentStatus) {
+        // The tick landed before the goal item it needs was saved, so the
+        // dispatch is queued rather than dropped. Shown so a delay reads as
+        // "queued" instead of "the agent silently didn't run".
+        case 'waiting': return { kind: 'waiting', label: 'Agent waiting' };
         case 'running': return { kind: 'running', label: 'Agent running' };
         case 'listening': return { kind: 'listening', label: 'Agent listening' };
         case 'finished': return { kind: 'finished', label: 'Agent done' };
@@ -470,6 +477,10 @@ export default {
 }
 .current-task .agent-status-badge--running {
   background: #1976d2;
+  animation: agent-status-pulse 1.4s ease-in-out infinite;
+}
+.current-task .agent-status-badge--waiting {
+  background: #78909c;
   animation: agent-status-pulse 1.4s ease-in-out infinite;
 }
 .current-task .agent-status-badge--listening { background: #ffb300; }
