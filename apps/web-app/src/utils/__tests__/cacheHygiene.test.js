@@ -164,11 +164,54 @@ describe('sanitizePersistedCache', () => {
     realLocalStorage.store[CACHE_VERSION_KEY] = String(CACHE_SCHEMA_VERSION);
     const storage = makeStorage({});
     const res = await sanitizePersistedCache(storage);
-    expect(res).toEqual({ purged: false, removed: [] });
+    expect(res).toEqual({ purged: false, removed: [], store: null });
   });
 
   it('never throws on a missing/!invalid storage object', async () => {
-    await expect(sanitizePersistedCache(null)).resolves.toEqual({ purged: false, removed: [] });
-    await expect(sanitizePersistedCache({})).resolves.toEqual({ purged: false, removed: [] });
+    const empty = { purged: false, removed: [], store: null };
+    await expect(sanitizePersistedCache(null)).resolves.toEqual(empty);
+    await expect(sanitizePersistedCache({})).resolves.toEqual(empty);
+  });
+
+  // main.js hands `store` straight to cache.restore(), which is the whole of
+  // CachePersistor.restore(). Returning it here is what removes a second full
+  // read + parse of the store from the cold-boot path, before first paint.
+  describe('returns the parsed store for the caller to restore', () => {
+    it('hands back a clean blob without rewriting it', async () => {
+      realLocalStorage.store[CACHE_VERSION_KEY] = String(CACHE_SCHEMA_VERSION);
+      const parsed = { ROOT_QUERY: { a: 1 }, 'Goal:real': { __typename: 'Goal' } };
+      const storage = makeStorage({ [PERSIST_KEY]: JSON.stringify(parsed) });
+      const res = await sanitizePersistedCache(storage);
+      expect(res.store).toEqual(parsed);
+      expect(res.removed).toEqual([]);
+    });
+
+    it('hands back the SANITIZED store, not the raw one', async () => {
+      realLocalStorage.store[CACHE_VERSION_KEY] = String(CACHE_SCHEMA_VERSION);
+      const storage = makeStorage({
+        [PERSIST_KEY]: JSON.stringify({
+          ROOT_QUERY: {},
+          'Goal:temp-1-day': { __typename: 'Goal' },
+          'Goal:real': { __typename: 'Goal' },
+        }),
+      });
+      const res = await sanitizePersistedCache(storage);
+      expect(res.store['Goal:temp-1-day']).toBeUndefined();
+      expect(res.store['Goal:real']).toBeDefined();
+    });
+
+    it('hands back null on a version purge, so nothing is restored', async () => {
+      const storage = makeStorage({ [PERSIST_KEY]: '{"Goal:real":{}}' });
+      const res = await sanitizePersistedCache(storage);
+      expect(res.purged).toBe(true);
+      expect(res.store).toBeNull();
+    });
+
+    it('hands back null for an unparseable blob', async () => {
+      realLocalStorage.store[CACHE_VERSION_KEY] = String(CACHE_SCHEMA_VERSION);
+      const storage = makeStorage({ [PERSIST_KEY]: '{not json' });
+      const res = await sanitizePersistedCache(storage);
+      expect(res.store).toBeNull();
+    });
   });
 });

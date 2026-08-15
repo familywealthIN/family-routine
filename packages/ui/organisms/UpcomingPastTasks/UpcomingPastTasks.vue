@@ -124,7 +124,6 @@
                       :goal="taskGoals"
                       :progress="getWeekProgress(taskGoals)"
                       :passive="showGoalsSkeleton"
-                      :busy="busy"
                       @delete-task-goal="$emit('delete-task-goal', $event)"
                       @refresh-task-goal="$emit('refresh-task-goal', $event)"
                       @toggle-goal-display-dialog="forwardToggleGoalDisplayDialog"
@@ -232,8 +231,6 @@ export default {
   },
   props: {
     upcomingTasks: { type: Array, default: () => [] },
-    // True while a feeding query is refetching; disables goal-item checkboxes.
-    busy: { type: Boolean, default: false },
     pastTasks: { type: Array, default: () => [] },
     tabs: { type: Number, default: 0 },
     selectedTaskRef: { type: String, default: '' },
@@ -260,6 +257,8 @@ export default {
         return null;
       }
       switch (task && task.agentStatus) {
+        // Queued behind an unsaved goal item — see CurrentTaskCard.
+        case 'waiting': return { kind: 'waiting', label: 'Agent waiting' };
         case 'running': return { kind: 'running', label: 'Agent running' };
         case 'listening': return { kind: 'listening', label: 'Agent listening' };
         case 'finished': return { kind: 'finished', label: 'Agent done' };
@@ -338,6 +337,10 @@ export default {
 }
 .upcoming-past-card .agent-status-badge--running {
   background: #1976d2;
+  animation: upcoming-agent-status-pulse 1.4s ease-in-out infinite;
+}
+.upcoming-past-card .agent-status-badge--waiting {
+  background: #78909c;
   animation: upcoming-agent-status-pulse 1.4s ease-in-out infinite;
 }
 .upcoming-past-card .agent-status-badge--listening { background: #ffb300; }

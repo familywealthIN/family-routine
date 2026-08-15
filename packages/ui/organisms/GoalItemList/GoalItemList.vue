@@ -13,7 +13,7 @@
           <AtomCheckbox
             :key="`checkbox-${goalItem.id}`"
             :value="goalItem.isComplete"
-            :disabled="passive || busy"
+            :disabled="passive"
             @input="completeGoalItem(
               goalItem.id,
               !goalItem.isComplete,
@@ -106,7 +106,7 @@
                 <AtomCheckbox
                   :key="`checkbox-${subTask.id}`"
                   :value="subTask.isComplete"
-                  :disabled="passive || busy"
+                  :disabled="passive"
                   @click.stop="completeSubTask(subTask, goalItem)"
                   dense
                 />
@@ -138,7 +138,11 @@ import {
 
 export default {
   name: 'OrganismGoalItemList',
-  props: ['goal', 'editMode', 'newGoalItem', 'passive', 'busy'],
+  // `passive` is the skeleton state — there is genuinely no data to act on yet.
+  // There is deliberately no `busy` prop: a refetch no longer disables
+  // anything, because the pending-entity guard (utils/cacheGuard.js) makes an
+  // in-flight response yield to a local write instead of overwriting it.
+  props: ['goal', 'editMode', 'newGoalItem', 'passive'],
   components: {
     AtomButton,
     AtomCheckbox,
@@ -180,7 +184,7 @@ export default {
      * is what used to desynchronise the store from the rendered result.
      */
     completeSubTask(subTask, goalItem) {
-      if (this.passive || this.busy) return;
+      if (this.passive) return;
       if (!subTask || !goalItem || !goalItem.id) return;
       if (!this.goal.period || !this.goal.date) return;
 
