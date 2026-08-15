@@ -108,11 +108,17 @@ export function sanitizeStore(store) {
  * Never throws: a hygiene failure must not stop the app from booting — the
  * worst case is that we restore what we would have restored anyway.
  *
+ * Returns the cleaned store alongside the report so the caller can hand it
+ * straight to `cache.restore()`. `CachePersistor.restore()` is nothing but
+ * `getItem` -> `JSON.parse` -> `cache.restore`, so reusing what we already
+ * parsed here takes a second full read and parse of the entire store off the
+ * cold-boot path — and that read blocks first paint.
+ *
  * @param {Object} storage  the localforage instance used for persistence
- * @returns {Promise<{purged: boolean, removed: string[]}>}
+ * @returns {Promise<{purged: boolean, removed: string[], store: Object|null}>}
  */
 export async function sanitizePersistedCache(storage) {
-  const result = { purged: false, removed: [] };
+  const result = { purged: false, removed: [], store: null };
   if (!storage || typeof storage.getItem !== 'function') return result;
 
   // localStorage can throw outright (Safari private mode, locked-down
@@ -145,6 +151,7 @@ export async function sanitizePersistedCache(storage) {
 
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
     const { store, removed } = sanitizeStore(parsed);
+    result.store = store;
     if (removed.length) {
       await storage.setItem(PERSIST_KEY, JSON.stringify(store));
       result.removed = removed;
@@ -152,10 +159,11 @@ export async function sanitizePersistedCache(storage) {
   } catch (e) {
     // Only an unreadable/unparseable BLOB gets dropped — restoring garbage is
     // worse than starting empty, and cache-and-network refills on first paint.
+    result.store = null;
     try {
       await storage.removeItem(PERSIST_KEY);
       result.purged = true;
-    } catch (e2) { /* nothing more we can do; persistCache will overwrite it */ }
+    } catch (e2) { /* nothing more we can do; the persistor will overwrite it */ }
   }
 
   return result;

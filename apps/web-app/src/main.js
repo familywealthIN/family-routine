@@ -8,7 +8,7 @@ import { ApolloLink } from 'apollo-link';
 import { onError } from 'apollo-link-error';
 import { createHttpLink } from 'apollo-link-http';
 import { InMemoryCache } from 'apollo-cache-inmemory';
-import { persistCache } from 'apollo-cache-persist';
+import { CachePersistor } from 'apollo-cache-persist';
 import localforage from 'localforage';
 import 'firebase/messaging';
 import { Capacitor } from '@capacitor/core';
@@ -35,6 +35,8 @@ import {
 } from './constants/settings';
 import redirectOnError from './utils/redirectOnError';
 import { sanitizePersistedCache } from './utils/cacheHygiene';
+import { configureNewDay } from './utils/newDay';
+import { createGuardLink } from './apollo/guardLink';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
@@ -132,6 +134,21 @@ loadData().then(() => {
 
   const normalLink = authMiddleware.concat(httpLink);
 
+  // The pending-entity guard. Outermost in the chain, so it is the last link to
+  // see a response before it is normalized into the cache — that is what stops
+  // an in-flight `cache-and-network` read from overwriting a tap the user just
+  // made (and what lets every control stay enabled during a refetch).
+  // See utils/cacheGuard.js.
+  const guardLink = createGuardLink({
+    onHold: process.env.NODE_ENV === 'development'
+      ? ({ operationName, held }) => console.log(`[guard] held ${held} field(s) on ${operationName}`)
+      : undefined,
+  });
+
+  // Kept so the persistor is not garbage-collected: its write-back trigger is
+  // the only thing keeping IndexedDB in sync with the cache.
+  let cachePersistor = null;
+
   // Persist Apollo cache to localforage before creating client
   const setupCachePersistence = async () => {
     try {
@@ -148,7 +165,17 @@ loadData().then(() => {
         console.log(`[Main] Dropped ${hygiene.removed.length} unrepairable cache entries:`, hygiene.removed);
       }
 
-      await persistCache({
+      // Restore from the store the sanitize pass already read and parsed.
+      // `CachePersistor.restore()` is exactly `getItem -> JSON.parse ->
+      // cache.restore`, so calling it here would read and parse the entire
+      // store a second time — on the critical path, before first paint.
+      if (hygiene.store) cache.restore(hygiene.store);
+
+      // Construct the persistor AFTER restoring. Its write-back trigger is
+      // installed in the constructor (`trigger: 'write'` by default), so
+      // building it first would schedule a pointless re-serialization of the
+      // very blob we just read.
+      cachePersistor = new CachePersistor({
         cache,
         storage: localforage,
         maxSize: false, // Disable max size limit
@@ -162,7 +189,7 @@ loadData().then(() => {
 
   // Create the apollo client
   const apolloClient = new ApolloClient({
-    link: errorLink.concat(normalLink),
+    link: guardLink.concat(errorLink).concat(normalLink),
     cache,
     fetchOptions: {
       fetch,
@@ -184,9 +211,23 @@ loadData().then(() => {
     defaultClient: apolloClient,
   });
 
+  // Hand the day-rollover reset everything it needs to purge. The persistor is
+  // passed as a thunk because it is constructed asynchronously by
+  // setupCachePersistence() — reading it eagerly here would capture `null`.
+  configureNewDay({
+    apolloClient,
+    storage: localforage,
+    persistor: () => cachePersistor,
+  });
+
   // Expose for Playwright e2e tests. Strictly dev/test only.
   if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
     window.__APOLLO_CLIENT__ = apolloClient;
+    // Lets the cache-integrity suite force a synchronous flush to IndexedDB
+    // instead of racing the trigger's debounce.
+    window.__APOLLO_PERSISTOR__ = () => cachePersistor;
+    // eslint-disable-next-line global-require
+    window.__CACHE_GUARD__ = require('./utils/cacheGuard');
   }
 
   const name = getSessionItem(GC_USER_NAME);

@@ -137,6 +137,13 @@ const hydrateStatus = () => {
       let resolvedAny = false;
       Object.keys(parsed.statuses).forEach((taskRef) => {
         let status = parsed.statuses[taskRef];
+        // 'waiting' is page-owned like 'running', but unlike 'running' the
+        // dispatch never left — the page died still waiting for a goal id. It
+        // has no outcome to resolve to, so the badge is simply dropped.
+        if (status === 'waiting') {
+          resolvedAny = true;
+          return;
+        }
         // A persisted 'running' is stale: the dispatch that set it died with
         // the previous page. Resolve it to where it was headed — a start event
         // with an end trigger becomes 'listening'; anything else 'finished' —
@@ -413,6 +420,12 @@ const actions = {
 
   setLocalStatus(taskRef, status) {
     setStatus(taskRef, status);
+  },
+
+  // Drop a badge entirely (as opposed to setting it to ''). Used to retire a
+  // 'waiting' badge whose goal item never materialised.
+  clearLocalStatus(taskRef) {
+    clearStatus(taskRef);
   },
 
   clearResult(taskRef) {

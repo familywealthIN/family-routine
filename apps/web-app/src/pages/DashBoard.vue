@@ -1,6 +1,17 @@
 <template>
   <div>
       <container-box transparent="true" >
+      <atom-card
+        v-if="isPreparingNewDay"
+        class="mb-3 mx-3 mt-3 pa-3 new-day-card"
+        data-testid="preparing-new-day"
+      >
+        <div class="d-flex align-center mb-2">
+          <atom-icon class="mr-2" color="primary" small>wb_sunny</atom-icon>
+          <span class="new-day-label">Preparing new day — starting with a fresh cache.</span>
+        </div>
+        <atom-progress-linear indeterminate color="primary" height="6" class="ma-0" />
+      </atom-card>
       <atom-card v-if="isDashboardCaching" class="mb-3 mx-3 mt-3 pa-3 dashboard-caching-card">
         <div class="d-flex align-center mb-2">
           <atom-icon class="mr-2" color="warning" small>cached</atom-icon>
@@ -51,8 +62,7 @@
           <div class="skip-agenda">
             <agenda-task-list
               :groups="todayGoalItemsGrouped"
-              :loading="$apollo.queries.goals && $apollo.queries.goals.loading && goalsFirstLoad"
-              :busy="isGoalsBusy"
+              :loading="showGoalsSkeleton"
               @complete-goal-item="completeGoalItem"
               @edit-goal-item="(item) => toggleGoalDisplayDialog(item, true)"
               @delete-goal-item="deleteTaskGoal"
@@ -75,12 +85,11 @@
                 :time-label="displayTime(currentTask && currentTask.time)"
                 :button-icon="getButtonIcon(currentTask)"
                 :button-color="getCurrentButtonColor(currentTask)"
-                :button-disabled="getButtonDisabled(currentTask) || isRoutineBusy"
-                :busy="isGoalsBusy"
+                :button-disabled="getButtonDisabled(currentTask)"
                 :agent-status="currentAgentStatus"
                 :show-goals-skeleton="showGoalsSkeleton"
                 :show-routine-skeleton="showRoutineSkeleton"
-                :loading="$apollo.queries.goals && $apollo.queries.goals.loading"
+                :loading="showGoalsSkeleton"
                 :last-complete-item-goal-ref="lastCompleteItemGoalRef"
                 @click="updateSelectedTaskRef($event.id)"
                 @action-click="checkDialogClick($event.event, $event.task)"
@@ -154,7 +163,6 @@
             <upcoming-past-tasks
               :upcoming-tasks="upcomingTasksMeta"
               :past-tasks="pastTasksMeta"
-              :busy="isGoalsBusy"
               :tabs.sync="tabs"
               :selected-task-ref="selectedTaskRef"
               :goal-period.sync="currentGoalPeriod"
@@ -189,9 +197,8 @@
       <div class="pa-3 pt-0">
         <agenda-task-list
           :groups="nonTodayGoalItems"
-          :loading="$apollo.queries.agendaGoals.loading"
+          :loading="showAgendaSkeleton"
           :hide-checkbox="isFutureDateSelected"
-          :busy="isGoalsBusy"
           @complete-goal-item="completeAgendaGoalItem"
           @edit-goal-item="(item) => toggleGoalDisplayDialog(item, true)"
           @delete-goal-item="deleteAgendaGoalFromList"
@@ -422,6 +429,9 @@ import {
   updateWeekStimuliKInCache,
 } from '../composables/useApolloCacheUpdates';
 import { pendingMutations } from '../utils/pendingMutations';
+import { runNewDayReset } from '../utils/newDay';
+import { startAgentWhenReady } from '../utils/agentStart';
+import { guardFields, releaseEntity } from '../utils/cacheGuard';
 
 import GoalList from '../containers/GoalListContainer.vue';
 import { stepupMilestonePeriodDate, threshold } from '../utils/getDates';
@@ -536,6 +546,7 @@ export default {
         return !this.$root.$data.email || this.isTodaySelected;
       },
       update(data) {
+        this.agendaFirstLoad = false;
         return data.agendaGoals;
       },
       variables() {
@@ -624,6 +635,12 @@ export default {
       goalsFirstLoad: true,
       // Track first load for routine skeleton display
       routineFirstLoad: true,
+      // Track first load for the non-today agenda skeleton
+      agendaFirstLoad: true,
+      // True while the day-rollover cache purge runs. Drives the "Preparing
+      // new day" overlay — the only load state that legitimately blocks the
+      // dashboard, because at that moment there is nothing valid to paint.
+      isPreparingNewDay: false,
       // The id of the last week-goal item the user completed; used by
       // CurrentTaskCard / UpcomingPastTasks to highlight streak progress
       // on that goal. Declared here so the template binding stays
@@ -1194,6 +1211,29 @@ export default {
       return null;
     },
 
+    /**
+     * Fire a routine task's agent, queueing rather than dropping it when the
+     * goal item it needs has not been saved yet. See utils/agentStart.js for
+     * the rule and why the old `startsWith('temp-')` skip was wrong.
+     */
+    fireAgentWhenReady(taskRef, { implicit = true } = {}) {
+      return startAgentWhenReady({
+        taskRef,
+        implicit,
+        agent: this.$agent.getByTaskRef(taskRef),
+        readGoalId: () => this.findFirstGoalIdForRoutine(taskRef),
+        isSettled: () => pendingMutations.empty(),
+        setStatus: (ref, status) => this.$agent.setLocalStatus(ref, status),
+        clearStatus: (ref) => this.$agent.clearLocalStatus(ref),
+        fire: ({ goalId }) => this.$agent.fireStartEventIfPresent({
+          taskRef, goalId, goalDate: this.date, goalPeriod: 'day', implicit,
+        }).catch(() => {}),
+        notify: ({ title, text }) => this.$notify({
+          title, text, group: 'notify', type: 'warning', duration: 4000,
+        }),
+      });
+    },
+
     // The agent end event has completed for this task when its day goal item
     // carries a saved transcript (reward) — the same signal the transcript
     // button keys on, persisted server-side so it survives reload.
@@ -1492,7 +1532,7 @@ export default {
         timeLabel: this.displayTime(task.time),
         buttonIcon: this.getButtonIcon(task),
         buttonColor: this.getCurrentButtonColor(task),
-        buttonDisabled: this.getButtonDisabled(task) || this.isRoutineBusy,
+        buttonDisabled: this.getButtonDisabled(task),
         // Agent running/listening/done badge — same as the current-task card.
         agentStatus: this.effectiveAgentStatus(task.id),
       }));
@@ -1968,11 +2008,8 @@ export default {
           // exactly like checkClick does for an on-time tick. Works for any
           // of today's passed tasks, not just the current one. agentImplicit
           // stays quiet on failure unless the user pressed Start Agent.
-          const goalId = this.findFirstGoalIdForRoutine(task.id);
-          if (fireAgent && goalId && !String(goalId).startsWith('temp-')) {
-            this.$agent.fireStartEventIfPresent({
-              taskRef: task.id, goalId, goalDate: this.date, goalPeriod: 'day', implicit: agentImplicit,
-            }).catch(() => {});
+          if (fireAgent) {
+            this.fireAgentWhenReady(task.id, { implicit: agentImplicit });
           }
 
           const newBalance = payload
@@ -2009,7 +2046,7 @@ export default {
           pendingMutations.remove(pendingKey);
         });
     },
-    checkClick(task, { fireAgent = true, agentImplicit = true } = {}) {
+    async checkClick(task, { fireAgent = true, agentImplicit = true } = {}) {
       // Track task completion
       this.trackTaskEvent('complete', {
         id: task.id,
@@ -2028,24 +2065,6 @@ export default {
       }
       if (task.passed || task.wait || task.ticked) return;
 
-      // `this.did` is the routine DOCUMENT id, and it is only set once the
-      // routineDate query resolves. Ticking before that sends id:'' (server
-      // CastError -> optimistic rollback: the circle goes green and flips back),
-      // and after a mid-session midnight rollover it still holds YESTERDAY's
-      // routine id, so the tick would land on the wrong day's document.
-      // `skipClick` already guards this; `checkClick` did not — which is the
-      // "new day: first check goes green but is not saved" report.
-      if (!this.did) {
-        this.$notify({
-          title: 'Please wait',
-          text: 'Routine is still loading. Try again in a moment.',
-          group: 'notify',
-          type: 'warning',
-          duration: 3000,
-        });
-        return;
-      }
-
       const pendingKey = `routine:${task.id}`;
       // Per-item coalescing — if a tick mutation for this task is
       // already in flight, ignore further taps. The tick is monotonic
@@ -2055,10 +2074,41 @@ export default {
 
       const tickedAt = Date.now();
 
+      // Claim the tick locally the instant it is tapped. From here until the
+      // server confirms, no query response may write `ticked` on this task —
+      // including reads already on the wire, and including the routine read we
+      // may be about to wait for below.
+      guardFields('RoutineItem', task.id, { ticked: true });
+
+      // `did` is the routine DOCUMENT id and only exists once the routineDate
+      // query resolves; a mid-session midnight rollover briefly leaves it
+      // holding YESTERDAY's id. Ticking with the wrong one lands on the wrong
+      // day's document — the "new day: first check goes green but is not saved"
+      // report. This used to refuse the tap and ask the user to try again,
+      // which cost a tap on every new day. Now it waits for the id instead.
+      let did = '';
+      try {
+        did = await this.ensureRoutineId();
+      } catch (e) {
+        did = '';
+      }
+      if (!did) {
+        releaseEntity('RoutineItem', task.id);
+        pendingMutations.remove(pendingKey);
+        this.$notify({
+          title: 'Error',
+          text: "Couldn't load today's routine. Check your connection and try again.",
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+        return;
+      }
+
       // Note: no longer mutate `task.ticked` directly. Vue reactivity
       // is now driven entirely by the Apollo cache, which Apollo updates
       // via the `optimisticResponse + update` pair below.
-      this.$apollo
+      await this.$apollo
         .mutate({
           mutation: gql`
             mutation tickRoutineItem($id: ID!, $taskId: String!, $ticked: Boolean!) {
@@ -2077,7 +2127,7 @@ export default {
             }
           `,
           variables: {
-            id: this.did,
+            id: did,
             taskId: task.id,
             ticked: true,
           },
@@ -2089,7 +2139,7 @@ export default {
             __typename: 'Mutation',
             tickRoutineItem: {
               __typename: 'Routine',
-              id: this.did,
+              id: did,
               // Build a synthetic tasklist that flips just this task to
               // ticked: true, and bumps its D-stimulus earned to its
               // points value (matches server logic).
@@ -2146,7 +2196,7 @@ export default {
         })
         .then(() => {
           this.trackMutationPerformance('tickRoutineItem', {
-            id: this.did,
+            id: did,
             taskId: task.id,
             ticked: true,
           }, tickedAt);
@@ -2163,20 +2213,23 @@ export default {
           // exists (Quick Goal Creation handles that path). Callers pass
           // fireAgent:false when they fire the event themselves (the
           // quick-goal flow fires with the freshly created goal id).
-          // Skip Apollo optimistic temp ids — the real id follows once
-          // the addGoalItem mutation resolves.
-          const goalId = this.findFirstGoalIdForRoutine(task.id);
-          if (fireAgent && goalId && !String(goalId).startsWith('temp-')) {
-            // agentImplicit (default): the user ticked a task, they didn't
-            // press Start Agent — a failing event must not surface an
-            // "Agent failed" state. Explicit Start Agent passes false.
-            this.$agent.fireStartEventIfPresent({
-              taskRef: task.id, goalId, goalDate: this.date, goalPeriod: 'day', implicit: agentImplicit,
-            }).catch(() => {});
+          // An optimistic temp id is not usable, but it is also not a reason to
+          // give up: fireAgentWhenReady queues the dispatch behind the real id
+          // and shows an "Agent waiting" badge meanwhile.
+          //
+          // agentImplicit (default): the user ticked a task, they didn't
+          // press Start Agent — a failing event must not surface an
+          // "Agent failed" state. Explicit Start Agent passes false.
+          if (fireAgent) {
+            this.fireAgentWhenReady(task.id, { implicit: agentImplicit });
           }
         })
         .catch(() => {
           // Apollo automatically rolls back the optimistic write on error.
+          // Drop the guard too, or it would keep pinning `ticked: true` over
+          // every incoming read until its TTL expired — showing a tick that was
+          // never saved.
+          releaseEntity('RoutineItem', task.id);
           this.$notify({
             title: 'Error',
             text: 'An unexpected error occured',
@@ -2189,23 +2242,77 @@ export default {
           pendingMutations.remove(pendingKey);
         });
     },
-    skipClick(nextValue) {
+    /**
+     * Resolve `did` (the routine document id for the viewed date), waiting for
+     * it if the routineDate query is still in flight or the day has no routine
+     * document yet.
+     *
+     * Interactions used to be refused during that window. They are now queued
+     * instead — which is the whole point of removing the disable mechanism: the
+     * user's tap is always accepted, and the plumbing catches up.
+     */
+    async ensureRoutineId() {
+      if (this.did) return this.did;
+      if (this.routineDate && this.routineDate.id) {
+        this.did = this.routineDate.id;
+        return this.did;
+      }
+      // Nothing on the wire and no id means this date has no routine document.
+      // (When the query IS in flight, its update() already calls this on a null
+      // result.) addNewDayRoutine memoizes per date, so a concurrent create is
+      // reused rather than racing — the duplicate-document bug.
+      const query = this.$apollo.queries.routineDate;
+      if (!query || !query.loading) this.addNewDayRoutine();
+      return this.waitForDid();
+    },
+    /**
+     * Resolve once `did` becomes non-empty, or with '' after `timeoutMs`.
+     * Watching the reactive field avoids depending on vue-apollo's SmartQuery
+     * internals, and covers both paths that can set it (query update and
+     * addNewDayRoutine's refetch).
+     */
+    waitForDid(timeoutMs = 8000) {
+      if (this.did) return Promise.resolve(this.did);
+      return new Promise((resolve) => {
+        let settled = false;
+        let unwatch = () => {};
+        let timer = null;
+        const finish = (value) => {
+          if (settled) return;
+          settled = true;
+          unwatch();
+          if (timer) clearTimeout(timer);
+          resolve(value);
+        };
+        unwatch = this.$watch('did', (value) => { if (value) finish(value); });
+        timer = setTimeout(() => finish(this.did || ''), timeoutMs);
+      });
+    },
+    async skipClick(nextValue) {
       // Persist the emitted switch value (fallback to current model value).
       const skipValue = typeof nextValue === 'boolean' ? nextValue : this.skipDay;
 
-      if (!this.did) {
+      // Wait for the routine id rather than bouncing the toggle back at the
+      // user (see ensureRoutineId).
+      let did = '';
+      try {
+        did = await this.ensureRoutineId();
+      } catch (e) {
+        did = '';
+      }
+      if (!did) {
+        this.$routine.setSkipDay(!skipValue);
         this.$notify({
-          title: 'Please wait',
-          text: 'Routine is still loading. Try again in a moment.',
+          title: 'Error',
+          text: "Couldn't load today's routine. Check your connection and try again.",
           group: 'notify',
-          type: 'warning',
+          type: 'error',
           duration: 3000,
         });
-        this.$routine.setSkipDay(!skipValue);
         return;
       }
 
-      this.$apollo
+      await this.$apollo
         .mutate({
           mutation: gql`
             mutation skipRoutine($id: ID!, $skip: Boolean!) {
@@ -2216,7 +2323,7 @@ export default {
             }
           `,
           variables: {
-            id: this.did,
+            id: did,
             skip: skipValue,
           },
           // Update Apollo cache with the mutation result
@@ -2501,7 +2608,7 @@ export default {
      * Handle day change event
      * @param {string} newDate - New date in DD-MM-YYYY format
      */
-    handleDayChange(newDate) {
+    async handleDayChange(newDate) {
       console.log('DashBoard: Day changed to', newDate);
       // Update both date and todayDate so isTodaySelected stays true
       this.todayDate = newDate;
@@ -2510,8 +2617,46 @@ export default {
       // Yesterday's agent badges must not carry into the new day.
       this.$agent.clearDayStatuses();
 
+      await this.prepareNewDay(newDate);
+
       // Add new routine for the new day
       this.addNewDayRoutine();
+    },
+
+    /**
+     * Throw away every client-side cache so the new day starts cold.
+     *
+     * Routine tasks reuse the same `_id` across days, so yesterday's normalized
+     * RoutineItem/GoalItem entities are the *same* cache records today's queries
+     * resolve to — and the persisted copy in IndexedDB carries them across a
+     * close/reopen. Expiring the store wholesale at the boundary is both simpler
+     * and stricter than trying to invalidate the right subset; `cache-and-network`
+     * refills everything on the next paint.
+     *
+     * `isPreparingNewDay` drives a blocking overlay: this is the one moment the
+     * dashboard genuinely has nothing valid to show, so the skeleton is honest
+     * rather than a flash over usable data.
+     */
+    async prepareNewDay(newDate) {
+      if (this.isPreparingNewDay) return;
+      this.isPreparingNewDay = true;
+      try {
+        const result = await runNewDayReset(newDate);
+        console.log('[DashBoard] New day prepared:', result.cleared.join(', ') || 'nothing to clear');
+        if (result.errors.length) {
+          console.warn('[DashBoard] New day reset had partial failures:', result.errors);
+        }
+        // The store is empty and `did` referred to yesterday's document.
+        this.did = '';
+        this.pendingRoutineCreates = {};
+        this.routineFirstLoad = true;
+        this.goalsFirstLoad = true;
+        this.agendaFirstLoad = true;
+      } catch (e) {
+        console.warn('[DashBoard] New day reset failed:', e);
+      } finally {
+        this.isPreparingNewDay = false;
+      }
     },
 
     /**
@@ -2609,34 +2754,36 @@ export default {
       return this.routineDate?.tasklist || [];
     },
     /**
-     * Whether to show the goals loading skeleton
-     * Only show skeleton when:
-     * - Apollo is loading AND
-     * - It's the first load
+     * Whether to show the goals loading skeleton.
+     *
+     * Only when there is genuinely nothing to show — same rule as
+     * showRoutineSkeleton. The `!hasData` clause is the important one: every
+     * display query is `cache-and-network`, so on a warm cache vue-apollo emits
+     * the cached goals FIRST and keeps `loading` true until the network answers.
+     * Without this guard the skeleton replaced perfectly good cached goals for a
+     * whole round trip on every cold open — a visible flicker on PWA/mobile,
+     * where that round trip is slowest.
+     *
+     * It also un-disables the checkboxes: this same flag is passed down as
+     * `passive`, which drives `:disabled` on every goal-item checkbox. Gating it
+     * on "no data" rather than "loading" is what makes the load window
+     * interactive (ARCHITECTURE.md §3 principle #7).
      */
     showGoalsSkeleton() {
       const isLoading = this.$apollo.queries.goals && this.$apollo.queries.goals.loading;
-      return isLoading && this.goalsFirstLoad;
+      const hasData = Array.isArray(this.goals) && this.goals.length > 0;
+      return !!isLoading && this.goalsFirstLoad && !hasData;
     },
     /**
-     * True while the routine query is fetching from the network — including the
-     * cache-and-network refetch that runs on app-open/date-change while cached
-     * data is already on screen. The tick "circle" is disabled during this
-     * window so a tap can't be reverted by an in-flight response that started
-     * before the tap. (See ARCHITECTURE.md §3 principle #4 / the caching diagram.)
+     * Same rule for the non-today agenda view. This one used to be bound
+     * inline to a bare `agendaGoals.loading` with no first-load guard at all,
+     * so EVERY refetch blanked the list to a loading card.
      */
-    isRoutineBusy() {
-      return !!(this.$apollo.queries.routineDate && this.$apollo.queries.routineDate.loading);
-    },
-    /**
-     * True while either goals query (today `goals` or `agendaGoals`) is fetching
-     * from the network. Goal-item checkboxes are disabled during this window for
-     * the same reason.
-     */
-    isGoalsBusy() {
-      const goalsLoading = this.$apollo.queries.goals && this.$apollo.queries.goals.loading;
-      const agendaLoading = this.$apollo.queries.agendaGoals && this.$apollo.queries.agendaGoals.loading;
-      return !!(goalsLoading || agendaLoading);
+    showAgendaSkeleton() {
+      const isLoading = this.$apollo.queries.agendaGoals
+        && this.$apollo.queries.agendaGoals.loading;
+      const hasData = Array.isArray(this.agendaGoals) && this.agendaGoals.length > 0;
+      return !!isLoading && this.agendaFirstLoad && !hasData;
     },
     /**
      * Goals to display - Apollo cache-and-network handles persistence and updates automatically.
@@ -2771,6 +2918,14 @@ export default {
 }
 .caching-counter {
   font-size: 11px;
+}
+.new-day-card {
+  background: #e8f0fe !important;
+  border-left: 4px solid #1a73e8;
+}
+.new-day-label {
+  font-size: 13px;
+  color: #174ea6;
 }
 </style>
 

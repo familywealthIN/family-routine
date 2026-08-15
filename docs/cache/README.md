@@ -12,6 +12,43 @@ fixed.
 | "Routine should not have missed state if agent failed and ticked on time" | The completion window ended at the **next task in the list**, so two tasks sharing a start time gave the first a **zero-minute window** — always `missed`. And the window was built in the **server's** timezone but compared against an absolute timestamp. | `utils/goalItemStatus.js`: window closes at the next *distinct* time, graded in the **user's** timezone (13 unit tests) |
 | "Goal creation modal / past-upcoming switch flickers or doesn't show until refresh" | `goalsByGoalRef` returned the **real `Goal:<id>`** with a **filtered** `goalItems` array. Apollo normalizes by id, so it replaced the shared list — a 14-item day goal collapsed to 2 across every query at once. | server returns the complete list; the three consumers scope client-side via `utils/goalRefScope.js` |
 
+### The load window is now interactive
+
+The first pass closed the revert race by **disabling** the tick circle and every
+goal-item checkbox while a feeding query was in flight (a `busy` prop). That
+works, but it costs a tap on every single app-open — the dashboard is at its most
+tappable exactly when it is also refetching, and a tap that does nothing reads as
+a broken app.
+
+The `busy` gate is gone. In its place, **F9's pending-entity guard**
+(`utils/cacheGuard.js` + `apollo/guardLink.js`) makes the *response* yield
+instead of the user: a query payload that left before a local write is confirmed
+can no longer overwrite that write on the way into the cache. Controls stay live
+throughout, and `checkClick` / `skipClick` now **wait** for the routine document
+id instead of refusing the tap with "Routine is still loading".
+
+Measured: optimistic feedback at 19–153 ms; the tap survives every response
+already on the wire. See `02-corrected-flow.md` F9 for the rule and its two
+halves, and guard R5 below.
+
+**And the skeletons were doing the same thing.** Removing `busy` exposed a
+second gate: `passive` is driven by `showGoalsSkeleton`, which was
+`loading && firstLoad` with **no `!hasData` clause** (unlike
+`showRoutineSkeleton`, which always had one). Because every display query is
+`cache-and-network`, `loading` stays true while cached data is already on
+screen — so on every cold open the skeleton *replaced* perfectly good cached
+goals for a full round trip, and disabled every checkbox underneath. Two more
+bindings (`AgendaTaskList`'s `:loading` on the non-today view,
+`CurrentTaskCard`'s `:loading`) went straight to `queries.*.loading` with no
+guard at all, so a refetch blanked the list on **every tick**.
+
+All four now derive from "there is no data", never "a query is loading". A warm
+cache paints straight through with no loading state at all.
+
+The one unavoidable exception is the **first open after this ships**, because
+`CACHE_SCHEMA_VERSION = 2` purges the persisted cache once (see the deploy note
+below). Every open after that is instant.
+
 Plus the thing you actually named: **`GoalItemList` was not a dumb component.**
 It kept a `pendingSubTaskUpdates` Set, `$set`-mutated cached `SubTaskItem`s,
 wrote `period`/`date` onto cached `GoalItem`s (fields the type doesn't have), and
@@ -38,9 +75,11 @@ now returns the complete parent goal item; guard R4.
 
 | Path | Purpose |
 |------|---------|
-| `apps/web-app/e2e/cache-integrity.spec.js` | The intense soak: open → one activity → close → reopen, a different activity each cycle; a clock walk across every routine slot; a midnight rollover; and four regression guards (R1–R4) for the reported symptoms. Runs against the real database and **restores it afterwards** — it snapshots today's routine first and only resets a day that started with zero progress |
+| `apps/web-app/e2e/cache-integrity.spec.js` | The intense soak: open → one activity → close → reopen, a different activity each cycle; a clock walk across every routine slot; a midnight rollover; and five regression guards (R1–R5) for the reported symptoms. Runs against the real database and **restores it afterwards** — it snapshots today's routine first and only resets a day that started with zero progress |
 | `apps/web-app/e2e/helpers/cache.js` | Cache invariants (no truncated `Goal.goalItems`, no `Goal:temp-*` leaks, no unknown `__typename`s, no foreign fields on cached entities), checked against **both** the live store and the persisted IndexedDB copy |
 | `apps/web-app/e2e/helpers/seed.js` | Builds a realistically stacked day (routine + week goals + day goals under every task). The bugs don't reproduce with one goal on one task. |
+| `apps/web-app/src/apollo/__tests__/guardLink.test.js` | The revert race run inside a real Apollo Client + cache — **with a control that asserts the unguarded chain still reverts**, so the test can't quietly stop proving anything |
+| `apps/web-app/src/utils/__tests__/cacheGuard.test.js` | The guard registry: hold/confirm/release, sequence ordering, TTL expiry, scalar-only rule, registry cap |
 | `apps/server/src/utils/goalItemStatus.test.js` | The done/missed grading rule, including the shared-start-time and timezone cases |
 | `apps/server/scripts/dedupe-routines.js` | Merges duplicate Routine documents and builds the unique index. **Dry-run by default.** |
 
@@ -51,16 +90,26 @@ cd apps/server  && npx jest src/utils/goalItemStatus.test.js
 cd apps/server  && node scripts/dedupe-routines.js                # read-only report
 ```
 
-## Pre-deployment check (2026-07-29)
+## Pre-deployment check (2026-07-30)
 
 | Check | Result |
 |-------|--------|
 | Server unit tests | 90/90 |
-| Web-app unit tests | 254/254 |
-| e2e cache-integrity | 6 passed, 1 skipped (R2 self-skips outside routine hours; the rule has 13 unit tests) |
+| Web-app unit tests | 285/285 |
+| e2e cache-integrity | **8/8 passed** (R2 ran rather than self-skipping this time) |
 | Production build | clean |
-| `window.__APOLLO_CLIENT__` in prod bundle | absent — my guard is dead-code-eliminated and Apollo's own `connectToDevTools` compiles to `false` |
+| Dev-only globals in prod bundle | `__APOLLO_PERSISTOR__` / `__CACHE_GUARD__` absent (dead-code-eliminated; only source maps mention them). The one `__APOLLO_CLIENT__` hit is Apollo's own `connectToDevTools` in chunk-vendors, not ours |
 | Lint on changed files | clean (pre-existing debt in `taskPriority.test.js` / `e2e/helpers/api.js` left alone) |
+
+### Test-timing note
+
+`actTickGoalItem` used to sleep a fixed 1500 ms after clicking. That is not long
+enough: the invariants read `cache.extract()`, which deliberately **excludes**
+the optimistic layer, and the first mutation against a cold dev server measured
+**3158 ms** round trip (mongoose connect + first query plan) where warm ones take
+~240 ms. It now polls for the real condition (`waitForConfirmed`), which is
+strictly stronger — a genuine revert still fails, on timeout, instead of being
+slept through.
 | Unique-index build failure on cold start | **contained** — verified against production data: mongoose swallows the E11000, queries keep serving, no unhandled rejection (which on `nodejs18.x` would kill the invocation) |
 | Real midnight rollover | survived with **exactly one** routine document |
 | Live account after the run | restored to its pre-run state; balance unchanged, no XP written |
@@ -83,7 +132,7 @@ after updating sees an empty dashboard until they reconnect. One time, per user.
    can't enforce the invariant.
 
 2. **Deferred structural work** (see `02-corrected-flow.md`): derive
-   `passed`/`wait` server-side (F8), extend mutation return shapes to the
-   complete entity (F4) so `useApolloCacheUpdates.js` can be deleted (F5),
-   version + purge the persisted cache (F6), and the pending-entity guard (F9)
-   that would remove the need to disable controls during loads at all.
+   `passed`/`wait` server-side (F8), and extend mutation return shapes to the
+   complete entity (F4 — done for `completeSubTaskItem`, still open for
+   `completeGoalItem`) so `useApolloCacheUpdates.js` can be deleted (F5).
+   F6 and F9 have since shipped.

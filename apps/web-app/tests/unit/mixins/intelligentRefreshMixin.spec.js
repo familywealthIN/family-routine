@@ -1,4 +1,5 @@
 import intelligentRefreshMixin from '@/mixins/intelligentRefreshMixin';
+import { pendingMutations } from '@/utils/pendingMutations';
 
 // Use jest fake timers + setSystemTime to control both Date and moment()
 const MOCK_DATE = new Date('2025-12-22T10:30:00');
@@ -177,6 +178,145 @@ describe('intelligentRefreshMixin', () => {
 
       // Should not throw
       vm.performIntelligentRefresh(null, null);
+    });
+
+    // The rollover used to sit BEHIND the pendingMutations gate. Since that
+    // registry has no TTL, one mutation that never settles pinned the gate shut
+    // and the dashboard stayed on yesterday until the app was relaunched.
+    it('detects a day change even while a mutation is still in flight', () => {
+      pendingMutations._reset();
+      pendingMutations.add('routine:stuck-forever');
+
+      vm.lastRefreshDate = '21-12-2025';
+      vm.$apollo = { queries: {} };
+      const onDayChange = jest.fn();
+
+      vm.performIntelligentRefresh(onDayChange, null);
+
+      expect(onDayChange).toHaveBeenCalledWith('22-12-2025');
+      expect(vm.lastRefreshDate).toBe('22-12-2025');
+      pendingMutations._reset();
+    });
+
+    it('still skips the routine refetch while a mutation is in flight', () => {
+      pendingMutations._reset();
+      pendingMutations.add('routine:abc');
+
+      vm.lastRefreshDate = '22-12-2025'; // same day — no rollover
+      const onRoutineCheck = jest.fn();
+
+      vm.performIntelligentRefresh(null, onRoutineCheck);
+
+      expect(onRoutineCheck).not.toHaveBeenCalled();
+      pendingMutations._reset();
+    });
+  });
+
+  describe('checkDayChange', () => {
+    it('returns false and does nothing when the date is unchanged', () => {
+      vm.lastRefreshDate = '22-12-2025';
+      const onDayChange = jest.fn();
+
+      expect(vm.checkDayChange(onDayChange)).toBe(false);
+      expect(onDayChange).not.toHaveBeenCalled();
+    });
+
+    it('returns true and fires the callback on a rollover', () => {
+      vm.lastRefreshDate = '21-12-2025';
+      vm.$apollo = { queries: {} };
+      const onDayChange = jest.fn();
+
+      expect(vm.checkDayChange(onDayChange)).toBe(true);
+      expect(onDayChange).toHaveBeenCalledWith('22-12-2025');
+    });
+
+    it('falls back to the stored callback when called with no argument', () => {
+      vm.lastRefreshDate = '21-12-2025';
+      vm.$apollo = { queries: {} };
+      const onDayChange = jest.fn();
+      vm.onDayChangeCallback = onDayChange;
+
+      vm.checkDayChange();
+
+      expect(onDayChange).toHaveBeenCalledWith('22-12-2025');
+    });
+  });
+
+  // A suspended PWA runs no timers overnight, so the overwhelmingly common
+  // rollover — close at night, open in the morning — is one setInterval never
+  // sees. These listeners are what actually detect it in the field.
+  describe('wireDayChangeWakeups', () => {
+    it('checks the day when the document becomes visible', () => {
+      vm.lastRefreshDate = '21-12-2025';
+      vm.$apollo = { queries: {} };
+      const onDayChange = jest.fn();
+      vm.onDayChangeCallback = onDayChange;
+
+      vm.wireDayChangeWakeups();
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      expect(onDayChange).toHaveBeenCalledWith('22-12-2025');
+      vm.unwireDayChangeWakeups();
+    });
+
+    it('checks the day on window focus and on pageshow (bfcache restore)', () => {
+      vm.$apollo = { queries: {} };
+      const onDayChange = jest.fn();
+      vm.onDayChangeCallback = onDayChange;
+      vm.wireDayChangeWakeups();
+
+      vm.lastRefreshDate = '21-12-2025';
+      window.dispatchEvent(new Event('focus'));
+      expect(onDayChange).toHaveBeenCalledTimes(1);
+
+      // Second rollover through the bfcache path.
+      vm.lastRefreshDate = '20-12-2025';
+      window.dispatchEvent(new Event('pageshow'));
+      expect(onDayChange).toHaveBeenCalledTimes(2);
+
+      vm.unwireDayChangeWakeups();
+    });
+
+    it('is idempotent so the interval restart does not stack listeners', () => {
+      vm.$apollo = { queries: {} };
+      const onDayChange = jest.fn();
+      vm.onDayChangeCallback = onDayChange;
+
+      vm.wireDayChangeWakeups();
+      vm.wireDayChangeWakeups();
+      vm.wireDayChangeWakeups();
+
+      vm.lastRefreshDate = '21-12-2025';
+      window.dispatchEvent(new Event('focus'));
+
+      expect(onDayChange).toHaveBeenCalledTimes(1);
+      vm.unwireDayChangeWakeups();
+    });
+
+    it('stops checking once unwired', () => {
+      vm.$apollo = { queries: {} };
+      const onDayChange = jest.fn();
+      vm.onDayChangeCallback = onDayChange;
+
+      vm.wireDayChangeWakeups();
+      vm.unwireDayChangeWakeups();
+
+      vm.lastRefreshDate = '21-12-2025';
+      window.dispatchEvent(new Event('focus'));
+
+      expect(onDayChange).not.toHaveBeenCalled();
+    });
+
+    it('startIntelligentRefresh wires the wakeups', () => {
+      vm.$apollo = { queries: {} };
+      const onDayChange = jest.fn();
+      vm.startIntelligentRefresh({ onDayChange });
+
+      vm.lastRefreshDate = '21-12-2025';
+      window.dispatchEvent(new Event('focus'));
+
+      expect(onDayChange).toHaveBeenCalledWith('22-12-2025');
+      vm.unwireDayChangeWakeups();
     });
   });
 
@@ -495,6 +635,34 @@ describe('intelligentRefreshMixin', () => {
 
       expect(vm.refreshTimerId).toBeNull();
       expect(vm.isRefreshActive).toBe(false);
+    });
+
+    it('removes the wakeup listeners', () => {
+      vm.$apollo = { queries: {} };
+      const onDayChange = jest.fn();
+      vm.startIntelligentRefresh({ onDayChange });
+
+      intelligentRefreshMixin.beforeDestroy.call(vm);
+
+      vm.lastRefreshDate = '21-12-2025';
+      window.dispatchEvent(new Event('focus'));
+      expect(onDayChange).not.toHaveBeenCalled();
+    });
+
+    // adjustRefreshInterval stops and restarts the timer; if the listeners were
+    // torn down there, every interval change would blind the rollover.
+    it('keeps wakeups wired across an interval adjustment', () => {
+      vm.$apollo = { queries: {} };
+      const onDayChange = jest.fn();
+      vm.startIntelligentRefresh({ interval: 30000, onDayChange });
+
+      vm.adjustRefreshInterval(15000);
+
+      vm.lastRefreshDate = '21-12-2025';
+      window.dispatchEvent(new Event('focus'));
+      expect(onDayChange).toHaveBeenCalledWith('22-12-2025');
+
+      vm.unwireDayChangeWakeups();
     });
   });
 });

@@ -15,6 +15,8 @@ export default {
       isRefreshActive: false,
       onDayChangeCallback: null,
       onRoutineCheckCallback: null,
+      dayChangeWakeupsWired: false,
+      onWakeCheckDay: null,
     };
   },
 
@@ -46,6 +48,10 @@ export default {
         this.performIntelligentRefresh(onDayChange, onRoutineCheck);
       }, this.refreshInterval);
 
+      // The timer alone cannot see a rollover that happened while the app was
+      // suspended. Idempotent, so the restart in adjustRefreshInterval is free.
+      this.wireDayChangeWakeups();
+
       console.log('Intelligent refresh started with interval:', interval);
     },
 
@@ -67,38 +73,22 @@ export default {
      * @param {Function} onRoutineCheck - Callback for routine item checks
      */
     performIntelligentRefresh(onDayChange, onRoutineCheck) {
-      // Skip the timer tick entirely while any optimistic mutation is in
+      // The day check runs FIRST, before the pending-mutation gate below.
+      //
+      // It used to sit behind that gate, which meant a single stuck key in
+      // `pendingMutations` (it has no TTL — a mutation that never settles holds
+      // its key forever) permanently disabled the rollover: every subsequent
+      // tick returned early and the dashboard stayed on yesterday until the app
+      // was killed and relaunched. A day change is also not the kind of thing
+      // that should ever be skipped to protect an optimistic write — the write
+      // belongs to a day that is now over.
+      if (this.checkDayChange(onDayChange)) return;
+
+      // Skip the *refetch* portion while any optimistic mutation is in
       // flight — refetching mid-mutation would let a server response
       // returning pre-mutation data race-overwrite the cache and visibly
       // flicker the checkbox.
       if (!pendingMutations.empty()) {
-        return;
-      }
-
-      const currentDate = moment().format('DD-MM-YYYY');
-
-      // Check if day has changed
-      if (this.lastRefreshDate !== currentDate) {
-        console.log('Day changed detected:', this.lastRefreshDate, '→', currentDate);
-        this.lastRefreshDate = currentDate;
-
-        // Update component todayDate if it exists (keeps isTodaySelected in sync)
-        if (this.todayDate !== undefined) {
-          this.todayDate = currentDate;
-        }
-
-        // Update component date if it exists
-        if (this.date && this.date !== currentDate) {
-          this.date = currentDate;
-        }
-
-        // Call day change callback
-        if (onDayChange && typeof onDayChange === 'function') {
-          onDayChange(currentDate);
-        }
-
-        // Refresh Apollo queries if available
-        this.refreshApolloQueries();
         return;
       }
 
@@ -107,6 +97,86 @@ export default {
         onRoutineCheck();
       } else {
         this.checkRoutineItemsForRefresh();
+      }
+    },
+
+    /**
+     * Detect a day rollover and drive the callback. Split out of
+     * `performIntelligentRefresh` so it can also be called directly the moment
+     * the app becomes visible again — see `wireDayChangeWakeups`.
+     *
+     * @param {Function} onDayChange
+     * @returns {boolean} true when the day changed (caller should stop)
+     */
+    checkDayChange(onDayChange = this.onDayChangeCallback) {
+      const currentDate = moment().format('DD-MM-YYYY');
+      if (this.lastRefreshDate === currentDate) return false;
+
+      console.log('Day changed detected:', this.lastRefreshDate, '→', currentDate);
+      this.lastRefreshDate = currentDate;
+
+      // Update component todayDate if it exists (keeps isTodaySelected in sync)
+      if (this.todayDate !== undefined) {
+        this.todayDate = currentDate;
+      }
+
+      // Update component date if it exists
+      if (this.date && this.date !== currentDate) {
+        this.date = currentDate;
+      }
+
+      if (onDayChange && typeof onDayChange === 'function') {
+        onDayChange(currentDate);
+      }
+
+      this.refreshApolloQueries();
+      return true;
+    },
+
+    /**
+     * Re-check the day whenever the app comes back to the foreground.
+     *
+     * `setInterval` is the wrong instrument on its own here: a backgrounded tab
+     * is throttled to roughly once a minute, and an installed PWA on iOS or
+     * Android is suspended outright — the timer simply does not run while the
+     * phone is asleep. The overwhelmingly common rollover is "user closes the
+     * app at night, opens it in the morning", which is exactly the case a timer
+     * never sees. Without these listeners the dashboard shows yesterday until a
+     * 30s tick happens to land after resume.
+     *
+     * `pageshow` covers bfcache restores, where no visibility change fires at
+     * all. All four are idempotent — `checkDayChange` no-ops when the date is
+     * unchanged.
+     */
+    wireDayChangeWakeups() {
+      if (this.dayChangeWakeupsWired) return;
+      this.dayChangeWakeupsWired = true;
+
+      this.onWakeCheckDay = () => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+        this.checkDayChange();
+      };
+
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', this.onWakeCheckDay);
+      }
+      if (typeof window !== 'undefined') {
+        window.addEventListener('focus', this.onWakeCheckDay);
+        window.addEventListener('pageshow', this.onWakeCheckDay);
+        window.addEventListener('online', this.onWakeCheckDay);
+      }
+    },
+
+    unwireDayChangeWakeups() {
+      if (!this.dayChangeWakeupsWired) return;
+      this.dayChangeWakeupsWired = false;
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', this.onWakeCheckDay);
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', this.onWakeCheckDay);
+        window.removeEventListener('pageshow', this.onWakeCheckDay);
+        window.removeEventListener('online', this.onWakeCheckDay);
       }
     },
 
@@ -236,5 +306,9 @@ export default {
    */
   beforeDestroy() {
     this.stopIntelligentRefresh();
+    // Not unwired in stopIntelligentRefresh: adjustRefreshInterval stops and
+    // restarts the timer, and tearing the listeners down on every interval
+    // change would leave a window with no rollover detection at all.
+    this.unwireDayChangeWakeups();
   },
 };

@@ -5,18 +5,38 @@
 const { test, expect } = require('@playwright/test');
 const { gotoAuthed } = require('./helpers/auth');
 const { addTestGoal, purgeTestGoals, currentRoutineTaskId } = require('./helpers/api');
+const { ensureRoutine, snapshotRoutine, restoreRoutine } = require('./helpers/seed');
 
 test.describe.configure({ mode: 'serial' });
 
 let TASK_REF = null;
+/** Pre-run state of today's routine, so afterAll can reset it safely. */
+let routineSnapshot = null;
 
 test.beforeAll(async () => {
   await purgeTestGoals();
+
+  // Record the found state BEFORE creating anything, so the teardown below
+  // knows whether the day is safe to reset (see restoreRoutine).
+  routineSnapshot = await snapshotRoutine();
+
+  // This spec needs a routine document to hang its goals off, and it cannot
+  // assume one exists: cache-integrity.spec.js runs first (files run
+  // alphabetically) and its teardown deletes today's routine whenever the day
+  // started without one. Depending on that leftover made the whole file fail
+  // with "No routine tasks for <date>" in a full-suite run while every test
+  // passed in isolation. Create it explicitly instead.
+  await ensureRoutine();
+
   TASK_REF = await currentRoutineTaskId();
 });
 
 test.afterAll(async () => {
   await purgeTestGoals();
+  // Ticking goal items earns K/G stimuli on the routine — residue the account
+  // owner would otherwise see as a day they never lived. restoreRoutine only
+  // touches a day that started with no progress of its own.
+  await restoreRoutine(routineSnapshot);
 });
 
 async function seed(body) {

@@ -106,6 +106,33 @@ async function goalItems(page) {
   return page.locator('[data-testid="goal-item"]');
 }
 
+/**
+ * Wait until a goal item's completion has reached the BASE cache layer — the
+ * server confirmed it and Apollo dropped its optimistic layer.
+ *
+ * A fixed sleep cannot do this job. `cache.extract()` (what the invariants read)
+ * deliberately excludes the optimistic layer, and the FIRST mutation against a
+ * cold dev server measured 3158 ms round trip — mongoose connect plus first
+ * query plan — where warm ones take ~240 ms. Polling the real condition removes
+ * that flake without weakening anything: it is the same fact the invariant
+ * asserts, so a genuine revert still fails here (on timeout) rather than being
+ * slept through.
+ */
+async function waitForConfirmed(page, id, want, timeoutMs = 20_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const state = await page.evaluate((gid) => {
+      const c = window.__APOLLO_CLIENT__;
+      const rec = c && c.cache.extract()[`GoalItem:${gid}`];
+      return rec ? !!rec.isComplete : null;
+    }, id);
+    if (state === want) return true;
+    await page.waitForTimeout(150);
+  }
+  console.warn(`[act] GoalItem:${id} never reached isComplete=${want} in ${timeoutMs}ms`);
+  return false;
+}
+
 /** Tick the first unchecked goal item on the current-task card. */
 async function actTickGoalItem(page) {
   const items = await goalItems(page);
@@ -115,7 +142,7 @@ async function actTickGoalItem(page) {
     if ((await row.getAttribute('data-goal-complete')) === 'false') {
       const id = await row.getAttribute('data-goal-id');
       await row.locator('[data-testid="goal-checkbox"]').first().click();
-      await page.waitForTimeout(1500);
+      await waitForConfirmed(page, id, true);
       expectedTicks[id] = true;
       return `tick ${id}`;
     }
@@ -132,7 +159,7 @@ async function actUntickGoalItem(page) {
     if ((await row.getAttribute('data-goal-complete')) === 'true') {
       const id = await row.getAttribute('data-goal-id');
       await row.locator('[data-testid="goal-checkbox"]').first().click();
-      await page.waitForTimeout(1500);
+      await waitForConfirmed(page, id, false);
       expectedTicks[id] = false;
       return `untick ${id}`;
     }
@@ -565,4 +592,147 @@ test('R4 completeSubTaskItem returns a normalizable parent GoalItem', async () =
     !!out.isComplete,
     "isComplete must be the PARENT's own completion, not the sub-task's",
   ).toBe(false);
+});
+
+// ---------------------------------------------------------------------------
+// R5 — the load window is interactive, and a tap made inside it sticks.
+//
+// This is the guard that replaces the `busy` prop. The dashboard used to
+// disable the tick circle and every goal-item checkbox for as long as a feeding
+// query was loading, which closed the revert race by removing the interaction —
+// and cost the user a tap on every single app-open, because the dashboard is at
+// its most tappable exactly when it is also refetching.
+//
+// The pending-entity guard (src/utils/cacheGuard.js) closes the same race by
+// making the RESPONSE yield instead. So there are two things to prove:
+//   (a) nothing is disabled while the queries are in flight, and
+//   (b) a tap landing in that window survives the responses that follow it.
+// ---------------------------------------------------------------------------
+
+test('R5 controls stay live during load and a tap inside that window survives', async ({ page }) => {
+  // Hold every QUERY response on the wire for 4s while letting mutations
+  // through immediately. The request itself is sent at once (route.fetch), so
+  // the server computes its answer from PRE-tap state and then delivers it
+  // AFTER the tick mutation has already resolved. That is the race, made
+  // deterministic instead of hoped for:
+  //
+  //   t=0.0  goals/routine reads leave, held
+  //   t=0.5  user taps -> mutation resolves, cache says complete
+  //   t=4.0  the held reads land, carrying "not complete"
+  // Warm the cache FIRST. Every Playwright test gets a fresh browser context,
+  // so IndexedDB starts empty here — without this the dashboard has nothing to
+  // paint from and is legitimately waiting on the network, which is not the
+  // scenario under test. This is the user's *second* open.
+  await openApp(page);
+  await closeApp(page);
+
+  const HOLD_MS = 4000;
+  let intercepted = 0;
+  await page.route('**/graphql**', async (route) => {
+    const body = route.request().postData() || '';
+    const isMutation = /(^|["\s])mutation[\s({]/.test(body);
+    if (isMutation) {
+      await route.continue();
+      return;
+    }
+    intercepted += 1;
+    let response;
+    try {
+      response = await route.fetch();
+    } catch (e) {
+      await route.continue().catch(() => {});
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, HOLD_MS));
+    await route.fulfill({ response }).catch(() => {});
+  });
+
+  // Deliberately do NOT use openApp() — it waits for the queries to settle,
+  // which is the window we need to be inside. The dashboard paints from the
+  // cache the warm-up open just persisted.
+  await gotoAuthed(page, '/home');
+  await page.waitForFunction(() => !!window.__APOLLO_CLIENT__, { timeout: 20_000 });
+
+  // (a0) The goals must paint FROM CACHE, well before any held response lands.
+  // Every query is held for HOLD_MS, so anything on screen inside that window
+  // came from IndexedDB — not the network.
+  //
+  // This assertion is what makes the rest of the test meaningful. When
+  // `showGoalsSkeleton` was `loading && firstLoad` (no `!hasData` clause), the
+  // skeleton REPLACED the cached goal list for the whole round trip, so no
+  // goal item existed to inspect and the checks below silently ran *after* the
+  // load window instead of inside it. A timeout here means that regressed.
+  const items = page.locator('[data-testid="goal-item"]');
+  await expect(
+    items.first(),
+    'cached goals did not paint within the hold window — a skeleton is covering them',
+  ).toBeVisible({ timeout: HOLD_MS - 1500 });
+  expect(intercepted, 'no query was held — the route interception did not take').toBeGreaterThan(0);
+
+  // (a) Nothing may be disabled. Under the old build every one of these
+  // carried `disabled` for the duration of the refetch — first via the `busy`
+  // prop, then via `passive` (which the goals skeleton drove).
+  const n = await items.count();
+  expect(n, 'need at least one seeded goal item on screen').toBeGreaterThan(0);
+
+  let target = null;
+  let targetId = null;
+  for (let i = 0; i < n; i += 1) {
+    const row = items.nth(i);
+    const box = row.locator('[data-testid="goal-checkbox"] input').first();
+    if (!(await box.count())) continue;
+    const disabled = await box.isDisabled();
+    expect(
+      disabled,
+      `goal-item checkbox ${i} is disabled during the load window — the busy gate is back`,
+    ).toBe(false);
+    if (target === null && (await row.getAttribute('data-goal-complete')) === 'false') {
+      target = row;
+      targetId = await row.getAttribute('data-goal-id');
+    }
+  }
+  expect(target, 'need an unchecked goal item to tap').not.toBeNull();
+
+  // (b) Tap while those reads are still held. The mutation is not held, so it
+  // confirms first...
+  await target.locator('[data-testid="goal-checkbox"]').first().click();
+  expect(
+    await waitForConfirmed(page, targetId, true),
+    'the tick never reached the base cache layer at all',
+  ).toBe(true);
+
+  // ...and only then do the held reads land, every one of them carrying the
+  // pre-tap state. This is the exact sequence that used to revert the tick.
+  await page.waitForTimeout(HOLD_MS + 2500);
+
+  const afterTap = await page.evaluate((id) => {
+    const store = window.__APOLLO_CLIENT__.cache.extract();
+    const entity = store[`GoalItem:${id}`];
+    return entity ? entity.isComplete : null;
+  }, targetId);
+  expect(
+    afterTap,
+    'the tap was reverted by a response that was already on the wire when it happened',
+  ).toBe(true);
+  expectedTicks[targetId] = true;
+
+  // Stop holding responses before the reopen below.
+  await page.unroute('**/graphql**');
+
+  // And it is really persisted, not just held in memory by the guard: the
+  // server has it too.
+  const onServer = await gql(
+    `query G($date: String!) {
+      optimizedDailyGoals(date: $date) { period goalItems { id isComplete } }
+    }`,
+    { date: DATE },
+  );
+  const found = (onServer.optimizedDailyGoals || [])
+    .flatMap((g) => g.goalItems || [])
+    .find((gi) => gi.id === targetId);
+  expect(!!(found && found.isComplete), 'the tap never reached the server').toBe(true);
+
+  await closeApp(page);
+  await openApp(page);
+  await assertHealthy(page, 'R5 reopen after tapping during load');
 });

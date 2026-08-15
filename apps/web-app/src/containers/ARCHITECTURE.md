@@ -99,16 +99,53 @@ cache got corrupt.
    renders one entity twice and patches unreliably. Containers hand organisms
    de-duped lists. (This caused the overlapping agent-status badges.)
 
-7. **Gate write controls while their feeding query is in-flight.**
+7. **Never disable a control to win a race. Make the response yield instead.**
    A `cache-and-network` read that started *before* a tap resolves *after* it and
    overwrites the just-mutated entity — Apollo 2.x has no field `merge` to protect
-   it. So disable the tick circle / goal checkbox on `$apollo.queries.<q>.loading`
-   until the refetch lands. See DashBoard `isRoutineBusy` / `isGoalsBusy` and the
-   `busy` organism prop threaded into `GoalItemList` / `AgendaTaskList`. The
-   durable end-state is a **pending-entity guard** (skip overwriting an entity
-   with an unconfirmed local mutation until a read issued *after* it confirms),
-   which removes the need to disable at all. (This caused the tick/checkbox
-   revert-on-open bug.)
+   it. (This caused the tick/checkbox revert-on-open bug.)
+
+   The first fix disabled the tick circle and goal checkboxes while their feeding
+   query was loading (`isRoutineBusy` / `isGoalsBusy` + a `busy` organism prop).
+   **That is no longer how this works, and the `busy` prop is gone.** It closed
+   the race by removing the interaction, which costs a dead tap on every
+   app-open: the dashboard is at its most tappable precisely when it is also
+   refetching, and a control that ignores you reads as a broken app.
+
+   The mechanism now is the **pending-entity guard** — `utils/cacheGuard.js` plus
+   `apollo/guardLink.js`, installed outermost in the link chain. A query payload
+   that left before a local write was confirmed is rewritten on the way back so
+   it cannot overwrite that write. Mutation results confirm every entity they
+   carry automatically; use `guardFields()` at a call site only for fields the
+   mutation does not return, and `releaseEntity()` when it fails.
+
+   So: **containers do not derive `busy`, and organisms do not accept it.**
+   `passive` (no data yet) is still a legitimate reason to disable. "A request is
+   in flight" is not. If an interaction genuinely needs a value that has not
+   arrived yet, *wait for it* — see `DashBoard.ensureRoutineId()`, which queues
+   the tap until the routine document id resolves rather than rejecting it.
+
+   **A skeleton flag is a disable flag.** `passive` is driven by
+   `showGoalsSkeleton`, so any skeleton condition silently gates the controls
+   too. Derive every skeleton from **"there is no data"**, never from
+   **"a query is loading"** — with `cache-and-network`, `loading` stays true
+   while cached data is already on screen:
+
+   ```js
+   // WRONG — hides cached data behind a skeleton for a whole round trip,
+   // and disables every checkbox underneath it.
+   return isLoading && this.goalsFirstLoad;
+
+   // RIGHT — skeleton only when there is genuinely nothing to show.
+   const hasData = Array.isArray(this.goals) && this.goals.length > 0;
+   return isLoading && this.goalsFirstLoad && !hasData;
+   ```
+
+   `showRoutineSkeleton` always had the `!hasData` clause; `showGoalsSkeleton`
+   did not, and two more bindings (`AgendaTaskList`'s `:loading`,
+   `CurrentTaskCard`'s `:loading`) were wired straight to `queries.*.loading`
+   with no guard at all — so a refetch blanked the list on every tick. All four
+   now go through `showGoalsSkeleton` / `showAgendaSkeleton` /
+   `showRoutineSkeleton`. Guard: `e2e` R5 step (a0).
 
 ---
 

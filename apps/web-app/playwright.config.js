@@ -49,11 +49,18 @@ module.exports = defineConfig({
       stderr: 'pipe',
     },
     {
+      // `url`, not `port`. webpack-dev-server binds the port immediately and
+      // compiles (~2800 modules, minutes on a cold cache) afterwards, so a port
+      // check reports ready while the bundle does not exist yet — the first
+      // page.goto then queues behind the compile inside webpack-dev-middleware
+      // and blows the navigation timeout. Waiting for a real HTTP response is
+      // what makes readiness mean "can actually serve the app".
       command: 'yarn workspace web-app dev',
-      port: WEB_APP_PORT,
+      url: `http://localhost:${WEB_APP_PORT}/`,
       cwd: path.resolve(__dirname, '../..'),
       reuseExistingServer: !process.env.CI,
-      timeout: 180_000,
+      // Must exceed a cold compile, since this wait now genuinely covers it.
+      timeout: 300_000,
       stdout: 'ignore',
       stderr: 'pipe',
     },

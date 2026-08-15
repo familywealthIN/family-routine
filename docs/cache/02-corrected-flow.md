@@ -138,9 +138,40 @@ flowchart TD
   must write them, which is what created B7 and B8. Derive them in the
   `routineDate` resolver and the ~20 mutations per app open become **zero**.
   *(Keep `passedPoints` persisted — it is a real snapshot, not a derivation.)*
-- **F9** — the "pending-entity guard" already named as the north star in
+- **F9 — SHIPPED.** The pending-entity guard, named as the north star in
   `ARCHITECTURE.md` §3 principle #7. It replaces disabling controls during load
-  (the `busy` prop) with something that cannot lose a tick.
+  (the `busy` prop, now deleted) with something that cannot lose a tick.
+
+  Implementation: `utils/cacheGuard.js` (the registry) + `apollo/guardLink.js`
+  (an `ApolloLink` installed outermost in the chain, so it is the last thing to
+  touch a response before Apollo normalizes it).
+
+  The rule is *the request that left last wins*. Every operation is stamped with
+  a monotonic sequence when it leaves; a mutation result confirms every entity
+  it carries at a later sequence; and a query payload is rewritten on the way
+  back so guarded fields keep their local value — but only for payloads whose
+  request predates that confirmation. Guards drop as soon as no older request is
+  still out (usually milliseconds), and unconditionally after 20s, so a hung
+  request can never pin stale state.
+
+  Two halves:
+  - **automatic** — `captureFromResult` in the link confirms every entity in
+    every mutation result. Zero call-site changes; this is what protects
+    `passRoutineItem`, `waitRoutineItem`, `tickRoutineItem` and the rest.
+  - **explicit** — `guardFields()` at the three interaction sites, for fields a
+    mutation does not return. `completeGoalItem` omits `progress` (that is the
+    F4 gap), so the client claims it directly; `releaseEntity()` on failure
+    drops the claim alongside Apollo's own optimistic rollback.
+
+  Scalars only — a guarded field is never a list or object. Reshaping a list
+  from the client is how the cache got corrupted in the first place (B5).
+
+  Guards: `src/apollo/__tests__/guardLink.test.js` runs the race inside a real
+  Apollo Client and **includes a control that asserts the unguarded chain still
+  reverts** — if that control ever passes, the test has stopped proving
+  anything. `e2e/cache-integrity.spec.js` R5 does the same end-to-end by holding
+  every query response for 4s while letting the mutation through, and asserts
+  nothing on screen is `disabled` during that window.
 - **F10/F11/F12** — grade lateness against the next *distinct* time, in the user's
   zone, and keep agent outcomes out of task status entirely.
 
@@ -162,7 +193,7 @@ flowchart LR
     subgraph "apps/web-app/src/containers — the ONLY Apollo caller"
     B["GoalItemListContainer"]
     B --> B1["✅ owns pending-mutation set"]
-    B --> B2["✅ owns busy/disabled derivation"]
+    B --> B2["✅ no busy/disabled derivation —<br/>F9's guard makes the RESPONSE yield,<br/>so controls stay live during load"]
     B --> B3["✅ writes via useEntityCache only"]
     end
 
@@ -213,22 +244,31 @@ session.
 
 ## Fix index, ordered by (impact ÷ risk)
 
-| # | Fix | File | Risk | Kills |
-|---|-----|------|------|-------|
-| F2 | unique index `{email, date}` on routines | `schema/RoutineSchema.js` | low | B1 |
-| F10 | window = next **distinct** time | `resolvers/goal.js` | low | B9 |
-| F11 | grade in the user's timezone | `resolvers/goal.js` | low | B10 |
-| F7a | `goalsByGoalRef` returns full `goalItems` | `resolvers/goal.js` | low | **B4 — the flicker** |
-| F1 | `ensureRoutineForDate()` in-flight guard | `DashBoard.vue` | low | B2 |
-| F3 | `routineReady` gate on tick controls | `DashBoard.vue` | low | B3 |
-| — | drop the duplicate `goals.refetch()` | `DashBoard.vue` | low | B6 |
-| — | make `GoalItemList` pure; add `busy` to its container | `packages/ui`, `containers/` | low | B11–B16 |
-| F6 | cache version + purge on restore | `main.js` | med | B17, permanence |
-| F8 | derive `passed`/`wait` server-side | `resolvers/routine.js`, `DashBoard.vue` | med | B7, B8 |
-| F4 | complete entity in mutation returns | `resolvers/goal.js` | med | B5 |
-| F5 | delete `useApolloCacheUpdates.js` | `composables/` | med | B5 |
-| F9 | pending-entity guard | new link/composable | high | the whole revert class |
+| # | Fix | File | Risk | Kills | Status |
+|---|-----|------|------|-------|--------|
+| F2 | unique index `{email, date}` on routines | `schema/RoutineSchema.js` | low | B1 | shipped (index not yet built) |
+| F10 | window = next **distinct** time | `resolvers/goal.js` | low | B9 | shipped |
+| F11 | grade in the user's timezone | `resolvers/goal.js` | low | B10 | shipped |
+| F7a | `goalsByGoalRef` returns full `goalItems` | `resolvers/goal.js` | low | **B4 — the flicker** | shipped |
+| F1 | `ensureRoutineForDate()` in-flight guard | `DashBoard.vue` | low | B2 | shipped |
+| F3 | `routineReady` gate on tick controls | `DashBoard.vue` | low | B3 | **superseded by F9** |
+| — | drop the duplicate `goals.refetch()` | `DashBoard.vue` | low | B6 | shipped |
+| — | make `GoalItemList` pure | `packages/ui`, `containers/` | low | B11–B16 | shipped |
+| F6 | cache version + purge on restore | `main.js` | med | B17, permanence | shipped |
+| F9 | pending-entity guard | `utils/cacheGuard.js`, `apollo/guardLink.js` | high | the whole revert class | **shipped** |
+| F8 | derive `passed`/`wait` server-side | `resolvers/routine.js`, `DashBoard.vue` | med | B7, B8 | deferred |
+| F4 | complete entity in mutation returns | `resolvers/goal.js` | med | B5 | partial (`completeSubTaskItem` only) |
+| F5 | delete `useApolloCacheUpdates.js` | `composables/` | med | B5 | deferred (blocked on F4) |
+| F7b | distinct type for scoped projections | `resolvers/goal.js` + schema | med | B4 permanently | deferred (F7a covers it) |
 
 **Sequencing:** F2 + F10 + F11 + F7a are four small server edits that resolve all
 three reported symptoms. Everything below them is the structural work that stops
 the class from recurring.
+
+**F3 was superseded, not reverted.** It gated the tick controls on a
+`routineReady` flag (shipped as `did` + the `busy` prop), which closed the race
+by removing the interaction — at the cost of a dead tap on every app-open, since
+the dashboard is at its most tappable exactly when it is also refetching. F9
+closes the same race by making the *response* yield instead, so the gate came
+out: no `busy` prop anywhere, and `checkClick`/`skipClick` now **wait** for the
+routine document id (`ensureRoutineId`) rather than refusing the tap.

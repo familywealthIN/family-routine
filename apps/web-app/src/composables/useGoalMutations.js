@@ -22,6 +22,7 @@ import goalStore from '../store/goalStore';
 import currentTaskStore from '../store/currentTask';
 import { updateTaskStatusOnComplete } from '../utils/taskStatus';
 import { pendingMutations } from '../utils/pendingMutations';
+import { guardFields, releaseEntity } from '../utils/cacheGuard';
 import {
   addGoalItemToCache,
   updateGoalItemCompletionInCache,
@@ -532,6 +533,24 @@ export function useGoalMutations(apolloClient, options = {}) {
     // rules that are hard to mirror on the client, so we wait for the
     // refetch triggered by the caller after the mutation resolves.
 
+    // Claim these fields locally for the duration of the request. Apollo's
+    // optimistic layer covers the in-flight window, but not the one after it:
+    // a `cache-and-network` read issued before the tap can still land after the
+    // mutation resolves and revert the checkbox. The guard makes that response
+    // yield instead — which is why the checkbox no longer has to be disabled
+    // while a query is loading. See utils/cacheGuard.js.
+    //
+    // `progress` needs an explicit claim because the mutation does not return
+    // it (COMPLETE_GOAL_ITEM_MUTATION selects id/isComplete/status/completedAt
+    // only, and the resolver has no progress to give — F4). The other three are
+    // also confirmed automatically from the result by guardLink.
+    guardFields('GoalItem', id, {
+      isComplete,
+      progress: isComplete ? 100 : 0,
+      status: optimisticStatus,
+      completedAt: optimisticCompletedAt,
+    });
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: COMPLETE_GOAL_ITEM_MUTATION,
@@ -574,7 +593,10 @@ export function useGoalMutations(apolloClient, options = {}) {
 
       return result;
     } catch (err) {
-      // Apollo automatically rolls back the optimisticResponse on error.
+      // Apollo automatically rolls back the optimisticResponse on error. Drop
+      // the guard with it — otherwise it would keep pinning the rolled-back
+      // value over incoming reads until its TTL expired.
+      releaseEntity('GoalItem', id);
       pendingMutations.remove(pendingKey);
       handleError(err, 'completeGoalItem');
       if (onError) onError(err);
@@ -854,6 +876,11 @@ export function useGoalMutations(apolloClient, options = {}) {
       },
     } : undefined;
 
+    // Claim the toggled sub-task so an in-flight goals read can't revert it
+    // after the mutation resolves (see completeGoalItem above). The parent's
+    // own fields come back in the result, so guardLink confirms those for us.
+    guardFields('SubTaskItem', id, { isComplete });
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: COMPLETE_SUB_TASK_ITEM_MUTATION,
@@ -871,6 +898,7 @@ export function useGoalMutations(apolloClient, options = {}) {
 
       return result;
     } catch (err) {
+      releaseEntity('SubTaskItem', id);
       handleError(err, 'completeSubTaskItem');
 
       if (onError) {
