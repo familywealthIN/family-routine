@@ -44,15 +44,17 @@ function rewrite(relPath, replacements) {
   let text = readFileSync(path, 'utf8');
 
   for (const { pattern, replacement, label } of replacements) {
-    const before = text;
-    text = text.replace(pattern, replacement);
-    if (text === before) {
-      // A silent no-op here ships the wrong version to a store, which cannot be
+    // Assert the pattern matches, rather than that the text changed. Re-stamping
+    // a version that is already in the file is a legitimate no-op, and treating
+    // that as a failure would abort the release for no reason.
+    if (!text.match(pattern)) {
+      // A silent miss here ships the wrong version to a store, which cannot be
       // undone — a duplicate versionCode/build number is rejected forever.
       console.error(`FAILED: no match for ${label} in ${relPath}`);
       console.error(`  pattern: ${pattern}`);
       process.exit(1);
     }
+    text = text.replace(pattern, replacement);
   }
 
   writeFileSync(path, text);
