@@ -47,9 +47,13 @@ jobs:
     outputs:
       version: ${{ steps.v.outputs.version }}
       track: ${{ steps.v.outputs.track }}
+      build_number: ${{ steps.v.outputs.build_number }}
     steps:
       - name: Derive version and track
         id: v
+        env:
+          GITHUB_RUN_NUMBER_INT: ${{ github.run_number }}
+          VERSION_CODE_OFFSET: ${{ env.VERSION_CODE_OFFSET }}
         run: |
           set -e
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -63,9 +67,11 @@ jobs:
             echo "::error::Version must be X.Y.Z, got '$VERSION'"
             exit 1
           fi
+          BUILD_NUMBER=$(( GITHUB_RUN_NUMBER_INT + VERSION_CODE_OFFSET ))
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "track=$TRACK" >> "$GITHUB_OUTPUT"
-          echo "Releasing $VERSION to $TRACK"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Releasing $VERSION to $TRACK (versionCode $BUILD_NUMBER)"
 
   build-web:
     name: Build web bundle
@@ -167,7 +173,7 @@ jobs:
       - name: Stamp version
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
-          BUILD_NUMBER: ${{ github.run_number + 100 }}
+          BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
         run: node scripts/stamp-version.mjs
 
       - name: Provision google-services.json
@@ -279,7 +285,7 @@ jobs:
       - name: Stamp version
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
-          BUILD_NUMBER: ${{ github.run_number + 100 }}
+          BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
         run: node scripts/stamp-version.mjs
 
       - name: Provision GoogleService-Info.plist
