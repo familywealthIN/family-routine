@@ -1,0 +1,17 @@
+# Certificates and provisioning profiles live encrypted in a separate private
+# repo (MATCH_GIT_URL), decrypted with MATCH_PASSWORD.
+#
+# Seed it once from a Mac before CI can use it:
+#   bundle exec fastlane match appstore
+#
+# CI always runs readonly so a failing job can never mint new certificates and
+# silently walk the account into its 20-certificate limit.
+
+git_url(ENV['MATCH_GIT_URL'])
+storage_mode('git')
+
+type('appstore')
+app_identifier(['com.routine.note'])
+team_id('NJ3L9A8F3R')
+
+readonly(true)

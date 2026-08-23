@@ -1,0 +1,174 @@
+# Store deployment for Routine Notes (com.routine.note).
+#
+#   Release  — triggered by a v*.*.* tag (.github/workflows/release-mobile.yml)
+#     android release       signed AAB  -> Play production, staged rollout
+#     ios     release       signed IPA  -> App Store, auto-submit
+#                                     (iPhone + iPad; the iPad build is also
+#                                      offered on Apple Silicon Macs via the
+#                                      "Designed for iPad" availability option)
+#
+#   Pull request — every PR to master/develop (.github/workflows/mobile-build.yml)
+#     android pr_distribute debug APK   -> Firebase App Distribution
+#     ios     pr_testflight signed IPA  -> TestFlight internal testers
+#
+# All paths are absolute, derived from this file's location. fastlane resolves
+# relative paths inconsistently between actions (some from the fastlane/ dir,
+# some from the working directory) and a wrong path here fails deep inside a
+# 15-minute macOS job.
+
+REPO_ROOT       = File.expand_path('..', __dir__)
+IOS_WORKSPACE   = File.join(REPO_ROOT, 'apps/ios/App/App.xcworkspace')
+IOS_PROJECT     = File.join(REPO_ROOT, 'apps/ios/App/App.xcodeproj')
+ANDROID_DIR     = File.join(REPO_ROOT, 'apps/android')
+BUILD_DIR       = File.join(REPO_ROOT, 'build')
+
+APP_IDENTIFIER  = 'com.routine.note'.freeze
+
+# match's profile naming convention. Deterministic, so referencing the name
+# directly beats guessing at the sigh_* environment variables match exports.
+IOS_PROFILE     = "match AppStore #{APP_IDENTIFIER}".freeze
+
+# Store listing text and screenshots are only synced when explicitly asked for.
+# The default is binary-only: an accidental push of an empty fastlane/metadata
+# tree would blank a live listing, which is far worse than doing nothing.
+def sync_metadata?
+  ENV['SYNC_STORE_METADATA'] == 'true'
+end
+
+# ---------------------------------------------------------------------------
+# Android
+# ---------------------------------------------------------------------------
+
+platform :android do
+  desc 'Upload the signed AAB to Google Play production with a staged rollout'
+  lane :release do |options|
+    track   = options[:track]   || 'production'
+    rollout = options[:rollout] || '0.1'
+
+    supply(
+      package_name: APP_IDENTIFIER,
+      aab: File.join(ANDROID_DIR, 'app/build/outputs/bundle/release/app-release.aab'),
+      track: track,
+      rollout: (track == 'production' ? rollout : nil),
+      release_status: (track == 'production' ? 'inProgress' : 'completed'),
+      json_key: ENV.fetch('PLAY_JSON_KEY_PATH'),
+      skip_upload_apk: true,
+      skip_upload_metadata: !sync_metadata?,
+      skip_upload_images: !sync_metadata?,
+      skip_upload_screenshots: !sync_metadata?,
+      # No R8 in the release build type, so there is no mapping file to attach.
+      skip_upload_changelogs: !sync_metadata?
+    )
+  end
+
+  desc 'Send the PR debug APK to Firebase App Distribution testers'
+  lane :pr_distribute do
+    firebase_app_distribution(
+      app: ENV.fetch('FIREBASE_ANDROID_APP_ID'),
+      service_credentials_file: ENV.fetch('FIREBASE_SA_PATH'),
+      android_artifact_type: 'APK',
+      android_artifact_path: ENV.fetch('APK_PATH'),
+      groups: 'pr-testers',
+      release_notes: "PR ##{ENV['PR_NUMBER']}: #{ENV['PR_TITLE']}\n#{ENV['GITHUB_SHA'].to_s[0, 8]}"
+    )
+  end
+end
+
+# ---------------------------------------------------------------------------
+# Apple — iPhone and iPad (one binary, also runnable on Apple Silicon Macs)
+# ---------------------------------------------------------------------------
+
+platform :ios do
+  before_all do
+    app_store_connect_api_key(
+      key_id: ENV.fetch('ASC_KEY_ID'),
+      issuer_id: ENV.fetch('ASC_ISSUER_ID'),
+      key_content: ENV.fetch('ASC_KEY_P8_B64'),
+      is_key_content_base64: true,
+      in_house: false
+    )
+  end
+
+  desc 'Archive for iPhone + iPad and submit to the App Store'
+  lane :release do
+    setup_ci
+    match(type: 'appstore', readonly: true)
+    stamp_build_number
+
+    gym(
+      workspace: IOS_WORKSPACE,
+      scheme: 'App',
+      configuration: 'Release',
+      destination: 'generic/platform=iOS',
+      export_method: 'app-store',
+      output_directory: File.join(BUILD_DIR, 'ios'),
+      export_options: {
+        provisioningProfiles: { APP_IDENTIFIER => IOS_PROFILE }
+      },
+      xcargs: "PROVISIONING_PROFILE_SPECIFIER='#{IOS_PROFILE}' CODE_SIGN_IDENTITY='Apple Distribution'"
+    )
+
+    upload_to_app_store(
+      platform: 'ios',
+      force: true, # skip the interactive HTML preview
+      skip_metadata: !sync_metadata?,
+      skip_screenshots: !sync_metadata?,
+      precheck_include_in_app_purchases: false,
+      submit_for_review: true,
+      automatic_release_after_approval: true,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false
+      }
+    )
+  end
+
+  desc 'Build the PR branch and push it to TestFlight internal testers'
+  lane :pr_testflight do
+    setup_ci
+    match(type: 'appstore', readonly: true)
+    stamp_build_number
+
+    gym(
+      workspace: IOS_WORKSPACE,
+      scheme: 'App',
+      configuration: 'Release',
+      destination: 'generic/platform=iOS',
+      export_method: 'app-store',
+      output_directory: File.join(BUILD_DIR, 'ios'),
+      export_options: {
+        provisioningProfiles: { APP_IDENTIFIER => IOS_PROFILE }
+      },
+      xcargs: "PROVISIONING_PROFILE_SPECIFIER='#{IOS_PROFILE}' CODE_SIGN_IDENTITY='Apple Distribution'"
+    )
+
+    # No `groups:` here — that option selects *external* beta groups, and naming
+    # a group that does not exist fails the upload. Internal testers on the app
+    # record are notified automatically once processing finishes, and they skip
+    # Beta App Review entirely.
+    upload_to_testflight(
+      distribute_external: false,
+      # Returning as soon as the upload lands keeps the macOS runner from idling
+      # through Apple's 5-15 minute processing. TestFlight emails testers itself.
+      skip_waiting_for_build_processing: true,
+      changelog: "PR ##{ENV['PR_NUMBER']}: #{ENV['PR_TITLE']}"
+    )
+  end
+
+  # Two workflows upload iOS builds and github.run_number is scoped per workflow
+  # file, so those counters would collide in TestFlight. Asking App Store Connect
+  # for the highest build it already has is self-healing and collision-proof.
+  # scripts/stamp-version.mjs deliberately sets only MARKETING_VERSION on iOS.
+  private_lane :stamp_build_number do
+    version = get_version_number(xcodeproj: IOS_PROJECT, target: 'App')
+    latest = latest_testflight_build_number(
+      version: version,
+      initial_build_number: 0
+    )
+    increment_build_number(
+      build_number: latest + 1,
+      xcodeproj: IOS_PROJECT
+    )
+    UI.message("Build number for #{version}: #{latest + 1}")
+  end
+end
