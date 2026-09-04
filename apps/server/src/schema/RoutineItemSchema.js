@@ -34,7 +34,9 @@ const StimulusItemType = new GraphQLObjectType({
   name: 'StimuliItem',
   fields: {
     name: { type: GraphQLString },
-    splitRate: { type: GraphQLInt },
+    // Float, not Int: D.splitRate is a real number of hours (a 06:40 -> 09:00
+    // gap is 2.33), and GraphQLInt refuses to serialize a fraction.
+    splitRate: { type: GraphQLFloat },
     earned: { type: GraphQLFloat },
     potential: { type: GraphQLInt },
   },
