@@ -283,28 +283,19 @@ requires macOS keychain APIs, so it cannot be done from Windows or Linux.
 A **private** repo, e.g. `familywealthIN/certificates`. It stores only
 encrypted material, but it must never be public.
 
-### 2. Get the App Store Connect API key onto the Mac
+### 2. Point the environment at the App Store Connect API key
 
-`fastlane/Fastfile` authenticates with the ASC API key, so the `.p8` must be
-present. It **cannot be re-downloaded** — Apple offers it exactly once, at
-creation. The copy lives on the Windows machine at:
+**Already done as of 2026-09-06** — `AuthKey_AC3C3Y55D5.p8` has been copied to
+the Mac. (The original is at `D:/keys/routine-notes/` on the Windows machine.
+It cannot be re-downloaded; Apple offers it exactly once, at creation.)
 
-```
-D:/keys/routine-notes/AuthKey_AC3C3Y55D5.p8
-```
-
-Transfer it over something private (AirDrop, a password manager, an encrypted
-volume) — not email or chat. Then:
+From the directory holding the `.p8`:
 
 ```bash
 export ASC_KEY_ID=AC3C3Y55D5
 export ASC_ISSUER_ID=9b9c575a-cafe-420d-8611-f18c3a9a99dc
 export ASC_KEY_P8_B64=$(base64 -i AuthKey_AC3C3Y55D5.p8)   # macOS base64 uses -i
 ```
-
-> If moving the `.p8` is inconvenient, `match` can authenticate interactively
-> instead with `--username <your-apple-id>` and a 2FA prompt. CI still needs the
-> key, but seeding does not.
 
 ### 3. Seed the certificates
 
