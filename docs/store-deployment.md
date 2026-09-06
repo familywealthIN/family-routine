@@ -28,6 +28,12 @@ version-related is committed.
 
 Build numbers differ per platform on purpose:
 
+> **Toolchain floors, both enforced by the stores.** Google Play requires
+> `targetSdk` **36** for new uploads (since 2026-08-31), and App Store Connect
+> requires builds made with **Xcode 26 / the iOS 26 SDK** (since 2026-04-28).
+> The project is on AGP 8.13.0 / Gradle 8.14.3 / SDK 36 and `XCODE_VERSION: 26.2`.
+> Both are annual ratchets — expect to raise them again.
+
 - **Android** — `github.run_number + VERSION_CODE_OFFSET` (offset `100`, set in
   `release-mobile.yml`). The offset exists because Play production is already at
   **versionCode 3** while this workflow's `run_number` starts at 1 — without it

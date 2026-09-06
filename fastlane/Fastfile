@@ -125,7 +125,11 @@ platform :ios do
       skip_screenshots: !sync_metadata?,
       precheck_include_in_app_purchases: false,
       submit_for_review: submit_for_review?,
-      automatic_release_after_approval: submit_for_review?,
+      # `automatic_release`, not `automatic_release_after_approval` — the latter
+      # is not a deliver option and made the action reject its whole config. It
+      # went unnoticed until 2026-09-06 because no archive had ever succeeded,
+      # so upload_to_app_store had never once been reached.
+      automatic_release: submit_for_review?,
       submission_information: {
         add_id_info_uses_idfa: false,
         export_compliance_uses_encryption: false
