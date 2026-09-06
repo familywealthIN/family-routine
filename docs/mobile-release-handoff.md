@@ -1,11 +1,11 @@
 # Mobile Release Pipeline — Session Handoff
 
-**Branch:** `app-release-work` · **Last updated:** 2026-09-06
+**Branch:** `app-release-work` · **Last updated:** 2026-09-06 (match seeded)
 
 Starting a fresh session? Open with something like:
 
-> Read `docs/mobile-release-handoff.md` and `docs/store-deployment.md`. I'm on a
-> Mac now and want to seed fastlane match so the iOS release lane can run.
+> Read `docs/mobile-release-handoff.md` and `docs/store-deployment.md`. The match
+> deploy key is installed now — kick off the first iOS release run.
 
 `docs/store-deployment.md` is the full runbook. This file is the state of play,
 the decisions behind it, and what not to undo.
@@ -17,14 +17,26 @@ the decisions behind it, and what not to undo.
 | Area | Status |
 |---|---|
 | Android release | ✅ **Proven end-to-end.** v0.1.0 / versionCode 103 published to Play internal track, run `32641311575`, 2026-08-23 |
-| iOS release | ⛔ Blocked. Job passes every step up to `Configure match SSH access` |
+| fastlane match | ✅ **Seeded 2026-09-06** into `familywealth/certificates`. Cert `FXF8T465ZP` + profile `match AppStore com.routine.note`, both expire 2027-09-06 |
+| iOS release | ⛔ Blocked on one click — the match deploy key's public half is not on the certificates repo |
 | PR distribution | ⚙️ Built, not yet exercised. Firebase App Distribution (Android) + TestFlight (iOS) |
 | Mac | Covered by "Designed for iPad", not a Catalyst target |
-| GitHub secrets | 28 set. Only `MATCH_GIT_URL`, `MATCH_PASSWORD`, `MATCH_DEPLOY_KEY` missing |
+| GitHub secrets | ✅ 31 set. Nothing missing |
 
-**The single remaining blocker** is seeding `fastlane match`, which needs macOS
-keychain APIs. Step-by-step instructions are in `docs/store-deployment.md` →
-*"Seeding fastlane match — must run on a Mac"*.
+**The single remaining blocker** is a deploy key. `MATCH_DEPLOY_KEY` is set, but
+its public half has not been added to `familywealth/certificates`, because
+`grvpanchal` has push but not admin there. Until an org admin adds it, the `ios`
+job fails at `Configure match SSH access`.
+
+Add at `https://github.com/familywealth/certificates/settings/keys/new`,
+title `routine-notes-ci-readonly`, write access **unchecked**:
+
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOQJrlBVjmRxsRd8+pDtPTUhQuXEhczN0oECv64Bi/il routine-notes-ci-readonly
+```
+
+Then run the verification in `docs/store-deployment.md` →
+*"Seeding fastlane match — done 2026-09-06"*.
 
 ---
 
@@ -52,7 +64,7 @@ keychain APIs. Step-by-step instructions are in `docs/store-deployment.md` →
 | **`supply` / `deliver` default to binary-only** (`SYNC_STORE_METADATA` unset) | Pushing an empty `fastlane/metadata` tree would blank a live store listing |
 | **Matchfile is `readonly(true)`** | A failing CI job must never mint certificates and walk the account toward its 20-cert limit. **Seeding needs `--readonly false`** |
 | **`VERSION_CODE_OFFSET: 100`** | Play production was already at versionCode 3 while the workflow's `run_number` starts at 1 |
-| **Auto-submit for App Store review is ON** | User's choice. Consider `submit_for_review: false` for the first real iOS run |
+| **App Store review submission is opt-in**, gated on `SUBMIT_FOR_REVIEW=true` | Changed 2026-09-06 from a hardcoded `true`. `ios release` now uploads to App Store Connect and TestFlight and stops; a human submits. A rejection blocks the review queue, and the listing is not complete yet |
 | **PR distribution runs on every PR**, not label-gated | User's choice, knowing each PR permanently consumes a TestFlight build number |
 
 ---
@@ -104,11 +116,16 @@ keychain APIs. Step-by-step instructions are in `docs/store-deployment.md` →
 
 ## Local artifacts — not in the repo, **not backed up**
 
-`D:/keys/routine-notes/` on the Windows machine:
+`D:/keys/routine-notes/` on the Windows machine, and — verified 2026-09-06 — the
+**whole folder is also at `/Users/encors/Documents/keys/routine-notes/` on the
+Mac**, not just the `.p8` as earlier drafts of this doc claimed. Two machines is
+better than one, but neither is a backup: both are unsynced local disks.
 
 | File | If lost |
 |---|---|
-| `AuthKey_AC3C3Y55D5.p8` | **Unrecoverable.** Apple offers it once. Already copied to the Mac (2026-09-06), so two copies now exist |
+| `AuthKey_AC3C3Y55D5.p8` | **Unrecoverable.** Apple offers it once. Copies on both machines |
+| `match-password.txt` | **Mac only, and the `MATCH_PASSWORD` secret is write-only.** Losing both means `fastlane match nuke appstore` and a full re-seed, which revokes cert `FXF8T465ZP` |
+| `match_deploy_key.pub` | Harmless — public half. The private half lives only in the `MATCH_DEPLOY_KEY` secret; if that is lost, generate a new pair |
 | `upload-keystore.jks` | Another Play upload-key reset request (~4 days) |
 | `debug.keystore` | Tester builds break Google Sign-In until a new SHA-1 is registered |
 | `play-publisher-sa.json`, `firebase-app-distribution-sa.json` | Regenerable |

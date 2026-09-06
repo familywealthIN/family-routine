@@ -63,7 +63,7 @@ Build numbers differ per platform on purpose:
 | `ASC_KEY_ID` | App Store Connect API key ID |
 | `ASC_ISSUER_ID` | App Store Connect issuer ID (UUID) |
 | `ASC_KEY_P8_B64` | base64 of `AuthKey_<KEYID>.p8` |
-| `MATCH_GIT_URL` | SSH URL of the private certificates repo |
+| `MATCH_GIT_URL` | SSH URL of the private certificates repo — `git@github.com:familywealth/certificates.git` |
 | `MATCH_PASSWORD` | passphrase encrypting that repo |
 | `MATCH_DEPLOY_KEY` | SSH private key with read access to it |
 
@@ -128,19 +128,19 @@ the first real release:
 
 **Apple**
 
-1. App Store Connect → *Users and Access* → *Integrations* → create an API key
-   with the **App Manager** role. The `.p8` downloads exactly once.
-2. Create a private git repo for `match` (e.g. `familywealthIN/certificates`)
-   and a read-only deploy key for it.
-3. Developer Portal → App ID `com.routine.note` with **Push Notifications**,
-   and **Sign in with Apple**.
-4. Upload an **APNs Auth Key** to the Firebase console — separate from the ASC
-   key, and required for iOS/iPad push to work at all.
-5. Create the App Store Connect app record for the iOS platform.
-6. Seed the certificates repo **from a Mac** (this cannot be done from Windows):
-   ```
-   bundle exec fastlane match appstore
-   ```
+1. ✅ API key `AC3C3Y55D5` created with the **App Manager** role. The `.p8` is at
+   `/Users/encors/Documents/keys/routine-notes/AuthKey_AC3C3Y55D5.p8` on the Mac
+   and `D:/keys/routine-notes/` on the Windows box. It cannot be re-downloaded.
+2. ✅ Private repo `familywealth/certificates` created and seeded (2026-09-06).
+   ⛔ Its **read-only deploy key is still not installed** — see
+   *"Seeding fastlane match"* below. This is the last blocker on the iOS job.
+3. ✅ Developer Portal App ID `com.routine.note` exists (`WV4ZX53BS5`, UNIVERSAL),
+   alongside `com.routine.note.service` (`265233QTYX`) for Sign in with Apple.
+4. ✅ APNs Auth Key `54M9U84DJT` uploaded to Firebase.
+5. ✅ App Store Connect app record exists — "Routine Notes", id `6744820484`.
+6. ✅ Certificates seeded from the Mac (2026-09-06). Distribution certificate
+   `FXF8T465ZP` and profile `match AppStore com.routine.note`, both expiring
+   **2027-09-06**. Full detail in *"Seeding fastlane match"* below.
 7. Once the first build is live, tick **Pricing and Availability → Make this app
    available on Mac**. Apple Silicon Macs only — Intel Macs are excluded — and
    Apple re-reviews the app for Mac suitability.
@@ -259,100 +259,105 @@ official Catalyst support, so budget real time for it.
 
 ---
 
-## Seeding fastlane match — must run on a Mac
+## Seeding fastlane match — done 2026-09-06
 
-This is the **only remaining blocker**. Everything else in the pipeline is done
-and proven: Android published to Play's internal track end-to-end on 2026-08-23.
-The iOS job runs correctly right up to `Configure match SSH access` and fails
-there because three secrets do not exist yet.
+**Seeded and verified.** `match` created the Apple distribution certificate and
+the App Store provisioning profile, encrypted them, and pushed them to
+`familywealth/certificates`. All three `MATCH_*` secrets are set on
+`familywealthIN/family-routine`, so the pipeline now has 31 secrets and none
+missing.
 
-`match` generates the Apple distribution certificate and provisioning profile,
-encrypts them, and commits them to a private git repo. Certificate creation
-requires macOS keychain APIs, so it cannot be done from Windows or Linux.
+| Thing | Value |
+|---|---|
+| Certificates repo | `familywealth/certificates` (private, branch `master`) |
+| Distribution certificate | `FXF8T465ZP`, `Apple Distribution: Gaurav Panchal (NJ3L9A8F3R)`, expires **2027-09-06** |
+| Provisioning profile | `match AppStore com.routine.note`, `IOS_APP_STORE`, ACTIVE, expires **2027-09-06** |
+| Profile UUID | `4b249ecf-69fd-4470-abc1-7b66ab2bb3a0` |
+| Passphrase | `/Users/encors/Documents/keys/routine-notes/match-password.txt` (mode 600) — **also only in the `MATCH_PASSWORD` secret. Not backed up.** |
 
-### Prerequisites
+The profile name matches `IOS_PROFILE` in `fastlane/Fastfile`
+(`"match AppStore #{APP_IDENTIFIER}"`) exactly — that string is referenced
+directly by `gym`'s `export_options`, so it must not drift.
 
-- macOS with **Xcode installed and opened once** (so the licence is accepted)
-- The repo cloned, on branch `app-release-work`
-- `bundle install` from the repo root — the `Gemfile` already pins fastlane and
-  CocoaPods
-- Access to the Apple Developer account (Team `NJ3L9A8F3R`)
+> **The repo is `familywealth/certificates`, not `familywealthIN/certificates`.**
+> Earlier drafts of this doc assumed the latter. `familywealthIN` denies repo
+> creation to non-owners (`grvpanchal does not have the correct permissions to
+> execute CreateRepository`), so the repo was created in the `familywealth` org
+> instead. Deploy keys are per-repo, so nothing about CI cares — but
+> `MATCH_GIT_URL` must point at `familywealth`.
 
-### 1. Create the certificates repo
+### ⛔ One step still outstanding: the CI deploy key
 
-A **private** repo, e.g. `familywealthIN/certificates`. It stores only
-encrypted material, but it must never be public.
+`MATCH_DEPLOY_KEY` is set, but its **public** half has not been added to the
+certificates repo, because `grvpanchal` has push but **not admin** on
+`familywealth/certificates` (the deploy-key API returns 404). Until an admin
+adds it, the `ios` job will fail at `Configure match SSH access` → the clone.
 
-### 2. Point the environment at the App Store Connect API key
+Add this key at
+`https://github.com/familywealth/certificates/settings/keys/new` —
+title `routine-notes-ci-readonly`, **leave write access unchecked**:
 
-**Already done as of 2026-09-06** — `AuthKey_AC3C3Y55D5.p8` has been copied to
-the Mac. (The original is at `D:/keys/routine-notes/` on the Windows machine.
-It cannot be re-downloaded; Apple offers it exactly once, at creation.)
-
-From the directory holding the `.p8`:
-
-```bash
-export ASC_KEY_ID=AC3C3Y55D5
-export ASC_ISSUER_ID=9b9c575a-cafe-420d-8611-f18c3a9a99dc
-export ASC_KEY_P8_B64=$(base64 -i AuthKey_AC3C3Y55D5.p8)   # macOS base64 uses -i
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOQJrlBVjmRxsRd8+pDtPTUhQuXEhczN0oECv64Bi/il routine-notes-ci-readonly
 ```
 
-### 3. Seed the certificates
+It is also saved at `/Users/encors/Documents/keys/routine-notes/match_deploy_key.pub`.
+The private half exists **only** in the `MATCH_DEPLOY_KEY` secret; the local copy
+was deleted. If it is ever lost, generate a new pair and replace both.
+
+### How it was seeded, for the record
+
+Seeding ran over **HTTPS** using the `gh` credential helper, not SSH — no SSH key
+is registered on the `grvpanchal` account and the token lacks `admin:public_key`.
+The encrypted contents are identical either way; only CI needs the SSH URL.
 
 ```bash
-export MATCH_GIT_URL=git@github.com:familywealthIN/certificates.git
-export MATCH_PASSWORD='<invent a strong passphrase and save it>'
+export PATH="$HOME/.rbenv/shims:$PATH"          # rbenv Ruby 3.3.3; system Ruby is 2.6.10 and too old
+gem install bundler:2.4.22 && bundle install
 
-bundle exec fastlane match appstore
+# match authenticates to Apple with the ASC API key, passed as a JSON file:
+#   { "key_id", "issuer_id", "key": <contents of the .p8>, "in_house": false }
+export MATCH_GIT_URL="https://github.com/familywealth/certificates.git"
+export MATCH_PASSWORD="$(grep '^MATCH_PASSWORD=' ~/Documents/keys/routine-notes/match-password.txt | cut -d= -f2-)"
+
+bundle exec fastlane match appstore --readonly false --api_key_path ./asc_api_key.json
 ```
 
-`fastlane/Matchfile` already sets `app_identifier`, `team_id` and
-`readonly(true)`. **Seeding must not be readonly**, so pass `--readonly false`
-if match refuses to create anything.
+`--readonly false` is required: `fastlane/Matchfile` sets `readonly(true)` so a
+failing CI job can never mint certificates. Only the `appstore` type is needed —
+there is no Mac Catalyst target, so no `mac_installer_distribution` certificate.
 
-Only the `appstore` type is needed — there is no Mac Catalyst target, so no
-`mac_installer_distribution` certificate is required.
+Re-running `--readonly true` afterwards confirmed the stored passphrase decrypts
+the repo and installs the profile — the exact path CI takes.
 
-### 4. Create a deploy key for CI
-
-CI reads the certificates repo over SSH:
-
-```bash
-ssh-keygen -t ed25519 -C "routine-notes-ci" -f ./match_deploy_key -N ""
-```
-
-Add `match_deploy_key.pub` to the **certificates** repo, under
-Settings -> Deploy keys. Read-only is sufficient, since CI runs `readonly: true`.
-
-### 5. Set the three GitHub secrets
-
-```bash
-gh secret set MATCH_GIT_URL    --repo familywealthIN/family-routine --body "git@github.com:familywealthIN/certificates.git"
-gh secret set MATCH_PASSWORD   --repo familywealthIN/family-routine --body '<the passphrase from step 3>'
-gh secret set MATCH_DEPLOY_KEY --repo familywealthIN/family-routine < ./match_deploy_key
-```
-
-Then delete the local private key — it now lives in the secret.
-
-### 6. Verify
+### Verify, once the deploy key is added
 
 ```bash
 gh workflow run release-mobile.yml --repo familywealthIN/family-routine \
   --ref app-release-work -f version=0.1.1 -f track=internal
 ```
 
-Watch the `ios` job. It should get past `Configure match SSH access` and reach
-`Build and submit to the App Store`.
+Watch the `ios` job. It should now get past `Configure match SSH access` and
+reach `Build and submit to the App Store`.
 
-> **Do the first iOS run with `submit_for_review: false`** in
-> `fastlane/Fastfile`. A rejected Apple submission blocks the review queue until
-> you respond, and it is worth confirming the archive uploads cleanly before
-> handing Apple an automated submission.
+> **App Store review submission is now opt-in.** `fastlane/Fastfile` gates it on
+> `SUBMIT_FOR_REVIEW=true` (see `submit_for_review?`), so by default `ios release`
+> uploads the build to App Store Connect and TestFlight and stops there. A human
+> submits it. Set the variable on the job only once the listing is complete —
+> screenshots, privacy answers, and the demo account App Review needs for a
+> login-gated app. This replaces the old hardcoded `submit_for_review: true`.
 
 > Pick a version that has not been used. `0.1.0` is already consumed on the Play
 > internal track, and App Store Connect likewise rejects duplicate build numbers.
 
----
+### If you ever need to re-seed
+
+Losing `MATCH_PASSWORD` means the repo cannot be decrypted. Recovery is
+`bundle exec fastlane match nuke appstore` (revokes the certificate on Apple's
+side — any build signed with it stops being uploadable) followed by a fresh
+seed. The account holds **1 of 20** distribution certificates today, so there is
+ample headroom, but `nuke` is the only way back from a lost passphrase.
+
 
 ## Verifying before you trust it
 

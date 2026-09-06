@@ -35,6 +35,16 @@ def sync_metadata?
   ENV['SYNC_STORE_METADATA'] == 'true'
 end
 
+# Handing a build to Apple review is not something to do by accident. A rejection
+# blocks the review queue until someone responds, and the listing has to be
+# complete first — screenshots, privacy answers, and the demo account App Review
+# requires for a login-gated app. So the default is upload-only: the build lands
+# in App Store Connect and TestFlight, and a human submits it from there.
+# Set SUBMIT_FOR_REVIEW=true on the job once the listing is ready.
+def submit_for_review?
+  ENV['SUBMIT_FOR_REVIEW'] == 'true'
+end
+
 # ---------------------------------------------------------------------------
 # Android
 # ---------------------------------------------------------------------------
@@ -114,8 +124,8 @@ platform :ios do
       skip_metadata: !sync_metadata?,
       skip_screenshots: !sync_metadata?,
       precheck_include_in_app_purchases: false,
-      submit_for_review: true,
-      automatic_release_after_approval: true,
+      submit_for_review: submit_for_review?,
+      automatic_release_after_approval: submit_for_review?,
       submission_information: {
         add_id_info_uses_idfa: false,
         export_compliance_uses_encryption: false
