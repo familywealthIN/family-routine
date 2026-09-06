@@ -259,6 +259,110 @@ official Catalyst support, so budget real time for it.
 
 ---
 
+## Seeding fastlane match — must run on a Mac
+
+This is the **only remaining blocker**. Everything else in the pipeline is done
+and proven: Android published to Play's internal track end-to-end on 2026-08-23.
+The iOS job runs correctly right up to `Configure match SSH access` and fails
+there because three secrets do not exist yet.
+
+`match` generates the Apple distribution certificate and provisioning profile,
+encrypts them, and commits them to a private git repo. Certificate creation
+requires macOS keychain APIs, so it cannot be done from Windows or Linux.
+
+### Prerequisites
+
+- macOS with **Xcode installed and opened once** (so the licence is accepted)
+- The repo cloned, on branch `app-release-work`
+- `bundle install` from the repo root — the `Gemfile` already pins fastlane and
+  CocoaPods
+- Access to the Apple Developer account (Team `NJ3L9A8F3R`)
+
+### 1. Create the certificates repo
+
+A **private** repo, e.g. `familywealthIN/certificates`. It stores only
+encrypted material, but it must never be public.
+
+### 2. Get the App Store Connect API key onto the Mac
+
+`fastlane/Fastfile` authenticates with the ASC API key, so the `.p8` must be
+present. It **cannot be re-downloaded** — Apple offers it exactly once, at
+creation. The copy lives on the Windows machine at:
+
+```
+D:/keys/routine-notes/AuthKey_AC3C3Y55D5.p8
+```
+
+Transfer it over something private (AirDrop, a password manager, an encrypted
+volume) — not email or chat. Then:
+
+```bash
+export ASC_KEY_ID=AC3C3Y55D5
+export ASC_ISSUER_ID=9b9c575a-cafe-420d-8611-f18c3a9a99dc
+export ASC_KEY_P8_B64=$(base64 -i AuthKey_AC3C3Y55D5.p8)   # macOS base64 uses -i
+```
+
+> If moving the `.p8` is inconvenient, `match` can authenticate interactively
+> instead with `--username <your-apple-id>` and a 2FA prompt. CI still needs the
+> key, but seeding does not.
+
+### 3. Seed the certificates
+
+```bash
+export MATCH_GIT_URL=git@github.com:familywealthIN/certificates.git
+export MATCH_PASSWORD='<invent a strong passphrase and save it>'
+
+bundle exec fastlane match appstore
+```
+
+`fastlane/Matchfile` already sets `app_identifier`, `team_id` and
+`readonly(true)`. **Seeding must not be readonly**, so pass `--readonly false`
+if match refuses to create anything.
+
+Only the `appstore` type is needed — there is no Mac Catalyst target, so no
+`mac_installer_distribution` certificate is required.
+
+### 4. Create a deploy key for CI
+
+CI reads the certificates repo over SSH:
+
+```bash
+ssh-keygen -t ed25519 -C "routine-notes-ci" -f ./match_deploy_key -N ""
+```
+
+Add `match_deploy_key.pub` to the **certificates** repo, under
+Settings -> Deploy keys. Read-only is sufficient, since CI runs `readonly: true`.
+
+### 5. Set the three GitHub secrets
+
+```bash
+gh secret set MATCH_GIT_URL    --repo familywealthIN/family-routine --body "git@github.com:familywealthIN/certificates.git"
+gh secret set MATCH_PASSWORD   --repo familywealthIN/family-routine --body '<the passphrase from step 3>'
+gh secret set MATCH_DEPLOY_KEY --repo familywealthIN/family-routine < ./match_deploy_key
+```
+
+Then delete the local private key — it now lives in the secret.
+
+### 6. Verify
+
+```bash
+gh workflow run release-mobile.yml --repo familywealthIN/family-routine \
+  --ref app-release-work -f version=0.1.1 -f track=internal
+```
+
+Watch the `ios` job. It should get past `Configure match SSH access` and reach
+`Build and submit to the App Store`.
+
+> **Do the first iOS run with `submit_for_review: false`** in
+> `fastlane/Fastfile`. A rejected Apple submission blocks the review queue until
+> you respond, and it is worth confirming the archive uploads cleanly before
+> handing Apple an automated submission.
+
+> Pick a version that has not been used. `0.1.0` is already consumed on the Play
+> internal track, and App Store Connect likewise rejects duplicate build numbers.
+
+---
+
 ## Verifying before you trust it
 
 1. **Android** — `npx cap sync android && ./gradlew bundleRelease`, then
