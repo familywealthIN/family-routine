@@ -16,27 +16,56 @@ the decisions behind it, and what not to undo.
 
 | Area | Status |
 |---|---|
-| Android release | ✅ **Proven end-to-end.** v0.1.0 / versionCode 103 published to Play internal track, run `32641311575`, 2026-08-23 |
-| fastlane match | ✅ **Seeded 2026-09-06** into `familywealth/certificates`. Cert `FXF8T465ZP` + profile `match AppStore com.routine.note`, both expire 2027-09-06 |
-| iOS release | ⛔ Blocked on one click — the match deploy key's public half is not on the certificates repo |
+| fastlane match | ✅ **Seeded and proven in CI 2026-09-06.** Run `34060741146` cloned `familywealth/certificates` over SSH, decrypted, and installed cert + profile |
+| iOS release | ⛔ Blocked: `iOS 18.2 Platform Not Installed` — the archive fails compiling storyboards on `macos-15` with the pinned Xcode 16.2 |
+| Android release | ⛔ Blocked: Play now rejects `targetSdk 35`. Was proven end-to-end 2026-08-23 (v0.1.0 / versionCode 103); the API 36 deadline passed 2026-08-31 |
 | PR distribution | ⚙️ Built, not yet exercised. Firebase App Distribution (Android) + TestFlight (iOS) |
 | Mac | Covered by "Designed for iPad", not a Catalyst target |
 | GitHub secrets | ✅ 31 set. Nothing missing |
 
-**The single remaining blocker** is a deploy key. `MATCH_DEPLOY_KEY` is set, but
-its public half has not been added to `familywealth/certificates`, because
-`grvpanchal` has push but not admin there. Until an org admin adds it, the `ios`
-job fails at `Configure match SSH access`.
+**The match blocker is gone.** The deploy key is installed on
+`familywealth/certificates` and CI used it successfully. What remains are two
+unrelated failures, both surfaced by run
+[`34060741146`](https://github.com/familywealthIN/family-routine/actions/runs/34060741146),
+neither caused by the release pipeline itself.
 
-Add at `https://github.com/familywealth/certificates/settings/keys/new`,
-title `routine-notes-ci-readonly`, write access **unchecked**:
+### ⛔ Android — Play's target API deadline passed
 
 ```
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOQJrlBVjmRxsRd8+pDtPTUhQuXEhczN0oECv64Bi/il routine-notes-ci-readonly
+Google Api Error: Invalid request - Target SDK of artifact is too low: 104.
 ```
 
-Then run the verification in `docs/store-deployment.md` →
-*"Seeding fastlane match — done 2026-09-06"*.
+(`104` is the versionCode, not an API level — the message names the artifact.)
+
+`apps/android/variables.gradle` sets `targetSdkVersion = 35`. Since
+**2026-08-31** Google Play requires *new uploads and updates* to target
+**API 36** (Android 16); API 35 only keeps an *already published* app available.
+The 2026-08-23 success predates the deadline by eight days — nothing regressed
+in the repo, the calendar moved.
+
+The bump is not a one-liner: **AGP 8.x tops out at `compileSdk 35`**, and this
+project is on AGP 8.7.2 / Gradle 8.11.1. Reaching 36 needs AGP 9.0+ (or 8.9.1 as
+a transitional hack), which drags in a Gradle upgrade and a Capacitor 7
+compatibility check. An extension to **2026-11-01** can be requested in Play
+Console if that buys useful time.
+
+### ⛔ iOS — archive fails on the runner's Xcode
+
+```
+::error file=.../Base.lproj/Main.storyboard::iOS 18.2 Platform Not Installed.
+::error file=.../Base.lproj/LaunchScreen.storyboard::iOS 18.2 Platform Not Installed.
+** ARCHIVE FAILED **
+```
+
+`release-mobile.yml` pins `XCODE_VERSION: '16.2'` on `macos-15`. That Xcode is on
+the image, but its iOS platform component is not installed, so `ibtool` cannot
+compile the two storyboards. Xcode **16.4 is the image default** and the image
+also carries 16.3 and several 26.x. Cheapest fix is to move the pin to a version
+whose platform is present; the alternative is a
+`xcodebuild -downloadPlatform iOS` step, which costs a large download every run.
+
+The pin is deliberate — see the comment in `release-mobile.yml` — so change it
+knowingly rather than dropping to "latest".
 
 ---
 

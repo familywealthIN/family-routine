@@ -330,7 +330,30 @@ there is no Mac Catalyst target, so no `mac_installer_distribution` certificate.
 Re-running `--readonly true` afterwards confirmed the stored passphrase decrypts
 the repo and installs the profile — the exact path CI takes.
 
-### Verify, once the deploy key is added
+### Verified in CI
+
+Run [`34060741146`](https://github.com/familywealthIN/family-routine/actions/runs/34060741146)
+(2026-09-06) exercised the deploy key for the first time and match worked:
+
+```
+Enabling match readonly mode.
+Cloning remote git repo...
+Installing certificate...
+Installing provisioning profile...
+Certificate Name: Apple Distribution: Gaurav Panchal (NJ3L9A8F3R)
+Profile Name:     match AppStore com.routine.note
+All required keys, certificates and provisioning profiles are installed 🙌
+```
+
+Note that the `Configure match SSH access` step only loads the key into
+`ssh-agent` — it passes even with a bad key. The real proof is the `Cloning
+remote git repo` line above, inside `Build and submit to the App Store`.
+
+That run then failed further on for two reasons unrelated to signing — Play's
+API 36 requirement and a missing iOS platform SDK on the runner. Both are
+described in `docs/mobile-release-handoff.md`.
+
+### Re-verify after a change
 
 ```bash
 gh workflow run release-mobile.yml --repo familywealthIN/family-routine \
