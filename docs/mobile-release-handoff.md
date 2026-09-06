@@ -49,23 +49,49 @@ a transitional hack), which drags in a Gradle upgrade and a Capacitor 7
 compatibility check. An extension to **2026-11-01** can be requested in Play
 Console if that buys useful time.
 
-### ⛔ iOS — archive fails on the runner's Xcode
+### ⚙️ iOS — Xcode pin moved to 26.2 (2026-09-06, not yet re-run)
+
+Run `34060741146` failed the archive with:
 
 ```
 ::error file=.../Base.lproj/Main.storyboard::iOS 18.2 Platform Not Installed.
-::error file=.../Base.lproj/LaunchScreen.storyboard::iOS 18.2 Platform Not Installed.
 ** ARCHIVE FAILED **
 ```
 
-`release-mobile.yml` pins `XCODE_VERSION: '16.2'` on `macos-15`. That Xcode is on
-the image, but its iOS platform component is not installed, so `ibtool` cannot
-compile the two storyboards. Xcode **16.4 is the image default** and the image
-also carries 16.3 and several 26.x. Cheapest fix is to move the pin to a version
-whose platform is present; the alternative is a
-`xcodebuild -downloadPlatform iOS` step, which costs a large download every run.
+Both workflows pinned `XCODE_VERSION: '16.2'`, and on `macos-15` `ibtool` could
+not compile the two storyboards with it.
 
-The pin is deliberate — see the comment in `release-mobile.yml` — so change it
-knowingly rather than dropping to "latest".
+**The pin is now `26.2`, and the reason is not just that error.** Since
+**2026-04-28** App Store Connect rejects any upload not built with Xcode 26 /
+the iOS 26 SDK. Pinning 16.4 — the `macos-15` default, and the obvious fix for
+the archive failure — would have produced a green archive and then a rejected
+upload. 26.x is the only range that can actually ship.
+
+Knock-on changes, all in the same commit:
+
+- `mobile-build.yml`'s `build-ios` and `smoke-ios` moved from **macos-14 to
+  macos-15**. macos-14 tops out at Xcode 16.2 and has no 26.x at all, so they
+  could not have resolved the shared pin.
+- Both workflows deliberately keep the *same* pin. If the PR lane and the
+  release lane build with different toolchains, the PR lane goes green on builds
+  the release lane cannot produce — the same shape of bug as the `main` vs
+  `master` trigger already in the list below.
+- `smoke-ios` no longer hardcodes `iPhone 15` as its simulator fallback; it
+  picks the newest available iPhone device type. Xcode 26 does not ship an
+  iPhone 15 device type.
+
+**Not yet verified — no run has used this pin.** Two things to watch on the
+first one:
+
+1. **Liquid Glass.** Apps built against the iOS 26 SDK get the new look applied
+   to *native* UI by default. This is a Capacitor app so the WebView content is
+   unaffected, but the splash screen, status bar and any native controls may
+   look different. Check the TestFlight build before releasing.
+2. **`IPHONEOS_DEPLOYMENT_TARGET = 14.0`.** Xcode 26 documents iOS 15 as its
+   minimum and will warn; it still builds 14.0. Left alone deliberately to keep
+   this change to the pin — but it is now entangled with the long-standing
+   disagreement where `capacitor.config.json` says `15.0` while the pbxproj and
+   Podfile say `14.0`. Reconciling both to 15.0 would settle it.
 
 ---
 

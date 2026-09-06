@@ -32,7 +32,10 @@ env:
   JAVA_VERSION: '21'
   RUBY_VERSION: '3.2'
   # Pinned so a runner image bumping Xcode cannot silently break signed builds.
-  XCODE_VERSION: '16.2'
+  # Kept identical to release-mobile.yml: if the PR lane and the release lane
+  # build with different toolchains, the PR lane goes green on builds the
+  # release lane cannot produce. See that file for why this must be a 26.x.
+  XCODE_VERSION: '26.2'
 
 jobs:
   build-web:
@@ -240,7 +243,9 @@ jobs:
   build-ios:
     name: Build iOS (unsigned)
     needs: build-web
-    runs-on: macos-14
+    # macos-15, not macos-14: that image tops out at Xcode 16.2 and has no 26.x,
+    # so it cannot build with the toolchain the release lane requires.
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
@@ -339,7 +344,9 @@ jobs:
     name: Smoke test iOS (boot simulator + launch app)
     needs: build-ios
     if: github.event_name != 'workflow_dispatch' || inputs.smoke_test
-    runs-on: macos-14
+    # Must match build-ios: a simulator can only run a build made for its own
+    # runtime, and macos-14 has no iOS 26 runtime.
+    runs-on: macos-15
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -361,7 +368,18 @@ jobs:
               ids=[v['udid'] for k,arr in d.items() if 'iOS' in k for v in arr if v.get('isAvailable') and 'iPhone' in v['name']]; \
               print(ids[0] if ids else '')")
           if [ -z "$DEVICE" ]; then
-            DEVICE=$(xcrun simctl create "ci-iphone" "iPhone 15")
+            # Don't hardcode a model — the device types shipped with each Xcode
+            # change every release, and a name that no longer exists makes this
+            # fall over exactly when the discovery above has already failed.
+            DEVICE_TYPE=$(xcrun simctl list devicetypes -j | \
+              python3 -c "import json,sys; t=[d['identifier'] for d in json.load(sys.stdin)['devicetypes'] if 'iPhone' in d['name']]; \
+                print(t[-1] if t else '')")
+            if [ -z "$DEVICE_TYPE" ]; then
+              echo "::error::No iPhone simulator or device type available"
+              exit 1
+            fi
+            echo "No booted iPhone found; creating one from $DEVICE_TYPE"
+            DEVICE=$(xcrun simctl create "ci-iphone" "$DEVICE_TYPE")
           fi
           echo "Using simulator: $DEVICE"
           xcrun simctl boot "$DEVICE" || true

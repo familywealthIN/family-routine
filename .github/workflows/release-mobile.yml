@@ -30,7 +30,13 @@ env:
   RUBY_VERSION: '3.2'
   # Pinned rather than latest-stable: a runner image bumping Xcode underneath us
   # is a bad way to discover a broken release.
-  XCODE_VERSION: '16.2'
+  #
+  # Must be a 26.x. Since 2026-04-28 App Store Connect rejects any upload not
+  # built with Xcode 26 / the iOS 26 SDK, so an older pin fails at the upload
+  # step even when the archive succeeds. 16.2 also could not archive at all on
+  # macos-15 — ibtool failed both storyboards with "iOS 18.2 Platform Not
+  # Installed" (run 34060741146). macos-15 carries 26.0.1, 26.1.1, 26.2 and 26.3.
+  XCODE_VERSION: '26.2'
   # Play production is already at versionCode 3, and this workflow's run_number
   # starts at 1. The offset keeps the first automated release safely above it —
   # Play permanently rejects a versionCode that is not strictly increasing.
