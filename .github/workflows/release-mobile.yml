@@ -108,7 +108,10 @@ jobs:
           FCM_MESSAGING_SENDER_ID: ${{ secrets.FCM_MESSAGING_SENDER_ID }}
           FCM_APP_ID: ${{ secrets.FCM_APP_ID }}
           FCM_MEASUREMENT_ID: ${{ secrets.FCM_MEASUREMENT_ID }}
-          GQL_URL: ${{ secrets.GQL_URL || 'https://api.routine.familywealth.in/graphql' }}
+          # api.routine.familywealth.in does not resolve (NXDOMAIN) and is not in
+          # the CSP connect-src either, so it could never have worked. This is the
+          # endpoint the live web app at routine.familywealth.in actually calls.
+          GQL_URL: ${{ secrets.GQL_URL || 'https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com/dev/graphql' }}
           GA_PUBLIC_KEY: ${{ secrets.GA_PUBLIC_KEY }}
           GA_CLIENT_ID: ${{ secrets.GA_CLIENT_ID }}
           GA_SERVER_CLIENT_ID: ${{ secrets.GA_SERVER_CLIENT_ID }}
