@@ -1,0 +1,6 @@
+# build/ holds only generated output: the composited slide pages (multi-megabyte
+# HTML with the capture inlined as a base64 data URI) and the review sheet.
+# It is already covered by the repo-wide **/build/ rule, which is exactly why
+# the generators live in tools/ instead. Regenerate with:
+#   node tools/render-all.js <platform>
+#   node tools/make-review.js && node tools/make-review-page.js
