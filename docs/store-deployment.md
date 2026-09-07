@@ -143,7 +143,11 @@ the first real release:
 3. ✅ Developer Portal App ID `com.routine.note` exists (`WV4ZX53BS5`, UNIVERSAL),
    alongside `com.routine.note.service` (`265233QTYX`) for Sign in with Apple.
 4. ✅ APNs Auth Key `54M9U84DJT` uploaded to Firebase.
-5. ✅ App Store Connect app record exists — "Routine Notes", id `6744820484`.
+5. ✅ App Store Connect app record exists — "Routine Notes", id `6744820484` —
+   **and the app is already live**, at 1.2 (READY_FOR_SALE), with 1.1 and 1.0
+   before it and 23+ manually uploaded builds. Any new upload must use a
+   `CFBundleShortVersionString` **strictly greater than 1.2**; Apple rejects the
+   binary otherwise. See `docs/mobile-release-handoff.md` → *"The version floor"*.
 6. ✅ Certificates seeded from the Mac (2026-09-06). Distribution certificate
    `FXF8T465ZP` and profile `match AppStore com.routine.note`, both expiring
    **2027-09-06**. Full detail in *"Seeding fastlane match"* below.
@@ -376,8 +380,10 @@ reach `Build and submit to the App Store`.
 > screenshots, privacy answers, and the demo account App Review needs for a
 > login-gated app. This replaces the old hardcoded `submit_for_review: true`.
 
-> Pick a version that has not been used. `0.1.0` is already consumed on the Play
-> internal track, and App Store Connect likewise rejects duplicate build numbers.
+> **Pick a version above 1.2.** The App Store is at 1.2 while Play production is
+> at 0.0.3 — the stores have diverged, and one tag feeds both. `0.1.0` and `0.1.1`
+> are both consumed on the Play internal track. Play only requires `versionCode`
+> to increase, which happens independently.
 
 ### If you ever need to re-seed
 

@@ -16,95 +16,64 @@ the decisions behind it, and what not to undo.
 
 | Area | Status |
 |---|---|
-| fastlane match | ✅ **Proven in CI.** Run `34060741146` cloned `familywealth/certificates` over SSH and installed cert + profile |
-| iOS archive | ✅ **Proven in CI.** Run `34061487738` under Xcode 26.2: `Archive Succeeded`, dSYM exported, signed `App.ipa` produced |
-| iOS upload | ⚙️ Fixed but unverified — `upload_to_app_store` was passing an option that does not exist. Corrected 2026-09-06; no run has reached it since |
-| Android build | ✅ **Verified locally** on AGP 8.13 / Gradle 8.14.3 / SDK 36. Signed AAB built and `jarsigner` verified |
-| Android upload | ⚙️ Fixed but unverified — the API 36 bump is committed; no run has re-attempted the Play upload |
+| fastlane match | ✅ Proven in CI (run `34060741146`) |
+| iOS archive | ✅ Proven in CI (run `34061487738`, Xcode 26.2) — signed IPA produced |
+| iOS upload | ⚙️ **Reaches Apple and transmits the IPA.** Rejected on version number only — see below |
+| Android build | ✅ Verified locally and in CI on AGP 8.13 / Gradle 8.14.3 / SDK 36 |
+| Android upload | ✅ **Proven in CI (run `34061981272`).** `Upload to Google Play` succeeded with targetSdk 36 |
 | PR distribution | ⚙️ Built, not yet exercised |
-| Mac | Covered by "Designed for iPad", not a Catalyst target |
 | GitHub secrets | ✅ 31 set. Nothing missing |
 
-Every step of the signing and build chain is now proven. What is unverified is
-strictly the two *upload* calls, both of which had never been reached before.
+Every mechanical part of the pipeline now works on both platforms. The only
+remaining failure is a *version number*, not a defect.
 
-### ✅ iOS — the Xcode pin fixed the archive
+## ⚠️ The iOS app is already live on the App Store
 
-`XCODE_VERSION` moved `16.2` → **`26.2`**. Under 16.2 the archive died with
-`iOS 18.2 Platform Not Installed` on both storyboards. Under 26.2 it produced a
-signed IPA.
+Earlier drafts of both docs were wrong about this. They listed "create the App
+Store Connect app record" as outstanding and treated the pipeline's first iOS
+upload as the app's first ever. Queried directly from App Store Connect on
+2026-09-06:
 
-26.2 rather than 16.4 (the `macos-15` default) because since **2026-04-28**
-App Store Connect rejects any upload not built with Xcode 26 / the iOS 26 SDK.
-16.4 would have archived green and been rejected at upload.
-
-Knock-ons: `mobile-build.yml`'s `build-ios` and `smoke-ios` moved macos-14 →
-**macos-15** (macos-14 has no Xcode 26 at all), both workflows keep the *same*
-pin so the PR lane cannot go green on builds the release lane cannot produce,
-and `smoke-ios` stopped hardcoding `iPhone 15` as its simulator fallback.
-
-Still to watch on the first successful upload:
-
-- **Liquid Glass.** The iOS 26 SDK restyles *native* UI by default. The WebView
-  content is unaffected, but splash, status bar and native controls may differ.
-- **`IPHONEOS_DEPLOYMENT_TARGET = 14.0`** is below the iOS 15 Xcode 26 documents
-  as its minimum. It still builds. Reconciling it with
-  `capacitor.config.json`'s `15.0` would settle a long-standing disagreement.
-
-### ✅ Android — API 36 via AGP 8.13, *not* AGP 9
-
-Play rejected the upload with `Target SDK of artifact is too low: 104` (`104` is
-the versionCode; the message names the artifact). Since **2026-08-31** Play
-requires new uploads to target **API 36**. The 2026-08-23 success predates the
-deadline — the calendar moved, not the repo.
-
-**AGP 9 was the wrong tool.** AGP **8.13** already supports API 36.1, and
-Capacitor 8 itself ships AGP 8.13.0 + Gradle 8.14.3 + compileSdk 36. Meanwhile
-all seven Capacitor 7 plugin modules under `node_modules` use `lintOptions` and
-a library-level `targetSdkVersion`, both of which **AGP 9 removes** — so AGP 9
-would have broken every one of them for no benefit.
-
-What changed:
-
-| | From | To |
+| Version | State | Created |
 |---|---|---|
-| AGP | 8.7.2 | **8.13.0** |
-| Gradle wrapper | 8.11.1 | **8.14.3** |
-| `compileSdkVersion` / `targetSdkVersion` | 35 | **36** |
-| CI SDK packages | `android-35` / `build-tools;35.0.0` | **`android-36` / `36.0.0`** |
+| 0.1.1 | PREPARE_FOR_SUBMISSION | 2026-04-06 |
+| **1.2** | **READY_FOR_SALE** | 2026-03-13 |
+| 1.1 | READY_FOR_SALE | 2026-02-06 |
+| 1.0 | READY_FOR_SALE | 2025-04-18 |
 
-`minSdkVersion` stays **23**. Capacitor 8 uses 24, but API 36 does not require
-it and raising it would drop Android 6 users for no reason.
+Plus 23+ builds uploaded manually between Nov 2025 and Mar 2026. So this app has
+been shipping on iOS for nearly a year by hand; this pipeline is *automating an
+existing release*, not launching a new one.
 
-Only `variables.gradle` needed the SDK bump — all seven plugin modules read
-`rootProject.ext.compileSdkVersion`, so it propagates. `rootProject.buildDir` in
-the `clean` task also became `rootProject.layout.buildDirectory`; the old form is
-removed in Gradle 9.
+### The version floor
 
-Verified locally on this Mac (JDK 21, matching CI): debug APK reports
-`targetSdkVersion:'36'` / `compileSdkVersion='36'`, and a signed release AAB
-built and passed `jarsigner -verify`.
-
-**API 36 behaviour changes look low-risk here.** The manifest has no
-`screenOrientation` lock and no `windowOptOutEdgeToEdgeEnforcement`, and the web
-app already handles insets via `apps/web-app/src/utils/androidSafeArea.js` and
-`env(safe-area-inset-*)`. Edge-to-edge was already enforced at targetSdk 35.
-
-### 🐛 A latent Fastfile bug the successful archive exposed
-
-`upload_to_app_store` was passing **`automatic_release_after_approval`**, which
-is not a deliver option. fastlane rejects the entire config when given an unknown
-key, so the action could never have run:
+**iOS requires the next version to be strictly greater than 1.2.** Apple:
 
 ```
-[!] Could not find option 'automatic_release_after_approval' in the list of
-    available options: ..., submit_for_review, ..., automatic_release, ...
+This bundle is invalid. The value for key CFBundleShortVersionString [0.1.1]
+in the Info.plist file must contain a higher version than that of the
+previously approved version [1.2].
 ```
 
-Now `automatic_release`. This was pre-existing, not introduced by the review-flag
-change — it simply had never been reached, because no archive had ever succeeded.
-Every option name in both iOS lanes has since been checked against the `deliver`
-and `pilot` gems.
+The two stores have **diverged**: Play production is at 0.0.3 / versionCode 3
+while the App Store is at 1.2. The pipeline stamps *one* version from the git tag
+into both, so **the tag must clear the iOS floor**. Play does not care about
+`versionName` — only `versionCode`, which is computed separately from
+`run_number + VERSION_CODE_OFFSET` and keeps increasing regardless.
+
+Next release is **1.2.1**.
+
+> A stale `0.1.1` version sits in `PREPARE_FOR_SUBMISSION` in App Store Connect.
+> It is below 1.2 and cannot accept a build. Delete it or renumber it before the
+> next run; `SYNC_STORE_METADATA` is off, so the pipeline will not fix it.
+
+### Android is done
+
+Run `34061981272` uploaded `0.1.1` to the Play internal track successfully with
+`targetSdk 36`. The API 36 work is confirmed against the live Play API — the same
+call that returned `Target SDK of artifact is too low` twice earlier that day.
+
+Note this means **0.1.1 is now consumed on the Play internal track too.**
 
 ---
 
