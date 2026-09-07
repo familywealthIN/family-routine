@@ -16,16 +16,38 @@ the decisions behind it, and what not to undo.
 
 | Area | Status |
 |---|---|
-| fastlane match | ✅ Proven in CI (run `34060741146`) |
-| iOS archive | ✅ Proven in CI (run `34061487738`, Xcode 26.2) — signed IPA produced |
-| iOS upload | ⚙️ **Reaches Apple and transmits the IPA.** Rejected on version number only — see below |
-| Android build | ✅ Verified locally and in CI on AGP 8.13 / Gradle 8.14.3 / SDK 36 |
-| Android upload | ✅ **Proven in CI (run `34061981272`).** `Upload to Google Play` succeeded with targetSdk 36 |
-| PR distribution | ⚙️ Built, not yet exercised |
-| GitHub secrets | ✅ 31 set. Nothing missing |
+| **Whole pipeline** | ✅ **Green end to end.** Run [`34087580358`](https://github.com/familywealthIN/family-routine/actions/runs/34087580358), v1.2.1, 2026-09-07 — all four jobs success |
+| fastlane match | ✅ Proven. Clones `familywealth/certificates` over SSH, installs cert + profile |
+| Android | ✅ AAB on the Play **internal** track, v1.2.1 / versionCode 107, targetSdk 36 |
+| iOS | ✅ Signed IPA uploaded to App Store Connect as **build 1 of 1.2.1** |
+| App Store review | ⏸️ Not submitted, by design. `SUBMIT_FOR_REVIEW` is unset |
+| PR distribution | ⚙️ Built, still not exercised — no PR has run `mobile-build.yml` since the Xcode/SDK changes |
+| GitHub secrets | ✅ 31 set |
 
-Every mechanical part of the pipeline now works on both platforms. The only
-remaining failure is a *version number*, not a defect.
+### What was actually wrong
+
+Five separate problems, each hidden behind the one in front of it. Only the
+first was known when this started:
+
+| Problem | Fix |
+|---|---|
+| `match` never seeded | Seeded to `familywealth/certificates`; deploy key + 3 secrets |
+| Play rejected `targetSdk 35` | AGP 8.13.0 / Gradle 8.14.3 / SDK 36 — **not** AGP 9 |
+| Archive: `iOS 18.2 Platform Not Installed` | Xcode pin `16.2` → `26.2`; macos-14 jobs → macos-15 |
+| `upload_to_app_store` rejected its own config | `automatic_release_after_approval` → `automatic_release` |
+| Apple rejected version `0.1.1` | Version floor is >1.2 — released as 1.2.1 |
+
+### Before the next release
+
+- **A `v*.*.*` tag goes to Play _production_ with a 10% staged rollout**, not
+  internal. Every run so far has been `workflow_dispatch` with `track=internal`.
+  The first tag push is the first production release — and this is a live app.
+- **Check the TestFlight build** for Liquid Glass changes to native UI (splash,
+  status bar) from the iOS 26 SDK, and confirm Google/Apple sign-in still work.
+- `IPHONEOS_DEPLOYMENT_TARGET` is still `14.0` while `capacitor.config.json`
+  says `15.0`. Xcode 26 documents 15 as its minimum but builds 14 anyway.
+- Open a throwaway PR to exercise `mobile-build.yml` — its iOS jobs moved
+  runners and Xcode versions and have not run since.
 
 ## ⚠️ The iOS app is already live on the App Store
 
