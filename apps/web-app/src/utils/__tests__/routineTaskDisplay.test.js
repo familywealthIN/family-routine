@@ -7,6 +7,7 @@
 const {
   isRedeemable,
   getRedeemCost,
+  describeRedeemFailure,
   canAffordRedeem,
   getCurrentButtonColor,
   getButtonIcon,
@@ -47,6 +48,38 @@ describe('routineTaskDisplay', () => {
       expect(getRedeemCost({ points: 10 })).toBe(10);
       expect(getRedeemCost({})).toBe(0);
       expect(getRedeemCost(null)).toBe(0);
+    });
+  });
+
+  describe('describeRedeemFailure', () => {
+    it('names Start agent rather than "redeem this task" (D-05)', () => {
+      const { title, text } = describeRedeemFailure(
+        'GraphQL error: 400:Redemption is only available for today',
+        { startingAgent: true },
+      );
+      expect(title).toBe("Couldn't start the agent");
+      expect(text).toContain("today's routine");
+    });
+    it('names the task when the check button was pressed', () => {
+      expect(describeRedeemFailure('409:Task is already checked').title)
+        .toBe("Couldn't complete this task");
+    });
+    it('maps each server reason to its own explanation', () => {
+      expect(describeRedeemFailure('409:Task is already checked').text)
+        .toBe('This task is already checked off for today.');
+      expect(describeRedeemFailure('400:Task has not passed yet').text)
+        .toContain("hasn't passed yet");
+      expect(describeRedeemFailure('404:Task not found').text)
+        .toContain("no longer on today's routine");
+      expect(describeRedeemFailure('404:Routine not found').text)
+        .toContain("no longer on today's routine");
+      expect(describeRedeemFailure('400:Date does not match routine').text)
+        .toContain("today's routine");
+    });
+    it('falls back to a generic retry for unknown / empty errors', () => {
+      expect(describeRedeemFailure('500:Boom').text).toBe('Something went wrong. Please try again.');
+      expect(describeRedeemFailure(null).text).toBe('Something went wrong. Please try again.');
+      expect(describeRedeemFailure(undefined, {}).title).toBe("Couldn't complete this task");
     });
   });
 
@@ -137,6 +170,15 @@ describe('routineTaskDisplay', () => {
       expect(countTaskTotal(null)).toBe(0);
       expect(countTaskCompleted({ id: 't', points: 100, stimuli: [] })).toBe(0);
       expect(countTaskPercentage({ points: 100 })).toBe(0);
+    });
+    // D-20: a 06:40 -> 09:00 task is a 2h20m gap, i.e. one slot — the card has
+    // to read 1/1 once its single day goal item is checked, not 1/2.
+    it('a fractional D split rate is one whole slot', () => {
+      const meditation = {
+        id: 't', points: 15, stimuli: [{ name: 'D', splitRate: 7 / 3, earned: 0 }, { name: 'K', splitRate: 2, earned: 15 }],
+      };
+      expect(countTaskTotal(meditation)).toBe(1);
+      expect(countTaskCompleted(meditation)).toBe(1);
     });
   });
 });
