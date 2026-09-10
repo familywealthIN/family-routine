@@ -173,6 +173,45 @@ export default {
             isMilestone
             taskRef
             goalRef
+            milestones {
+              id
+              body
+              period
+              date
+              deadline
+              contribution
+              reward
+              isComplete
+              isMilestone
+              taskRef
+              goalRef
+              milestones {
+                id
+                body
+                period
+                date
+                deadline
+                contribution
+                reward
+                isComplete
+                isMilestone
+                taskRef
+                goalRef
+                milestones {
+                  id
+                  body
+                  period
+                  date
+                  deadline
+                  contribution
+                  reward
+                  isComplete
+                  isMilestone
+                  taskRef
+                  goalRef
+                }
+              }
+            }
           }
           lifetime {
             id
