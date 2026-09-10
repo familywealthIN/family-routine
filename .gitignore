@@ -40,8 +40,22 @@ nohup.out
 # Turbo
 .turbo
 
-android
-ios
+# Legacy Capacitor native project locations (pre-July 2026, repo root).
+# Rooted with a leading slash so they do NOT match apps/android and apps/ios,
+# where the native projects now live.
+/android
+/ios
+
+# Signing material — never commit
+*.jks
+*.keystore
+keystore.properties
+*.p8
+*.p12
+*.mobileprovision
+fastlane/report.xml
+fastlane/Preview.html
+
 # Playwright
 apps/web-app/test-results/
 apps/web-app/playwright-report/

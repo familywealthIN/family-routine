@@ -431,6 +431,7 @@ import {
 import { pendingMutations } from '../utils/pendingMutations';
 import { runNewDayReset } from '../utils/newDay';
 import { startAgentWhenReady } from '../utils/agentStart';
+import { describeRedeemFailure } from '../utils/redeemErrors';
 import { guardFields, releaseEntity } from '../utils/cacheGuard';
 
 import GoalList from '../containers/GoalListContainer.vue';
@@ -2034,12 +2035,19 @@ export default {
             this.paywallDrawerOpen = true;
             return;
           }
+          // Every redeem failure used to read "Could not redeem this task",
+          // which named an action the user never pressed (they pressed Start
+          // Agent, or ticked a circle) and gave no reason. Report what the
+          // server actually refused, and name the button they touched.
+          const { title, text } = describeRedeemFailure(message, {
+            startedAgent: fireAgent && !agentImplicit,
+          });
           this.$notify({
-            title: 'Error',
-            text: 'Could not redeem this task. Please try again.',
+            title,
+            text,
             group: 'notify',
             type: 'error',
-            duration: 3000,
+            duration: 5000,
           });
         })
         .finally(() => {

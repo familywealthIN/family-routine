@@ -59,11 +59,28 @@ async function getSkipDayCount(email) {
   return skipDayCount;
 }
 
+/**
+ * Hours between a routine item and the next one, as a real number.
+ *
+ * This feeds D.splitRate, and `D.splitRate / K.splitRate` (K is always 2, i.e.
+ * "one task per two hours") is the number of day goal-items the task needs
+ * before its counter reads full. So an error here silently changes how many
+ * goals a task demands.
+ *
+ * It used to subtract only the hour field — `'06:40'` and `'09:00'` became
+ * 9 - 6 = 3 — which rounded a 2h20m gap up to 3h. That gave `round(3/2) = 2`
+ * slots for a task the user had given one goal, so the card sat on "1/2"
+ * forever and the agent end event (which waits for completed >= total) could
+ * never fire. Minutes are counted now: 2.33h -> `round(1.17) = 1`.
+ */
 function timeDiff(time, nextTime) {
-  const [startHour] = time.split(':');
-  const [endHour] = nextTime.split(':');
+  const toMinutes = (value) => {
+    const [hour, minute] = String(value).split(':');
+    return (Number(hour) * 60) + (Number(minute) || 0);
+  };
 
-  const taskTime = (endHour - startHour);
+  // Rounded to 2dp so the stored value stays readable rather than 2.3333333333333335.
+  const taskTime = Number(((toMinutes(nextTime) - toMinutes(time)) / 60).toFixed(2));
 
   return taskTime > 2 ? taskTime : 2;
 }
@@ -256,9 +273,22 @@ const query = {
             task.ticked = foundTask.ticked;
             task.redeemed = foundTask.redeemed;
             task.passedPoints = foundTask.passedPoints;
+            // splitRate is a property of the schedule, not of the day: it is
+            // recomputed from the current times on every read, while `earned`
+            // (the only part the day owns) is carried over. Without this, every
+            // routine document written before the timeDiff fix would keep its
+            // stale hour-only splitRate forever and still demand the wrong
+            // number of goals — so this heals old days instead of needing a
+            // migration.
+            const fresh = buildStimuliForRoutineItem(task._id, tasklist);
             task.stimuli = foundTask.stimuli && foundTask.stimuli.length
-              ? foundTask.stimuli
-              : buildStimuliForRoutineItem(task._id, tasklist);
+              ? fresh.map((stimulus) => {
+                const previous = foundTask.stimuli.find((st) => st.name === stimulus.name);
+                return previous
+                  ? { ...stimulus, earned: previous.earned }
+                  : stimulus;
+              })
+              : fresh;
           } else {
             task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
           }

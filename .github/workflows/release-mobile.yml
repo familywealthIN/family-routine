@@ -1,0 +1,339 @@
+name: Release (Play Store + App Store)
+
+# Push a v*.*.* tag to cut a release:
+#   git tag v1.3.0 && git push origin v1.3.0
+#
+# The tag is the single source of truth for the marketing version. Android is
+# published to Google Play; the single iOS binary covers iPhone and iPad, and is
+# offered on Apple Silicon Macs through the "Designed for iPad" availability
+# option in App Store Connect (no separate Mac build).
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Marketing version to publish (X.Y.Z)'
+        type: string
+        required: true
+      track:
+        description: 'Play track — production runs a staged rollout'
+        type: choice
+        options: [internal, production]
+        default: internal
+        required: true
+
+env:
+  NODE_VERSION: '20'
+  JAVA_VERSION: '21'
+  RUBY_VERSION: '3.2'
+  # Pinned rather than latest-stable: a runner image bumping Xcode underneath us
+  # is a bad way to discover a broken release.
+  #
+  # Must be a 26.x. Since 2026-04-28 App Store Connect rejects any upload not
+  # built with Xcode 26 / the iOS 26 SDK, so an older pin fails at the upload
+  # step even when the archive succeeds. 16.2 also could not archive at all on
+  # macos-15 — ibtool failed both storyboards with "iOS 18.2 Platform Not
+  # Installed" (run 34060741146). macos-15 carries 26.0.1, 26.1.1, 26.2 and 26.3.
+  XCODE_VERSION: '26.2'
+  # Play production is already at versionCode 3, and this workflow's run_number
+  # starts at 1. The offset keeps the first automated release safely above it —
+  # Play permanently rejects a versionCode that is not strictly increasing.
+  VERSION_CODE_OFFSET: '100'
+
+concurrency:
+  group: release-mobile-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      track: ${{ steps.v.outputs.track }}
+      build_number: ${{ steps.v.outputs.build_number }}
+    steps:
+      - name: Derive version and track
+        id: v
+        env:
+          GITHUB_RUN_NUMBER_INT: ${{ github.run_number }}
+          VERSION_CODE_OFFSET: ${{ env.VERSION_CODE_OFFSET }}
+        run: |
+          set -e
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+            TRACK="${{ inputs.track }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            TRACK="production"
+          fi
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version must be X.Y.Z, got '$VERSION'"
+            exit 1
+          fi
+          BUILD_NUMBER=$(( GITHUB_RUN_NUMBER_INT + VERSION_CODE_OFFSET ))
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "track=$TRACK" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Releasing $VERSION to $TRACK (versionCode $BUILD_NUMBER)"
+
+  build-web:
+    name: Build web bundle
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # create-env.js is not wired into the build script. Skipping it produces a
+      # bundle with the literal string "undefined" for every config value.
+      - name: Generate runtime config
+        working-directory: apps/web-app
+        env:
+          FCM_API_KEY: ${{ secrets.FCM_API_KEY }}
+          FCM_AUTH_DOMAIN: ${{ secrets.FCM_AUTH_DOMAIN }}
+          FCM_DATABASE_URL: ${{ secrets.FCM_DATABASE_URL }}
+          FCM_PROJECT_ID: ${{ secrets.FCM_PROJECT_ID }}
+          FCM_STORAGE_BUCKET: ${{ secrets.FCM_STORAGE_BUCKET }}
+          FCM_MESSAGING_SENDER_ID: ${{ secrets.FCM_MESSAGING_SENDER_ID }}
+          FCM_APP_ID: ${{ secrets.FCM_APP_ID }}
+          FCM_MEASUREMENT_ID: ${{ secrets.FCM_MEASUREMENT_ID }}
+          # api.routine.familywealth.in does not resolve (NXDOMAIN) and is not in
+          # the CSP connect-src either, so it could never have worked. This is the
+          # endpoint the live web app at routine.familywealth.in actually calls.
+          GQL_URL: ${{ secrets.GQL_URL || 'https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com/dev/graphql' }}
+          GA_PUBLIC_KEY: ${{ secrets.GA_PUBLIC_KEY }}
+          GA_CLIENT_ID: ${{ secrets.GA_CLIENT_ID }}
+          GA_SERVER_CLIENT_ID: ${{ secrets.GA_SERVER_CLIENT_ID }}
+          GA_ANDROID_CLIENT_ID: ${{ secrets.GA_ANDROID_CLIENT_ID }}
+          GA_IOS_CLIENT_ID: ${{ secrets.GA_IOS_CLIENT_ID }}
+          IS_DEVELOPMENT: 'false'
+        run: node ./scripts/create-env.js
+
+      - name: Build web app
+        run: yarn workspace web-app build
+
+      - name: Upload web dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web-app/dist
+          retention-days: 7
+          if-no-files-found: error
+
+  android:
+    name: Publish Android to Google Play
+    needs: [prepare, build-web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+
+      - name: Setup JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('apps/android/**/*.gradle*', 'apps/android/**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Download web dist
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web-app/dist
+
+      - name: Stamp version
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+        run: node scripts/stamp-version.mjs
+
+      - name: Provision google-services.json
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON_B64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          set -e
+          if [ -z "$ANDROID_GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "::error::ANDROID_GOOGLE_SERVICES_JSON_B64 is required for a release build"
+            exit 1
+          fi
+          printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON_B64" | base64 --decode > apps/android/app/google-services.json
+
+      - name: Provision upload keystore
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          printf '%s' "$ANDROID_KEYSTORE_B64" | base64 --decode > "$GITHUB_WORKSPACE/apps/android/upload-keystore.jks"
+          # Absolute storeFile path: Gradle's file() in the app module would
+          # otherwise resolve relative to apps/android/app.
+          cat > apps/android/keystore.properties <<EOF
+          storeFile=$GITHUB_WORKSPACE/apps/android/upload-keystore.jks
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+
+      - name: Write local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > apps/android/local.properties
+
+      - name: Capacitor sync (android)
+        working-directory: apps/web-app
+        run: npx cap sync android
+
+      - name: Build signed release AAB
+        working-directory: apps/android
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: Verify the AAB is signed
+        run: |
+          set -e
+          AAB=apps/android/app/build/outputs/bundle/release/app-release.aab
+          if ! jarsigner -verify "$AAB" | grep -q 'jar verified'; then
+            echo "::error::$AAB is not signed — Play will reject it"
+            jarsigner -verify -verbose "$AAB" | tail -20
+            exit 1
+          fi
+          echo "Signature verified"
+
+      - name: Provision Play service account
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON_B64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_B64 }}
+        run: printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON_B64" | base64 --decode > "$RUNNER_TEMP/play-key.json"
+
+      - name: Upload to Google Play
+        env:
+          PLAY_JSON_KEY_PATH: ${{ runner.temp }}/play-key.json
+        run: bundle exec fastlane android release track:${{ needs.prepare.outputs.track }}
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f apps/android/upload-keystore.jks apps/android/keystore.properties "$RUNNER_TEMP/play-key.json"
+
+  ios:
+    name: Publish iPhone + iPad to the App Store
+    needs: [prepare, build-web]
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: apps/ios/App/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('apps/ios/App/Podfile.lock') }}
+          restore-keys: pods-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Download web dist
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web-app/dist
+
+      - name: Stamp version
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+        run: node scripts/stamp-version.mjs
+
+      - name: Provision GoogleService-Info.plist
+        env:
+          IOS_GOOGLE_SERVICE_INFO_PLIST_B64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_B64 }}
+        run: |
+          set -e
+          if [ -z "$IOS_GOOGLE_SERVICE_INFO_PLIST_B64" ]; then
+            echo "::error::IOS_GOOGLE_SERVICE_INFO_PLIST_B64 is required for a release build"
+            exit 1
+          fi
+          printf '%s' "$IOS_GOOGLE_SERVICE_INFO_PLIST_B64" | base64 --decode > apps/ios/App/App/GoogleService-Info.plist
+
+      - name: Capacitor sync (ios)
+        working-directory: apps/web-app
+        run: npx cap sync ios
+
+      - name: Pod install
+        working-directory: apps/ios/App
+        run: bundle exec pod install --repo-update
+
+      - name: Configure match SSH access
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.MATCH_DEPLOY_KEY }}
+
+      - name: Build and submit to the App Store
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: bundle exec fastlane ios release
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-logs
+          path: ~/Library/Logs/gym
+          if-no-files-found: ignore

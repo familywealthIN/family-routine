@@ -5,7 +5,8 @@
   "bundledWebRuntime": false,
   "ios": {
     "minVersion": "15.0",
-    "path": "../ios"
+    "path": "../ios",
+    "contentInset": "always"
   },
   "android": {
     "path": "../android"
