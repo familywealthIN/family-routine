@@ -5,9 +5,17 @@
       "gid": "1217517967742541",
       "name": "Beta Test fixes",
       "permalink": "https://app.asana.com/0/1207860307324832/1217517967742541",
-      "openCount": 27,
-      "totalCount": 28,
+      "openCount": 24,
+      "totalCount": 29,
       "tickets": [
+        {
+          "gid": "1218368899457543",
+          "ref": "D-29",
+          "severity": "Major",
+          "title": "Skip Day quota is spent by days the user never opened the app",
+          "name": "D-29 [Major] Skip Day quota is spent by days the user never opened the app",
+          "notes": "Area: Dashboard / Skip Day. Found: while fixing D-06, 10 Sep 2026.\n\nNot observed in the beta run - found by reading the code during the D-06 fix, and it is the\nmost likely explanation for what the beta run DID see.\n\nMECHANISM\ngetSkipDayCount (apps/server/src/resolvers/routine.js:40-59) counts how many days this week\nthe user has skipped, and skipRoutine (routine.js:436) refuses with \"You have already skip 2\ndays this week.\" once that count reaches 2.\n\nThe helper treats a MISSING routine document as a skipped day (selectedItem === null, line 53).\nA routine document is only created when the user actually opens the app for that date. So every\nday the user simply did not open the app silently spends their weekly Skip Day quota.\n\nEFFECT\nA user who misses two days of a week - by being on holiday, ill, or just not opening the app -\ncan no longer use Skip Day at all for the rest of that week. The one feature intended to handle\n\"I could not do my routine today\" is disabled precisely by the situation it exists for.\n\nThe refusal was also invisible until now: skipClick's catch showed a generic \"An unexpected\nerror occured\" and reverted the switch, which is exactly why D-06 was filed as \"the Skip Day\nswitch does nothing\". D-06's fix now surfaces the real server message, so this defect is at\nleast legible - but the quota rule itself is unchanged.\n\nDONE WHEN\nA day the user never opened the app is not counted against the Skip Day quota, OR the quota\nrule is deliberately confirmed as intended and the UI explains it before the user hits it.\n\nNOTE\nThis is a product decision as much as a bug - changing getSkipDayCount alters the weekly quota\nfor every existing user, which is why the D-06 fix deliberately did not touch it.\n\n---\nFound during the first automated fix cycle, 10 Sep 2026. Related: D-06."
+        },
         {
           "gid": "1217517967920266",
           "ref": "D-28",
@@ -71,14 +79,6 @@
           "title": "Two screens disagree about which week \"this week\" is",
           "name": "D-21 [Minor] Two screens disagree about which week \"this week\" is",
           "notes": "Area: Dates. Found: setup day.\n\nACTUAL\nHome's week strip runs Sunday-Saturday. The week goal picker calls \"W33  Aug 10 - Aug 16\" current (Monday-start / ISO). On Sunday 16 Aug, Home says the week is 16-22 while the picker says the current week ends today.\n\nDOWNSTREAM\nA plan saved under \"Week 33, 2026\" generated entries for 16-22 Aug - a week whose stated range excludes six of its own seven milestones - and then filed under \"Week 34 2026\" on the Goals page.\n\nDONE WHEN\nOne week definition is used across the app.\n\n---\nSeven-day beta simulation, 16-22 Aug 2026. Full report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
-        },
-        {
-          "gid": "1217518125886131",
-          "ref": "D-20",
-          "severity": "Major",
-          "title": "Routine counter disagrees with its own checkboxes",
-          "name": "D-20 [Major] Routine counter disagrees with its own checkboxes",
-          "notes": "Area: Dashboard. Found: day 7.\n\nACTUAL\nThe Meditation routine header read \"06:40 - 1/2\" while BOTH of its goals were visibly checked:\n- TODAY tab: \"Active Recovery and Holistic Reflection\" checked and struck through\n- WEEK tab: the parent goal checked and struck through\nIt should read 2/2.\n\nDONE WHEN\nThe counter and the checkboxes agree.\n\n---\nSeven-day beta simulation, 16-22 Aug 2026. Full report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
         },
         {
           "gid": "1217517967415566",
@@ -187,9 +187,9 @@
         {
           "gid": "1217518128950236",
           "ref": "D-06",
-          "severity": "Major",
-          "title": "The Skip Day switch does nothing",
-          "name": "D-06 [Major] The Skip Day switch does nothing",
+          "severity": "Needs re-verification",
+          "title": "[Major] The Skip Day switch does nothing",
+          "name": "D-06 [Needs re-verification] [Major] The Skip Day switch does nothing",
           "notes": "Area: Dashboard. Found: day 4.\n\nREPRO\nOpen Home on any day and click the \"Skip Day\" switch.\n\nACTUAL\nNothing happens. After two clicks the input still reports checked: false, aria-checked: \"false\", disabled: false. No visual state change, no GraphQL mutation on the wire, no console error (only the usual dev-server sockjs CSP noise).\n\nNOT AN INTERACTION ARTEFACT\nGoal-item checkboxes toggle correctly via the identical interaction in the same session, so this is specific to Skip Day.\n\nDONE WHEN\nThe switch either works or is removed from the dashboard.\n\n---\nFound in the seven-day beta simulation, 16-22 Aug 2026 (account grvpanchalus@gmail.com, local web-app :8080 + apps/server :3000, live Atlas).\nFull report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
         },
         {
@@ -199,30 +199,6 @@
           "title": "An agent can only ever be started once per routine item",
           "name": "D-05 [Major] An agent can only ever be started once per routine item",
           "notes": "Area: Agents. Found: days 1 and 7.\n\nACTUAL\nDay 1's \"Start agent\" succeeded and debited 15 diamonds; the agent moved to listening. Day 7's \"Start agent\" failed with a red toast - \"Error / Could not redeem this task. Please try again.\" No diamonds debited, agent unchanged.\n\nCAUSE\nThe routine-item document carries redeemed: true (confirmed in the apps/server log alongside ticked: true). Routine items are one shared document reused across every day, so the flag set on 16 Aug is still true on 22 Aug and the redeem is refused permanently.\n\nEFFECT\nA \"daily\" agent runs exactly one day, then errors forever.\n\nSECONDARY\nThe error message says \"redeem this task\", which does not match the button the user pressed (\"Start agent\"), so the user cannot tell what failed or why.\n\nDONE WHEN\nThe redeem/started flag is scoped per day, and the error names the action that actually failed.\n\n---\nFound in the seven-day beta simulation, 16-22 Aug 2026 (account grvpanchalus@gmail.com, local web-app :8080 + apps/server :3000, live Atlas).\nFull report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
-        },
-        {
-          "gid": "1217518165967047",
-          "ref": "D-04",
-          "severity": "Critical",
-          "title": "AI plan entries are not milestones, so milestone tracking reads zero",
-          "name": "D-04 [Critical] AI plan entries are not milestones, so milestone tracking reads zero",
-          "notes": "Area: Milestones / Progress. Found: day 5.\n\nThe plan-review pane states: \"all timeline entries will be milestones referencing the plan title.\" They are saved as ordinary day goals instead.\n\nEVIDENCE (with four of seven plan days complete)\n- Progress > Task and Activities Completed shows \"Milestones 0/1\"\n- /goals/milestones > day Goals lists none of the seven generated titles\n- /goals/milestones > week Goals omits the parent goal entirely\n- the goal-item editor exposes no control to mark an item as a milestone, so the user cannot correct it manually either\n\nIMPACT\nMilestone creation and milestone progress are non-functional for AI-generated plans, which is the flow the feature is built around.\n\nDONE WHEN\nPlan entries are stored as milestones, milestone counters reflect them, and they appear on the Milestones page.\n\n---\nFound in the seven-day beta simulation, 16-22 Aug 2026 (account grvpanchalus@gmail.com, local web-app :8080 + apps/server :3000, live Atlas).\nFull report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
-        },
-        {
-          "gid": "1217518165956602",
-          "ref": "D-03",
-          "severity": "Critical",
-          "title": "Goal marks itself complete with a milestone still unfinished",
-          "name": "D-03 [Critical] Goal marks itself complete with a milestone still unfinished",
-          "notes": "Area: Goal completion. Found: day 7.\n\nREPRO\n1. Create a week goal with seven daily milestones.\n2. Complete six of them, leaving one mid-week day untouched.\n3. Complete the final day's milestone.\n\nEXPECTED\nThe goal stays open, or the user is told what is outstanding before it closes.\n\nACTUAL\nThe parent goal becomes checked and struck through on its own. The user never ticked it, and the missed day's milestone was never completed. The goal reports COMPLETE at 6/7.\n\nEVIDENCE\nUnchecked on day 6; checked on day 7. The only intervening goal action was completing the final day's milestone.\n\nWHY IT MATTERS\nThis is the \"avoids falsely marking goals as complete\" case. A goal that closes itself at 6/7 without saying so is worse than one that never closes - the user is told they achieved something they did not.\n\nDONE WHEN\nCompletion is gated on the goal's criteria, and any auto-complete states which criteria were met.\n\n---\nFound in the seven-day beta simulation, 16-22 Aug 2026 (account grvpanchalus@gmail.com, local web-app :8080 + apps/server :3000, live Atlas).\nFull report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
-        },
-        {
-          "gid": "1217518128960728",
-          "ref": "D-01",
-          "severity": "Blocker",
-          "title": "Month-period AI plan saves the goal but drops all 7 milestones",
-          "name": "D-01 [Blocker] Month-period AI plan saves the goal but drops all 7 milestones",
-          "notes": "Area: AI routine builder. Found: setup day.\n\nThe headline feature does not persist its timeline when the period is \"This Month\".\n\nREPRO\n1. Home > \"Build your routine goals with AI\" > Goal tab.\n2. Set period to \"This Month\". Enter a seven-day objective. Send.\n3. AI returns \"Generated Monthly Plan (7 items)\" with seven dated entries.\n4. Click \"Save plan & timeline\".\n\nEXPECTED\nOne month goal plus seven day-goal milestones on 16-22 Aug referencing it.\n\nACTUAL\nOnly the month goal is created. Zero milestones exist. The modal closes with no error and no toast.\n\nEVIDENCE\n- Goals page: Total Day Tasks 0\n- Home TODAY empty on both 15 and 16 Aug\n- none of the seven generated titles appear on the Milestones page\n- the parent goal has no children\n- apps/server logs seven rounds of tag work, so the loop runs; the items just never land\n\nKEY DETAIL FOR THE FIX\nThe identical flow with the period set to \"Week\" creates all seven milestones correctly. The bug is specific to the month period.\n\nDONE WHEN\nA month-period plan creates its milestones, and any save that cannot create them fails loudly instead of silently.\n\nSOLUTION\nTHe logic is just to create week milestones with month goal. It can 3 to 5 based on weeks within that month. So no day milestone needed for the week. \n\n---\nFound in the seven-day beta simulation, 16-22 Aug 2026 (account grvpanchalus@gmail.com, local web-app :8080 + apps/server :3000, live Atlas).\nFull report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
         }
       ]
     }
