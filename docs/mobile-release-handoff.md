@@ -49,6 +49,96 @@ first was known when this started:
 - Open a throwaway PR to exercise `mobile-build.yml` — its iOS jobs moved
   runners and Xcode versions and have not run since.
 
+## 🐛 Two app bugs found on the first real build (2026-09-07)
+
+Both predate the pipeline work and shipped in every build to date. Neither was
+caused by the release automation — the automation just delivered a build people
+could finally run.
+
+### The app could not reach the server
+
+`GQL_URL` resolved to `https://api.routine.familywealth.in/graphql`. That host
+is **NXDOMAIN**, and it is not in the `connect-src` of the CSP in
+`public/index.html` either, so it could never have worked from the WebView.
+
+The endpoint the **live web app** at `routine.familywealth.in` actually calls —
+read straight out of its deployed bundle — is:
+
+```
+https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com/dev/graphql
+```
+
+That host was *already* in the CSP allowlist, and it answers GraphQL. It is the
+`familywealth-graphql-api` serverless service, stage `dev`, region `ap-south-1`.
+Fixed as the fallback in both workflows; the `GQL_URL` secret was updated to
+match.
+
+> `apps/web-app/src/blob/config.js` is committed and had the correct URL all
+> along. CI overwrites it via `scripts/create-env.js` from the secret, so only
+> the mobile builds were ever broken — the web app was always fine.
+
+### The header drew under the status bar (iOS)
+
+Capacitor's iOS default is `UIScrollViewContentInsetAdjustmentNever`
+(`CAPInstanceDescriptor.m:45`). **With `.never`, WKWebView reports
+`env(safe-area-inset-*)` as 0.** So this rule resolved to `max(0px, 0px)`:
+
+```css
+.capacitor-native .v-toolbar {
+  margin-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top));
+}
+```
+
+Fixed with `"contentInset": "always"` in `capacitor.config.json` → `ios`.
+
+Measured on an iPhone 16 Pro Max simulator using a probe page loaded in the real
+WebView:
+
+| | `env(safe-area-inset-top)` | `innerHeight` | Result |
+|---|---|---|---|
+| Before | `0px` | 956 (full screen) | content under the Dynamic Island |
+| After | `0px` | **860** | content correctly inset |
+
+`env()` staying 0 afterwards is correct: the WebView no longer extends into the
+unsafe area, so there is nothing to compensate for and nothing double-insets.
+
+`public/index.html` also shipped with **two `<head>` tags**, the first never
+closed, each carrying its own viewport meta — and the first lacked
+`viewport-fit=cover`, leaving the winner to the parser. Merged into one
+well-formed head. Necessary, but not sufficient on its own: `viewport-fit=cover`
+cannot help while the WebView reports no insets at all.
+
+> **Still latent:** `--system-top-inset` is read in seven CSS rules but is
+> **never assigned anywhere**, so it always falls back to `0px`.
+> `utils/androidSafeArea.js` sets a differently named `--safe-area-inset-top`,
+> which none of those rules read — so its intended 24px Android fallback is dead
+> code. Left alone deliberately; `contentInset` makes it moot on iOS, but
+> **Android has no `contentInset` equivalent** and may still need a real fix.
+
+## 🧪 Test in the simulator before TestFlight
+
+Standing instruction from the user, 2026-09-07: build and run in the local Xcode
+simulator and verify the change there *before* shipping to TestFlight. Both bugs
+above were reproducible on a simulator in minutes; both had already survived a
+full release cycle. Every TestFlight upload also permanently burns a build
+number and ~12 minutes of macOS runner.
+
+```bash
+yarn workspace web-app build
+cd apps/web-app && PATH="$HOME/.rbenv/shims:$PATH" npx cap sync ios
+cd ../ios/App && xcodebuild -workspace App.xcworkspace -scheme App   -configuration Debug -sdk iphonesimulator   -destination 'platform=iOS Simulator,name=iPhone 16 Pro Max'   CODE_SIGNING_ALLOWED=NO build
+xcrun simctl install booted <path>/App.app && xcrun simctl launch booted com.routine.note
+```
+
+Two gaps in local fidelity worth knowing:
+
+- **Local Xcode is 16.2; CI builds with 26.2.** Simulator runs cannot reproduce
+  iOS 26 SDK behaviour such as Liquid Glass. Installing Xcode 26 would close it.
+- `GoogleService-Info.plist` is gitignored and provisioned by CI. A **placeholder
+  with dummy keys** now exists locally so the app builds and launches;
+  `FirebaseApp.configure()` is unguarded and crashes without one. Swap in the
+  real file for anything Firebase-dependent.
+
 ## ⚠️ The iOS app is already live on the App Store
 
 Earlier drafts of both docs were wrong about this. They listed "create the App
