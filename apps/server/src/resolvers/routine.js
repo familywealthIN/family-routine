@@ -59,11 +59,17 @@ async function getSkipDayCount(email) {
   return skipDayCount;
 }
 
-function timeDiff(time, nextTime) {
-  const [startHour] = time.split(':');
-  const [endHour] = nextTime.split(':');
+function timeOfDayInHours(time) {
+  const [hour, minute] = time.split(':');
 
-  const taskTime = (endHour - startHour);
+  return Number(hour) + (Number(minute || 0) / 60);
+}
+
+function timeDiff(time, nextTime) {
+  // Minutes are part of the gap. Reading only the hour stretched a 06:40 ->
+  // 09:00 window into a full 3 hours, which bought the task a second goal-item
+  // slot (round(3 / 2) = 2) that its 2h20m never earned.
+  const taskTime = timeOfDayInHours(nextTime) - timeOfDayInHours(time);
 
   return taskTime > 2 ? taskTime : 2;
 }

@@ -1544,6 +1544,15 @@ const mutation = {
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
+      const goal = await GoalModel.findOne({
+        date: args.date,
+        period: args.period,
+        email,
+      }).exec();
+      const deletedItem = goal && goal.goalItems
+        ? goal.goalItems.find((aGoalItem) => aGoalItem.id === args.id)
+        : null;
+
       await GoalModel.findOneAndUpdate(
         {
           date: args.date,
@@ -1552,6 +1561,26 @@ const mutation = {
         },
         { $pull: { goalItems: { _id: args.id } } },
       ).exec();
+
+      // Completing a day item credits K on its routine task; the bare $pull
+      // left that credit behind, so the card kept counting a goal item that no
+      // longer exists (a routine reading 1/2 with an empty goal list). Refund
+      // it exactly the way un-checking the item does.
+      if (args.period === 'day' && deletedItem && deletedItem.isComplete && deletedItem.taskRef) {
+        const routine = await RoutineModel.findOne({ date: args.date, email }).exec();
+        const task = routine && routine.tasklist
+          ? routine.tasklist.find((t) => t._id.toString() === deletedItem.taskRef.toString())
+          : null;
+        if (task) {
+          task.stimuli = removeStimulusEarnedPoint('K', task);
+          await RoutineModel.findOneAndUpdate(
+            { date: args.date, email, 'tasklist._id': deletedItem.taskRef },
+            { $set: { 'tasklist.$.stimuli': task.stimuli } },
+            { new: true },
+          ).exec();
+        }
+      }
+
       return args;
     },
   },

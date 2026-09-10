@@ -171,5 +171,14 @@ describe('routineTaskDisplay', () => {
       expect(countTaskCompleted({ id: 't', points: 100, stimuli: [] })).toBe(0);
       expect(countTaskPercentage({ points: 100 })).toBe(0);
     });
+    // D-20: a 06:40 -> 09:00 task is a 2h20m gap, i.e. one slot — the card has
+    // to read 1/1 once its single day goal item is checked, not 1/2.
+    it('a fractional D split rate is one whole slot', () => {
+      const meditation = {
+        id: 't', points: 15, stimuli: [{ name: 'D', splitRate: 7 / 3, earned: 0 }, { name: 'K', splitRate: 2, earned: 15 }],
+      };
+      expect(countTaskTotal(meditation)).toBe(1);
+      expect(countTaskCompleted(meditation)).toBe(1);
+    });
   });
 });
