@@ -30,6 +30,7 @@ const { RoutineModel } = require('../schema/RoutineSchema');
 const { buildStimuliForRoutineItem } = require('./routine');
 const { threshold } = require('../utils/getProgressReport');
 const { deriveGoalItemStatus } = require('../utils/goalItemStatus');
+const { collectPeriodCriteria, evaluateAutoComplete } = require('../utils/goalCompletionCriteria');
 
 const getDaysArray = (year, month) => {
   let firstMonday = '';
@@ -239,6 +240,11 @@ async function autoCheckTaskPeriod({
 
       const dayCleanGoals = childPeriodGoals.filter((g) => g.goalItems && g.goalItems.length);
 
+      // Everything the user hung off this goal inside the period. The streak
+      // threshold alone used to close a week goal at five wins with a seventh
+      // milestone still open, so it is now a floor rather than the whole rule.
+      const criteria = collectPeriodCriteria(dayCleanGoals, periodGoalItem.id);
+
       if (dayCleanGoals && dayCleanGoals.length) {
         const tempGRoutineTasks = [];
         dayCleanGoals.forEach((dayCleanGoal) => {
@@ -258,7 +264,15 @@ async function autoCheckTaskPeriod({
               taskRef: matchedDayGoal.taskRef,
             });
 
-            if (periodGoalItem.progress === completionThreshold && !periodGoalItem.isComplete) {
+            const autoComplete = evaluateAutoComplete({
+              criteria,
+              progress: periodGoalItem.progress,
+              completionThreshold,
+              stepDownPeriod,
+              date: periodGoal.date,
+            });
+
+            if (autoComplete.isComplete && !periodGoalItem.isComplete) {
               // Mirror completion into cleanGoals so a caller that re-uses it
               // (completeGoalItem's month→year backtrack) sees the parent as
               // done. Guarded: a caller may not include the parent doc.
@@ -268,6 +282,7 @@ async function autoCheckTaskPeriod({
                 .find((cleanGoalItem) => String(cleanGoalItem.id) === String(periodGoalItem.id));
 
               periodGoalItem.isComplete = true;
+              periodGoalItem.completionNote = autoComplete.note;
               if (cleanGoalsGoalItem) cleanGoalsGoalItem.isComplete = true;
 
               updatePromises.push(GoalModel.findOneAndUpdate(
@@ -277,7 +292,7 @@ async function autoCheckTaskPeriod({
                   email,
                   'goalItems._id': periodGoalItem.id,
                 },
-                { $set: { 'goalItems.$.isComplete': true } },
+                { $set: { 'goalItems.$.isComplete': true, 'goalItems.$.completionNote': autoComplete.note } },
                 { new: true },
               ).exec());
 
