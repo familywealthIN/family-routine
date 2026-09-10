@@ -49,6 +49,13 @@ rule, and the known false-positive traps. Two that bite every run:
   silently reverts to real time.
 - Never pipe a dev server through `head`/`tail`. It dies on SIGPIPE mid-run and the app then
   paints confident EMPTY states that look exactly like data loss.
+- **A browser-only clock shim cannot test anything the server date-checks.** `validateRedeem`
+  (`apps/server/src/utils/xpLedger.js`) enforces a ±1-day window against the SERVER's clock, so
+  a redeem, an agent start or a points debit on a simulated future day is refused with
+  `400: Redemption is only available for today` no matter how healthy the feature is. This has
+  already produced one false Major (D-05, "an agent can only ever be started once per routine
+  item"). Before you report any cross-day finding about redeem, points or the agent lifecycle,
+  confirm it is not just the integrity window — and say in your evidence which clock you moved.
 
 ## The seven days
 

@@ -105,11 +105,9 @@ Found in the seven-day beta simulation, ${label} (account grvpanchalus@gmail.com
   for (let i = 0; i < fresh.length; i += 1) {
     const f = fresh[i];
     const ref = `D-${String(i + 1).padStart(2, '0')}`;
-    const t = await api('POST', '/tasks', {
+    const t = await api('POST', `/tasks/${epic.gid}/subtasks`, {
       name: `${ref} [${f.severity}] ${f.title}`,
       notes: renderNotes(f, ref, run.reportUrl),
-      parent: epic.gid,
-      workspace: IDS.workspace,
     });
     console.log(`OK    ${t.gid}  ${t.name}`);
   }
