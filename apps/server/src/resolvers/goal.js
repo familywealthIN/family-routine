@@ -1275,74 +1275,105 @@ const mutation = {
       const email = getEmailfromSession(context);
       const { goalItems } = args;
 
-      // Process goal items in parallel using Promise.all
-      const addedGoalItems = await Promise.all(
-        goalItems.map(async (goalItemData) => {
-          const {
-            date,
-            period,
-            body,
-            deadline,
-            contribution,
-            reward,
-            isComplete,
-            isMilestone,
-            taskRef,
-            goalRef,
-            tags = [],
-          } = goalItemData;
+      const addOne = async (goalItemData) => {
+        const {
+          date,
+          period,
+          body,
+          deadline,
+          contribution,
+          reward,
+          isComplete,
+          isMilestone,
+          taskRef,
+          goalRef,
+          tags = [],
+        } = goalItemData;
 
-          // Validation: if goalRef is passed, isMilestone must be true
-          if (goalRef && !isMilestone) {
-            throw new Error(`When goalRef is provided, isMilestone must be true for item: ${body || 'Unknown'}`);
-          }
+        // Validation: if goalRef is passed, isMilestone must be true
+        if (goalRef && !isMilestone) {
+          throw new Error(`When goalRef is provided, isMilestone must be true for item: ${body || 'Unknown'}`);
+        }
 
-          await setUserTag(email, tags);
+        await setUserTag(email, tags);
 
-          const goalToAdd = {
-            date,
-            email,
-            period,
-            goalItems: [
-              {
-                body,
-                deadline,
-                contribution,
-                reward,
-                isComplete,
-                isMilestone,
-                taskRef,
-                goalRef,
-                tags: ensurePriorityTag(tags, { period, date, body }),
-              },
-            ],
-          };
+        const goalToAdd = {
+          date,
+          email,
+          period,
+          goalItems: [
+            {
+              body,
+              deadline,
+              contribution,
+              reward,
+              isComplete,
+              isMilestone,
+              taskRef,
+              goalRef,
+              tags: ensurePriorityTag(tags, { period, date, body }),
+            },
+          ],
+        };
 
-          const goalEntry = await GoalModel.findOne({
-            date,
-            period: period || 'day',
-            email,
-          }).exec();
+        const goalEntry = await GoalModel.findOne({
+          date,
+          period: period || 'day',
+          email,
+        }).exec();
 
-          if (goalEntry && goalEntry.date) {
-            await GoalModel.findOneAndUpdate(
-              { email, date, period },
-              { $set: { goalItems: [...goalEntry.goalItems, goalToAdd.goalItems[0]] } },
-              { new: true },
-            ).exec();
-          } else {
-            const goal = new GoalModel(goalToAdd);
-            await goal.save();
-          }
+        if (goalEntry && goalEntry.date) {
+          await GoalModel.findOneAndUpdate(
+            { email, date, period },
+            { $set: { goalItems: [...goalEntry.goalItems, goalToAdd.goalItems[0]] } },
+            { new: true },
+          ).exec();
+        } else {
+          const goal = new GoalModel(goalToAdd);
+          await goal.save();
+        }
 
-          const updatedGoal = await GoalModel.findOne({
-            date,
-            period,
-            email,
-          }).exec();
+        const updatedGoal = await GoalModel.findOne({
+          date,
+          period,
+          email,
+        }).exec();
 
-          return updatedGoal.goalItems[updatedGoal.goalItems.length - 1];
-        }),
+        const addedGoalItem = updatedGoal
+          && updatedGoal.goalItems[updatedGoal.goalItems.length - 1];
+
+        // Never report a save that didn't happen — the caller closes its
+        // modal on success, so a swallowed item disappears without a trace.
+        if (!addedGoalItem) {
+          throw new Error(`Failed to save goal item "${body || 'Unknown'}" for ${period} ${date}`);
+        }
+
+        return addedGoalItem;
+      };
+
+      // Items sharing a date + period live in the same Goal document, and
+      // adding one is a read-append-write. Run those in parallel and every
+      // item but the last is lost (or forked into a duplicate Goal document
+      // that no read path returns). Group by document, write each group in
+      // order, keep separate documents parallel.
+      const buckets = new Map();
+      goalItems.forEach((goalItemData, index) => {
+        const key = `${goalItemData.date}|${goalItemData.period || 'day'}`;
+        if (!buckets.has(key)) {
+          buckets.set(key, []);
+        }
+        buckets.get(key).push({ goalItemData, index });
+      });
+
+      const addedGoalItems = [];
+
+      await Promise.all(
+        Array.from(buckets.values()).map((bucket) => bucket.reduce(
+          (previous, { goalItemData, index }) => previous.then(async () => {
+            addedGoalItems[index] = await addOne(goalItemData);
+          }),
+          Promise.resolve(),
+        )),
       );
 
       return addedGoalItems;
