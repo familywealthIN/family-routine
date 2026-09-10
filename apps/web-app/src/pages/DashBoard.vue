@@ -431,6 +431,7 @@ import {
 import { pendingMutations } from '../utils/pendingMutations';
 import { runNewDayReset } from '../utils/newDay';
 import { startAgentWhenReady } from '../utils/agentStart';
+import { describeRedeemFailure } from '../utils/routineTaskDisplay';
 import { guardFields, releaseEntity } from '../utils/cacheGuard';
 
 import GoalList from '../containers/GoalListContainer.vue';
@@ -2034,12 +2035,18 @@ export default {
             this.paywallDrawerOpen = true;
             return;
           }
+          // Name the control the user actually pressed ("Start agent" reaches
+          // this same path) and the reason the server gave, so a refusal is
+          // diagnosable from the toast alone.
+          const { title, text } = describeRedeemFailure(message, {
+            startingAgent: fireAgent && !agentImplicit,
+          });
           this.$notify({
-            title: 'Error',
-            text: 'Could not redeem this task. Please try again.',
+            title,
+            text,
             group: 'notify',
             type: 'error',
-            duration: 3000,
+            duration: 4000,
           });
         })
         .finally(() => {

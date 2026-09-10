@@ -93,6 +93,27 @@ function buildStimuliForRoutineItem(taskId, tasklist) {
   ];
 }
 
+/**
+ * Clear the per-day state on a routine item seeded from the shared
+ * `routineItems` template.
+ *
+ * One routineItem document is reused by every day, so `ticked` / `passed` /
+ * `redeemed` / `passedPoints` only ever mean anything on the copy inside a
+ * day's `routines.tasklist[]`. Every writer already respects that (see
+ * xp.js redeemRoutineItem and passRoutineItem below, which both write
+ * `tasklist.$.*`), but the seeding paths used to inherit whatever the template
+ * happened to carry. Resetting explicitly makes "per day" an invariant rather
+ * than an accident of addRoutineItem's initial values — otherwise a template
+ * that ever picked up `redeemed: true` would make that item unredeemable, and
+ * its agent unstartable, on every future day.
+ */
+function resetDayState(task) {
+  task.ticked = false;
+  task.passed = false;
+  task.redeemed = false;
+  task.passedPoints = undefined;
+}
+
 // Threshold constants for G stimulus scaling
 const stimuliThreshold = {
   weekDays: 5,
@@ -260,6 +281,10 @@ const query = {
               ? foundTask.stimuli
               : buildStimuliForRoutineItem(task._id, tasklist);
           } else {
+            // Not in this day's document yet — there is no per-day state to
+            // carry over, so start it clean instead of inheriting the shared
+            // template's flags.
+            resetDayState(task);
             task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
           }
         });
@@ -347,6 +372,7 @@ const mutation = {
       const tasklist = await RoutineItemModel.find({ email });
       sortTimes(tasklist);
       tasklist.forEach((task) => {
+        resetDayState(task);
         task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
       });
 
@@ -469,5 +495,5 @@ const mutation = {
 };
 
 module.exports = {
-  query, mutation, buildStimuliForRoutineItem, aggregateStimuliForRoutine,
+  query, mutation, buildStimuliForRoutineItem, aggregateStimuliForRoutine, resetDayState,
 };
