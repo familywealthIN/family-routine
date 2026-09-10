@@ -2361,12 +2361,16 @@ export default {
             }
           },
         })
-        .catch(() => {
-          // Revert on error
+        .catch((error) => {
+          // Revert on error. skipRoutine refuses a skip once the week's quota
+          // is spent ("You have already skip 2 days this week.") — behind the
+          // generic text the switch just flips back on its own, which reads as
+          // a dead control, so show what the server actually said.
           this.$routine.setSkipDay(!skipValue);
+          const [gqlError] = (error && error.graphQLErrors) || [];
           this.$notify({
             title: 'Error',
-            text: 'An unexpected error occured',
+            text: (gqlError && gqlError.message) || 'An unexpected error occured',
             group: 'notify',
             type: 'error',
             duration: 3000,
