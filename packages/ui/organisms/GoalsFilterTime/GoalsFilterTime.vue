@@ -5,7 +5,13 @@
     >
       {{ periodFilter | capitalize }} Goals
     </v-subheader>
-    <div v-if="goals && goals.length">
+    <LoadErrorState
+      v-if="showLoadError"
+      :message="`We couldn't load your ${periodFilter} goals.`"
+      :retrying="retrying"
+      @retry="$emit('retry')"
+    />
+    <div v-else-if="goals && goals.length">
       <template v-for="goal in goals">
         <AtomListGroup
           :key="goal.id"
@@ -41,6 +47,7 @@ import moment from 'moment';
 
 import { getPeriodDate, isItBeforeToday } from '../../utils/getDates';
 import GoalItemList from '../GoalItemList/GoalItemList.vue';
+import LoadErrorState from '../../molecules/LoadErrorState/LoadErrorState.vue';
 import {
   AtomList,
   AtomListGroup,
@@ -59,12 +66,24 @@ export default {
     AtomListTileContent,
     AtomListTileTitle,
     GoalItemList,
+    LoadErrorState,
   },
-  props: ['goals', 'periodFilter', 'updateNewGoalItem', 'rangeType', 'selectedMonth'],
+  // `error` tells an empty list apart from a list we never received — without
+  // it a failed query renders as a confident "You Don't have any Goals.".
+  props: [
+    'goals', 'periodFilter', 'updateNewGoalItem', 'rangeType', 'selectedMonth', 'error', 'retrying',
+  ],
   data() {
     return {
       date: moment().format('DD-MM-YYYY'),
     };
+  },
+  computed: {
+    // Only claim the load failed when there is nothing to show: a refetch that
+    // fails over a cache-and-network read should keep showing what we have.
+    showLoadError() {
+      return !!this.error && !(this.goals && this.goals.length);
+    },
   },
   methods: {
     isItBeforeToday,

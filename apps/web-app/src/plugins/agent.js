@@ -17,6 +17,7 @@ export default {
       get statusByRoutineId() { return agentStore.statusByRoutineId; },
       get lastResultByRoutineId() { return agentStore.lastResultByRoutineId; },
       get loading() { return agentStore.loading; },
+      get error() { return agentStore.error; },
 
       getByTaskRef: agentStore.getByTaskRef,
       setLocalStatus: agentStore.setLocalStatus,
