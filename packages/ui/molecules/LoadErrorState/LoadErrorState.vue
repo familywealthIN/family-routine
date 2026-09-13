@@ -23,7 +23,7 @@ import AtomButton from '../../atoms/Button/Button.vue';
 import AtomIcon from '../../atoms/Icon/Icon.vue';
 
 export default {
-  name: 'LoadErrorState',
+  name: 'MoleculeLoadErrorState',
 
   components: {
     AtomButton,
