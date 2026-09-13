@@ -49,6 +49,7 @@ const GoalItemSchema = new mongoose.Schema({
   },
   completedAt: Date,
   originalDate: String, // Track original date for rescheduled tasks
+  completionNote: String, // Which criteria an auto-complete was awarded on
 });
 
 const GoalSchema = new mongoose.Schema({
@@ -146,6 +147,7 @@ const GoalItemTypeFields = {
   createdAt: { type: GraphQLString },
   completedAt: { type: GraphQLString },
   originalDate: { type: GraphQLString },
+  completionNote: { type: GraphQLString },
 };
 
 const SubTaskItemType = new GraphQLObjectType({

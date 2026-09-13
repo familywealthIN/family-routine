@@ -5,7 +5,7 @@ function updatePeriodDate(goalItem, period, date) {
   };
 }
 
-function updateMilestonesEntry(period, milestoneGoals, periodGoalItemList) {
+function updateMilestonesEntry(period, milestoneGoals, periodGoalItemList, attachedIds) {
   if (period === 'day') { return; }
 
   // const spliceList = [];
@@ -23,6 +23,8 @@ function updateMilestonesEntry(period, milestoneGoals, periodGoalItemList) {
       if (!foundGoalItem.milestones.find((milestone) => milestone._id === milestoneGoal._id)) {
         foundGoalItem.milestones.push(milestoneGoal);
       }
+      // eslint-disable-next-line no-underscore-dangle
+      attachedIds.add(milestoneGoal._id);
       // spliceList.push(i);
     }
   });
@@ -30,7 +32,7 @@ function updateMilestonesEntry(period, milestoneGoals, periodGoalItemList) {
   // spliceList.forEach((i) => milestoneGoals.splice(i, 1));
 }
 
-function getGoalPeriodMilestone(period, goals, milestoneGoals) {
+function getGoalPeriodMilestone(period, goals, milestoneGoals, attachedIds) {
   const periodGoals = goals.filter((goal) => goal.period === period);
   const periodGoalItemList = [];
   periodGoals.forEach((periodGoal) => {
@@ -47,19 +49,32 @@ function getGoalPeriodMilestone(period, goals, milestoneGoals) {
     }
   });
 
-  updateMilestonesEntry(period, milestoneGoals, periodGoalItemList);
-  updateMilestonesEntry(period, milestoneGoals, milestoneGoals);
+  updateMilestonesEntry(period, milestoneGoals, periodGoalItemList, attachedIds);
+  updateMilestonesEntry(period, milestoneGoals, milestoneGoals, attachedIds);
 
   return periodGoalItemList;
 }
 
 function getGoalMilestone(goals) {
   const milestoneGoals = [];
+  const attachedIds = new Set();
   const periods = ['day', 'week', 'month', 'year', 'lifetime'];
   const milestonesView = {};
 
   periods.forEach((period) => {
-    milestonesView[period] = getGoalPeriodMilestone(period, goals, milestoneGoals);
+    milestonesView[period] = getGoalPeriodMilestone(period, goals, milestoneGoals, attachedIds);
+  });
+
+  // A milestone is only ever rendered under the parent it was attached to, so
+  // one whose goalRef is empty or names an item that no longer exists fell out
+  // of the view entirely — and took everything nested below it with it. An AI
+  // plan disappears the moment any link above it is unrooted. List those at
+  // their own period, where they are the top of what is left of the tree.
+  milestoneGoals.forEach((milestoneGoal) => {
+    // eslint-disable-next-line no-underscore-dangle
+    if (!attachedIds.has(milestoneGoal._id) && milestonesView[milestoneGoal.period]) {
+      milestonesView[milestoneGoal.period].push(milestoneGoal);
+    }
   });
 
   return milestonesView;

@@ -161,9 +161,42 @@ async function getNextStepsFromGoalItems(goalItems) {
   }
 }
 
+/**
+ * Week anchors (Fridays) that fall inside the month `monthDate` belongs to,
+ * from `from` onwards. A month plan is made of the weeks the month actually
+ * contains — 3 to 5 of them — so its milestones are week goals that sit
+ * inside the parent month goal, instead of 7-day hops that walk straight out
+ * of the month. Friday is the week-goal anchor used everywhere else
+ * (getTimelineEntryDate, getWeeksOfYear).
+ *
+ * @param {Date} monthDate Any date inside the target month.
+ * @param {Date} from Earliest anchor to keep (start of today, or the 1st for
+ *   a "next month" plan).
+ * @returns {Date[]}
+ */
+function monthWeekAnchors(monthDate, from) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const anchors = [];
+
+  for (let day = 1; day <= lastDay; day += 1) {
+    const date = new Date(year, month, day);
+    if (date.getDay() === 5) {
+      anchors.push(date);
+    }
+  }
+
+  const upcoming = anchors.filter((date) => date >= from);
+  // Late in the month nothing is left — keep the plan well formed by
+  // falling back to the month's final week rather than returning no entries.
+  return upcoming.length ? upcoming : anchors.slice(-1);
+}
+
 function generateEntriesTemplate(timeframe, userQuery = '') {
   const entriesTemplate = [];
   const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   // The frontend (modifyQueryPeriod in AiGoalPlanFormContainer) rewrites
   // bare period words into explicit counts (e.g. "this year" → "8 months"
@@ -199,6 +232,11 @@ function generateEntriesTemplate(timeframe, userQuery = '') {
     })()
     : new Date(today);
 
+  // A month plan steps down to the weeks the month contains, never past its
+  // end. `explicitWeeks` (the client rewrites "this month" into "N weeks")
+  // only ever trims the tail — the calendar decides where the weeks land.
+  const monthAnchors = monthWeekAnchors(monthBase, isNextMonth ? monthBase : todayStart);
+
   const periodInfo = {
     week: {
       period: 'day',
@@ -216,8 +254,8 @@ function generateEntriesTemplate(timeframe, userQuery = '') {
     },
     month: {
       period: 'week',
-      range: explicitWeeks || 4,
-      getDelta: (i) => new Date(monthBase.getTime() + (i * 7 * 24 * 60 * 60 * 1000)),
+      range: Math.min(monthAnchors.length, explicitWeeks || monthAnchors.length),
+      getDelta: (i) => monthAnchors[i],
       formatPeriodName: (date, i) => `Week ${i + 1}`,
     },
     year: {
@@ -252,13 +290,48 @@ function generateEntriesTemplate(timeframe, userQuery = '') {
   return entriesTemplate;
 }
 
-function generateFallbackPlan(userQuery, timeframe) {
-  const entriesTemplate = generateEntriesTemplate(timeframe, userQuery);
-  const mappedEntries = entriesTemplate.map((entry, index) => ({
+// Periods the milestone planner knows how to step down from. Anything else
+// (day, lifetime) falls back to inferring the timeframe from the query text.
+const PLAN_TIMEFRAMES = ['week', 'month', 'year'];
+
+function fallbackEntry(entry, index) {
+  return {
     ...entry,
     title: `Goal Plan - ${entry.periodName}`,
     description: `Continue working towards your goals. Step ${index + 1} of your plan.`,
-  }));
+  };
+}
+
+/**
+ * Pin the model's entries onto the template grid.
+ *
+ * Rule 2 of the prompt asks the model to keep every period / periodName /
+ * date exactly as templated, and it regularly ignores that — a month plan
+ * comes back as seven day-dated entries. The save path derives the milestone
+ * period and date from these values, so a drifting entry lands the milestone
+ * on the wrong period (or on none at all). Keep the model's prose, keep our
+ * grid.
+ */
+function alignEntriesToTemplate(entries, entriesTemplate) {
+  const generated = Array.isArray(entries) ? entries : [];
+
+  return entriesTemplate.map((templateEntry, index) => {
+    const entry = generated[index];
+    if (!entry || !entry.title) {
+      return fallbackEntry(templateEntry, index);
+    }
+
+    return {
+      ...templateEntry,
+      title: entry.title,
+      description: entry.description || fallbackEntry(templateEntry, index).description,
+    };
+  });
+}
+
+function generateFallbackPlan(userQuery, timeframe) {
+  const entriesTemplate = generateEntriesTemplate(timeframe, userQuery);
+  const mappedEntries = entriesTemplate.map(fallbackEntry);
   return {
     period: timeframe,
     title: 'Goal Plan',
@@ -267,10 +340,16 @@ function generateFallbackPlan(userQuery, timeframe) {
   };
 }
 
-async function generateMilestonePlan(userQuery, systemPrompt = null) {
+async function generateMilestonePlan(userQuery, systemPrompt = null, period = null) {
   let timeframe = 'week';
 
-  if (/\d+\s*days?\b/i.test(userQuery) || /next\s*week/i.test(userQuery)) {
+  if (PLAN_TIMEFRAMES.includes(period)) {
+    // The period the user picked in the toolbar is authoritative. The query
+    // text alone can't tell a month plan from a week plan, so a "This Month"
+    // plan whose objective never says "month" used to fall through to the
+    // week default and come back as seven day entries under a month goal.
+    timeframe = period;
+  } else if (/\d+\s*days?\b/i.test(userQuery) || /next\s*week/i.test(userQuery)) {
     timeframe = 'week';
   } else if (/\d+\s*weeks?\b/i.test(userQuery) || /next\s*month/i.test(userQuery)) {
     timeframe = 'month';
@@ -311,6 +390,11 @@ async function generateMilestonePlan(userQuery, systemPrompt = null) {
     if (!parsedJson.period || !parsedJson.title || !parsedJson.entries) {
       throw new Error('Invalid JSON structure from AI');
     }
+
+    // The plan's own period and entry grid are ours, not the model's — the
+    // save path steps down from them to decide what a milestone is.
+    parsedJson.period = timeframe;
+    parsedJson.entries = alignEntriesToTemplate(parsedJson.entries, entriesTemplate);
 
     // Guard: if the model forgot the top-level description, build one
     // from the first two entries so the parent goal never ends up blank.

@@ -71,13 +71,19 @@ const mutation = {
       systemPrompt: {
         type: GraphQLString,
       },
+      // The period selected in the toolbar. Authoritative when supplied —
+      // the query text on its own can't distinguish a month plan from a
+      // week one.
+      period: {
+        type: GraphQLString,
+      },
     },
-    resolve: async (root, { query: userQuery, systemPrompt }, context) => {
+    resolve: async (root, { query: userQuery, systemPrompt, period }, context) => {
       // Require authentication even for AI operations
       getEmailfromSession(context);
 
       try {
-        const plan = await generateMilestonePlan(userQuery, systemPrompt);
+        const plan = await generateMilestonePlan(userQuery, systemPrompt, period);
         return plan;
       } catch (error) {
         console.error('Error generating milestone plan:', error);
