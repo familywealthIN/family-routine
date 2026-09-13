@@ -41,6 +41,41 @@ function collectPeriodCriteria(childPeriodGoals, goalItemId) {
   return criteria;
 }
 
+/** DD-MM-YYYY → YYYYMMDD, so two period dates can be compared as strings. */
+const sortableDate = (date) => String(date || '').split('-').reverse().join('');
+
+/**
+ * One entry per CALENDAR child date of the period, in calendar order, so the
+ * streak widget can align its nodes to days instead of packing completions to
+ * the left. Rendering `progress` as an N-of-5 count made a week with a missed
+ * Wednesday look identical to an unbroken one.
+ *
+ * A child date the user declared no milestone on is still emitted, as 'none':
+ * dropping it would shift the later days leftwards and re-create that bug.
+ *
+ * @param {Array<string>} childDates    DD-MM-YYYY, calendar order (periodChildDates)
+ * @param {Array}         criteria      from collectPeriodCriteria
+ * @param {string}        referenceDate DD-MM-YYYY the period is being read for;
+ *                                      dates before it can be missed, dates from
+ *                                      it onwards are still winnable
+ * @returns {Array<{ date: string, status: 'complete'|'missed'|'upcoming'|'none' }>}
+ */
+function buildMilestoneDays(childDates, criteria, referenceDate) {
+  const reference = sortableDate(referenceDate);
+
+  return childDates.map((childDate) => {
+    const onThisDate = criteria.filter((criterion) => criterion.date === childDate);
+
+    if (!onThisDate.length) return { date: childDate, status: 'none' };
+    if (onThisDate.every((criterion) => criterion.isComplete)) return { date: childDate, status: 'complete' };
+
+    return {
+      date: childDate,
+      status: sortableDate(childDate) < reference ? 'missed' : 'upcoming',
+    };
+  });
+}
+
 /**
  * @param {Object} p
  * @param {Array}  p.criteria            from collectPeriodCriteria
@@ -70,4 +105,4 @@ function evaluateAutoComplete({
   };
 }
 
-module.exports = { collectPeriodCriteria, evaluateAutoComplete };
+module.exports = { collectPeriodCriteria, buildMilestoneDays, evaluateAutoComplete };

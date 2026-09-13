@@ -18,13 +18,16 @@
           Goal {{ index + 1 }} of {{ weekGoal.goalItems.length }}
         </div>
         <div class="body-1">{{ goalItem.body }}</div>
-        <streak-checks :progress="goalItem.progress || 0" />
+        <streak-checks
+          v-if="goalItem.milestoneDays && goalItem.milestoneDays.length"
+          :days="goalItem.milestoneDays"
+        />
+        <div v-else class="caption text--secondary">Streak not available for this week</div>
       </div>
 
       <!-- Fallback for when no goal items exist -->
       <div v-if="!weekGoal.goalItems || weekGoal.goalItems.length === 0" class="mb-2">
         <div class="body-1 text--secondary">No week goal items</div>
-        <streak-checks :progress="0" />
       </div>
     </div>
   </AtomCard>

@@ -30,7 +30,7 @@ const { RoutineModel } = require('../schema/RoutineSchema');
 const { buildStimuliForRoutineItem } = require('./routine');
 const { threshold } = require('../utils/getProgressReport');
 const { deriveGoalItemStatus } = require('../utils/goalItemStatus');
-const { collectPeriodCriteria, evaluateAutoComplete } = require('../utils/goalCompletionCriteria');
+const { collectPeriodCriteria, buildMilestoneDays, evaluateAutoComplete } = require('../utils/goalCompletionCriteria');
 
 const getDaysArray = (year, month) => {
   let firstMonday = '';
@@ -251,6 +251,11 @@ async function autoCheckTaskPeriod({
       // path on GoalItemSchema, so neither is ever persisted.
       periodGoalItem.milestonesTotal = criteria.length;
       periodGoalItem.milestonesComplete = criteria.filter((criterion) => criterion.isComplete).length;
+
+      // The same criteria laid out against the period's own calendar, one entry
+      // per child date, so the streak widget can show WHERE a week broke rather
+      // than only how many wins it holds. GraphQL-only, like the tallies above.
+      periodGoalItem.milestoneDays = buildMilestoneDays(childDates, criteria, date);
 
       if (dayCleanGoals && dayCleanGoals.length) {
         const tempGRoutineTasks = [];

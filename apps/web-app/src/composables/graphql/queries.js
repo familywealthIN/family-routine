@@ -193,6 +193,10 @@ export const DAILY_GOALS_QUERY = gql`
         progress
         milestonesTotal
         milestonesComplete
+        milestoneDays {
+          date
+          status
+        }
         isComplete
         taskRef
         goalRef
