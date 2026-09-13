@@ -245,6 +245,13 @@ async function autoCheckTaskPeriod({
       // milestone still open, so it is now a floor rather than the whole rule.
       const criteria = collectPeriodCriteria(dayCleanGoals, periodGoalItem.id);
 
+      // The figure the dashboard renders for "how close am I?". Derived from the
+      // same criteria the auto-complete rule uses, so the count can never
+      // disagree with the tick. GraphQL-only, like `progress` — neither is a
+      // path on GoalItemSchema, so neither is ever persisted.
+      periodGoalItem.milestonesTotal = criteria.length;
+      periodGoalItem.milestonesComplete = criteria.filter((criterion) => criterion.isComplete).length;
+
       if (dayCleanGoals && dayCleanGoals.length) {
         const tempGRoutineTasks = [];
         dayCleanGoals.forEach((dayCleanGoal) => {
