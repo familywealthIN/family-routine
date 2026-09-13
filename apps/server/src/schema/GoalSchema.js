@@ -128,6 +128,16 @@ const decryptGoalData = function decryptGoal(docs) {
 
 GoalSchema.post(['find', 'findOne', 'findOneAndUpdate'], decryptGoalData);
 
+// One node of a period goal's calendar streak: every child date of the period,
+// with what happened on it ('complete' | 'missed' | 'upcoming' | 'none').
+const GoalMilestoneDayType = new GraphQLObjectType({
+  name: 'GoalMilestoneDay',
+  fields: {
+    date: { type: GraphQLString },
+    status: { type: GraphQLString },
+  },
+});
+
 const GoalItemTypeFields = {
   id: { type: GraphQLID },
   email: { type: GraphQLString },
@@ -146,6 +156,7 @@ const GoalItemTypeFields = {
   // read and never stored.
   milestonesTotal: { type: GraphQLInt },
   milestonesComplete: { type: GraphQLInt },
+  milestoneDays: { type: new GraphQLList(GoalMilestoneDayType) },
   goalRef: { type: GraphQLString },
   tags: { type: new GraphQLList(GraphQLString) },
   status: { type: GraphQLString },

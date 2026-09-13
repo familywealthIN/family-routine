@@ -102,6 +102,9 @@ function createGoalItemObject(goalItem) {
     id: goalItem.id,
     body: goalItem.body,
     progress: goalItem.progress != null ? goalItem.progress : 0,
+    // Only period goals carry a calendar streak; the server derives it per read,
+    // so an optimistically added item has none yet.
+    milestoneDays: goalItem.milestoneDays || null,
     isComplete: goalItem.isComplete != null ? goalItem.isComplete : false,
     taskRef: goalItem.taskRef || null,
     goalRef: goalItem.goalRef || null,
