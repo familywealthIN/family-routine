@@ -21,22 +21,22 @@
           <atom-layout align-center justify-center class="agent-stats-row">
             <div class="agent-stat-item text-xs-center">
               <div class="overline white--text stat-label">Agents</div>
-              <div class="display-3 white--text font-weight-medium">{{ agents.length }}</div>
+              <div class="display-3 white--text font-weight-medium">{{ statCount(agents.length) }}</div>
             </div>
             <v-divider vertical dark class="agent-stat-divider"></v-divider>
             <div class="agent-stat-item text-xs-center">
               <div class="overline white--text stat-label">Active</div>
-              <div class="display-3 white--text font-weight-medium">{{ activeCount }}</div>
+              <div class="display-3 white--text font-weight-medium">{{ statCount(activeCount) }}</div>
             </div>
             <v-divider vertical dark class="agent-stat-divider"></v-divider>
             <div class="agent-stat-item text-xs-center">
               <div class="overline white--text stat-label">Success</div>
-              <div class="display-3 white--text font-weight-medium">{{ successTotal }}</div>
+              <div class="display-3 white--text font-weight-medium">{{ statCount(successTotal) }}</div>
             </div>
             <v-divider vertical dark class="agent-stat-divider"></v-divider>
             <div class="agent-stat-item text-xs-center">
               <div class="overline white--text stat-label">Failures</div>
-              <div class="display-3 white--text font-weight-medium">{{ failureTotal }}</div>
+              <div class="display-3 white--text font-weight-medium">{{ statCount(failureTotal) }}</div>
             </div>
           </atom-layout>
         </atom-container>
@@ -66,9 +66,17 @@
         </template>
         <template v-slot:no-data>
           <td :colspan="headers.length" class="text-xs-center pa-4">
-            No agents yet. Create one to start automating routine actions —
-            each agent fires a start event when its routine becomes active and
-            (optionally) an end event when its goals are complete.
+            <load-error-state
+              v-if="loadError"
+              message="We couldn't load your agents."
+              :retrying="$agent.loading"
+              @retry="reloadAgents"
+            />
+            <template v-else>
+              No agents yet. Create one to start automating routine actions —
+              each agent fires a start event when its routine becomes active and
+              (optionally) an end event when its goals are complete.
+            </template>
           </td>
         </template>
       </atom-data-table>
@@ -102,6 +110,7 @@
 import gql from 'graphql-tag';
 import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import { AgentEditModal } from '@routine-notes/ui/organisms';
+import LoadErrorState from '@routine-notes/ui/molecules/LoadErrorState/LoadErrorState.vue';
 import {
   AtomButton,
   AtomCard,
@@ -130,6 +139,7 @@ export default {
   components: {
     ContainerBox,
     AgentEditModal,
+    LoadErrorState,
     AtomButton,
     AtomCard,
     AtomCardText,
@@ -157,6 +167,9 @@ export default {
   },
   computed: {
     agents() { return this.$agent.agents; },
+    // fetchAll swallows a failed load into the store and leaves `agents` empty,
+    // so without this the page claims the user has no agents.
+    loadError() { return !!this.$agent.error && !this.agents.length; },
     activeCount() {
       return this.agents.filter((a) => ACTIVE_STATUSES.includes(a.executionStatus)).length;
     },
@@ -210,6 +223,13 @@ export default {
     this.$agent.fetchAll();
   },
   methods: {
+    // The totals are unknown after a failed load, not zero.
+    statCount(count) {
+      return this.loadError ? '—' : count;
+    },
+    reloadAgents() {
+      this.$agent.fetchAll();
+    },
     routineName(taskRef) {
       const r = this.routineItems.find((item) => item.id === taskRef);
       return r ? r.name : taskRef;
