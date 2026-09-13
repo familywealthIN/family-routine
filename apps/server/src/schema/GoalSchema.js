@@ -141,6 +141,11 @@ const GoalItemTypeFields = {
   isMilestone: { type: GraphQLBoolean },
   taskRef: { type: GraphQLString },
   progress: { type: GraphQLInt },
+  // Milestone tally for a period goal item, computed by autoCheckTaskPeriod.
+  // Like `progress`, these are not GoalItemSchema paths — they are derived per
+  // read and never stored.
+  milestonesTotal: { type: GraphQLInt },
+  milestonesComplete: { type: GraphQLInt },
   goalRef: { type: GraphQLString },
   tags: { type: new GraphQLList(GraphQLString) },
   status: { type: GraphQLString },

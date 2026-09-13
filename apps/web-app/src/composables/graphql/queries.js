@@ -191,6 +191,8 @@ export const DAILY_GOALS_QUERY = gql`
         id
         body
         progress
+        milestonesTotal
+        milestonesComplete
         isComplete
         taskRef
         goalRef

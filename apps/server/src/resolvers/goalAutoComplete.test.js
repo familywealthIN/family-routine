@@ -128,3 +128,36 @@ describe('autoCheckTaskPeriod week auto-complete', () => {
     expect(mockGoalFindOneAndUpdate).toHaveBeenCalledTimes(1);
   });
 });
+
+// D-12: the week goal showed as a bare checkbox because the payload carried no
+// denominator — `progress` alone cannot say how close the goal is.
+describe('autoCheckTaskPeriod milestone tally', () => {
+  it('reports met and declared milestones on the period goal item', async () => {
+    const complete = ['06-09-2026', '07-09-2026', '08-09-2026'];
+    primeFind([weekDoc()], dayDocs(complete));
+
+    const [weekGoal] = await runWeek();
+
+    expect(weekGoal.goalItems[0].milestonesComplete).toBe(3);
+    expect(weekGoal.goalItems[0].milestonesTotal).toBe(7);
+  });
+
+  it('counts only the milestones declared for the period', async () => {
+    const declared = WEEK_DAYS.slice(0, 3);
+    primeFind([weekDoc()], dayDocs(declared, declared));
+
+    const [weekGoal] = await runWeek();
+
+    expect(weekGoal.goalItems[0].milestonesComplete).toBe(3);
+    expect(weekGoal.goalItems[0].milestonesTotal).toBe(3);
+  });
+
+  it('reports a zero tally when nothing was hung off the goal', async () => {
+    primeFind([weekDoc()], []);
+
+    const [weekGoal] = await runWeek();
+
+    expect(weekGoal.goalItems[0].milestonesComplete).toBe(0);
+    expect(weekGoal.goalItems[0].milestonesTotal).toBe(0);
+  });
+});
