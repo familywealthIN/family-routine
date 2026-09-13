@@ -176,6 +176,20 @@ export const UPDATE_GOAL_ITEM_MUTATION = gql`
 `;
 
 /**
+ * Mark goal item missed mutation. Records a day the user did not manage as a
+ * status on the item, so the alternative to completing it is no longer deleting
+ * it. Selecting `status` keeps the normalized GoalItem entity in step.
+ */
+export const MARK_GOAL_ITEM_MISSED_MUTATION = gql`
+  mutation markGoalItemMissed($id: ID!, $isMissed: Boolean!) {
+    markGoalItemMissed(id: $id, isMissed: $isMissed) {
+      id
+      status
+    }
+  }
+`;
+
+/**
  * Update goal item contribution mutation (for auto-save)
  */
 export const UPDATE_GOAL_ITEM_CONTRIBUTION_MUTATION = gql`
