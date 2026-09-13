@@ -31,7 +31,6 @@
             :is-milestone="localGoalItem.isMilestone"
             :tasklist="tasklist"
             :goal-items-ref="goalItemsRef"
-            :disabled="newItemLoaded"
             :min-date="todayISO"
             @date-change="handleDateChange"
             @period-change="handlePeriodChange"
@@ -197,7 +196,6 @@ export default {
   data() {
     return {
       valid: false,
-      newItemLoaded: false,
       formRules: {
         body: [
           (v) => !!v || 'Task Name is required',
@@ -346,7 +344,6 @@ export default {
     },
 
     newGoalItem(newVal, oldVal) {
-      this.newItemLoaded = !!newVal.id && (oldVal.date === '' || typeof oldVal.date === 'undefined');
       if (
         newVal.date !== oldVal.date
         && (oldVal.date === '' || typeof oldVal.date === 'undefined')

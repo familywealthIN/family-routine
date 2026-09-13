@@ -639,6 +639,18 @@ export default {
       this.goalActionText = 'Add Goal';
     },
     addUpdateGoalEntry(newGoalItem) {
+      // An edit can reschedule the item to another date or period, in which
+      // case the bucket it used to live in still holds a copy of it.
+      if (newGoalItem.id) {
+        this.allGoals.forEach((aGoal) => {
+          if (!aGoal || !aGoal.goalItems) return;
+          if (aGoal.period === newGoalItem.period && aGoal.date === newGoalItem.date) return;
+          const staleIndex = aGoal.goalItems.findIndex((aGoalItem) => aGoalItem.id === newGoalItem.id);
+          if (staleIndex !== -1) {
+            aGoal.goalItems.splice(staleIndex, 1);
+          }
+        });
+      }
       const goal = this.getGoal(newGoalItem.period, newGoalItem.date);
       let goalItem = goal
         .goalItems

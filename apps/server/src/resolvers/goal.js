@@ -18,6 +18,7 @@ const {
   PriorityGoalsType,
 } = require('../schema/GoalSchema');
 const { GoalItemInput } = require('../schema/AiSchema');
+const { encryption, ENCRYPTION_FIELDS } = require('../utils/encryption');
 const { UserModel } = require('../schema/UserSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
@@ -368,6 +369,64 @@ async function setUserTag(email, tags) {
       }
     }
   }
+}
+
+/**
+ * Move a goal item to another date and/or period, applying `updates` on the way.
+ *
+ * Goal items are subdocuments of the Goal document for their (email, date,
+ * period), so rescheduling one is a pull from the old document and a push into
+ * the new one. The subdocument keeps its `_id`: milestone links (`goalRef`),
+ * sub-tasks and the client's entity cache are all keyed on the goal item id, so
+ * a moved item must stay the same entity.
+ *
+ * `$push` does not run the schema's pre-save hook, and the source item comes
+ * back decrypted from the read middleware, so the encrypted fields are
+ * re-encrypted here the way GoalSchema would have done on save.
+ *
+ * @returns {Object} the moved goal item, read back from its new document
+ */
+async function moveGoalItem({
+  email, id, sourceGoal, date, period, updates,
+}) {
+  const sourceItem = sourceGoal.goalItems.find((item) => item.id === id);
+  // An argument the caller left out must not wipe the stored value, matching
+  // the in-place `$set` path (Mongoose drops undefined paths from an update).
+  const changes = Object.entries(updates)
+    .filter(([, value]) => value !== undefined)
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+  const movedItem = {
+    ...(sourceItem.toObject ? sourceItem.toObject() : sourceItem),
+    ...changes,
+    // First move records where the item started; later moves keep that origin.
+    originalDate: sourceItem.originalDate || sourceGoal.date,
+  };
+
+  // Same rule addGoalItem applies: a day item sitting away from its original
+  // date is a rescheduled one. A finished item keeps the status it earned.
+  if (period === 'day' && !movedItem.isComplete && movedItem.originalDate !== date) {
+    movedItem.status = 'rescheduled';
+  }
+
+  const storedItem = encryption.encryptObject(movedItem, ENCRYPTION_FIELDS.goalItem);
+  storedItem.subTasks = encryption.encryptArray(movedItem.subTasks || [], ENCRYPTION_FIELDS.subTask);
+
+  // Upsert: the target day may have no goal document yet.
+  await GoalModel.findOneAndUpdate(
+    { date, period, email },
+    { $push: { goalItems: storedItem } },
+    { upsert: true, new: true },
+  ).exec();
+
+  await GoalModel.findOneAndUpdate(
+    { date: sourceGoal.date, period: sourceGoal.period, email },
+    { $pull: { goalItems: { _id: id } } },
+    { new: true },
+  ).exec();
+
+  const targetGoal = await GoalModel.findOne({ date, period, email }).exec();
+
+  return targetGoal.goalItems.find((item) => item.id === id);
 }
 
 const query = {
@@ -1439,6 +1498,32 @@ const mutation = {
       } = args;
 
       await setUserTag(email, tags);
+
+      // A goal item lives inside the Goal document for ITS date and period, so
+      // the (date, period) the caller is saving to is not necessarily where the
+      // item is now: an edit that reschedules it has to move the subdocument
+      // between documents. Find it by id first, then decide.
+      const sourceGoal = await GoalModel.findOne({
+        email,
+        'goalItems._id': id,
+      }).exec();
+
+      if (!sourceGoal) {
+        throw new Error('Goal item not found');
+      }
+
+      if (sourceGoal.date !== date || sourceGoal.period !== period) {
+        return moveGoalItem({
+          email,
+          id,
+          sourceGoal,
+          date,
+          period,
+          updates: {
+            body, deadline, contribution, reward, isMilestone, taskRef, goalRef, tags,
+          },
+        });
+      }
 
       await GoalModel.findOneAndUpdate(
         {
