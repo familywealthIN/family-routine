@@ -168,6 +168,9 @@ export const UPDATE_GOAL_ITEM_MUTATION = gql`
       isComplete
       isMilestone
       status
+      taskRef
+      goalRef
+      originalDate
     }
   }
 `;

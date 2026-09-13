@@ -278,6 +278,20 @@ export default {
         return;
       }
 
+      // Date and period address the goal the item is stored under, and changing
+      // the period clears the date. Saving with it empty would file the item
+      // under no day at all, so ask for one instead.
+      if (!date || !period) {
+        this.$notify({
+          title: 'Pick a date',
+          text: 'Choose a date before saving this task',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+        return;
+      }
+
       this.buttonLoading = true;
 
       try {
