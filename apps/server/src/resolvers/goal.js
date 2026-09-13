@@ -1912,6 +1912,51 @@ const mutation = {
         : null;
     },
   },
+  /**
+   * Record that an item was not done, without destroying it.
+   *
+   * Completing or deleting were the only ways to clear an item off a day, so a
+   * missed day was either a lie or a lost record. `missed` is already in the
+   * GoalItemSchema status enum — autoCheckTaskPeriod, collectPeriodCriteria and
+   * buildMilestoneDays all count off `isComplete`, which this deliberately does
+   * not touch, so a marked item still reads as outstanding everywhere.
+   */
+  markGoalItemMissed: {
+    type: GoalItemType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+      isMissed: { type: GraphQLNonNull(GraphQLBoolean) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const { id, isMissed } = args;
+
+      // Addressed by id alone, the way updateGoalItemReward is: the caller's
+      // idea of the item's date can be stale after a move, and a miss that
+      // silently matched no document would be a miss the user thinks they
+      // recorded.
+      const goal = await GoalModel.findOneAndUpdate(
+        {
+          email,
+          'goalItems._id': id,
+        },
+        {
+          $set: {
+            // Unmarking returns the item to the schema default, the same state
+            // completeGoalItem restores when a tick is undone.
+            'goalItems.$.status': isMissed ? 'missed' : 'todo',
+          },
+        },
+        { new: true },
+      ).exec();
+
+      if (!goal) {
+        throw new Error('Goal item not found');
+      }
+
+      return goal.goalItems.find((aGoalItem) => aGoalItem.id === id);
+    },
+  },
   rescheduleGoalItem: {
     type: GoalItemType,
     args: {

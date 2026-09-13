@@ -51,6 +51,18 @@
           </div>
         </AtomListTileAction>
 
+        <!-- A day the user did not manage, recorded on the item instead of
+             deleted. Only shown while the item is still unticked. -->
+        <AtomListTileAction v-if="isMissed(goalItem)">
+          <div
+            class="missed-counter"
+            data-testid="goal-missed-marker"
+            title="Marked missed"
+          >
+            Missed
+          </div>
+        </AtomListTileAction>
+
         <AtomListTileAction v-if="goalItem.subTasks && goalItem.subTasks.length > 0">
           <div class="subtask-counter">
             {{ getSubTasksProgress(goalItem.subTasks) }}
@@ -197,6 +209,9 @@ export default {
       const completed = goalItem.milestonesComplete || 0;
       return `${completed}/${total} milestones`;
     },
+    isMissed(goalItem) {
+      return !!goalItem && goalItem.status === 'missed' && !goalItem.isComplete;
+    },
     getMilestonesOutstanding(goalItem) {
       const total = goalItem.milestonesTotal || 0;
       if (!total) {
@@ -340,6 +355,18 @@ export default {
     font-size: 0.75rem;
     color: #1976d2;
     background-color: #e3f2fd;
+    border-radius: 12px;
+    padding: 4px 8px;
+    min-width: 60px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* Missed marker styling */
+  .missed-counter {
+    font-size: 0.75rem;
+    color: #c62828;
+    background-color: #ffebee;
     border-radius: 12px;
     padding: 4px 8px;
     min-width: 60px;

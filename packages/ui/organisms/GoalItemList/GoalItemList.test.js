@@ -57,3 +57,23 @@ describe('OrganismGoalItemList milestone tally', () => {
     });
   });
 });
+
+// D-07: a miss is recorded on the item rather than deleting it, so the row has
+// to say so — otherwise the only evidence is inside the detail dialog.
+describe('OrganismGoalItemList missed marker', () => {
+  it('marks an unticked item the user recorded a miss on', () => {
+    expect(GoalItemList.methods.isMissed({ id: 'd1', status: 'missed', isComplete: false }))
+      .toBe(true);
+  });
+
+  it('leaves a late completion alone: that miss is already a tick', () => {
+    expect(GoalItemList.methods.isMissed({ id: 'd1', status: 'missed', isComplete: true }))
+      .toBe(false);
+  });
+
+  it('marks nothing for any other status', () => {
+    expect(GoalItemList.methods.isMissed({ id: 'd1', status: 'todo', isComplete: false }))
+      .toBe(false);
+    expect(GoalItemList.methods.isMissed({ id: 'd1' })).toBe(false);
+  });
+});

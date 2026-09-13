@@ -50,7 +50,9 @@ export const TASK_STATUS_CONFIG = {
     color: 'red',
     icon: 'cancel',
     label: 'Missed',
-    description: 'Task completed after its scheduled time window',
+    // Both a late completion (graded server-side) and a miss the user recorded
+    // on an item they never ticked land here.
+    description: 'Task was not done within its scheduled time window',
   },
   [TASK_STATUS.RESCHEDULED]: {
     color: 'purple',
