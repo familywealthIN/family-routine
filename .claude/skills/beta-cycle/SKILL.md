@@ -27,7 +27,7 @@ Both dev servers, backgrounded **bare** — never piped through `head`/`tail`:
 
 ```bash
 (cd apps/server && yarn dev) &
-(cd apps/web-app && yarn serve) &
+(cd apps/web-app && yarn dev) &    # not `yarn serve` - no such script in this workspace
 ```
 
 ## 1. Test

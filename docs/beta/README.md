@@ -27,7 +27,7 @@ Run `/beta-cycle` (see `.claude/skills/beta-cycle/SKILL.md`) or, by hand:
   --remote-debugging-port=9222 --user-data-dir=C:/Users/grvpa/cdbg &
 
 (cd apps/server && yarn dev) &     # bare - never pipe through head/tail, it dies on SIGPIPE
-(cd apps/web-app && yarn serve) &
+(cd apps/web-app && yarn dev) &    # not `yarn serve` - no such script in this workspace
 ```
 
 Then dispatch the `beta-tester` agent, and file what it returns:
