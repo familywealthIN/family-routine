@@ -78,7 +78,15 @@ jobs:
         # Yarn workspaces hoist deps to the root node_modules, but `serverless
         # package` only ships apps/server/node_modules. Install prod deps
         # directly into the server's own node_modules so they end up in the zip.
-        run: npm install --omit=dev --no-package-lock --no-save --legacy-peer-deps --fetch-retries=5
+        #
+        # serverless-offline is a devDependency, so --omit=dev drops it — but
+        # serverless.yml lists it under `plugins`, and Serverless v4 resolves
+        # every declared plugin at init regardless of the command, so `deploy`
+        # aborts with "plugin not found" without it. Name it explicitly here,
+        # in the same npm pass, so the verify step below still guards the tree.
+        # It adds nothing to the artifact: `package.patterns` ships only
+        # secrets.json and esbuild bundles the handler's own imports.
+        run: npm install --omit=dev --no-package-lock --no-save --legacy-peer-deps --fetch-retries=5 serverless-offline@^6.1.4
 
       - name: Break workspace symlink loop
         # apps/server's package name is "server"; yarn hoists a symlink at
