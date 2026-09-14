@@ -5,7 +5,7 @@
         <AtomFlex xs12 v-if="shouldShowStatus(localGoalItem.period) && localGoalItem.body" class="status-row pb-0">
           <div class="d-flex align-center status-container">
             <task-status-tag
-              :status="getNewTaskStatus(localGoalItem.taskRef, localGoalItem.originalDate, localGoalItem)"
+              :status="statusChip"
               class="status-chip"
             />
           </div>
@@ -31,7 +31,6 @@
             :is-milestone="localGoalItem.isMilestone"
             :tasklist="tasklist"
             :goal-items-ref="goalItemsRef"
-            :disabled="newItemLoaded"
             :min-date="todayISO"
             @date-change="handleDateChange"
             @period-change="handlePeriodChange"
@@ -112,6 +111,17 @@
       </AtomLayout>
     </AtomCardText>
         <AtomFlex xs12>
+          <!-- Off-ramps for a day that did not go to plan. Without them the
+               only ways to clear an item were completing it, which is a lie,
+               and deleting it, which loses the record. -->
+          <div v-if="canDeferOrMiss" style="float: left;" class="ml-1">
+            <AtomButton flat color="primary" :loading="buttonLoading" @click="deferGoalItem" class="mr-2">
+              Tomorrow
+            </AtomButton>
+            <AtomButton flat :color="isMissed ? 'grey' : 'error'" @click="toggleGoalItemMissed">
+              {{ isMissed ? 'Unmark Missed' : 'Mark Missed' }}
+            </AtomButton>
+          </div>
           <div style="float: right;" class="mr-1">
             <AtomButton color="primary" :disabled="!valid" :loading="buttonLoading" @click="saveGoalItem" class="mr-3">
               Save
@@ -126,6 +136,7 @@
 </template>
 
 <script>
+import moment from 'moment';
 import { MarkdownEditor } from '@routine-notes/markdown-editor';
 
 import taskStatusMixin from '../../composables/useTaskStatus';
@@ -197,7 +208,6 @@ export default {
   data() {
     return {
       valid: false,
-      newItemLoaded: false,
       formRules: {
         body: [
           (v) => !!v || 'Task Name is required',
@@ -252,6 +262,30 @@ export default {
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
+    },
+    // An existing item's status is server state — `missed` and `rescheduled`
+    // are both written there — so it is read straight off the item. Only a
+    // brand-new one has to be derived from the current routine task, where
+    // getInitialTaskStatus' originalDate rule would otherwise outrank it.
+    statusChip() {
+      if (this.localGoalItem.id && this.localGoalItem.status) {
+        return this.localGoalItem.status;
+      }
+      return this.getNewTaskStatus(
+        this.localGoalItem.taskRef,
+        this.localGoalItem.originalDate,
+        this.localGoalItem,
+      );
+    },
+    // Deferring or recording a miss only means anything for a saved day item
+    // that has not been ticked.
+    canDeferOrMiss() {
+      return !!this.localGoalItem.id
+        && this.localGoalItem.period === 'day'
+        && !this.localGoalItem.isComplete;
+    },
+    isMissed() {
+      return this.localGoalItem.status === 'missed';
     },
     localGoalItem: {
       get() {
@@ -310,6 +344,34 @@ export default {
       }
     },
 
+    /**
+     * Push the item to the next day. `updateGoalItem` already relocates the
+     * subdocument between date documents and stamps originalDate / rescheduled
+     * (server resolvers/goal.js moveGoalItem), so a defer is just a save with
+     * tomorrow's date — no second code path to keep in step.
+     */
+    deferGoalItem() {
+      if (!this.localGoalItem.date) return;
+      this.localGoalItem.date = moment(this.localGoalItem.date, 'DD-MM-YYYY')
+        .add(1, 'days')
+        .format('DD-MM-YYYY');
+      this.saveGoalItem();
+    },
+
+    toggleGoalItemMissed() {
+      const isMissed = !this.isMissed;
+      const previousStatus = this.localGoalItem.status;
+      // Flip the chip now and hand the old status back on failure: the dialog
+      // stays open so the user can see the miss was recorded.
+      this.$set(this.localGoalItem, 'status', isMissed ? 'missed' : 'todo');
+      this.$emit('mark-goal-item-missed', {
+        id: this.localGoalItem.id,
+        isMissed,
+      }, {
+        onError: () => this.$set(this.localGoalItem, 'status', previousStatus),
+      });
+    },
+
     updateNewTagItems(tags) {
       this.localGoalItem.tags = tags;
     },
@@ -346,7 +408,6 @@ export default {
     },
 
     newGoalItem(newVal, oldVal) {
-      this.newItemLoaded = !!newVal.id && (oldVal.date === '' || typeof oldVal.date === 'undefined');
       if (
         newVal.date !== oldVal.date
         && (oldVal.date === '' || typeof oldVal.date === 'undefined')

@@ -1337,7 +1337,16 @@ export default {
       }
 
       // Calculate week number
-      const weekNum = Math.floor((target - firstThursday) / 86400000 / 7) + 1;
+      // CRITICAL: compare the two Thursdays as UTC midnights. Subtracting local
+      // timestamps spanning a DST change is short by an hour, and both dates are
+      // whole days apart, so the division floors into the previous week.
+      const targetUTC = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate());
+      const firstThursdayUTC = Date.UTC(
+        firstThursday.getFullYear(),
+        firstThursday.getMonth(),
+        firstThursday.getDate(),
+      );
+      const weekNum = Math.round((targetUTC - firstThursdayUTC) / 86400000 / 7) + 1;
       return weekNum;
     },
 

@@ -18,6 +18,7 @@ const {
   PriorityGoalsType,
 } = require('../schema/GoalSchema');
 const { GoalItemInput } = require('../schema/AiSchema');
+const { encryption, ENCRYPTION_FIELDS } = require('../utils/encryption');
 const { UserModel } = require('../schema/UserSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
@@ -30,7 +31,7 @@ const { RoutineModel } = require('../schema/RoutineSchema');
 const { buildStimuliForRoutineItem } = require('./routine');
 const { threshold } = require('../utils/getProgressReport');
 const { deriveGoalItemStatus } = require('../utils/goalItemStatus');
-const { collectPeriodCriteria, evaluateAutoComplete } = require('../utils/goalCompletionCriteria');
+const { collectPeriodCriteria, buildMilestoneDays, evaluateAutoComplete } = require('../utils/goalCompletionCriteria');
 
 const getDaysArray = (year, month) => {
   let firstMonday = '';
@@ -245,6 +246,18 @@ async function autoCheckTaskPeriod({
       // milestone still open, so it is now a floor rather than the whole rule.
       const criteria = collectPeriodCriteria(dayCleanGoals, periodGoalItem.id);
 
+      // The figure the dashboard renders for "how close am I?". Derived from the
+      // same criteria the auto-complete rule uses, so the count can never
+      // disagree with the tick. GraphQL-only, like `progress` — neither is a
+      // path on GoalItemSchema, so neither is ever persisted.
+      periodGoalItem.milestonesTotal = criteria.length;
+      periodGoalItem.milestonesComplete = criteria.filter((criterion) => criterion.isComplete).length;
+
+      // The same criteria laid out against the period's own calendar, one entry
+      // per child date, so the streak widget can show WHERE a week broke rather
+      // than only how many wins it holds. GraphQL-only, like the tallies above.
+      periodGoalItem.milestoneDays = buildMilestoneDays(childDates, criteria, date);
+
       if (dayCleanGoals && dayCleanGoals.length) {
         const tempGRoutineTasks = [];
         dayCleanGoals.forEach((dayCleanGoal) => {
@@ -356,6 +369,64 @@ async function setUserTag(email, tags) {
       }
     }
   }
+}
+
+/**
+ * Move a goal item to another date and/or period, applying `updates` on the way.
+ *
+ * Goal items are subdocuments of the Goal document for their (email, date,
+ * period), so rescheduling one is a pull from the old document and a push into
+ * the new one. The subdocument keeps its `_id`: milestone links (`goalRef`),
+ * sub-tasks and the client's entity cache are all keyed on the goal item id, so
+ * a moved item must stay the same entity.
+ *
+ * `$push` does not run the schema's pre-save hook, and the source item comes
+ * back decrypted from the read middleware, so the encrypted fields are
+ * re-encrypted here the way GoalSchema would have done on save.
+ *
+ * @returns {Object} the moved goal item, read back from its new document
+ */
+async function moveGoalItem({
+  email, id, sourceGoal, date, period, updates,
+}) {
+  const sourceItem = sourceGoal.goalItems.find((item) => item.id === id);
+  // An argument the caller left out must not wipe the stored value, matching
+  // the in-place `$set` path (Mongoose drops undefined paths from an update).
+  const changes = Object.entries(updates)
+    .filter(([, value]) => value !== undefined)
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+  const movedItem = {
+    ...(sourceItem.toObject ? sourceItem.toObject() : sourceItem),
+    ...changes,
+    // First move records where the item started; later moves keep that origin.
+    originalDate: sourceItem.originalDate || sourceGoal.date,
+  };
+
+  // Same rule addGoalItem applies: a day item sitting away from its original
+  // date is a rescheduled one. A finished item keeps the status it earned.
+  if (period === 'day' && !movedItem.isComplete && movedItem.originalDate !== date) {
+    movedItem.status = 'rescheduled';
+  }
+
+  const storedItem = encryption.encryptObject(movedItem, ENCRYPTION_FIELDS.goalItem);
+  storedItem.subTasks = encryption.encryptArray(movedItem.subTasks || [], ENCRYPTION_FIELDS.subTask);
+
+  // Upsert: the target day may have no goal document yet.
+  await GoalModel.findOneAndUpdate(
+    { date, period, email },
+    { $push: { goalItems: storedItem } },
+    { upsert: true, new: true },
+  ).exec();
+
+  await GoalModel.findOneAndUpdate(
+    { date: sourceGoal.date, period: sourceGoal.period, email },
+    { $pull: { goalItems: { _id: id } } },
+    { new: true },
+  ).exec();
+
+  const targetGoal = await GoalModel.findOne({ date, period, email }).exec();
+
+  return targetGoal.goalItems.find((item) => item.id === id);
 }
 
 const query = {
@@ -1428,6 +1499,32 @@ const mutation = {
 
       await setUserTag(email, tags);
 
+      // A goal item lives inside the Goal document for ITS date and period, so
+      // the (date, period) the caller is saving to is not necessarily where the
+      // item is now: an edit that reschedules it has to move the subdocument
+      // between documents. Find it by id first, then decide.
+      const sourceGoal = await GoalModel.findOne({
+        email,
+        'goalItems._id': id,
+      }).exec();
+
+      if (!sourceGoal) {
+        throw new Error('Goal item not found');
+      }
+
+      if (sourceGoal.date !== date || sourceGoal.period !== period) {
+        return moveGoalItem({
+          email,
+          id,
+          sourceGoal,
+          date,
+          period,
+          updates: {
+            body, deadline, contribution, reward, isMilestone, taskRef, goalRef, tags,
+          },
+        });
+      }
+
       await GoalModel.findOneAndUpdate(
         {
           date,
@@ -1813,6 +1910,51 @@ const mutation = {
       return goal && goal.goalItems
         ? goal.goalItems.find((item) => item.id === args.id)
         : null;
+    },
+  },
+  /**
+   * Record that an item was not done, without destroying it.
+   *
+   * Completing or deleting were the only ways to clear an item off a day, so a
+   * missed day was either a lie or a lost record. `missed` is already in the
+   * GoalItemSchema status enum — autoCheckTaskPeriod, collectPeriodCriteria and
+   * buildMilestoneDays all count off `isComplete`, which this deliberately does
+   * not touch, so a marked item still reads as outstanding everywhere.
+   */
+  markGoalItemMissed: {
+    type: GoalItemType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+      isMissed: { type: GraphQLNonNull(GraphQLBoolean) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const { id, isMissed } = args;
+
+      // Addressed by id alone, the way updateGoalItemReward is: the caller's
+      // idea of the item's date can be stale after a move, and a miss that
+      // silently matched no document would be a miss the user thinks they
+      // recorded.
+      const goal = await GoalModel.findOneAndUpdate(
+        {
+          email,
+          'goalItems._id': id,
+        },
+        {
+          $set: {
+            // Unmarking returns the item to the schema default, the same state
+            // completeGoalItem restores when a tick is undone.
+            'goalItems.$.status': isMissed ? 'missed' : 'todo',
+          },
+        },
+        { new: true },
+      ).exec();
+
+      if (!goal) {
+        throw new Error('Goal item not found');
+      }
+
+      return goal.goalItems.find((aGoalItem) => aGoalItem.id === id);
     },
   },
   rescheduleGoalItem: {

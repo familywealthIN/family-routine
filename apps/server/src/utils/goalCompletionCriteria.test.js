@@ -1,4 +1,4 @@
-const { collectPeriodCriteria, evaluateAutoComplete } = require('./goalCompletionCriteria');
+const { collectPeriodCriteria, buildMilestoneDays, evaluateAutoComplete } = require('./goalCompletionCriteria');
 
 // The reported case: a week goal with seven day milestones, one mid-week day
 // never completed. The five-day streak threshold used to close it anyway.
@@ -26,6 +26,57 @@ describe('collectPeriodCriteria', () => {
     ], 'W1');
 
     expect(criteria).toEqual([{ date: '06-09-2026', isComplete: false }]);
+  });
+});
+
+// D-11: the streak filled left-to-right by completion count, so the beta week
+// (completed 16, 17, 18; MISSED 19; completed 20, 21) rendered as five solid
+// nodes in a row — an unbroken run in a control called "Streak".
+describe('buildMilestoneDays', () => {
+  const betaWeek = ['16-08-2026', '17-08-2026', '18-08-2026', '19-08-2026', '20-08-2026', '21-08-2026', '22-08-2026'];
+  const betaCriteria = collectPeriodCriteria(
+    dayGoals(['16-08-2026', '17-08-2026', '18-08-2026', '20-08-2026', '21-08-2026'], betaWeek),
+    'W1',
+  );
+
+  it('emits one entry per calendar day, in calendar order', () => {
+    const days = buildMilestoneDays(betaWeek, betaCriteria, '21-08-2026');
+
+    expect(days.map((day) => day.date)).toEqual(betaWeek);
+  });
+
+  it('breaks on the missed day instead of packing the wins to the left', () => {
+    const days = buildMilestoneDays(betaWeek, betaCriteria, '21-08-2026');
+
+    expect(days.map((day) => day.status)).toEqual([
+      'complete', 'complete', 'complete', 'missed', 'complete', 'complete', 'upcoming',
+    ]);
+  });
+
+  it('treats the day being read and anything after it as still winnable', () => {
+    const days = buildMilestoneDays(betaWeek, betaCriteria, '19-08-2026');
+
+    expect(days[3].status).toBe('upcoming');
+    expect(days[6].status).toBe('upcoming');
+  });
+
+  it('keeps a day the user declared no milestone on, so later days do not shift', () => {
+    const declared = ['16-08-2026', '18-08-2026'];
+    const criteria = collectPeriodCriteria(dayGoals(['16-08-2026'], declared), 'W1');
+    const days = buildMilestoneDays(betaWeek, criteria, '22-08-2026');
+
+    expect(days.map((day) => day.status)).toEqual([
+      'complete', 'none', 'missed', 'none', 'none', 'none', 'none',
+    ]);
+  });
+
+  it('only calls a day complete when every milestone on it is met', () => {
+    const criteria = [
+      { date: '16-08-2026', isComplete: true },
+      { date: '16-08-2026', isComplete: false },
+    ];
+
+    expect(buildMilestoneDays(['16-08-2026'], criteria, '22-08-2026')[0].status).toBe('missed');
   });
 });
 

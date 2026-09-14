@@ -51,27 +51,27 @@
           <atom-layout align-center justify-center class="goal-stats-row">
             <div class="goal-stat-item text-xs-center">
               <div class="overline white--text stat-label">Total Day Tasks</div>
-              <div class="display-3 white--text font-weight-medium">{{ getDayGoalsCount() }}</div>
+              <div class="display-3 white--text font-weight-medium">{{ statCount(getDayGoalsCount()) }}</div>
             </div>
             <v-divider vertical dark class="goal-stat-divider"></v-divider>
             <div class="goal-stat-item text-xs-center">
               <div class="overline white--text stat-label">Total Week Tasks</div>
-              <div class="display-3 white--text font-weight-medium">{{ getWeekGoalsCount() }}</div>
+              <div class="display-3 white--text font-weight-medium">{{ statCount(getWeekGoalsCount()) }}</div>
             </div>
             <v-divider vertical dark class="goal-stat-divider"></v-divider>
             <div class="goal-stat-item text-xs-center">
               <div class="overline white--text stat-label">Total Month Tasks</div>
-              <div class="display-3 white--text font-weight-medium">{{ getMonthGoalsCount() }}</div>
+              <div class="display-3 white--text font-weight-medium">{{ statCount(getMonthGoalsCount()) }}</div>
             </div>
             <v-divider vertical dark class="goal-stat-divider"></v-divider>
             <div class="goal-stat-item text-xs-center">
               <div class="overline white--text stat-label">Total Year Tasks</div>
-              <div class="display-3 white--text font-weight-medium">{{ getYearGoalsCount() }}</div>
+              <div class="display-3 white--text font-weight-medium">{{ statCount(getYearGoalsCount()) }}</div>
             </div>
             <v-divider vertical dark class="goal-stat-divider"></v-divider>
             <div class="goal-stat-item text-xs-center">
               <div class="overline white--text stat-label">Total Life Tasks</div>
-              <div class="display-3 white--text font-weight-medium">{{ getLifetimeGoalsCount() }}</div>
+              <div class="display-3 white--text font-weight-medium">{{ statCount(getLifetimeGoalsCount()) }}</div>
             </div>
           </atom-layout>
         </atom-container>
@@ -143,10 +143,13 @@
           <goals-filter-time
             :key="period.name"
             :goals="allGoals"
+            :error="loadError"
+            :retrying="$apollo.queries.goals.loading"
             :periodFilter="period.name"
             :rangeType="rangeType"
             :selectedMonth="currentMonthVariable"
             :updateNewGoalItem="updateNewGoalItem"
+            @retry="retryGoals"
             @delete-task-goal="deleteTaskGoal"
             @complete-goal-item="completeGoalItem"
             @complete-sub-task="completeSubTask"
@@ -297,8 +300,17 @@ export default {
       skip() {
         return !this.$root.$data.email;
       },
-      result() {
+      result({ data }) {
         this.firstLoadDone = true;
+        if (data) this.loadError = false;
+      },
+      // Without this the page drops through to the empty state and tells the
+      // user their goals are gone when the server is simply unreachable.
+      error(error) {
+        console.error('[GoalsTime] goals query failed:', error);
+        this.firstLoadDone = true;
+        this.isNavigating = false;
+        this.loadError = true;
       },
       update(data) {
         console.log('[GoalsTime] goals query update:', data);
@@ -336,6 +348,10 @@ export default {
       `,
       skip() {
         return !this.$root.$data.email || this.rangeType !== 'past';
+      },
+      error(error) {
+        console.error('[GoalsTime] pastGoals query failed:', error);
+        this.loadError = true;
       },
       update(data) {
         console.log('[GoalsTime] pastGoals query update:', data);
@@ -437,6 +453,7 @@ export default {
     buttonLoading: false,
     isNavigating: false,
     firstLoadDone: false,
+    loadError: false,
     goalActionText: 'Add Goal',
     groupId: '',
     defaultGoalItem,
@@ -449,6 +466,17 @@ export default {
     dayTasklist: [], // Routine tasks for the selected day (to show linked task names)
   }),
   methods: {
+    // A load we never received knows nothing about the totals — a dash beats
+    // asserting 0, which reads as "your goals were deleted".
+    statCount(count) {
+      return this.loadError && !this.allGoals.length ? '—' : count;
+    },
+    retryGoals() {
+      this.$apollo.queries.goals.refetch().catch(() => {});
+      if (this.rangeType === 'past') {
+        this.$apollo.queries.pastGoals.refetch().catch(() => {});
+      }
+    },
     calendarPrev() {
       if (this.isNavigating) return;
       this.isNavigating = true;
@@ -639,6 +667,18 @@ export default {
       this.goalActionText = 'Add Goal';
     },
     addUpdateGoalEntry(newGoalItem) {
+      // An edit can reschedule the item to another date or period, in which
+      // case the bucket it used to live in still holds a copy of it.
+      if (newGoalItem.id) {
+        this.allGoals.forEach((aGoal) => {
+          if (!aGoal || !aGoal.goalItems) return;
+          if (aGoal.period === newGoalItem.period && aGoal.date === newGoalItem.date) return;
+          const staleIndex = aGoal.goalItems.findIndex((aGoalItem) => aGoalItem.id === newGoalItem.id);
+          if (staleIndex !== -1) {
+            aGoal.goalItems.splice(staleIndex, 1);
+          }
+        });
+      }
       const goal = this.getGoal(newGoalItem.period, newGoalItem.date);
       let goalItem = goal
         .goalItems

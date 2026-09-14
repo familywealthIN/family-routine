@@ -40,6 +40,9 @@ nohup.out
 # Turbo
 .turbo
 
+# Agent scratch worktrees
+.claude/worktrees/
+
 android
 ios
 # Playwright

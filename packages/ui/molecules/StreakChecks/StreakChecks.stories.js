@@ -5,10 +5,8 @@ export default {
   title: 'Molecules/StreakChecks',
   component: StreakChecks,
   argTypes: {
-    progress: {
-      control: {
-        type: 'number', min: 0, max: 5, step: 1,
-      },
+    days: {
+      control: { type: 'object' },
     },
     animate: {
       control: { type: 'boolean' },
@@ -22,32 +20,44 @@ const Template = (args, { argTypes }) => ({
   template: '<StreakChecks v-bind="$props" />',
 });
 
+// 16-22 Aug 2026, the beta week: completed 16, 17, 18; missed 19; completed 20, 21.
+const week = (statuses) => statuses.map((status, i) => ({
+  date: `${String(16 + i).padStart(2, '0')}-08-2026`,
+  status,
+}));
+
 export const NoProgress = Template.bind({});
 NoProgress.args = {
-  progress: 0,
-  animate: false,
-};
-
-export const OneComplete = Template.bind({});
-OneComplete.args = {
-  progress: 1,
+  days: week(['upcoming', 'upcoming', 'upcoming', 'upcoming', 'upcoming', 'upcoming', 'upcoming']),
   animate: false,
 };
 
 export const ThreeComplete = Template.bind({});
 ThreeComplete.args = {
-  progress: 3,
+  days: week(['complete', 'complete', 'complete', 'upcoming', 'upcoming', 'upcoming', 'upcoming']),
+  animate: false,
+};
+
+export const BrokenStreak = Template.bind({});
+BrokenStreak.args = {
+  days: week(['complete', 'complete', 'complete', 'missed', 'complete', 'complete', 'upcoming']),
+  animate: false,
+};
+
+export const NoMilestoneOnSomeDays = Template.bind({});
+NoMilestoneOnSomeDays.args = {
+  days: week(['complete', 'none', 'complete', 'missed', 'none', 'complete', 'upcoming']),
   animate: false,
 };
 
 export const FullStreak = Template.bind({});
 FullStreak.args = {
-  progress: 5,
+  days: week(['complete', 'complete', 'complete', 'complete', 'complete', 'complete', 'complete']),
   animate: false,
 };
 
 export const WithAnimation = Template.bind({});
 WithAnimation.args = {
-  progress: 3,
+  days: week(['complete', 'complete', 'complete', 'upcoming', 'upcoming', 'upcoming', 'upcoming']),
   animate: true,
 };

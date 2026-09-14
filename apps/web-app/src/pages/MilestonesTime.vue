@@ -24,6 +24,12 @@
             </atom-list-group>
           </div>
         </template>
+        <load-error-state
+          v-if="loadError"
+          message="We couldn't load your goals."
+          :retrying="$apollo.queries.goalMilestones.loading"
+          @retry="retryMilestones"
+        />
         <!-- <div class="text-xs-center" v-else>
           You Don't have any Goals in life. Poor Fellow.
         </div> -->
@@ -50,6 +56,7 @@ import moment from 'moment';
 import { defaultGoalItem, periodsArray } from '../constants/goals';
 
 import GoalItemMilestoneList from '@routine-notes/ui/molecules/GoalItemMilestoneList/GoalItemMilestoneList.vue';
+import LoadErrorState from '@routine-notes/ui/molecules/LoadErrorState/LoadErrorState.vue';
 import GoalCreation from '../containers/GoalCreationContainer.vue';
 import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import {
@@ -67,6 +74,7 @@ import {
 export default {
   components: {
     GoalItemMilestoneList,
+    LoadErrorState,
     GoalCreation,
     ContainerBox,
     AtomButton,
@@ -80,7 +88,8 @@ export default {
     AtomSubheader,
   },
   apollo: {
-    goalMilestones: gql`
+    goalMilestones: {
+      query: gql`
       query {
         goalMilestones {
           day {
@@ -281,6 +290,16 @@ export default {
         }
       }
     `,
+      result({ data }) {
+        if (data) this.loadError = false;
+      },
+      // A failed load leaves goalMilestones undefined, which renders as a blank
+      // "Goals" card — indistinguishable from having no milestones at all.
+      error(error) {
+        console.error('[MilestonesTime] goalMilestones query failed:', error);
+        this.loadError = true;
+      },
+    },
   },
   computed: {
     date() {
@@ -293,11 +312,15 @@ export default {
     buttonLoading: false,
     goalActionText: 'Add Goal',
     groupId: '',
-    periods: periodsArray
+    periods: periodsArray,
+    loadError: false,
   }),
   methods: {
   },
   methods: {
+    retryMilestones() {
+      this.$apollo.queries.goalMilestones.refetch().catch(() => {});
+    },
     getGoal(period, date) {
       const goal = this.goalMilestones.find((aGoal) => aGoal.period === period && aGoal.date === date);
       if (!goal) {
