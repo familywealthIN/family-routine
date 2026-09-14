@@ -2,8 +2,12 @@
 org: grvpanchal
 service: familywealth-graphql-api
 
-plugins:
-  - serverless-offline
+# No `plugins:` block. serverless-offline is the only one this service ever
+# declared, and Serverless resolves plugins from apps/server/node_modules —
+# where yarn workspaces never put it, since it hoists to the repo root. The
+# declaration therefore failed to resolve for every command, deploy included.
+# Nothing here runs `serverless offline` (local dev is `yarn dev`, nodemon
+# against server.js). To reintroduce it, install it into apps/server itself.
 
 build:
   esbuild:
