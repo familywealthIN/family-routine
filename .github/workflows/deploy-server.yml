@@ -22,6 +22,46 @@ jobs:
       run:
         working-directory: apps/server
     steps:
+      - name: Preflight — verify deploy secrets are configured
+        # Runs before checkout so a misconfigured repo fails in seconds instead
+        # of ~3 minutes into the install. Reports EVERY missing secret at once:
+        # previously only SERVER_SECRETS_JSON was checked, so the three AWS /
+        # Serverless credentials stayed hidden behind it.
+        working-directory: .
+        env:
+          SERVER_SECRETS_JSON: ${{ secrets.SERVER_SECRETS_JSON }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+        run: |
+          missing=()
+          for name in SERVER_SECRETS_JSON AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY SERVERLESS_ACCESS_KEY; do
+            if [ -z "${!name}" ]; then
+              missing+=("$name")
+              echo "::error title=Missing repository secret::$name is not set"
+            else
+              echo "$name: set"
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            {
+              echo "### Deploy Server cannot run"
+              echo
+              echo "The following GitHub Actions secrets are not configured:"
+              echo
+              for name in "${missing[@]}"; do echo "- \`$name\`"; done
+              echo
+              echo "Set them under **Settings → Secrets and variables → Actions**, or with:"
+              echo '```'
+              echo 'gh secret set SERVER_SECRETS_JSON --repo familywealthIN/family-routine < apps/server/secrets.json'
+              echo 'gh secret set AWS_ACCESS_KEY_ID --repo familywealthIN/family-routine'
+              echo 'gh secret set AWS_SECRET_ACCESS_KEY --repo familywealthIN/family-routine'
+              echo 'gh secret set SERVERLESS_ACCESS_KEY --repo familywealthIN/family-routine'
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
 
       - name: Use Node.js 18
@@ -55,12 +95,31 @@ jobs:
         env:
           SERVER_SECRETS_JSON: ${{ secrets.SERVER_SECRETS_JSON }}
         run: |
-          if [ -z "$SERVER_SECRETS_JSON" ]; then
-            echo "SERVER_SECRETS_JSON secret is not set" >&2
-            exit 1
-          fi
           printf '%s' "$SERVER_SECRETS_JSON" > secrets.json
-          node -e "JSON.parse(require('fs').readFileSync('secrets.json','utf8'))"
+          # serverless.yml interpolates ${self:custom.secrets.KEY} for each
+          # Lambda env var. A key missing from the JSON surfaces later as an
+          # opaque variable-resolution error, so check them here by name.
+          node -e "
+            const fs = require('fs');
+            let secrets;
+            try {
+              secrets = JSON.parse(fs.readFileSync('secrets.json', 'utf8'));
+            } catch (e) {
+              console.error('SERVER_SECRETS_JSON is not valid JSON: ' + e.message);
+              process.exit(1);
+            }
+            const required = [...new Set(
+              fs.readFileSync('serverless.yml', 'utf8')
+                .match(/self:custom\.secrets\.[A-Z_]+/g)
+                .map((m) => m.split('.').pop()),
+            )];
+            const missing = required.filter((k) => secrets[k] === undefined || secrets[k] === '');
+            if (missing.length) {
+              console.error('SERVER_SECRETS_JSON is missing keys required by serverless.yml: ' + missing.join(', '));
+              process.exit(1);
+            }
+            console.log('secrets.json OK (' + required.length + ' required keys present)');
+          "
 
       - name: Install Serverless Framework
         run: npm install -g serverless@4
