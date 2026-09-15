@@ -19,9 +19,14 @@ function parseTimestamp(value) {
   return moment(value);
 }
 
+// Mirrors the status enum in apps/server/src/schema/GoalSchema.js — every value
+// the server accepts has to be labellable here, or the badge falls through to a
+// meaningless "Unknown". `ready` is written by markGoalItemReady when an item's
+// agent start event fires.
 export const TASK_STATUS = {
   TODO: 'todo',
   PROGRESS: 'progress',
+  READY: 'ready',
   DONE: 'done',
   MISSED: 'missed',
   RESCHEDULED: 'rescheduled',
@@ -39,6 +44,12 @@ export const TASK_STATUS_CONFIG = {
     icon: 'play_arrow',
     label: 'In Progress',
     description: 'Task created during current task',
+  },
+  [TASK_STATUS.READY]: {
+    color: 'teal',
+    icon: 'hourglass_empty',
+    label: 'Ready',
+    description: 'Task is set up and waiting to be done',
   },
   [TASK_STATUS.DONE]: {
     color: 'green',
@@ -61,6 +72,37 @@ export const TASK_STATUS_CONFIG = {
     description: 'Task date was changed',
   },
 };
+
+// Anything that has a label. Derived from the config so a new status only ever
+// has to be added in one place.
+const LABELLED_STATUSES = Object.keys(TASK_STATUS_CONFIG);
+
+// The only stored statuses that a tick does not contradict: DONE is the
+// completion itself, and RESCHEDULED describes the date rather than the work
+// (which is also how determineTaskStatus ranks the two).
+const COMPLETION_SAFE_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.RESCHEDULED];
+
+/**
+ * Resolve the status a badge should show for a goal item.
+ *
+ * A stored status can outlive the truth — an item marked `missed` and ticked
+ * afterwards keeps `missed` — and it can be one this build has no label for.
+ * `isComplete` is the authoritative fact, so in both cases the badge is derived
+ * from the flag rather than asserting the opposite of it. An item that is
+ * genuinely still open keeps its stored status, so a real miss still reads as
+ * missed.
+ * @param {Object} options - Configuration object
+ * @param {string} options.status - Stored status of the goal item
+ * @param {boolean} options.isComplete - Whether the item is ticked
+ * @returns {string} A status that always has a TASK_STATUS_CONFIG entry
+ */
+export function resolveDisplayStatus({ status, isComplete = false }) {
+  if (isComplete) {
+    return COMPLETION_SAFE_STATUSES.includes(status) ? status : TASK_STATUS.DONE;
+  }
+
+  return LABELLED_STATUSES.includes(status) ? status : TASK_STATUS.TODO;
+}
 
 /**
  * Determine the status of a task based on when it was created, completed, and current task context
