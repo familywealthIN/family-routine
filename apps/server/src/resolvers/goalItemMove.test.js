@@ -162,3 +162,63 @@ describe('updateGoalItem rescheduling', () => {
     expect(mockGoalFindOneAndUpdate).not.toHaveBeenCalled();
   });
 });
+
+// The move above shipped without its guard: the dialog's period tab rewrites the
+// date on its own, so a save could file the item under no day and unroot the
+// milestone link it still carried.
+describe('updateGoalItem refusals', () => {
+  it('refuses a save whose date the period switch cleared', async () => {
+    mockGoalFindOne.mockReturnValue(exec(goalDoc(OLD_DATE, 'day', [goalItem()])));
+
+    await expect(saveItem({ date: '', period: 'week' })).rejects.toThrow('needs a date');
+    expect(mockGoalFindOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('refuses to file a dated item under the lifetime bucket', async () => {
+    mockGoalFindOne.mockReturnValue(exec(goalDoc(OLD_DATE, 'day', [goalItem()])));
+
+    await expect(saveItem({ date: '01-01-1970', period: 'lifetime' })).rejects.toThrow('needs a date');
+    expect(mockGoalFindOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('still edits a lifetime item, whose own date is the lifetime one', async () => {
+    mockGoalFindOne
+      .mockReturnValueOnce(exec(goalDoc('01-01-1970', 'lifetime', [goalItem()])))
+      .mockReturnValueOnce(exec(goalDoc('01-01-1970', 'lifetime', [goalItem()])));
+
+    await saveItem({ date: '01-01-1970', period: 'lifetime', body: 'Know your life mission' });
+
+    expect(mockGoalFindOneAndUpdate).toHaveBeenCalledTimes(1);
+    const [criteria] = mockGoalFindOneAndUpdate.mock.calls[0];
+    expect(criteria).toMatchObject({ date: '01-01-1970', period: 'lifetime', 'goalItems._id': 'g1' });
+  });
+
+  it('refuses a period change that would unroot the milestone', async () => {
+    mockGoalFindOne.mockReturnValue(
+      exec(goalDoc(OLD_DATE, 'day', [goalItem({ goalRef: 'week-goal-1', isMilestone: true })])),
+    );
+
+    await expect(saveItem({ period: 'week', goalRef: 'week-goal-1' })).rejects.toThrow('Clear its goal task');
+    expect(mockGoalFindOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('refuses it even when the save arrives with the goalRef already dropped', async () => {
+    mockGoalFindOne.mockReturnValue(
+      exec(goalDoc(OLD_DATE, 'day', [goalItem({ goalRef: 'week-goal-1', isMilestone: true })])),
+    );
+
+    await expect(saveItem({ period: 'week', goalRef: '' })).rejects.toThrow('Clear its goal task');
+    expect(mockGoalFindOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('lets an item with no parent goal move to another period', async () => {
+    mockGoalFindOne
+      .mockReturnValueOnce(exec(goalDoc(OLD_DATE, 'day', [goalItem()])))
+      .mockReturnValueOnce(exec(goalDoc(NEW_DATE, 'week', [goalItem()])));
+
+    await saveItem({ period: 'week' });
+
+    const [pushCriteria] = mockGoalFindOneAndUpdate.mock.calls[0];
+    expect(pushCriteria).toEqual({ date: NEW_DATE, period: 'week', email: EMAIL });
+  });
+});
