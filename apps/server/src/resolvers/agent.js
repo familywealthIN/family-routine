@@ -15,11 +15,19 @@ const {
   ERROR_MAX,
 } = require('../schema/AgentSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
+const ApiError = require('../utils/ApiError');
 
 const cap = (value, max) => {
   if (typeof value !== 'string') return value;
   return value.length > max ? value.slice(0, max) : value;
 };
+
+// A run is open from the moment a start event is dispatched until an end event
+// closes it. 'finished' closes a run, so it may only be recorded against a run
+// that was actually opened — an agent with no end event is the one exception,
+// there the start dispatch is the whole run and closes it itself.
+const CLOSING_STATUS = 'finished';
+const RUN_OPEN_STATUSES = ['running', 'listening'];
 
 const query = {
   agents: {
@@ -136,11 +144,32 @@ const mutation = {
       if (args.incrementSuccess) inc.successCount = args.incrementSuccess;
       if (args.incrementFailure) inc.failureCount = args.incrementFailure;
       const update = Object.keys(inc).length ? { $set: set, $inc: inc } : { $set: set };
-      return AgentModel.findOneAndUpdate(
-        { _id: args.id, email },
+      // Guard the close atomically, the same way redeemRoutineItem guards a
+      // double-redeem: two end-event records racing must not both be accepted,
+      // or one run logs two successes.
+      const filter = { _id: args.id, email };
+      if (args.status === CLOSING_STATUS) {
+        filter.$or = [
+          { executionStatus: { $in: RUN_OPEN_STATUSES } },
+          { endEvent: null },
+        ];
+      }
+      const updated = await AgentModel.findOneAndUpdate(
+        filter,
         update,
         { new: true },
       ).exec();
+      if (!updated && args.status === CLOSING_STATUS) {
+        // Tell the difference between "not your agent" (stay null, as before)
+        // and a refused close, so an end event that fired without a run says so
+        // instead of quietly logging a success.
+        const existing = await AgentModel.findOne({ _id: args.id, email }).exec();
+        if (existing) {
+          throw new ApiError(409, `409:Agent has no run in progress (${existing.executionStatus})`
+            + ' - end event ignored');
+        }
+      }
+      return updated;
     },
   },
 };
