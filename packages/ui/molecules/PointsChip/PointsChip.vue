@@ -40,6 +40,12 @@ export default {
       type: Boolean,
       default: false,
     },
+    // A balance we failed to load is unknown, not zero — `0` reads as "you
+    // spent everything", which is the wrong thing to tell an offline user.
+    error: {
+      type: Boolean,
+      default: false,
+    },
     small: {
       type: Boolean,
       default: false,
@@ -48,11 +54,13 @@ export default {
   computed: {
     displayValue() {
       if (this.loading) return '…';
+      if (this.error) return '—';
       if (this.entitled) return '∞';
       return Math.round(this.available).toLocaleString();
     },
     tooltipText() {
       if (this.loading) return '';
+      if (this.error) return "Points unavailable — we couldn't reach the server.";
       if (this.entitled) return 'Subscribed — unlimited redeems';
       const pending = Math.round(this.pendingToday);
       const base = `${Math.round(this.available).toLocaleString()} points available`;
