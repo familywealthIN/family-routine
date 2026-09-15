@@ -1512,6 +1512,26 @@ const mutation = {
         throw new Error('Goal item not found');
       }
 
+      // Switching the dialog's period tab rewrites the date on its own: to ''
+      // for a dated period, to the '01-01-1970' lifetime stand-in for "no
+      // date" (see the lifetime bucket in goalsOptimized). Filing the item
+      // under either one hides it from every read path that asks for a day,
+      // so an undated target is refused rather than moved to.
+      if (!date || (date === '01-01-1970' && sourceGoal.period !== 'lifetime')) {
+        throw new Error('This task needs a date. Pick one before saving.');
+      }
+
+      // A milestone hangs off a goal of the period above it — a day item's
+      // goalRef names a week goal (utils/getGoalMilestone) — so carrying the
+      // link into another period unroots it: the parent loses the milestone
+      // and the item resurfaces at the top of its new period. Refuse, so the
+      // switch cannot drop the link without the user clearing it first.
+      const sourceItem = sourceGoal.goalItems.find((aGoalItem) => aGoalItem.id === id);
+
+      if (sourceGoal.period !== period && (goalRef || sourceItem.goalRef)) {
+        throw new Error('This task is a milestone of a goal. Clear its goal task before changing the period.');
+      }
+
       if (sourceGoal.date !== date || sourceGoal.period !== period) {
         return moveGoalItem({
           email,
