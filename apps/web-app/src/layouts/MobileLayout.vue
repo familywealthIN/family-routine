@@ -110,6 +110,7 @@
         :available="(xpBalance && xpBalance.available) || 0"
         :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
         :entitled="!!(xpBalance && xpBalance.entitled)"
+        :error="xpBalanceError && !xpBalance"
         :loading="$apollo.queries.xpBalance.loading"
       />
       <v-btn icon @click="openAiSearch">
@@ -256,12 +257,22 @@ export default {
       skip() {
         return !this.$root.$data.email;
       },
+      result({ data }) {
+        if (data) this.xpBalanceError = false;
+      },
+      // A failed load leaves xpBalance undefined, which the chip would paint as
+      // `0` — a balance the app does not actually know.
+      error(error) {
+        console.error('[MobileLayout] xpBalance query failed:', error);
+        this.xpBalanceError = true;
+      },
     },
   },
   data() {
     return {
       drawer: null,
       pendingDialog: false,
+      xpBalanceError: false,
       areaTags: [],
       projectTags: [],
       drawerItems: [
