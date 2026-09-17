@@ -1,5 +1,12 @@
 /* eslint-env jest */
+const Vue = require('vue');
+const Vuetify = require('vuetify');
+
 const AgendaTaskList = require('./AgendaTaskList.vue').default;
+
+Vue.use(Vuetify);
+Vue.config.productionTip = false;
+Vue.config.devtools = false;
 
 // Build a fresh fixture for each test so mutation in one case can't leak.
 const makeGroups = () => [
@@ -309,6 +316,59 @@ describe('OrganismAgendaTaskList', () => {
 
       const events = ctx.emitted.map((e) => e.event);
       expect(events).toEqual(['delete-goal-item']);
+    });
+  });
+
+  // D-10: an offline day painted "No Day Tasks" - a failed load told as an
+  // empty day. Only a render can prove the two states are distinct, so this
+  // block mounts, matching the Switch.test.js convention.
+  describe('Load error state', () => {
+    const render = (props = {}) => {
+      const retries = [];
+      const vm = new Vue({
+        render: (h) => h(AgendaTaskList, { props, on: { retry: () => retries.push(true) } }),
+      }).$mount();
+      return { el: vm.$el, retries };
+    };
+
+    const text = (el) => el.textContent.replace(/\s+/g, ' ');
+
+    it('renders the error state, not the empty card, when the day failed to load', () => {
+      const { el } = render({ error: true });
+      expect(el.querySelector('.load-error-state')).not.toBeNull();
+      expect(text(el)).toContain('Nothing has been deleted');
+      expect(text(el)).not.toContain('No Day Tasks');
+    });
+
+    it('offers a retry the page can act on', () => {
+      const { el, retries } = render({ error: true });
+      const retry = el.querySelector('.load-error-state__retry');
+      expect(retry).not.toBeNull();
+      retry.click();
+      expect(retries).toHaveLength(1);
+    });
+
+    it('spins the retry while the page is already retrying', () => {
+      const { el } = render({ error: true, retrying: true });
+      expect(el.querySelector('.load-error-state__retry').className).toContain('v-btn--loader');
+    });
+
+    it('renders the empty card - never the error state - for a genuinely empty day', () => {
+      const { el } = render();
+      expect(el.querySelector('.load-error-state')).toBeNull();
+      expect(text(el)).toContain('No Day Tasks');
+    });
+
+    it('keeps showing groups we already hold when a refetch fails', () => {
+      const { el } = render({ error: true, groups: makeGroups() });
+      expect(el.querySelector('.load-error-state')).toBeNull();
+      expect(text(el)).toContain('Morning Routine');
+    });
+
+    it('shows the loading card in preference to the error state while retrying', () => {
+      const { el } = render({ error: true, loading: true });
+      expect(el.querySelector('.load-error-state')).toBeNull();
+      expect(text(el)).toContain('Loading day tasks');
     });
   });
 });
