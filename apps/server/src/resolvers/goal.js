@@ -276,44 +276,48 @@ async function autoCheckTaskPeriod({
               date: dayCleanGoal.date,
               taskRef: matchedDayGoal.taskRef,
             });
-
-            const autoComplete = evaluateAutoComplete({
-              criteria,
-              progress: periodGoalItem.progress,
-              completionThreshold,
-              stepDownPeriod,
-              date: periodGoal.date,
-            });
-
-            if (autoComplete.isComplete && !periodGoalItem.isComplete) {
-              // Mirror completion into cleanGoals so a caller that re-uses it
-              // (completeGoalItem's month→year backtrack) sees the parent as
-              // done. Guarded: a caller may not include the parent doc.
-              const cleanGoalsParent = cleanGoals
-                .find((cleanGoal) => String(cleanGoal.id) === String(periodGoal.id));
-              const cleanGoalsGoalItem = cleanGoalsParent && cleanGoalsParent.goalItems
-                .find((cleanGoalItem) => String(cleanGoalItem.id) === String(periodGoalItem.id));
-
-              periodGoalItem.isComplete = true;
-              periodGoalItem.completionNote = autoComplete.note;
-              if (cleanGoalsGoalItem) cleanGoalsGoalItem.isComplete = true;
-
-              updatePromises.push(GoalModel.findOneAndUpdate(
-                {
-                  date: periodGoal.date,
-                  period: periodGoal.period,
-                  email,
-                  'goalItems._id': periodGoalItem.id,
-                },
-                { $set: { 'goalItems.$.isComplete': true, 'goalItems.$.completionNote': autoComplete.note } },
-                { new: true },
-              ).exec());
-
-              // backtrack all associated task
-              updateGTasksMap(gRoutineTasks, tempGRoutineTasks);
-            }
           }
         });
+
+        // Judged once, on the whole period. Inside the loop above it was judged
+        // against `progress`, which counts one win per child DOCUMENT, so a
+        // parent whose milestones share a child document — five week milestones
+        // in one week doc — could never clear the floor however many of them
+        // were met, while the tallies above reported 5 of 5.
+        const autoComplete = evaluateAutoComplete({
+          criteria,
+          completionThreshold,
+          stepDownPeriod,
+          date: periodGoal.date,
+        });
+
+        if (autoComplete.isComplete && !periodGoalItem.isComplete) {
+          // Mirror completion into cleanGoals so a caller that re-uses it
+          // (completeGoalItem's month→year backtrack) sees the parent as
+          // done. Guarded: a caller may not include the parent doc.
+          const cleanGoalsParent = cleanGoals
+            .find((cleanGoal) => String(cleanGoal.id) === String(periodGoal.id));
+          const cleanGoalsGoalItem = cleanGoalsParent && cleanGoalsParent.goalItems
+            .find((cleanGoalItem) => String(cleanGoalItem.id) === String(periodGoalItem.id));
+
+          periodGoalItem.isComplete = true;
+          periodGoalItem.completionNote = autoComplete.note;
+          if (cleanGoalsGoalItem) cleanGoalsGoalItem.isComplete = true;
+
+          updatePromises.push(GoalModel.findOneAndUpdate(
+            {
+              date: periodGoal.date,
+              period: periodGoal.period,
+              email,
+              'goalItems._id': periodGoalItem.id,
+            },
+            { $set: { 'goalItems.$.isComplete': true, 'goalItems.$.completionNote': autoComplete.note } },
+            { new: true },
+          ).exec());
+
+          // backtrack all associated task
+          updateGTasksMap(gRoutineTasks, tempGRoutineTasks);
+        }
       }
     });
   });
