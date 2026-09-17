@@ -175,3 +175,94 @@ describe('autoCheckTaskPeriod milestone tally', () => {
     expect(weekGoal.goalItems[0].milestonesTotal).toBe(0);
   });
 });
+
+// D-25: the month goal "Routine Notes 1.0 live in both stores" read
+// [5/5 milestones] beside an unchecked box through every reload. All five of its
+// week milestones live in ONE week document, and `progress` scores one win per
+// child DOCUMENT, so it stuck at 1 against a floor of three — the parent could
+// never close while the tally truthfully said 5 of 5.
+const MONTH_DATE = '10-09-2026';
+const MONTH_END = '30-09-2026';
+const SHARED_WEEK = '11-09-2026'; // the Friday the week doc is keyed by
+
+function monthDoc() {
+  return {
+    id: 'GM',
+    date: MONTH_END,
+    period: 'month',
+    goalItems: [{ id: 'M1', body: 'Routine Notes 1.0 live in both stores', isComplete: false }],
+  };
+}
+
+/** A single week doc carrying every milestone the month goal declared. */
+function sharedWeekDocs(completeCount, declared = 5) {
+  return [{
+    id: 'GWS',
+    date: SHARED_WEEK,
+    period: 'week',
+    goalItems: Array.from({ length: declared }, (unused, i) => ({
+      id: `s${i}`, goalRef: 'M1', taskRef: `t${i}`, isComplete: i < completeCount,
+    })),
+  }];
+}
+
+function primeMonthFind(monthGoals, weekGoals) {
+  mockGoalFind.mockImplementation((criteria) => (
+    criteria.period === 'month' ? exec(monthGoals) : exec(weekGoals)
+  ));
+}
+
+const runMonth = () => {
+  const { autoCheckTaskPeriod } = require('./goal');
+  return autoCheckTaskPeriod({
+    currentPeriod: 'month',
+    stepDownPeriod: 'week',
+    cleanGoals: [],
+    completionThreshold: 3,
+    date: MONTH_DATE,
+    email: EMAIL,
+  });
+};
+
+describe('autoCheckTaskPeriod milestones sharing one child document', () => {
+  it('completes the month goal once all five shared milestones are met', async () => {
+    primeMonthFind([monthDoc()], sharedWeekDocs(5));
+
+    const [monthGoal] = await runMonth();
+
+    expect(monthGoal.goalItems[0].isComplete).toBe(true);
+    expect(mockGoalFindOneAndUpdate).toHaveBeenCalledTimes(1);
+    const [, update] = mockGoalFindOneAndUpdate.mock.calls[0];
+    expect(update.$set['goalItems.$.completionNote']).toContain('5 of 5 week milestones met');
+  });
+
+  it('uses the same count the dashboard chip renders', async () => {
+    primeMonthFind([monthDoc()], sharedWeekDocs(5));
+
+    const [monthGoal] = await runMonth();
+
+    expect(monthGoal.goalItems[0].milestonesComplete).toBe(5);
+    expect(monthGoal.goalItems[0].milestonesTotal).toBe(5);
+    // The streak itself still counts week wins, not milestones: one week doc.
+    expect(monthGoal.goalItems[0].progress).toBe(1);
+  });
+
+  it('leaves the month goal open while one shared milestone is outstanding', async () => {
+    primeMonthFind([monthDoc()], sharedWeekDocs(4));
+
+    const [monthGoal] = await runMonth();
+
+    expect(monthGoal.goalItems[0].isComplete).toBe(false);
+    expect(mockGoalFindOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the threshold as a floor when fewer milestones were declared', async () => {
+    // Two milestones, both met, sharing the one week doc: still not a month.
+    primeMonthFind([monthDoc()], sharedWeekDocs(2, 2));
+
+    const [monthGoal] = await runMonth();
+
+    expect(monthGoal.goalItems[0].isComplete).toBe(false);
+    expect(mockGoalFindOneAndUpdate).not.toHaveBeenCalled();
+  });
+});
