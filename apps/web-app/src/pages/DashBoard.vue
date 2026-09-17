@@ -153,11 +153,15 @@
             xs12
             class="pr-3 pl-3 mb-3"
             d-flex
-            v-if="!!countTaskTotal(currentTask) &&
-                  currentGoalPeriod === 'day' &&
-                  weekGoalsForCurrentTask.length > 0"
+            v-if="currentGoalPeriod === 'day' &&
+                  (weekGoalsForStreak.length > 0 || weekGoalsLoadError)"
           >
-            <week-goal-streak :week-goals="weekGoalsForCurrentTask" />
+            <week-goal-streak
+              :week-goals="weekGoalsForStreak"
+              :error="weekGoalsLoadError"
+              :retrying="isRefreshing"
+              @retry="refreshData"
+            />
           </atom-flex>
           <atom-flex xs12 class="pl-3 pr-3 pb-3" d-flex>
             <upcoming-past-tasks
@@ -580,6 +584,7 @@ export default {
       update(data) {
         // Mark first load as complete
         this.goalsFirstLoad = false;
+        this.weekGoalsLoadError = false;
 
         return data.optimizedDailyGoals;
       },
@@ -587,6 +592,12 @@ export default {
         return {
           date: this.date,
         };
+      },
+      // Without this the week streak card just disappears and an unreachable
+      // server reads as "you have no week goal".
+      error(error) {
+        console.error('[DashBoard] Daily goals query error:', error);
+        this.weekGoalsLoadError = true;
       },
     },
   },
@@ -638,6 +649,9 @@ export default {
       routineFirstLoad: true,
       // Track first load for the non-today agenda skeleton
       agendaFirstLoad: true,
+      // The daily-goals query failed; drives the week streak card's error state
+      // so a failed load never reads as "you have no week goal".
+      weekGoalsLoadError: false,
       // True while the day-rollover cache purge runs. Drives the "Preparing
       // new day" overlay — the only load state that legitimately blocks the
       // dashboard, because at that moment there is nothing valid to paint.
@@ -2694,14 +2708,20 @@ export default {
       return this.$agent.getByTaskRef(this.goalActionTask.id) ? 'assigned' : 'none';
     },
     /**
-     * Week goals filtered for the current task.
+     * Week goals for the streak card.
      * Consumed by the WeekGoalStreak organism and by the dashboard's
      * v-if on whether to render it at all.
+     *
+     * Deliberately NOT scoped to the current task. The streak is a property of
+     * the week, but this used to be `filterTaskGoalsPeriod(currentTask.id, …)`,
+     * so the whole card vanished for every minute of the day spent on a routine
+     * item that carries no goal item (05:45 "Wake Up" hid it; 09:10 "Start
+     * Work" brought it back on the same data).
      */
-    weekGoalsForCurrentTask() {
-      return this.currentTask && this.currentTask.id
-        ? this.filterTaskGoalsPeriod(this.currentTask.id, this.displayGoals, 'week')
-        : [];
+    weekGoalsForStreak() {
+      return (this.displayGoals || []).filter((goal) => goal
+        && goal.period === 'week'
+        && !!(goal.goalItems && goal.goalItems.length));
     },
     currentAgentStatus() {
       const id = this.currentTask && this.currentTask.id;
