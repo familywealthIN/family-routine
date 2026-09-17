@@ -61,7 +61,6 @@
             color="primary"
             class="routine-item-drawer__save"
             :loading="buttonLoading"
-            :disabled="!valid"
             @click="save"
           >
             Save
@@ -73,7 +72,7 @@
           <span class="headline">{{ formTitle }}</span>
         </atom-card-title>
 
-        <atom-form ref="form" v-model="valid" :class="isMobile ? 'routine-item-drawer__form' : ''">
+        <atom-form ref="form" :class="isMobile ? 'routine-item-drawer__form' : ''">
           <atom-card-text :class="isMobile ? 'routine-item-drawer__body' : ''">
               <atom-layout wrap> <atom-flex xs12 sm12 md12>
                   <atom-text-field v-model="editedItem.name" :rules="nameRules" label="Routine Name"
@@ -248,7 +247,6 @@ export default {
   data() {
     return {
       dialog: false,
-      valid: true,
       buttonLoading: false,
       editedIndex: -1,
       stepBody: '',
@@ -275,15 +273,16 @@ export default {
         (v) => !!v || 'Name is required',
         (v) => (v && v.length <= 100) || 'Name must be less than 100 characters',
       ],
+      // Description carries no required marker and the server stores it
+      // empty, so the only rule it has is the length cap.
       descriptionRules: [
-        (v) => !!v || 'Description is required',
-        (v) => (v && v.length <= 255)
+        (v) => !v || v.length <= 255
           || 'Description must be less than 255 characters',
       ],
       pointsRules: [
         (v) => !!v || 'points is required',
-        (v) => (v && Number(v) <= this.maxInputPoints())
-          || `Name must be less than ${this.maxInputPoints()} characters`,
+        (v) => !v || Number(v) <= this.maxInputPoints()
+          || `Points must be ${this.maxInputPoints()} or fewer`,
       ],
       timeRules: [(v) => !!v || 'Time is required'],
       goalRules: [(v) => !!v || 'At least one goal is required'],
@@ -431,15 +430,46 @@ export default {
       this.$router.push('/agents');
     },
 
+    // Vuetify hides a field's error until that field has been touched, so a
+    // refusal on an untouched one would name nothing. Re-run the same rules
+    // here, keeping the first failure per field as the inputs themselves do.
+    formErrors() {
+      const {
+        name, description, time, points,
+      } = this.editedItem;
+      return [
+        [this.nameRules, name],
+        [this.descriptionRules, description],
+        [this.timeRules, time],
+        [this.pointsRules, points],
+      ].reduce((messages, [rules, value]) => {
+        const failed = rules
+          .map((rule) => rule(value))
+          .find((message) => typeof message === 'string');
+        return failed ? [...messages, failed] : messages;
+      }, []);
+    },
+
     save() {
-      this.$refs.form.validate();
-      if (this.valid) {
-        this.buttonLoading = true;
-        if (this.editedIndex > -1) {
-          this.updateRoutineItem();
-        } else {
-          this.addRoutineItem();
-        }
+      // SAVE stays clickable: a button disabled for a reason the form never
+      // states leaves the user with nowhere to go. Validate on the click and
+      // say what is missing instead.
+      if (!this.$refs.form.validate()) {
+        this.$notify({
+          title: 'Cannot save this item',
+          text: this.formErrors().join('. '),
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+        return;
+      }
+
+      this.buttonLoading = true;
+      if (this.editedIndex > -1) {
+        this.updateRoutineItem();
+      } else {
+        this.addRoutineItem();
       }
     },
 
