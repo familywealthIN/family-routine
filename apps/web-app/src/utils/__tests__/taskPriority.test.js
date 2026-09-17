@@ -46,12 +46,16 @@ describe('extractAssignee', () => {
 
 describe('derivePriority', () => {
   it('defaults a plain task created for today to do', () => {
-    expect(derivePriority({ period: 'day', date: TODAY, body: 'write notes', today: TODAY }))
+    expect(derivePriority({
+      period: 'day', date: TODAY, body: 'write notes', today: TODAY,
+    }))
       .toBe('do');
   });
 
   it('marks a future-dated day task as plan', () => {
-    expect(derivePriority({ period: 'day', date: FUTURE, body: 'write notes', today: TODAY }))
+    expect(derivePriority({
+      period: 'day', date: FUTURE, body: 'write notes', today: TODAY,
+    }))
       .toBe('plan');
   });
 
@@ -63,17 +67,23 @@ describe('derivePriority', () => {
   });
 
   it('marks a Start Agent task for today as automate', () => {
-    expect(derivePriority({ period: 'day', date: TODAY, explicitAgent: true, today: TODAY }))
+    expect(derivePriority({
+      period: 'day', date: TODAY, explicitAgent: true, today: TODAY,
+    }))
       .toBe('automate');
   });
 
   it('marks an @mentioned task for today as delegate', () => {
-    expect(derivePriority({ period: 'day', date: TODAY, body: 'design @lee', today: TODAY }))
+    expect(derivePriority({
+      period: 'day', date: TODAY, body: 'design @lee', today: TODAY,
+    }))
       .toBe('delegate');
   });
 
   it('treats a past-dated day task like today (not future) — defaults to do', () => {
-    expect(derivePriority({ period: 'day', date: PAST, body: 'log yesterday', today: TODAY }))
+    expect(derivePriority({
+      period: 'day', date: PAST, body: 'log yesterday', today: TODAY,
+    }))
       .toBe('do');
   });
 
