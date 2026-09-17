@@ -357,7 +357,18 @@ export default {
     },
     editItem(item) {
       this.editedIndex = this.routineItems.indexOf(item);
-      this.editedItem = { ...item };
+      // A step's id is optional on the server, and the Steps list is keyed by
+      // it: a null key is no key at all, so `<transition-group>` drops the row
+      // and the section renders empty. It is also what removeStep matches on,
+      // which would delete every id-less step at once. Give the dialog's own
+      // copy an id the way addStep does, and the next save persists it.
+      this.editedItem = {
+        ...item,
+        steps: (item.steps || []).map((step) => ({
+          ...step,
+          id: step.id || window.crypto.randomUUID(),
+        })),
+      };
       this.dialog = true;
 
       // Track routine item edit
