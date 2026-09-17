@@ -63,6 +63,9 @@
             <agenda-task-list
               :groups="todayGoalItemsGrouped"
               :loading="showGoalsSkeleton"
+              :error="loadError && !nonTodayGoalItems.length"
+              :retrying="isRefreshing"
+              @retry="refreshData"
               @complete-goal-item="completeGoalItem"
               @edit-goal-item="(item) => toggleGoalDisplayDialog(item, true)"
               @delete-goal-item="deleteTaskGoal"
@@ -203,6 +206,9 @@
           :groups="nonTodayGoalItems"
           :loading="showAgendaSkeleton"
           :hide-checkbox="isFutureDateSelected"
+          :error="loadError && !nonTodayGoalItems.length"
+          :retrying="isRefreshing"
+          @retry="refreshData"
           @complete-goal-item="completeAgendaGoalItem"
           @edit-goal-item="(item) => toggleGoalDisplayDialog(item, true)"
           @delete-goal-item="deleteAgendaGoalFromList"
@@ -539,8 +545,12 @@ export default {
           date: this.date,
         };
       },
+      result({ data }) {
+        if (data) this.loadError = false;
+      },
       error(error) {
         console.error('[DashBoard] Routine query error:', error);
+        this.loadError = true;
       },
     },
     agendaGoals: {
@@ -559,8 +569,12 @@ export default {
           date: this.date,
         };
       },
+      result({ data }) {
+        if (data) this.loadError = false;
+      },
       error() {
         this.isLoading = false;
+        this.loadError = true;
       },
     },
     xpBalance: {
@@ -652,6 +666,9 @@ export default {
       // The daily-goals query failed; drives the week streak card's error state
       // so a failed load never reads as "you have no week goal".
       weekGoalsLoadError: false,
+      // The day's routine/agenda failed to load; drives the day strip's error
+      // state so an unreachable API never reads as "No Day Tasks".
+      loadError: false,
       // True while the day-rollover cache purge runs. Drives the "Preparing
       // new day" overlay — the only load state that legitimately blocks the
       // dashboard, because at that moment there is nothing valid to paint.
