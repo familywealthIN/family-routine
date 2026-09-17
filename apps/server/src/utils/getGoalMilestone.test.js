@@ -194,3 +194,90 @@ test('getGoalMilestone does not list a milestone that already hangs off a parent
   expect(milestonesView.month).toEqual([]);
   expect(milestonesView.week.map((goalItem) => goalItem.id)).toEqual(['w1']);
 });
+
+// Nesting each section of GoalMilestoneType can express, and MilestonesTime
+// asks for — 1 is the root row on its own.
+const QUERY_DEPTH = {
+  day: 1, week: 2, month: 3, year: 4, lifetime: 5,
+};
+
+/** Every id the page can render, mapped to how many rows it is listed in. */
+function renderedCounts(milestonesView) {
+  const counts = new Map();
+
+  Object.keys(milestonesView).forEach((period) => {
+    const walk = (goalItems, depth) => goalItems.forEach((goalItem) => {
+      if (depth > QUERY_DEPTH[period]) return;
+      counts.set(goalItem.id, (counts.get(goalItem.id) || 0) + 1);
+      if (goalItem.milestones) walk(goalItem.milestones, depth + 1);
+    });
+
+    walk(milestonesView[period], 1);
+  });
+
+  return counts;
+}
+
+/**
+ * One month plan chained to the year goal, and a second month plan whose own
+ * top link is `topRef` — each with a week milestone of its own.
+ */
+const twoPlans = (topRef) => [
+  {
+    _id: 'gy',
+    date: '31-12-2026',
+    period: 'year',
+    goalItems: [
+      {
+        _id: 'y', isMilestone: false, body: 'Ship 1.0', goalRef: null,
+      },
+    ],
+  },
+  {
+    _id: 'gm',
+    date: '30-09-2026',
+    period: 'month',
+    goalItems: [
+      {
+        _id: 'm', isMilestone: true, body: 'Rebuild my evening recovery habits', goalRef: 'y',
+      },
+      {
+        _id: 'm2', isMilestone: !!topRef, body: 'Ship the onboarding revamp', goalRef: topRef,
+      },
+    ],
+  },
+  {
+    _id: 'gw',
+    date: '18-09-2026',
+    period: 'week',
+    goalItems: [
+      {
+        _id: 'w', isMilestone: true, body: 'Establish a consistent wind-down time', goalRef: 'm',
+      },
+      {
+        _id: 'w2', isMilestone: true, body: 'Final QA and A/B Test Setup', goalRef: 'm2',
+      },
+    ],
+  },
+];
+
+test.each([
+  ['no parent at all', null],
+  ['a parent of its own period', 'm'],
+  ['a parent of a smaller period', 'w'],
+  ['a parent that no longer exists', 'deleted'],
+])('getGoalMilestone roots a plan saved with %s at its own period', (unused, topRef) => {
+  const milestonesView = getGoalMilestone(twoPlans(topRef));
+  const monthPlan = milestonesView.month.find((goalItem) => goalItem.id === 'm2');
+
+  // Nesting it under an item of its own period or below would push its week
+  // milestone past the deepest `milestones` the month section can select, and
+  // the plan and the milestone both fell out of the response with no error.
+  expect(monthPlan.body).toBe('Ship the onboarding revamp');
+  expect(monthPlan.milestones.map((milestone) => milestone.id)).toEqual(['w2']);
+
+  // The chained plan still renders under the year goal, and nothing is listed
+  // in two places.
+  expect(milestonesView.year[0].milestones.map((milestone) => milestone.id)).toEqual(['m']);
+  ['y', 'm', 'm2', 'w', 'w2'].forEach((id) => expect(renderedCounts(milestonesView).get(id)).toBe(1));
+});
