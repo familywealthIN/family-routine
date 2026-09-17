@@ -75,11 +75,11 @@ export default {
       setError: routineStore.setError,
       updateFromResponse: routineStore.updateFromResponse,
       getCachedRoutine: routineStore.getCachedRoutine,
-      getIndexedDBCache: routineStore.getIndexedDBCache,
-      loadFromIndexedDB: routineStore.loadFromIndexedDB,
+      // No getIndexedDBCache/loadFromIndexedDB here: the store has no IndexedDB
+      // layer, so aliasing them only handed callers an undefined to call. The
+      // persisted Apollo cache is read inside useRoutineQueries.fetchRoutine.
       clearCache: routineStore.clearCache,
       reset: routineStore.reset,
-      init: routineStore.init,
 
       // Computed helpers
       getTaskById: routineStore.getTaskById,

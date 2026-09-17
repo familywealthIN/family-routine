@@ -21,6 +21,12 @@ import { GC_AUTH_TOKEN } from '../constants/settings';
 const RESULT_BODY_MAX = 65536;
 const ERROR_MAX = 2048;
 
+// A run is open from the moment the start event is dispatched until an end
+// event closes it — the same window recordAgentExecution guards server-side
+// (resolvers/agent.js). Read off the persisted agent doc, not the day-scoped
+// badge: an implicitly started run has no badge but is still open.
+const RUN_OPEN_STATUSES = ['running', 'listening'];
+
 const cap = (value, max) => {
   if (typeof value !== 'string') return value;
   return value.length > max ? value.slice(0, max) : value;
@@ -543,6 +549,12 @@ const actions = {
   }) {
     const agent = state.agentsByTaskRef[taskRef];
     if (!agent || !agent.endEvent || !agent.endEvent.value) return null;
+    // An end event CLOSES a run, so it may only go out while one is open. A
+    // task completed with "Start Task" — the button that means "do not run the
+    // agent" — never opened one, so filling its goal-item counter must not put
+    // the end event on the wire, record an execution, or touch the status of
+    // the run that did happen.
+    if (!RUN_OPEN_STATUSES.includes(agent.executionStatus)) return null;
 
     // Badges only for agents the user explicitly started — detected by the
     // presence of a (persisted) status like "listening". An agent that
@@ -575,16 +587,37 @@ const actions = {
         ? cap(resultData, RESULT_BODY_MAX)
         : cap(JSON.stringify(resultData == null ? null : resultData), RESULT_BODY_MAX);
 
-      const updated = await recordExecution(apollo, {
-        id: agent.id,
-        // Silent (implicit) end-event failures don't persist a "failed" state.
-        status: recordedStatus(visible, ok, 'finished'),
-        lastResultType: resultType || null,
-        lastResultBody,
-        lastError: ok ? null : cap((result && result.statusText) || 'End event failed', ERROR_MAX),
-        incrementSuccess: ok ? 1 : 0,
-        incrementFailure: ok ? 0 : 1,
-      });
+      let updated;
+      try {
+        updated = await recordExecution(apollo, {
+          id: agent.id,
+          // Silent (implicit) end-event failures don't persist a "failed" state.
+          status: recordedStatus(visible, ok, 'finished'),
+          lastResultType: resultType || null,
+          lastResultBody,
+          lastError: ok ? null : cap((result && result.statusText) || 'End event failed', ERROR_MAX),
+          incrementSuccess: ok ? 1 : 0,
+          incrementFailure: ok ? 0 : 1,
+        });
+      } catch (err) {
+        // The server refuses a close that closes no open run. That refusal is
+        // not a dispatch failure: booking one here would count a failure
+        // against the agent and overwrite the very status the refusal exists
+        // to protect. Tell the user instead of failing silently, and stop
+        // short of the transcript a refused close never earned.
+        console.warn('[agentStore.fireEndEvent] execution not recorded', err);
+        show(ok ? 'finished' : 'failed');
+        if (vm && vm.$notify) {
+          vm.$notify({
+            title: 'Agent run not recorded',
+            text: `The end event for "${agent.name}" ran but could not be recorded`,
+            group: 'notify',
+            type: 'warning',
+            duration: 4000,
+          });
+        }
+        return null;
+      }
       if (updated) upsertAgent(updated);
       // Leaves the badge on "Agent done" (persisted, day-scoped) as the final
       // visible state.

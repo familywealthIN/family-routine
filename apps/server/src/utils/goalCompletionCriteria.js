@@ -14,6 +14,14 @@
  * all of them must be met. `progress` is deliberately untouched: it is the
  * N-of-5 streak count the dashboard renders, not a completion signal.
  *
+ * The floor is therefore counted in the same unit as the criteria — met
+ * milestones — rather than taken from `progress`, which counts one win per child
+ * DOCUMENT. A month goal whose five week milestones all sit in the same week
+ * document scores one there, so it could never clear a floor of three however
+ * many of its milestones were met, while the dashboard truthfully read 5/5.
+ * Deriving the count here instead of taking it from the caller is what stops the
+ * two disagreeing again.
+ *
  * Pure so the rule is testable without Mongo.
  */
 
@@ -79,18 +87,18 @@ function buildMilestoneDays(childDates, criteria, referenceDate) {
 /**
  * @param {Object} p
  * @param {Array}  p.criteria            from collectPeriodCriteria
- * @param {number} p.progress            day/week/month wins counted so far
- * @param {number} p.completionThreshold streak floor (threshold.weekDays etc.)
+ * @param {number} p.completionThreshold streak floor (threshold.weekDays etc.),
+ *                                       counted in met milestones
  * @param {string} p.stepDownPeriod      'day' | 'week' | 'month', for the note
  * @param {string} p.date                the period goal's own date, for the note
  * @returns {{ isComplete: boolean, met: Array, outstanding: Array, note: ?string }}
  */
 function evaluateAutoComplete({
-  criteria, progress, completionThreshold, stepDownPeriod, date,
+  criteria, completionThreshold, stepDownPeriod, date,
 }) {
   const met = criteria.filter((criterion) => criterion.isComplete);
   const outstanding = criteria.filter((criterion) => !criterion.isComplete);
-  const isComplete = progress >= completionThreshold && !outstanding.length;
+  const isComplete = met.length >= completionThreshold && !outstanding.length;
 
   // An auto-complete has to state what it was awarded for; being told you
   // achieved something with no way to check it is worse than not closing.

@@ -276,44 +276,48 @@ async function autoCheckTaskPeriod({
               date: dayCleanGoal.date,
               taskRef: matchedDayGoal.taskRef,
             });
-
-            const autoComplete = evaluateAutoComplete({
-              criteria,
-              progress: periodGoalItem.progress,
-              completionThreshold,
-              stepDownPeriod,
-              date: periodGoal.date,
-            });
-
-            if (autoComplete.isComplete && !periodGoalItem.isComplete) {
-              // Mirror completion into cleanGoals so a caller that re-uses it
-              // (completeGoalItem's month→year backtrack) sees the parent as
-              // done. Guarded: a caller may not include the parent doc.
-              const cleanGoalsParent = cleanGoals
-                .find((cleanGoal) => String(cleanGoal.id) === String(periodGoal.id));
-              const cleanGoalsGoalItem = cleanGoalsParent && cleanGoalsParent.goalItems
-                .find((cleanGoalItem) => String(cleanGoalItem.id) === String(periodGoalItem.id));
-
-              periodGoalItem.isComplete = true;
-              periodGoalItem.completionNote = autoComplete.note;
-              if (cleanGoalsGoalItem) cleanGoalsGoalItem.isComplete = true;
-
-              updatePromises.push(GoalModel.findOneAndUpdate(
-                {
-                  date: periodGoal.date,
-                  period: periodGoal.period,
-                  email,
-                  'goalItems._id': periodGoalItem.id,
-                },
-                { $set: { 'goalItems.$.isComplete': true, 'goalItems.$.completionNote': autoComplete.note } },
-                { new: true },
-              ).exec());
-
-              // backtrack all associated task
-              updateGTasksMap(gRoutineTasks, tempGRoutineTasks);
-            }
           }
         });
+
+        // Judged once, on the whole period. Inside the loop above it was judged
+        // against `progress`, which counts one win per child DOCUMENT, so a
+        // parent whose milestones share a child document — five week milestones
+        // in one week doc — could never clear the floor however many of them
+        // were met, while the tallies above reported 5 of 5.
+        const autoComplete = evaluateAutoComplete({
+          criteria,
+          completionThreshold,
+          stepDownPeriod,
+          date: periodGoal.date,
+        });
+
+        if (autoComplete.isComplete && !periodGoalItem.isComplete) {
+          // Mirror completion into cleanGoals so a caller that re-uses it
+          // (completeGoalItem's month→year backtrack) sees the parent as
+          // done. Guarded: a caller may not include the parent doc.
+          const cleanGoalsParent = cleanGoals
+            .find((cleanGoal) => String(cleanGoal.id) === String(periodGoal.id));
+          const cleanGoalsGoalItem = cleanGoalsParent && cleanGoalsParent.goalItems
+            .find((cleanGoalItem) => String(cleanGoalItem.id) === String(periodGoalItem.id));
+
+          periodGoalItem.isComplete = true;
+          periodGoalItem.completionNote = autoComplete.note;
+          if (cleanGoalsGoalItem) cleanGoalsGoalItem.isComplete = true;
+
+          updatePromises.push(GoalModel.findOneAndUpdate(
+            {
+              date: periodGoal.date,
+              period: periodGoal.period,
+              email,
+              'goalItems._id': periodGoalItem.id,
+            },
+            { $set: { 'goalItems.$.isComplete': true, 'goalItems.$.completionNote': autoComplete.note } },
+            { new: true },
+          ).exec());
+
+          // backtrack all associated task
+          updateGTasksMap(gRoutineTasks, tempGRoutineTasks);
+        }
       }
     });
   });
@@ -1510,6 +1514,26 @@ const mutation = {
 
       if (!sourceGoal) {
         throw new Error('Goal item not found');
+      }
+
+      // Switching the dialog's period tab rewrites the date on its own: to ''
+      // for a dated period, to the '01-01-1970' lifetime stand-in for "no
+      // date" (see the lifetime bucket in goalsOptimized). Filing the item
+      // under either one hides it from every read path that asks for a day,
+      // so an undated target is refused rather than moved to.
+      if (!date || (date === '01-01-1970' && sourceGoal.period !== 'lifetime')) {
+        throw new Error('This task needs a date. Pick one before saving.');
+      }
+
+      // A milestone hangs off a goal of the period above it — a day item's
+      // goalRef names a week goal (utils/getGoalMilestone) — so carrying the
+      // link into another period unroots it: the parent loses the milestone
+      // and the item resurfaces at the top of its new period. Refuse, so the
+      // switch cannot drop the link without the user clearing it first.
+      const sourceItem = sourceGoal.goalItems.find((aGoalItem) => aGoalItem.id === id);
+
+      if (sourceGoal.period !== period && (goalRef || sourceItem.goalRef)) {
+        throw new Error('This task is a milestone of a goal. Clear its goal task before changing the period.');
       }
 
       if (sourceGoal.date !== date || sourceGoal.period !== period) {

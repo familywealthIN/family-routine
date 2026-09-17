@@ -30,11 +30,21 @@
         <div class="body-1 text--secondary">No week goal items</div>
       </div>
     </div>
+
+    <!-- A week we failed to load is not a week without a streak. Goals we
+         already hold still win over this, matching AgendaTaskList. -->
+    <load-error-state
+      v-if="error && !weekGoals.length"
+      message="We couldn't load this week's streak."
+      :retrying="retrying"
+      @retry="$emit('retry')"
+    />
   </AtomCard>
 </template>
 
 <script>
 import { AtomCard, AtomCardTitle } from '../../atoms';
+import LoadErrorState from '../../molecules/LoadErrorState/LoadErrorState.vue';
 import StreakChecks from '../../molecules/StreakChecks/StreakChecks.vue';
 
 export default {
@@ -42,12 +52,23 @@ export default {
   components: {
     AtomCard,
     AtomCardTitle,
+    LoadErrorState,
     StreakChecks,
   },
   props: {
     weekGoals: {
       type: Array,
       default: () => [],
+    },
+    // The week's goals failed to load. Without it the card simply vanishes and
+    // a connection failure reads as "you have no week goal".
+    error: {
+      type: Boolean,
+      default: false,
+    },
+    retrying: {
+      type: Boolean,
+      default: false,
     },
   },
 };

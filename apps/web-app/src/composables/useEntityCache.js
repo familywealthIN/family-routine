@@ -6,9 +6,9 @@
  * WHY THIS EXISTS
  * ---------------
  * Apollo Client 2.x normalizes every entity under `${__typename}:${id}` (the
- * default `dataIdFromObject`, and this app uses `new InMemoryCache()` with no
- * override). When you patch that normalized record by id, EVERY query that
- * references it updates at once — `optimizedDailyGoals`, `agendaGoals`,
+ * default `dataIdFromObject`, which main.js wraps only to stop a null id from
+ * being treated as one). When you patch that normalized record by id, EVERY
+ * query that references it updates at once — `optimizedDailyGoals`, `agendaGoals`,
  * `routineDate`, week views, etc. — with zero chance of the copies drifting
  * apart.
  *
@@ -33,8 +33,9 @@
  */
 import gql from 'graphql-tag';
 
-// Default InMemoryCache id shape. Keep in sync if a custom dataIdFromObject is
-// ever added in main.js.
+// The id shape main.js configures (apollo/dataIdFromObject.js). Keep in sync
+// with it. Only entities with a real id are normalized, which is the only kind
+// this module is ever asked to patch.
 const cacheId = (typename, id) => `${typename}:${id}`;
 
 // Fragments are pure functions of (typename, sorted field names); memoize so we

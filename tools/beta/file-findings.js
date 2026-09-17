@@ -5,7 +5,11 @@
 //   node tools/beta/file-findings.js <findings.json> [--label "5-11 Sep 2026"] [--dry]
 //
 // Dedupes against every still-open subtask of every prior beta epic, so a defect that
-// survived the last cycle is commented on rather than filed twice.
+// survived the last cycle is commented on rather than filed twice. Title matching is a
+// fallback: a finding that carries `recurrenceOf` (a ticket gid, or an array of them)
+// names its own target, which is the only thing that works when the run words a defect
+// better than the ticket it belongs to. `recurrenceLead` overrides the comment's opening
+// line - use it when the finding is a residual of a landed fix rather than a regression.
 const fs = require('fs');
 const { api, IDS } = require('./asana');
 
@@ -71,26 +75,47 @@ Found in the seven-day beta simulation, ${label} (account grvpanchalus@gmail.com
   }
   console.log(`${betaEpics.length} prior beta epic(s), ${seen.size} still-open ticket(s) to dedupe against.`);
 
+  // The title matcher only catches a recurrence that was reported under roughly the same
+  // words. A run that describes a defect more sharply than the original ticket did will
+  // slip straight past it - the 6-12 Sep run scored 23 new / 0 recurrences when 16 of the
+  // 23 were already on the board. So a finding may name its own target explicitly with
+  // `recurrenceOf` (a gid, or an array of them), which beats the matcher and also reaches
+  // tickets that are already closed - that is the case worth hearing about loudest.
   const fresh = [];
   const repeats = [];
-  findings.slice().sort(bySeverity).forEach((f) => {
-    const hit = seen.get(normalise(f.title));
-    if (hit) repeats.push({ f, hit }); else fresh.push(f);
-  });
+  for (const f of findings.slice().sort(bySeverity)) {
+    const declared = [].concat(f.recurrenceOf || []);
+    if (declared.length) {
+      for (const gid of declared) {
+        const hit = await api('GET', `/tasks/${gid}?opt_fields=name,completed`);
+        repeats.push({ f, hit });
+      }
+    } else {
+      const hit = seen.get(normalise(f.title));
+      if (hit) repeats.push({ f, hit }); else fresh.push(f);
+    }
+  }
 
-  console.log(`${fresh.length} new, ${repeats.length} recurrence(s) of an already-open ticket.`);
+  const onClosed = repeats.filter((r) => r.hit.completed);
+  console.log(`${fresh.length} new, ${repeats.length} recurrence comment(s) on ${new Set(repeats.map((r) => r.hit.gid)).size} existing ticket(s).`);
+  if (onClosed.length) {
+    console.log(`${onClosed.length} of them land on a ticket that is already CLOSED:`);
+    onClosed.forEach((r) => console.log(`  !! ${r.hit.gid}  ${r.hit.name}`));
+  }
   if (DRY) {
     fresh.forEach((f, i) => console.log(`  NEW  D-${String(i + 1).padStart(2, '0')} [${f.severity}] ${f.title}`));
-    repeats.forEach((r) => console.log(`  RPT  ${r.hit.gid}  ${r.hit.name}`));
+    repeats.forEach((r) => console.log(`  RPT  ${r.hit.gid}${r.hit.completed ? ' [closed]' : ''}  ${r.hit.name}`));
     return;
   }
 
-  // A recurrence is evidence the fix did not hold - say so on the existing ticket.
+  // A recurrence is evidence the fix did not hold - say so on the existing ticket. A
+  // finding that is a residual rather than a regression says so in its own words instead.
   for (const { f, hit } of repeats) {
+    const lead = f.recurrenceLead || `Still reproducing in the ${label} run (day ${f.day}).`;
     await api('POST', `/tasks/${hit.gid}/stories`, {
-      text: `Still reproducing in the ${label} run (day ${f.day}).\n\nActual: ${f.actual}\n\nEvidence: ${f.evidence}`,
+      text: `${lead}\n\nSeen as: ${f.title}\n\nActual: ${f.actual}\n\nEvidence: ${f.evidence}${run.reportUrl ? `\n\nFull report: ${run.reportUrl}` : ''}`,
     });
-    console.log(`RPT   ${hit.gid}  ${hit.name}`);
+    console.log(`RPT   ${hit.gid}${hit.completed ? ' [closed]' : ''}  ${hit.name}`);
   }
   if (!fresh.length) { console.log('\nNothing new to file.'); return; }
 

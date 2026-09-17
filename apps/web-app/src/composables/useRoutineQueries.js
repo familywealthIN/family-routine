@@ -195,6 +195,34 @@ export function useRoutineQueries(apolloClient, options = {}) {
   };
 
   /**
+         * Read a routine for a date out of the persisted Apollo cache
+         *
+         * The routine store never had an IndexedDB layer of its own — offline
+         * persistence is apollo-cache-persist mirroring Apollo's normalized
+         * cache (see main.js), so that cache IS the IndexedDB copy. A date that
+         * was never fetched is an ordinary miss; anything that throws in here is
+         * a real fault and is left to propagate rather than swallowed.
+         *
+         * @param {string} date - Date in DD-MM-YYYY format
+         * @returns {Object|null} Cached routine data or null when not cached
+         */
+  const readPersistedRoutine = (date) => {
+    const client = typeof apolloClient.getClient === 'function'
+      ? apolloClient.getClient()
+      : apolloClient;
+    if (!client || !client.cache) {
+      return null;
+    }
+    const { result, complete } = client.cache.diff({
+      query: getQueryByVariant(variant),
+      variables: { date },
+      optimistic: true,
+      returnPartialData: true,
+    });
+    return complete ? result.routineDate : null;
+  };
+
+  /**
          * Add a new routine for a date
          *
          * @param {string} date - Date in DD-MM-YYYY format
@@ -233,14 +261,15 @@ export function useRoutineQueries(apolloClient, options = {}) {
          *
          * Strategy:
          * 1. Check in-memory cache first (5 min TTL)
-         * 2. Load from IndexedDB for instant display while API fetches
+         * 2. Load from the persisted Apollo cache for instant display while API fetches
          * 3. Fetch from API (always, in background if we have cached data)
          * 4. Update store and persist to IndexedDB
          *
          * @param {string} date - Date in DD-MM-YYYY format
          * @param {Object} fetchOptions - Additional options
          * @param {boolean} fetchOptions.useCache - Whether to use cache (default: true)
-         * @param {boolean} fetchOptions.useIndexedDB - Whether to use IndexedDB cache (default: true)
+         * @param {boolean} fetchOptions.useIndexedDB - Whether to use the persisted
+         *   Apollo (IndexedDB) cache (default: true)
          * @param {Function} fetchOptions.onNotFound - Callback when routine not found
          * @returns {Promise<Object>} Routine data
          */
@@ -252,27 +281,31 @@ export function useRoutineQueries(apolloClient, options = {}) {
       const cached = routineStore.getCachedRoutine(date);
       if (cached) {
         console.log(`[useRoutineQueries] Using in-memory cache for ${date}`);
+        // This date is known-good, so clear any failure left by an earlier one
+        // — otherwise a day that simply has no tasks keeps reading as an error.
+        setError(null);
         updateFromResponse({ ...cached, date }, { persistToIndexedDB: false });
         return cached;
       }
     }
 
-    // 2. Try to load from IndexedDB for instant display
-    let indexedDBData = null;
+    // 2. Try the persisted Apollo cache for instant display
+    let persistedData = null;
     if (useIndexedDB && useSharedStore) {
-      try {
-        indexedDBData = await routineStore.loadFromIndexedDB(date);
-        if (indexedDBData) {
-          console.log(`[useRoutineQueries] Loaded from IndexedDB for instant display for ${date}`);
-          // Don't return - continue to fetch fresh data from API
-        }
-      } catch (err) {
-        console.warn('[useRoutineQueries] IndexedDB load failed:', err);
+      persistedData = readPersistedRoutine(date);
+      if (persistedData) {
+        console.log(`[useRoutineQueries] Loaded from the persisted cache for instant display for ${date}`);
+        // Paint what we already hold, then continue to fetch fresh data. Not
+        // routed through updateFromResponse: this copy is not a fresh read and
+        // must not refresh the 5-minute date cache.
+        routineStore.setRoutineId(persistedData.id);
+        routineStore.setSkipDay(persistedData.skip);
+        routineStore.setTasklist(persistedData.tasklist);
       }
     }
 
     // Only show loading if we don't have any cached data
-    if (!indexedDBData) {
+    if (!persistedData) {
       setLoading(true);
     }
     setError(null);
@@ -307,10 +340,10 @@ export function useRoutineQueries(apolloClient, options = {}) {
     } catch (err) {
       setError(err);
       console.error('Error fetching routine:', err);
-      // If we have IndexedDB data, don't throw - user still sees cached data
-      if (indexedDBData) {
-        console.log('[useRoutineQueries] API failed but IndexedDB data is available');
-        return indexedDBData;
+      // If we have persisted data, don't throw - user still sees cached data
+      if (persistedData) {
+        console.log('[useRoutineQueries] API failed but persisted cache data is available');
+        return persistedData;
       }
       throw err;
     } finally {
