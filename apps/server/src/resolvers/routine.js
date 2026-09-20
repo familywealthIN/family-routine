@@ -190,6 +190,9 @@ const DayStimuliType = new GraphQLObjectType({
     D: { type: GraphQLFloat },
     K: { type: GraphQLFloat },
     G: { type: GraphQLFloat },
+    // A day the user deliberately marked as a Skip Day also scores zero, so the
+    // week strip cannot tell a rest day from a day that got away without it.
+    skipped: { type: GraphQLBoolean },
   },
 });
 
@@ -358,6 +361,7 @@ const query = {
           D: stimuli.D,
           K: stimuli.K,
           G: stimuli.G,
+          skipped: !!(routine && routine.skip),
         };
       });
     },
