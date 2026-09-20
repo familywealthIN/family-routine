@@ -74,6 +74,13 @@
         </div>
       </template>
       <template v-else>
+        <!-- Renders nothing unless the week holds a day that got away, so a
+             clean week costs no space. -->
+        <missed-day-recovery-container
+          class="ml-3 mr-3 mb-3"
+          :date="date"
+          @open-day="handleDateSelected"
+        />
         <atom-layout wrap>
           <atom-flex xs12 sm10 d-flex class="pl-3 pr-3">
             <div style="width:100%">
@@ -456,6 +463,7 @@ import QuickGoalCreation from '../containers/QuickGoalCreationContainer.vue';
 import RelatedTasksTimelineContainer from '../containers/RelatedTasksTimelineContainer.vue';
 import GoalCreation from '../containers/GoalCreationContainer.vue';
 import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue';
+import MissedDayRecoveryContainer from '../containers/MissedDayRecoveryContainer.vue';
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
 import { TimeFormatMixin } from '../utils/timeFormat';
 import { initDashboardCaching } from '../composables/useDashboardCaching';
@@ -489,6 +497,7 @@ export default {
     TaskActionButtons,
     GoalCreation,
     WeekdaySelectorContainer,
+    MissedDayRecoveryContainer,
     CurrentTaskCard,
     UpcomingPastTasks,
     WeekGoalStreak,

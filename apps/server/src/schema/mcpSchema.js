@@ -324,6 +324,8 @@ type DayStimuli {
   D: Float
   K: Float
   G: Float
+  # The user marked this day as a Skip Day — a rest day, not a day that got away
+  skipped: Boolean
 }
 
 type Goal {
