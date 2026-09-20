@@ -8,6 +8,7 @@ const {
   isRedeemable,
   getRedeemCost,
   describeRedeemFailure,
+  describeRedeemReceipt,
   canAffordRedeem,
   getCurrentButtonColor,
   getButtonIcon,
@@ -80,6 +81,33 @@ describe('routineTaskDisplay', () => {
       expect(describeRedeemFailure('500:Boom').text).toBe('Something went wrong. Please try again.');
       expect(describeRedeemFailure(null).text).toBe('Something went wrong. Please try again.');
       expect(describeRedeemFailure(undefined, {}).title).toBe("Couldn't complete this task");
+    });
+  });
+
+  describe('describeRedeemReceipt', () => {
+    it('acknowledges what the agent start cost and what is left (D-16)', () => {
+      const { title, text } = describeRedeemReceipt(
+        15,
+        { available: 393, entitled: false },
+        { startingAgent: true },
+      );
+      expect(title).toBe('Agent started for 15 points');
+      expect(text).toBe('393 points left.');
+    });
+    it('names the check-in when the agent was not the control pressed', () => {
+      expect(describeRedeemReceipt(15, { available: 393 }).title)
+        .toBe('Task checked in for 15 points');
+    });
+    it('keeps the earn-more nudge when the charge empties the balance', () => {
+      expect(describeRedeemReceipt(15, { available: 0 }).text)
+        .toContain('earn more by completing your routine');
+    });
+    it('still reports the charge when the new balance is unknown', () => {
+      expect(describeRedeemReceipt(15, null).text).toBe('Charged to your points balance.');
+    });
+    it('stays silent when nothing was charged', () => {
+      expect(describeRedeemReceipt(0, { available: 393 })).toBeNull();
+      expect(describeRedeemReceipt(15, { available: 393, entitled: true })).toBeNull();
     });
   });
 
