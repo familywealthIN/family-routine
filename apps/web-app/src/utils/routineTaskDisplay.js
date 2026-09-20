@@ -60,6 +60,34 @@ export function describeRedeemFailure(message, { startingAgent = false } = {}) {
   return { title, text };
 }
 
+/**
+ * Receipt for a redeem that went through, or null when nothing was charged.
+ *
+ * A late check-in is the only silent debit in the app, and "Start agent" on a
+ * passed task pays exactly the same frozen price as the check button — the
+ * balance simply dropped. Name the control that spent the points, the amount
+ * and what is left; an emptied balance keeps its "earn more" nudge.
+ *
+ * Subscribers are debited zero server-side, so they get no receipt.
+ */
+export function describeRedeemReceipt(cost, balance, { startingAgent = false } = {}) {
+  if (!(cost > 0) || (balance && balance.entitled)) return null;
+
+  const title = startingAgent
+    ? `Agent started for ${Math.round(cost)} points`
+    : `Task checked in for ${Math.round(cost)} points`;
+
+  let text = 'Charged to your points balance.';
+  if (balance) {
+    const available = Math.round(balance.available);
+    text = available > 0
+      ? `${available.toLocaleString()} points left.`
+      : 'That was your last point — earn more by completing your routine, goals and milestones; points settle overnight.';
+  }
+
+  return { title, text };
+}
+
 export function canAffordRedeem(task, xpBalance) {
   // Balance still loading / entitled — let the flow proceed; the server's 402
   // check remains the authoritative backstop.

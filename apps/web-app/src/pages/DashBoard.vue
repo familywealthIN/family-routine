@@ -289,6 +289,7 @@
             period="day"
             :tasklist="displayTasklist"
             :selectedTaskRef="selectedTaskRef"
+            :redeem-cost="quickTaskRedeemCost"
             @start-quick-goal-task="(task) => checkClick(task, { fireAgent: false })"
             @build-agent="onBuildAgent"
             @start-agent="onStartAgentFromQuick"
@@ -313,8 +314,13 @@
             :date="date"
             :tasklist="displayTasklist"
           />
+          <p v-if="goalActionRedeemCost > 0" class="caption grey--text mb-2">
+            This task has already passed — starting it costs
+            {{ goalActionRedeemCost }} points.
+          </p>
           <task-action-buttons
             :agent-state="goalActionAgentState"
+            :redeem-cost="goalActionRedeemCost"
             @start-task="onGoalActionStartTask"
             @start-agent="onGoalActionStartAgent"
             @build-agent="onGoalActionBuildAgent"
@@ -441,7 +447,7 @@ import {
 import { pendingMutations } from '../utils/pendingMutations';
 import { runNewDayReset } from '../utils/newDay';
 import { startAgentWhenReady } from '../utils/agentStart';
-import { describeRedeemFailure } from '../utils/routineTaskDisplay';
+import { describeRedeemFailure, describeRedeemReceipt } from '../utils/routineTaskDisplay';
 import { guardFields, releaseEntity } from '../utils/cacheGuard';
 
 import GoalList from '../containers/GoalListContainer.vue';
@@ -1502,6 +1508,13 @@ export default {
     getRedeemCost(task) {
       return typeof task.passedPoints === 'number' ? task.passedPoints : (task.points || 0);
     },
+    // What pressing Start Task / Start Agent on this task will actually cost:
+    // 0 unless it is a passed-task redeem the user has to pay for.
+    redeemCostForTask(task) {
+      if (!this.isRedeemable(task)) return 0;
+      if (this.xpBalance && this.xpBalance.entitled) return 0;
+      return this.getRedeemCost(task);
+    },
     canAffordRedeem(task) {
       const balance = this.xpBalance;
       // Balance still loading — let the flow proceed; redeemClick and the
@@ -2047,11 +2060,16 @@ export default {
           const newBalance = payload
             && payload.redeemRoutineItem
             && payload.redeemRoutineItem.balance;
-          if (newBalance && !newBalance.entitled && newBalance.available <= 0) {
-            // Soft touchpoint: the redemption that drains the balance.
+          // Receipt for a charge nothing else reports: name what was bought,
+          // what it cost and what is left (and keep the drained-balance
+          // touchpoint when the redemption empties the account).
+          const receipt = describeRedeemReceipt(cost, newBalance, {
+            startingAgent: fireAgent && !agentImplicit,
+          });
+          if (receipt) {
             this.$notify({
-              title: "You're out of points",
-              text: 'Earn more by completing your routine, goals and milestones — points settle overnight.',
+              title: receipt.title,
+              text: receipt.text,
               group: 'notify',
               type: 'info',
               duration: 5000,
@@ -2723,6 +2741,17 @@ export default {
     goalActionAgentState() {
       if (!this.goalActionTask) return 'none';
       return this.$agent.getByTaskRef(this.goalActionTask.id) ? 'assigned' : 'none';
+    },
+    // Price shown on the goal-action modal's spending buttons (D-16) — the
+    // same frozen cost redeemClick debits.
+    goalActionRedeemCost() {
+      return this.redeemCostForTask(this.goalActionTask);
+    },
+    // Same price for the quick modal, whose Start Agent reaches the same
+    // redeem when the task has passed.
+    quickTaskRedeemCost() {
+      const task = (this.displayTasklist || []).find((t) => t.id === this.selectedTaskRef);
+      return this.redeemCostForTask(task);
     },
     /**
      * Week goals for the streak card.

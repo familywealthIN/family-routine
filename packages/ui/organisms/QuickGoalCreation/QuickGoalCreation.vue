@@ -40,10 +40,14 @@
         @update-new-tag-items="updateNewTagItems"
       ></goal-tags-input>
     </v-flex>
+    <v-flex xs12 v-if="redeemCost > 0" class="caption grey--text">
+      This task has already passed — starting it costs {{ redeemCost }} points.
+    </v-flex>
     <task-action-buttons
       :agent-state="agentState"
       :loading="buttonLoading"
       :loading-action="loadingAction"
+      :redeem-cost="redeemCost"
       @start-task="handleAddGoalItem"
       @start-agent="$emit('start-agent', { ...newGoalItem })"
       @build-agent="$emit('build-agent')"
@@ -123,6 +127,11 @@ export default {
     agentState: {
       type: String,
       default: 'none', // 'none' | 'assigned'
+    },
+    // Points charged when the selected task has passed (0 = nothing to pay).
+    redeemCost: {
+      type: Number,
+      default: 0,
     },
   },
   data() {

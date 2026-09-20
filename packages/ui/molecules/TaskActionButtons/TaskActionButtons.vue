@@ -14,6 +14,9 @@
       @click="$emit('start-task')"
     >
       Start Task
+      <template v-if="costLabel">
+        <v-icon small right>diamond</v-icon>{{ costLabel }}
+      </template>
     </v-btn>
     <v-btn
       v-if="agentState === 'assigned'"
@@ -24,6 +27,9 @@
       @click="$emit('start-agent')"
     >
       Start Agent
+      <template v-if="costLabel">
+        <v-icon small right>diamond</v-icon>{{ costLabel }}
+      </template>
     </v-btn>
     <v-btn
       v-else
@@ -55,6 +61,18 @@ export default {
     loadingAction: {
       type: String,
       default: '',
+    },
+    // Frozen points price this task is charged when it has already passed
+    // (0 = nothing to pay). Both Start Task and Start Agent spend it.
+    redeemCost: {
+      type: Number,
+      default: 0,
+    },
+  },
+  computed: {
+    // Price shown on the spending buttons, so the charge is never a surprise.
+    costLabel() {
+      return this.redeemCost > 0 ? String(Math.round(this.redeemCost)) : '';
     },
   },
 };
