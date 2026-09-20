@@ -6,6 +6,7 @@
 
 process.env.ENCRYPTION_KEY = 'goal-item-delete-test-key';
 
+const mockGoalFind = jest.fn();
 const mockGoalFindOne = jest.fn();
 const mockGoalFindOneAndUpdate = jest.fn();
 const mockRoutineFindOne = jest.fn();
@@ -16,6 +17,7 @@ jest.mock('../schema/GoalSchema', () => {
   return {
     ...actual,
     GoalModel: {
+      find: mockGoalFind,
       findOne: mockGoalFindOne,
       findOneAndUpdate: mockGoalFindOneAndUpdate,
     },
@@ -73,12 +75,14 @@ const deleteDayItem = () => {
 };
 
 beforeEach(() => {
+  mockGoalFind.mockReset();
   mockGoalFindOne.mockReset();
   mockGoalFindOneAndUpdate.mockReset();
   mockRoutineFindOne.mockReset();
   mockRoutineFindOneAndUpdate.mockReset();
   mockGoalFindOneAndUpdate.mockReturnValue(exec(null));
   mockRoutineFindOneAndUpdate.mockReturnValue(exec(null));
+  mockGoalFind.mockReturnValue(exec([]));
 });
 
 describe('deleteGoalItem stimulus rollback', () => {
