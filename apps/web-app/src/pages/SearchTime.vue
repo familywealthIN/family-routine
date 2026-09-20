@@ -143,12 +143,6 @@ export default {
     },
   },
   computed: {
-    routeTaskRef() {
-      return this.$route.query.taskRef || '';
-    },
-    routeTags() {
-      return this.$route.query.tags || '';
-    },
     routineItems() {
       if (this.routineData && this.routineData.tasklist) {
         return this.routineData.tasklist;
@@ -166,29 +160,21 @@ export default {
         }
       },
     },
-    '$route.query.taskRef': {
-      immediate: false,
-      handler(val) {
-        this.selectedRoutine = val || null;
-        if (this.executedQuery) {
-          this.executeSearch();
-        }
-      },
-    },
-    '$route.query.tags': {
-      immediate: false,
-      handler(val) {
-        this.selectedTags = val || null;
-        if (this.executedQuery) {
-          this.executeSearch();
-        }
-      },
+    searchQuery(val) {
+      // The results — and the empty state that names them — belong to the
+      // executed query. Drop both as soon as the input diverges so the
+      // message can never name the previous term.
+      if (this.executedQuery && (val || '').trim() !== this.executedQuery) {
+        this.executedQuery = '';
+        this.results = [];
+      }
     },
   },
   created() {
     this.searchComposable = useSearchGoals(this.$apollo);
     this.availableTags = getJSON(localStorage.getItem(USER_TAGS), []);
-    // Initialize filters from URL
+    // Initialize filters from URL — only an explicit deep link scopes the
+    // search, /search on its own opens unscoped
     if (this.$route.query.taskRef) {
       this.selectedRoutine = this.$route.query.taskRef;
     }
@@ -211,13 +197,14 @@ export default {
 
       this.executedQuery = query;
       this.isLoading = true;
+      this.syncRouteQuery();
 
       const options = {};
-      if (this.routeTaskRef) {
-        options.taskRef = this.routeTaskRef;
+      if (this.selectedRoutine) {
+        options.taskRef = this.selectedRoutine;
       }
-      if (this.routeTags) {
-        options.tags = this.routeTags;
+      if (this.selectedTags) {
+        options.tags = this.selectedTags;
       }
 
       try {
@@ -230,11 +217,23 @@ export default {
       } finally {
         this.isLoading = false;
       }
-
-      // Update URL query param without triggering watcher loop
-      if (this.$route.query.q !== query) {
-        this.$router.replace({ query: { ...this.$route.query, q: query } }).catch(() => {});
+    },
+    // The inputs own the search state; the URL only mirrors it. Rebuilding
+    // the query from the live values — rather than spreading $route.query —
+    // keeps a filter the user has just cleared from being restored out of a
+    // stale snapshot.
+    syncRouteQuery() {
+      const query = {};
+      if (this.executedQuery) {
+        query.q = this.executedQuery;
       }
+      if (this.selectedRoutine) {
+        query.taskRef = this.selectedRoutine;
+      }
+      if (this.selectedTags) {
+        query.tags = this.selectedTags;
+      }
+      this.$router.replace({ query }).catch(() => {});
     },
     clearSearch() {
       this.searchQuery = '';
@@ -243,7 +242,7 @@ export default {
       if (this.searchComposable) {
         this.searchComposable.clearResults();
       }
-      this.$router.replace({ query: {} }).catch(() => {});
+      this.syncRouteQuery();
     },
     openGoalDetail(item) {
       this.selectedGoalItem = {
@@ -287,22 +286,20 @@ export default {
       }
     },
     onRoutineFilterChange(value) {
-      const query = { ...this.$route.query };
-      if (value) {
-        query.taskRef = value;
+      this.selectedRoutine = value || null;
+      if (this.executedQuery) {
+        this.executeSearch();
       } else {
-        delete query.taskRef;
+        this.syncRouteQuery();
       }
-      this.$router.replace({ query }).catch(() => {});
     },
     onTagsFilterChange(value) {
-      const query = { ...this.$route.query };
-      if (value) {
-        query.tags = value;
+      this.selectedTags = value || null;
+      if (this.executedQuery) {
+        this.executeSearch();
       } else {
-        delete query.tags;
+        this.syncRouteQuery();
       }
-      this.$router.replace({ query }).catch(() => {});
     },
   },
 };

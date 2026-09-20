@@ -1550,15 +1550,15 @@ export default {
 
     /**
      * Navigate to search page with current filters when in search mode.
+     * The toolbar's routine is auto-selected from the current task, so it is
+     * deliberately NOT carried over — search starts unscoped and the search
+     * page's own Routine filter is where a scope is chosen.
      */
     handleSearchNavigate() {
       const query = (this.searchQuery || '').trim();
       if (!query) return;
 
       const routeQuery = { q: query };
-      if (this.toolbarTaskRef) {
-        routeQuery.taskRef = this.toolbarTaskRef;
-      }
       const tagString = this.promptTags.join(',');
       if (tagString) {
         routeQuery.tags = tagString;
