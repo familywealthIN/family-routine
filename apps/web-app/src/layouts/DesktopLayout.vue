@@ -22,6 +22,7 @@
                 :available="(xpBalance && xpBalance.available) || 0"
                 :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
                 :entitled="!!(xpBalance && xpBalance.entitled)"
+                :error="xpBalanceError && !xpBalance"
                 :loading="$apollo.queries.xpBalance.loading"
               />
             </v-list-tile-sub-title>
@@ -175,6 +176,7 @@ export default {
     return {
       drawer: null,
       pendingDialog: false,
+      xpBalanceError: false,
       toolbarRoutine: null,
       items: [
         { title: 'Home', icon: 'home', route: '/home' },
@@ -269,6 +271,15 @@ export default {
       },
       skip() {
         return !this.$root.$data.email;
+      },
+      result({ data }) {
+        if (data) this.xpBalanceError = false;
+      },
+      // A failed load leaves xpBalance undefined, which the chip would paint as
+      // `0` — a balance the app does not actually know.
+      error(error) {
+        console.error('[DesktopLayout] xpBalance query failed:', error);
+        this.xpBalanceError = true;
       },
     },
   },

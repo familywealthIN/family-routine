@@ -145,6 +145,7 @@ import GoalTagsInput from '../../molecules/GoalTagsInput/GoalTagsInput.vue';
 import GoalTaskToolbar from '../GoalTaskToolbar/GoalTaskToolbar.vue';
 import TaskStatusTag from '../../atoms/TaskStatusTag/TaskStatusTag.vue';
 import getJSON from '../../utils/getJSON';
+import { resolveDisplayStatus } from '../../utils/taskStatus';
 import { USER_TAGS } from '../../constants/settings';
 import {
   AtomButton,
@@ -264,12 +265,18 @@ export default {
       return `${year}-${month}-${day}`;
     },
     // An existing item's status is server state — `missed` and `rescheduled`
-    // are both written there — so it is read straight off the item. Only a
-    // brand-new one has to be derived from the current routine task, where
-    // getInitialTaskStatus' originalDate rule would otherwise outrank it.
+    // are both written there — so it is read off the item, but through the
+    // resolver the chip itself uses: a stored status can outlive the tick, and
+    // a ticked item still carrying `missed` has to read the same here as it
+    // does on /search. Only a brand-new one has to be derived from the current
+    // routine task, where getInitialTaskStatus' originalDate rule would
+    // otherwise outrank it.
     statusChip() {
       if (this.localGoalItem.id && this.localGoalItem.status) {
-        return this.localGoalItem.status;
+        return resolveDisplayStatus({
+          status: this.localGoalItem.status,
+          isComplete: this.localGoalItem.isComplete,
+        });
       }
       return this.getNewTaskStatus(
         this.localGoalItem.taskRef,

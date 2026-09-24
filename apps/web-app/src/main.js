@@ -37,6 +37,7 @@ import redirectOnError from './utils/redirectOnError';
 import { sanitizePersistedCache } from './utils/cacheHygiene';
 import { configureNewDay } from './utils/newDay';
 import { createGuardLink } from './apollo/guardLink';
+import dataIdFromObject from './apollo/dataIdFromObject';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
@@ -83,7 +84,7 @@ loadData().then(() => {
   });
 
   // Cache implementation with persistence
-  const cache = new InMemoryCache();
+  const cache = new InMemoryCache({ dataIdFromObject });
 
   // Configure localforage for Apollo cache persistence
   localforage.config({

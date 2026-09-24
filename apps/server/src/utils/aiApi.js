@@ -243,11 +243,10 @@ function generateEntriesTemplate(timeframe, userQuery = '') {
       range: explicitDays || 7,
       getDelta: (i) => {
         const targetDate = new Date(weekBase);
-        // For an explicit count or "next week", start at i=0.
-        // Otherwise keep the legacy "starts tomorrow" behaviour so
-        // the next 7 days excluding today are templated.
-        const offset = (explicitDays || isNextWeek) ? i : i + 1;
-        targetDate.setDate(weekBase.getDate() + offset);
+        // Day one is the day the user asks, not the day after — a plan set
+        // up today has to leave something to execute today. "next week"
+        // already starts at its own base (the upcoming Sunday).
+        targetDate.setDate(weekBase.getDate() + i);
         return targetDate;
       },
       formatPeriodName: (date) => date.toLocaleDateString('en-US', { weekday: 'long' }),

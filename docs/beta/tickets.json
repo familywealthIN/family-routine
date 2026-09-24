@@ -5,7 +5,7 @@
       "gid": "1217517967742541",
       "name": "Beta Test fixes",
       "permalink": "https://app.asana.com/0/1207860307324832/1217517967742541",
-      "openCount": 24,
+      "openCount": 22,
       "totalCount": 29,
       "tickets": [
         {
@@ -145,28 +145,12 @@
           "notes": "Area: Goals. Found: day 6.\n\nACTUAL\nHome > routine card > WEEK shows the parent goal as a bare, unchecked checkbox. There is:\n- no progress figure (no \"5/7\", no percentage, no bar)\n- no list of which milestones remain\n- no completion criteria or end date\n- no distinction between \"today's routine is done\" and \"the goal is achieved\"\n\nAnswering the Day-6 test questions directly:\n  Are final tasks clearly identified?          NO\n  Is it obvious what remains before complete?  NO\n  Routine completion vs goal completion?       only implicitly, via a separate checkbox\n  Are milestones displayed correctly?          NO (see D-04)\n\nAcross seven days I could never answer \"how close am I?\" from the UI.\n\nDONE WHEN\nA goal shows its progress and what is outstanding.\n\n---\nSeven-day beta simulation, 16-22 Aug 2026. Full report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
         },
         {
-          "gid": "1217518166448639",
-          "ref": "D-11",
-          "severity": "Major",
-          "title": "\"Week Goal Streak\" fills by completion count, hiding missed days",
-          "name": "D-11 [Major] \"Week Goal Streak\" fills by completion count, hiding missed days",
-          "notes": "Area: Dashboard. Found: days 3-6.\n\nACTUAL\nNodes fill left-to-right by number of completions, not by calendar day. Observed across the run (completed 16, 17, 18; missed 19; completed 20, 21):\n  after 3 completions -> nodes 1,2,3 solid\n  after 4 completions -> nodes 1,2,3,4 solid   <-- 19 Aug was MISSED\n  after 5 completions -> nodes 1,2,3,4,5 solid\nSo a broken week renders as an unbroken run of filled nodes, in a control literally named \"Streak\".\n\nALSO\n- there are only 5 nodes for a seven-day, seven-milestone plan\n- no node carries a label, date, title or tooltip, so the widget cannot be interpreted at all\n- incomplete nodes are drawn as a GREEN outline, which still reads as \"done\" at a glance\n\nDONE WHEN\nThe streak is calendar-aligned, breaks visibly on a missed day, and its nodes are labelled.\n\n---\nSeven-day beta simulation, 16-22 Aug 2026. Full report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
-        },
-        {
           "gid": "1217517967886484",
           "ref": "D-10",
           "severity": "Major",
           "title": "An unreachable API renders as \"you have no data\", not as an error",
           "name": "D-10 [Major] An unreachable API renders as \"you have no data\", not as an error",
           "notes": "Area: Error handling. Found: day 1.\n\nREPRO\nStop apps/server, then open /agents or /goals.\n\nACTUAL\nThe console logs net::ERR_CONNECTION_REFUSED and \"Error sending the query 'yearGoals' TypeError: Failed to fetch\", but the UI paints a confident EMPTY state:\n- /agents  -> \"Agents 0 / Active 0 / Success 0 / Failures 0\" and \"No data available\"\n- /goals   -> \"You Don't have any Goals.\" in all four buckets, every total 0\n- /goals/milestones -> an empty \"Goals\" card\nNo toast, no retry, no offline banner.\n\nWHY IT MATTERS\nA user on a flaky connection is told their agents and goals have been deleted. During this test it convinced me real data had been lost until I checked the server.\n\nRECOMMEND PROMOTING TO BETA-BLOCKING - it is cheap to fix and it destroys trust.\n\nDONE WHEN\nA failed query renders an error/offline state that is visually distinct from a genuine empty state.\n\n---\nSeven-day beta simulation, 16-22 Aug 2026. Full report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
-        },
-        {
-          "gid": "1217518166450053",
-          "ref": "D-09",
-          "severity": "Major",
-          "title": "The week picker always returns the current week",
-          "name": "D-09 [Major] The week picker always returns the current week",
-          "notes": "Area: AI routine builder. Found: setup day.\n\nREPRO\nAI builder > Goal > date field > Week tab > click \"W34  Aug 17 - Aug 23\" (tried both the \"W34\" label and the \"Aug 17 - Aug 23\" range).\n\nACTUAL\nThe picker closes and the field reads \"Week 33, 2026\" every time. Verified by reading the input value directly.\n\nIMPACT\nYou cannot plan a future week at all - every week goal lands on the current week.\n\nDONE WHEN\nSelecting any week in the picker sets that week.\n\n---\nSeven-day beta simulation, 16-22 Aug 2026. Full report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
         },
         {
           "gid": "1217518166425925",
@@ -199,6 +183,112 @@
           "title": "An agent can only ever be started once per routine item",
           "name": "D-05 [Major] An agent can only ever be started once per routine item",
           "notes": "Area: Agents. Found: days 1 and 7.\n\nACTUAL\nDay 1's \"Start agent\" succeeded and debited 15 diamonds; the agent moved to listening. Day 7's \"Start agent\" failed with a red toast - \"Error / Could not redeem this task. Please try again.\" No diamonds debited, agent unchanged.\n\nCAUSE\nThe routine-item document carries redeemed: true (confirmed in the apps/server log alongside ticked: true). Routine items are one shared document reused across every day, so the flag set on 16 Aug is still true on 22 Aug and the redeem is refused permanently.\n\nEFFECT\nA \"daily\" agent runs exactly one day, then errors forever.\n\nSECONDARY\nThe error message says \"redeem this task\", which does not match the button the user pressed (\"Start agent\"), so the user cannot tell what failed or why.\n\nDONE WHEN\nThe redeem/started flag is scoped per day, and the error names the action that actually failed.\n\n---\nFound in the seven-day beta simulation, 16-22 Aug 2026 (account grvpanchalus@gmail.com, local web-app :8080 + apps/server :3000, live Atlas).\nFull report: https://claude.ai/code/artifact/3c467de2-fc9e-4ea2-81ff-c24f6c1d5dc2"
+        }
+      ]
+    },
+    {
+      "gid": "1218441085160907",
+      "name": "Beta Test fixes — 6-12 Sep 2026",
+      "permalink": "https://app.asana.com/0/1207860307324832/1218441085160907",
+      "openCount": 7,
+      "totalCount": 7,
+      "tickets": [
+        {
+          "gid": "1218441017083795",
+          "ref": "D-07",
+          "severity": "Cosmetic",
+          "title": "The search filter's clear control is not exposed to assistive technology",
+          "name": "D-07 [Cosmetic] The search filter's clear control is not exposed to assistive technology",
+          "notes": "Area: Search / accessibility · Found: day 7 · Priority: P4\n\nREPRO\nPreconditions: /search with a Routine filter applied.\n1. /search -> apply a Routine filter.\n2. Inspect the accessibility tree around the select.\n\nEXPECTED\nThe clear affordance is a focusable control with a name.\n\nACTUAL\nThe v-input__icon--clear nodes are marked `ignored` in the accessibility tree and carry no accessible name, so clearing the filter is mouse-only. (The filter itself clears correctly - see the D-18 retraction.)\n\nEVIDENCE\nVerbose a11y snapshot of /search saved at scratchpad/beta/snap-search.txt (uids 121_288 / 121_290 both `ignored`).\nScreenshot: scratchpad/beta/shots/probe-d18-search.png\n\nDONE WHEN\nThe Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.\n\n---\nFound in the seven-day beta simulation, 6-12 Sep 2026 (account grvpanchalus@gmail.com, live Atlas).\nFull report: https://claude.ai/code/artifact/ec1b5989-ecb0-443a-a305-fc535d036f61"
+        },
+        {
+          "gid": "1218441093171376",
+          "ref": "D-06",
+          "severity": "Minor",
+          "title": "Agent status disagrees between the dashboard badge and the Agents page, and never shows \"listening\"",
+          "name": "D-06 [Minor] Agent status disagrees between the dashboard badge and the Agents page, and never shows \"listening\"",
+          "notes": "Area: Agents / status · Found: day 7 · Priority: P3\n\nREPRO\nPreconditions: An agent with both start and end events that has run before.\n1. Press START AGENT and read the card badge.\n2. Read the same agent's Status on /agents and in /settings -> Edit Item -> Linked agent.\n\nEXPECTED\nStart puts an agent with an end event into \"listening\" on every surface until the end event fires.\n\nACTUAL\nThe dashboard badge read \"AGENT RUNNING\" (then \"AGENT DONE\") while /agents and the Edit Item row both read \"finished\" for the same agent at the same moment. \"listening\" was never displayed for this agent on any surface.\n\nEVIDENCE\nAgent read-back executionStatus \"finished\" taken while the badge showed AGENT RUNNING; /settings Edit Item \"Linked agent | Dashboard beta sprint agent | Finished\".\nScreenshot: scratchpad/beta/shots/d7-02-startagent.png, d3-05-agent-detail.png\n\nDONE WHEN\nThe Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.\n\n---\nFound in the seven-day beta simulation, 6-12 Sep 2026 (account grvpanchalus@gmail.com, live Atlas).\nFull report: https://claude.ai/code/artifact/ec1b5989-ecb0-443a-a305-fc535d036f61"
+        },
+        {
+          "gid": "1218441017083732",
+          "ref": "D-05",
+          "severity": "Minor",
+          "title": "The client rewrites the user's own words before sending them to the AI",
+          "name": "D-05 [Minor] The client rewrites the user's own words before sending them to the AI",
+          "notes": "Area: AI goal builder · Found: day 1 · Priority: P3\n\nREPRO\nPreconditions: AI builder Goal tab.\n1. Type an objective containing the phrase \"this week\".\n2. Send.\n3. Read the outgoing generateMilestonePlan query variable and the Plan Title field.\n\nEXPECTED\nThe user's text is sent and stored verbatim.\n\nACTUAL\n\"...beta this week: write the spec...\" was sent as \"...beta this 7 days: write the spec...\" on Day 1 and as \"...this 3 days...\" on Day 5, and \"this month\" became \"this 3 weeks\". The mangled sentence is then stored as the goal title, so the user sees \"Ship the Analytics Dashboard beta this 7 days: write the spec, ...\" as their week goal. It also briefs the model with a period that contradicts the `period` argument.\n\nEVIDENCE\nRequest bodies reqid 450 (Day 1) and scratchpad/beta/req271.network-request (Day 5); the stored title on /goals.\nScreenshot: scratchpad/beta/shots/d1-08-ai-plan.png\n\nDONE WHEN\nThe Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.\n\n---\nFound in the seven-day beta simulation, 6-12 Sep 2026 (account grvpanchalus@gmail.com, live Atlas).\nFull report: https://claude.ai/code/artifact/ec1b5989-ecb0-443a-a305-fc535d036f61"
+        },
+        {
+          "gid": "1218441101990507",
+          "ref": "D-04",
+          "severity": "Minor",
+          "title": "Routine header counter is not refreshed after deleting a goal item (stale until reload)",
+          "name": "D-04 [Minor] Routine header counter is not refreshed after deleting a goal item (stale until reload)",
+          "notes": "Area: Dashboard / counters · Found: day 4 · Priority: P3\n\nREPRO\nPreconditions: A routine task showing n/1 with its only completed goal item.\n1. 9 Sep, Start Work reads \"09:00 - 1/1\" with three items, one ticked.\n2. Delete the ticked item with the row bin.\n3. Read the header.\n4. Reload the page and read it again.\n\nEXPECTED\nThe counter drops to 0/1 immediately.\n\nACTUAL\nImmediately after the delete the header still reads 1/1 and the green banner still says \"You are all set\" over a list with no ticked item. After a full page reload it reads 0/1. The refund is correct server-side; only the optimistic render is stale.\n\nEVIDENCE\ninnerText before reload \"09:00 - 1/1 ... check_box_outline_blank Fix the three blocker bugs ... check_box_outline_blank Send the beta invite list\"; after reload \"09:00 - 0/1\". This is the client-side residue of the D-20 delete-refund fix.\nScreenshot: n/a (text captures in evidence log section D4-E)\n\nDONE WHEN\nThe Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.\n\n---\nFound in the seven-day beta simulation, 6-12 Sep 2026 (account grvpanchalus@gmail.com, live Atlas).\nFull report: https://claude.ai/code/artifact/ec1b5989-ecb0-443a-a305-fc535d036f61"
+        },
+        {
+          "gid": "1218441093182183",
+          "ref": "D-03",
+          "severity": "Major",
+          "title": "Search result status badges ignore completion - finished work is labelled \"Missed\"",
+          "name": "D-03 [Major] Search result status badges ignore completion - finished work is labelled \"Missed\"",
+          "notes": "Area: Search · Found: day 7 · Priority: P1\n\nREPRO\nPreconditions: At least one completed past goal item and one completed non-day goal item.\n1. /search -> type \"analytics\" -> Enter.\n2. Read the status badge under each result.\n3. Cross-check the same items on /goals and on Home.\n\nEXPECTED\nCompleted items show a completed badge.\n\nACTUAL\n\"Finalize Analytics Dashboard Spec\" (Day, 12-09-2026) shows \"Missed\" although it was completed on Day 7 (Home Wind-down went 0/6 -> 1/6 and the read-back shows it ticked). \"Draft the analytics dashboard spec\" (Day, 06-09-2026) shows \"Missed\" although it was completed on Day 1. \"Ship the Analytics Dashboard beta\" (Week, 11-09-2026) shows \"To Do\" although it is isComplete: true and renders struck-through and ticked on /goals. The badge appears to be derived from the date alone (past = Missed, future = To Do) and never consults isComplete.\n\nEVIDENCE\nThree surfaces (Home card counter, /goals strike-through checkbox, raw goal read-back) all say complete; Search says Missed / To Do.\nScreenshot: scratchpad/beta/shots/probe-d18-search.png\n\nDONE WHEN\nThe Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.\n\n---\nFound in the seven-day beta simulation, 6-12 Sep 2026 (account grvpanchalus@gmail.com, live Atlas).\nFull report: https://claude.ai/code/artifact/ec1b5989-ecb0-443a-a305-fc535d036f61"
+        },
+        {
+          "gid": "1218441031744634",
+          "ref": "D-02",
+          "severity": "Major",
+          "title": "AI plan silently inherits a stale parent goal, producing an inverted hierarchy (a month goal nested under a week goal)",
+          "name": "D-02 [Major] AI plan silently inherits a stale parent goal, producing an inverted hierarchy (a month goal nested under a week goal)",
+          "notes": "Area: AI goal builder / goal hierarchy · Found: day 1 · Priority: P1\n\nREPRO\nPreconditions: The composer's goal chip has previously shown a goal (it defaults to one on the Task tab).\n1. Load Home fresh. Open the composer - the goal chip already reads \"Ship the onboarding redesign\".\n2. Switch to the Goal tab and choose a period; the chip visibly clears and its accessible name becomes the placeholder \"Goal Task\".\n3. Type an objective, Send, SAVE PLAN & TIMELINE.\n4. Read the saved item's goalRef chain.\n\nEXPECTED\nWith no parent goal shown as selected, the plan is saved unrooted (or the UI states which parent it will attach to).\n\nACTUAL\nBoth plans were parented to \"Ship the onboarding redesign\" (a WEEK goal item). The month plan's chain is: month \"Run a seven day analytics dashboard hardening sprint...\" -> week \"Ship the onboarding redesign\" -> month \"Routine Notes 1.0 live in both stores\" -> year \"Ship Routine Notes 1.0 to the App Store\". A month goal is now a child of a week goal. Reproduced twice (week plan on the 6-Sep shim, month plan on the real 12-Sep clock). The same sticky default also re-parented a goal item I deleted and re-created on Day 4, silently detaching it from \"Product walkthrough recorded\".\n\nEVIDENCE\ngoalRef chain read back through the public goals query; the inverted nesting is visible in the UI at /goals/milestones -> year Goals -> Ship Routine Notes 1.0 -> September - Routine Notes 1.0 live in both stores -> Week 37 - Ship the onboarding redesign, which lists \"September - Run a seven day analytics dashboard hardening sprint...\" as a child.\nScreenshot: scratchpad/beta/shots/d1-06-goal-typed.png (chip reads placeholder), cf-d01-02-month-typed.png\n\nDONE WHEN\nThe Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.\n\n---\nFound in the seven-day beta simulation, 6-12 Sep 2026 (account grvpanchalus@gmail.com, live Atlas).\nFull report: https://claude.ai/code/artifact/ec1b5989-ecb0-443a-a305-fc535d036f61"
+        },
+        {
+          "gid": "1218441016986377",
+          "ref": "D-01",
+          "severity": "Major",
+          "title": "Agent end event fires and logs a success for an agent that was never started",
+          "name": "D-01 [Major] Agent end event fires and logs a success for an agent that was never started",
+          "notes": "Area: Agents / lifecycle · Found: day 3 · Priority: P1\n\nREPRO\nPreconditions: An agent exists on a routine item with both a start and an end event configured, and has never been started (executionStatus idle). The account has day goal items under that routine item.\n1. /agents -> create \"Dashboard beta sprint agent\" on routine item Start Work with start URL .../webhook/test-flow and end URL .../webhook/test-end-flow. Row reads idle.\n2. Do NOT press START AGENT anywhere.\n3. Home -> FAB -> Task -> add a goal item under Start Work.\n4. Tick it.\n5. Watch the network panel and /agents.\n\nEXPECTED\nWith no start event dispatched, the agent stays idle; an end event should only close a run that was started (idle -> listening -> finished).\n\nACTUAL\nGET https://workflows.grvpanchal.me/webhook/test-end-flow?goal=6aa6240e818d576f5027f3b9 returned 200, a result sheet rendered, /agents went idle -> finished and the global Success counter rose 19 -> 21. No request to .../webhook/test-flow was made at any point (all 48 requests on the page scanned). The agent doc read back executionStatus finished, successCount 2, failureCount 0, lastRunAt 1789272705653.\n\nEVIDENCE\nNetwork panel reqid 251 (end event, 200, body <h1>Hello World</h1>); no test-flow request in the full request list; /agents row + /settings Edit Item \"Linked agent ... Finished\" as a second surface. Not the integrity window - the dispatch succeeded, nothing was refused. Not the Date shim - the outbound request is real and dated by the real clock.\nScreenshot: scratchpad/beta/shots/d3-06-after-endevent.png\n\nDONE WHEN\nThe Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.\n\n---\nFound in the seven-day beta simulation, 6-12 Sep 2026 (account grvpanchalus@gmail.com, live Atlas).\nFull report: https://claude.ai/code/artifact/ec1b5989-ecb0-443a-a305-fc535d036f61"
+        }
+      ]
+    },
+    {
+      "gid": "1218483647944317",
+      "name": "Beta Test fixes — 13-19 Sep 2026",
+      "permalink": "https://app.asana.com/0/1207860307324832/1218483647944317",
+      "openCount": 4,
+      "totalCount": 4,
+      "tickets": [
+        {
+          "gid": "1218483537910583",
+          "ref": "D-04",
+          "severity": "Minor",
+          "title": "A skipped day leaves no trace once it is no longer today, and Skip Day shows no quota",
+          "name": "D-04 [Minor] A skipped day leaves no trace once it is no longer today, and Skip Day shows no quota",
+          "notes": "Area: Dashboard / Skip Day · Found: day 4 · Priority: P3\n\nREPRO\nPreconditions: Skip Day switched on for a day, then viewed again from a later day.\n1. On 16-09 switch Skip Day on. Confirm the illustration and message replace the routine card and that it survives a reload. 2. Move to 19-09 and navigate the day strip back to 16-09. 3. Look for any indication that 16-09 was skipped, and for any indication of how much of the two-per-week allowance is left.\n\nEXPECTED\nA skipped day is marked as skipped wherever it is shown, and the remaining allowance is visible before and after using it.\n\nACTUAL\nViewed from a later day, 16-09 renders as an ordinary day: the same grouped list, no banner, no badge, no Skip Day control. Nothing anywhere in the UI states how many skips remain, so a user cannot tell what the switch costs them or why a future skip might be refused.\n\nEVIDENCE\nshots/60-D06-skipday-on.png (16-09 as the current day, skipped) versus shots/66-day7-16sep-loading.png (the same 16-09 viewed from 19-09, indistinguishable from any other day). The two-per-week limit lives at apps/server/src/resolvers/routine.js:441-444 and is never surfaced.\nScreenshot: C:/Users/grvpa/AppData/Local/Temp/claude/D--Documents-Projects-family-routine/f46cd1f8-0d49-477f-be4a-3b08f98f20c7/scratchpad/beta/shots/66-day7-16sep-loading.png\n\nDONE WHEN\nThe Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.\n\n---\nFound in the seven-day beta simulation, 13-19 Sep 2026 (account grvpanchalus@gmail.com, live Atlas).\nFull report: https://claude.ai/code/artifact/29fcca15-9e0f-4cb2-bec7-4a07b967c5fb"
+        },
+        {
+          "gid": "1218483576185060",
+          "ref": "D-03",
+          "severity": "Minor",
+          "title": "Changing one routine item's time silently retargets a different item from 1 task to 6",
+          "name": "D-03 [Minor] Changing one routine item's time silently retargets a different item from 1 task to 6",
+          "notes": "Area: Routine / counters / agent end event · Found: day 4 · Priority: P3\n\nREPRO\nPreconditions: A routine with Start Work at 09:00 followed by Wind-down at 11:30, and exactly one day goal item under Start Work.\n1. Read the Start Work card header on Home: '09:00 - 0/1'. 2. Settings > Edit Item > Wind-down. Change only its time, 11:30 -> 21:30. Save. 3. Reopen Home the next day and read the Start Work card header again.\n\nEXPECTED\nEditing Wind-down changes Wind-down. If Start Work's target really is derived from the gap to the next item, the user is told what it means.\n\nACTUAL\nStart Work's header became '09:00 - 0/6' while it still held exactly one goal item, and Wind-down's went 0/6 -> 0/1. The counter is a points-derived slot count over the gap to the next item, so a change to a different item silently multiplied this item's daily target by six. Because the agent end event is gated on countTaskCompleted >= countTaskTotal, Start Work's end event became unreachable on a normal day. The per-day routine copies also disagree: days whose routine document already existed kept the old slot counts, so the same routine item showed 0/6 on Wednesday and 0/1 on Thursday of the same week.\n\nEVIDENCE\nDay 3 Home: 'Start Work | 09:00 - 0/1' and 'Wind-down | 11:30 | 0/6'. Day 4 Home after the edit: 'Start Work | 09:00 - 0/6' and 'Evening Wind-down | 21:30 | 0/1'. Day 5 Home: 'Start Work | 09:00 - 0/1' and 'Evening Wind-down | 21:30 | 0/6'. Reverted at the end of the run.\nScreenshot: C:/Users/grvpa/AppData/Local/Temp/claude/D--Documents-Projects-family-routine/f46cd1f8-0d49-477f-be4a-3b08f98f20c7/scratchpad/beta/shots/51-day2-home.png\n\nDONE WHEN\nThe Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.\n\n---\nFound in the seven-day beta simulation, 13-19 Sep 2026 (account grvpanchalus@gmail.com, live Atlas).\nFull report: https://claude.ai/code/artifact/29fcca15-9e0f-4cb2-bec7-4a07b967c5fb"
+        },
+        {
+          "gid": "1218483564104679",
+          "ref": "D-02",
+          "severity": "Minor",
+          "title": "The goal-item dialog overflows both edges at a ~500px viewport and cannot be scrolled to reach them",
+          "name": "D-02 [Minor] The goal-item dialog overflows both edges at a ~500px viewport and cannot be scrolled to reach them",
+          "notes": "Area: Goals / goal item dialog / responsive layout · Found: day 1 · Priority: P2\n\nREPRO\nPreconditions: Browser viewport 500x932.\n1. Size the viewport to 500x932. 2. Home, tap any goal item row to open its dialog. 3. Try to read the full title and to reach the Goal chip on the right and the markdown toolbar on the left.\n\nEXPECTED\nThe dialog fits, or scrolls horizontally so every control can be reached.\n\nACTUAL\nContent overflows both edges while the dialog itself reports clientWidth 500 and scrollWidth 500, so nothing can be scrolled into view. The Goal chip sits at x 400-580 (80px off-screen right) and the markdown editor at x -157..343 (157px off-screen left); the title input is visibly cut ('Conduct End-to-End Testin'). At 900px the same dialog lays out correctly, so this is specific to the narrow breakpoint.\n\nEVIDENCE\nshots/39-goalitem-dialog.png and shots/40-D08-datepicker.png at 500px; shots/58-dialog-desktop.png at 900px for contrast. Measured via getBoundingClientRect on the dialog's children.\nScreenshot: C:/Users/grvpa/AppData/Local/Temp/claude/D--Documents-Projects-family-routine/f46cd1f8-0d49-477f-be4a-3b08f98f20c7/scratchpad/beta/shots/39-goalitem-dialog.png\n\nDONE WHEN\nThe Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.\n\n---\nFound in the seven-day beta simulation, 13-19 Sep 2026 (account grvpanchalus@gmail.com, live Atlas).\nFull report: https://claude.ai/code/artifact/29fcca15-9e0f-4cb2-bec7-4a07b967c5fb"
+        },
+        {
+          "gid": "1218483618829999",
+          "ref": "D-01",
+          "severity": "Major",
+          "title": "An AI-built goal and all seven of its milestones are invisible on the Milestones page",
+          "name": "D-01 [Major] An AI-built goal and all seven of its milestones are invisible on the Milestones page",
+          "notes": "Area: Goals / Milestones page / AI goal builder · Found: day 5 · Priority: P1\n\nREPRO\nPreconditions: A week goal created through Home > + > Goal with a seven-entry dated timeline, whose parent goal item itself has a goalRef pointing up the hierarchy.\n1. Home > + > Goal tab. Prompt: 'Ship the Routine Notes beta feedback loop this week - one concrete deliverable each day from Sunday to Saturday'. Period 'This Week', routine 'Start Work'. 2. Send, then SAVE PLAN & TIMELINE. 3. Confirm on Home > WEEK that the goal row shows a milestone tally, and on Home > TODAY that each day's entry appears. 4. Open /goals/milestones and expand day Goals, week Goals, month Goals and year Goals.\n\nEXPECTED\nThe plan's parent goal and its seven timeline entries appear on the Milestones page, nested under the parent, exactly as the builder's own help text promises: 'The plan title will be linked to a goal in the period above, and all timeline entries will be milestones referencing the plan title.'\n\nACTUAL\nNeither the parent nor any of the seven entries appears anywhere on the Milestones page. week Goals lists only Week 28 - Close 3 beta feedback loops, Week 30 - asdsadasd, Week 5 - week task, Week 28 - Launch the new marketing site and Week 21 - Ship marketing site rebuild. day Goals lists 95 older items, none of them mine. The other Week 38 goal, 'Pipeline Stabilisation & Initial Bug Triage', is also missing.\n\nEVIDENCE\ngoalMilestones response saved at <scratch>/beta/req312.network-response: grep for 'Ship Routine Notes Beta' = 0 hits, 'Feedback Form Design' = 0 hits, including every nested `milestones` array; day[] 95 entries all isMilestone=false, week[] 5, month[] 6, year[] 4, lifetime[] 0. The same items in optimizedDailyGoals (<scratch>/beta/req279.network-response) carry isMilestone=true with a populated goalRef, and Home > WEEK counts them '3/7 milestones'. getGoalPeriodMilestone (apps/server/src/utils/getGoalMilestone.js:34-56) returns only the NON-milestone items as each period's view and relies on updateMilestonesEntry to re-attach the rest; the D-04 fix only rescues chains whose goalRef is empty or dangling, so a rooted chain whose ancestor is itself absorbed disappears entirely.\nScreenshot: C:/Users/grvpa/AppData/Local/Temp/claude/D--Documents-Projects-family-routine/f46cd1f8-0d49-477f-be4a-3b08f98f20c7/scratchpad/beta/shots/64-milestones-missing-aiplan.png\n\nDONE WHEN\nThe Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.\n\n---\nFound in the seven-day beta simulation, 13-19 Sep 2026 (account grvpanchalus@gmail.com, live Atlas).\nFull report: https://claude.ai/code/artifact/29fcca15-9e0f-4cb2-bec7-4a07b967c5fb"
         }
       ]
     }

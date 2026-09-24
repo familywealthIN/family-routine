@@ -43,9 +43,20 @@
       </atom-img>
     </atom-card>
     <atom-card-text class="image-card-page px-0">
+      <!-- Vuetify 1.5 reads the table's empty content from `$slots['no-data']`,
+           and AtomDataTable re-forwards every slot as a SCOPED one, so a
+           `no-data` template here never arrives. Both states live outside it. -->
+      <load-error-state
+        v-if="loadError"
+        message="We couldn't load your agents."
+        :retrying="$agent.loading"
+        @retry="reloadAgents"
+      />
       <atom-data-table
+        v-else
         :headers="headers"
         :items="agents"
+        :no-data-text="emptyText"
         class="elevation-0 mt-2"
         hide-actions
       >
@@ -62,21 +73,6 @@
             <atom-button flat icon class="ml-0" @click="confirmRemove(props.item)">
               <atom-icon>delete</atom-icon>
             </atom-button>
-          </td>
-        </template>
-        <template v-slot:no-data>
-          <td :colspan="headers.length" class="text-xs-center pa-4">
-            <load-error-state
-              v-if="loadError"
-              message="We couldn't load your agents."
-              :retrying="$agent.loading"
-              @retry="reloadAgents"
-            />
-            <template v-else>
-              No agents yet. Create one to start automating routine actions —
-              each agent fires a start event when its routine becomes active and
-              (optionally) an end event when its goals are complete.
-            </template>
           </td>
         </template>
       </atom-data-table>
@@ -157,6 +153,11 @@ export default {
       pendingRemoval: null,
       removing: false,
       routineItems: [],
+      // Vuetify 1.5 renders a `no-data-text` that is not a `$vuetify.*` key
+      // verbatim, so this is how the friendly empty copy reaches the table.
+      emptyText: 'No agents yet. Create one to start automating routine actions — each agent '
+        + 'fires a start event when its routine becomes active and (optionally) an end event '
+        + 'when its goals are complete.',
     };
   },
   apollo: {

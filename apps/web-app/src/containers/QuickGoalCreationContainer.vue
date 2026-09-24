@@ -13,6 +13,7 @@
     :buttonLoading="buttonLoading"
     :loading-action="loadingAction"
     :agent-state="agentState"
+    :redeem-cost="redeemCost"
     @add-goal-item="addGoalItem"
     @goal-ref-changed="updateCurrentGoalRef"
     @start-quick-goal-task="(task) => $emit('start-quick-goal-task', task)"
@@ -65,6 +66,11 @@ export default {
     selectedTaskRef: {
       type: String,
       default: '',
+    },
+    // Points the page will charge for this task if it has already passed.
+    redeemCost: {
+      type: Number,
+      default: 0,
     },
   },
   data() {

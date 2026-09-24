@@ -206,6 +206,10 @@
         </atom-card>
       </atom-card>
     </atom-dialog>
+    <goal-delete-confirm-container
+      ref="deleteConfirm"
+      @confirm="confirmDeleteTaskGoal"
+    />
   </container-box>
 </template>
 
@@ -237,6 +241,7 @@ import {
   AtomToolbarTitle,
 } from '@routine-notes/ui/atoms';
 import GoalCreation from '../containers/GoalCreationContainer.vue';
+import GoalDeleteConfirmContainer from '../containers/GoalDeleteConfirmContainer.vue';
 import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 
 export default {
@@ -244,6 +249,7 @@ export default {
   components: {
     PriorityGoalList,
     GoalCreation,
+    GoalDeleteConfirmContainer,
     GoalsFilterTime,
     ContainerBox,
     AtomButton,
@@ -495,8 +501,29 @@ export default {
       this.currentMonth = newDate.format('MMMM YYYY');
       this.currentMonthVariable = newDate.endOf('month').format('DD-MM-YYYY');
     },
+    // A goal item can have milestones hanging off it, and deleting it deletes
+    // them too (server cascade). Nothing is destroyed until the dialog, which
+    // names them, is confirmed.
     deleteTaskGoal({ id, period, date }) {
+      this.$refs.deleteConfirm.open({
+        id, period, date, body: this.goalItemBody(id),
+      });
+    },
+    goalItemBody(id) {
+      let body = '';
+      (this.allGoals || []).forEach((goal) => {
+        (goal.goalItems || []).forEach((goalItem) => {
+          if (goalItem && goalItem.id === id) body = goalItem.body;
+        });
+      });
+      return body;
+    },
+    confirmDeleteTaskGoal({ id, period, date }) {
       this.$goals.deleteGoalItem({ id, period, date, dayDate: this.date })
+        // The mutation's cache update only knows about the item it was given;
+        // the milestones the server cascaded to would otherwise keep inflating
+        // the counters and the calendar until an unrelated refetch.
+        .then(() => this.retryGoals())
         .catch(() => {
           this.$notify({
             title: 'Error',

@@ -59,7 +59,7 @@ export const ROUTINE_DATE_QUERY = gql`
 
 /**
  * Get aggregated D/K/G stimulus totals for each day of the week
- * Used in: WeekdaySelectorContainer.vue
+ * Used in: WeekdaySelectorContainer.vue, MissedDayRecoveryContainer.vue
  */
 export const WEEK_STIMULI_QUERY = gql`
   query weekStimuli($date: String!) {
@@ -68,6 +68,7 @@ export const WEEK_STIMULI_QUERY = gql`
       D
       K
       G
+      skipped
     }
   }
 `;

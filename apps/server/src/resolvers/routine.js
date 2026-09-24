@@ -49,8 +49,13 @@ async function getSkipDayCount(email) {
   }
   const selectedRoutines = await Promise.all(promises);
 
+  // Only a day the user deliberately marked as a Skip Day spends the quota. A
+  // missing document means the app was never opened that day — addRoutine
+  // creates one on first open — not that a rest day was claimed, so counting
+  // it charged holidays, illness and brand-new sign-ups against the allowance
+  // and disabled Skip Day exactly when it was needed.
   const skipDayCount = selectedRoutines.reduce((acc, selectedItem) => {
-    if ((selectedItem && selectedItem.skip) || selectedItem === null) {
+    if (selectedItem && selectedItem.skip) {
       return acc + 1;
     }
     return acc;
@@ -185,6 +190,9 @@ const DayStimuliType = new GraphQLObjectType({
     D: { type: GraphQLFloat },
     K: { type: GraphQLFloat },
     G: { type: GraphQLFloat },
+    // A day the user deliberately marked as a Skip Day also scores zero, so the
+    // week strip cannot tell a rest day from a day that got away without it.
+    skipped: { type: GraphQLBoolean },
   },
 });
 
@@ -353,6 +361,7 @@ const query = {
           D: stimuli.D,
           K: stimuli.K,
           G: stimuli.G,
+          skipped: !!(routine && routine.skip),
         };
       });
     },

@@ -26,8 +26,14 @@
  * See docs/cache/02-corrected-flow.md (F6).
  */
 
-/** Bump to invalidate every persisted cache — e.g. after a schema change. */
-export const CACHE_SCHEMA_VERSION = 2;
+/**
+ * Bump to invalidate every persisted cache — e.g. after a schema change.
+ *
+ * 3: main.js stopped normalizing a null id (apollo/dataIdFromObject.js). Stores
+ *    written before that hold a `StepItem:null` record shared by every routine
+ *    item's steps, and nothing at read time can tell those entries apart again.
+ */
+export const CACHE_SCHEMA_VERSION = 3;
 
 export const CACHE_VERSION_KEY = 'apollo-cache-schema-version';
 export const PERSIST_KEY = 'apollo-cache-persist';

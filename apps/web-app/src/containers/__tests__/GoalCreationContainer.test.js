@@ -17,14 +17,16 @@ const { UPDATE_GOAL_ITEM_MUTATION } = require('../../composables/useGoalMutation
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-const makeCtx = () => {
+const makeCtx = (overrides = {}) => {
   const emitted = [];
   return {
     buttonLoading: false,
+    savedPeriod: 'day',
     $goals: { updateGoalItem: jest.fn(() => Promise.resolve({ id: 'g1' })) },
     $notify: jest.fn(),
     $emit: (evt, payload) => emitted.push({ evt, payload }),
     emitted,
+    ...overrides,
   };
 };
 
@@ -68,5 +70,73 @@ describe('GoalCreationContainer rescheduling', () => {
     const fields = field.selectionSet.selections.map((selection) => selection.name.value);
 
     expect(fields).toEqual(expect.arrayContaining(['id', 'taskRef', 'goalRef', 'originalDate']));
+  });
+});
+
+// Switching the period tab to Lifetime does not clear the date, it stamps the
+// '01-01-1970' stand-in for "no date" — which slipped past the !date guard and
+// filed the item under no day, taking its milestone link out of the week.
+describe('GoalCreationContainer period switches', () => {
+  it('remembers the period an existing item was loaded under', () => {
+    const ctx = {};
+    Container.watch.newGoalItem.handler.call(ctx, { id: 'g1', period: 'day', date: '18-09-2026' });
+    expect(ctx.savedPeriod).toBe('day');
+
+    Container.watch.newGoalItem.handler.call(ctx, { period: 'day', date: '' });
+    expect(ctx.savedPeriod).toBe(null);
+  });
+
+  it('refuses to save a dated item switched to Lifetime', async () => {
+    const ctx = makeCtx();
+
+    Container.methods.handleUpdateGoalItem.call(ctx, {
+      id: 'g1', body: 'Active Recovery', period: 'lifetime', date: '01-01-1970', goalRef: 'week-goal-1',
+    });
+    await flush();
+
+    expect(ctx.$goals.updateGoalItem).not.toHaveBeenCalled();
+    expect(ctx.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Lifetime goals have no date',
+    }));
+  });
+
+  it('still saves an item that is already a lifetime one', async () => {
+    const ctx = makeCtx({ savedPeriod: 'lifetime' });
+
+    Container.methods.handleUpdateGoalItem.call(ctx, {
+      id: 'g1', body: 'Know your life mission', period: 'lifetime', date: '01-01-1970',
+    });
+    await flush();
+
+    expect(ctx.$goals.updateGoalItem).toHaveBeenCalled();
+    expect(ctx.$notify).not.toHaveBeenCalled();
+  });
+
+  it('refuses a period switch that would unroot a milestone', async () => {
+    const ctx = makeCtx();
+
+    Container.methods.handleUpdateGoalItem.call(ctx, {
+      id: 'g1', body: 'Active Recovery', period: 'week', date: '18-09-2026', goalRef: 'week-goal-1',
+    });
+    await flush();
+
+    expect(ctx.$goals.updateGoalItem).not.toHaveBeenCalled();
+    expect(ctx.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Clear the goal task first',
+    }));
+  });
+
+  it('keeps moving a milestone to another date in the same period', async () => {
+    const ctx = makeCtx();
+
+    Container.methods.handleUpdateGoalItem.call(ctx, {
+      id: 'g1', body: 'Active Recovery', period: 'day', date: '19-09-2026', taskRef: 'task-9', goalRef: 'week-goal-1',
+    });
+    await flush();
+
+    expect(ctx.$goals.updateGoalItem).toHaveBeenCalledWith(expect.objectContaining({
+      date: '19-09-2026', taskRef: 'task-9', goalRef: 'week-goal-1',
+    }));
+    expect(ctx.$notify).not.toHaveBeenCalled();
   });
 });

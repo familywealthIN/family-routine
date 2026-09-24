@@ -63,6 +63,9 @@
             <agenda-task-list
               :groups="todayGoalItemsGrouped"
               :loading="showGoalsSkeleton"
+              :error="loadError && !nonTodayGoalItems.length"
+              :retrying="isRefreshing"
+              @retry="refreshData"
               @complete-goal-item="completeGoalItem"
               @edit-goal-item="(item) => toggleGoalDisplayDialog(item, true)"
               @delete-goal-item="deleteTaskGoal"
@@ -71,6 +74,13 @@
         </div>
       </template>
       <template v-else>
+        <!-- Renders nothing unless the week holds a day that got away, so a
+             clean week costs no space. -->
+        <missed-day-recovery-container
+          class="ml-3 mr-3 mb-3"
+          :date="date"
+          @open-day="handleDateSelected"
+        />
         <atom-layout wrap>
           <atom-flex xs12 sm10 d-flex class="pl-3 pr-3">
             <div style="width:100%">
@@ -153,11 +163,15 @@
             xs12
             class="pr-3 pl-3 mb-3"
             d-flex
-            v-if="!!countTaskTotal(currentTask) &&
-                  currentGoalPeriod === 'day' &&
-                  weekGoalsForCurrentTask.length > 0"
+            v-if="currentGoalPeriod === 'day' &&
+                  (weekGoalsForStreak.length > 0 || weekGoalsLoadError)"
           >
-            <week-goal-streak :week-goals="weekGoalsForCurrentTask" />
+            <week-goal-streak
+              :week-goals="weekGoalsForStreak"
+              :error="weekGoalsLoadError"
+              :retrying="isRefreshing"
+              @retry="refreshData"
+            />
           </atom-flex>
           <atom-flex xs12 class="pl-3 pr-3 pb-3" d-flex>
             <upcoming-past-tasks
@@ -199,6 +213,9 @@
           :groups="nonTodayGoalItems"
           :loading="showAgendaSkeleton"
           :hide-checkbox="isFutureDateSelected"
+          :error="loadError && !nonTodayGoalItems.length"
+          :retrying="isRefreshing"
+          @retry="refreshData"
           @complete-goal-item="completeAgendaGoalItem"
           @edit-goal-item="(item) => toggleGoalDisplayDialog(item, true)"
           @delete-goal-item="deleteAgendaGoalFromList"
@@ -279,6 +296,7 @@
             period="day"
             :tasklist="displayTasklist"
             :selectedTaskRef="selectedTaskRef"
+            :redeem-cost="quickTaskRedeemCost"
             @start-quick-goal-task="(task) => checkClick(task, { fireAgent: false })"
             @build-agent="onBuildAgent"
             @start-agent="onStartAgentFromQuick"
@@ -303,8 +321,13 @@
             :date="date"
             :tasklist="displayTasklist"
           />
+          <p v-if="goalActionRedeemCost > 0" class="caption grey--text mb-2">
+            This task has already passed — starting it costs
+            {{ goalActionRedeemCost }} points.
+          </p>
           <task-action-buttons
             :agent-state="goalActionAgentState"
+            :redeem-cost="goalActionRedeemCost"
             @start-task="onGoalActionStartTask"
             @start-agent="onGoalActionStartAgent"
             @build-agent="onGoalActionBuildAgent"
@@ -431,7 +454,7 @@ import {
 import { pendingMutations } from '../utils/pendingMutations';
 import { runNewDayReset } from '../utils/newDay';
 import { startAgentWhenReady } from '../utils/agentStart';
-import { describeRedeemFailure } from '../utils/routineTaskDisplay';
+import { describeRedeemFailure, describeRedeemReceipt } from '../utils/routineTaskDisplay';
 import { guardFields, releaseEntity } from '../utils/cacheGuard';
 
 import GoalList from '../containers/GoalListContainer.vue';
@@ -440,6 +463,7 @@ import QuickGoalCreation from '../containers/QuickGoalCreationContainer.vue';
 import RelatedTasksTimelineContainer from '../containers/RelatedTasksTimelineContainer.vue';
 import GoalCreation from '../containers/GoalCreationContainer.vue';
 import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue';
+import MissedDayRecoveryContainer from '../containers/MissedDayRecoveryContainer.vue';
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
 import { TimeFormatMixin } from '../utils/timeFormat';
 import { initDashboardCaching } from '../composables/useDashboardCaching';
@@ -473,6 +497,7 @@ export default {
     TaskActionButtons,
     GoalCreation,
     WeekdaySelectorContainer,
+    MissedDayRecoveryContainer,
     CurrentTaskCard,
     UpcomingPastTasks,
     WeekGoalStreak,
@@ -535,8 +560,12 @@ export default {
           date: this.date,
         };
       },
+      result({ data }) {
+        if (data) this.loadError = false;
+      },
       error(error) {
         console.error('[DashBoard] Routine query error:', error);
+        this.loadError = true;
       },
     },
     agendaGoals: {
@@ -555,8 +584,12 @@ export default {
           date: this.date,
         };
       },
+      result({ data }) {
+        if (data) this.loadError = false;
+      },
       error() {
         this.isLoading = false;
+        this.loadError = true;
       },
     },
     xpBalance: {
@@ -580,6 +613,7 @@ export default {
       update(data) {
         // Mark first load as complete
         this.goalsFirstLoad = false;
+        this.weekGoalsLoadError = false;
 
         return data.optimizedDailyGoals;
       },
@@ -587,6 +621,12 @@ export default {
         return {
           date: this.date,
         };
+      },
+      // Without this the week streak card just disappears and an unreachable
+      // server reads as "you have no week goal".
+      error(error) {
+        console.error('[DashBoard] Daily goals query error:', error);
+        this.weekGoalsLoadError = true;
       },
     },
   },
@@ -638,6 +678,12 @@ export default {
       routineFirstLoad: true,
       // Track first load for the non-today agenda skeleton
       agendaFirstLoad: true,
+      // The daily-goals query failed; drives the week streak card's error state
+      // so a failed load never reads as "you have no week goal".
+      weekGoalsLoadError: false,
+      // The day's routine/agenda failed to load; drives the day strip's error
+      // state so an unreachable API never reads as "No Day Tasks".
+      loadError: false,
       // True while the day-rollover cache purge runs. Drives the "Preparing
       // new day" overlay — the only load state that legitimately blocks the
       // dashboard, because at that moment there is nothing valid to paint.
@@ -1471,6 +1517,13 @@ export default {
     getRedeemCost(task) {
       return typeof task.passedPoints === 'number' ? task.passedPoints : (task.points || 0);
     },
+    // What pressing Start Task / Start Agent on this task will actually cost:
+    // 0 unless it is a passed-task redeem the user has to pay for.
+    redeemCostForTask(task) {
+      if (!this.isRedeemable(task)) return 0;
+      if (this.xpBalance && this.xpBalance.entitled) return 0;
+      return this.getRedeemCost(task);
+    },
     canAffordRedeem(task) {
       const balance = this.xpBalance;
       // Balance still loading — let the flow proceed; redeemClick and the
@@ -2016,11 +2069,16 @@ export default {
           const newBalance = payload
             && payload.redeemRoutineItem
             && payload.redeemRoutineItem.balance;
-          if (newBalance && !newBalance.entitled && newBalance.available <= 0) {
-            // Soft touchpoint: the redemption that drains the balance.
+          // Receipt for a charge nothing else reports: name what was bought,
+          // what it cost and what is left (and keep the drained-balance
+          // touchpoint when the redemption empties the account).
+          const receipt = describeRedeemReceipt(cost, newBalance, {
+            startingAgent: fireAgent && !agentImplicit,
+          });
+          if (receipt) {
             this.$notify({
-              title: "You're out of points",
-              text: 'Earn more by completing your routine, goals and milestones — points settle overnight.',
+              title: receipt.title,
+              text: receipt.text,
               group: 'notify',
               type: 'info',
               duration: 5000,
@@ -2693,15 +2751,32 @@ export default {
       if (!this.goalActionTask) return 'none';
       return this.$agent.getByTaskRef(this.goalActionTask.id) ? 'assigned' : 'none';
     },
+    // Price shown on the goal-action modal's spending buttons (D-16) — the
+    // same frozen cost redeemClick debits.
+    goalActionRedeemCost() {
+      return this.redeemCostForTask(this.goalActionTask);
+    },
+    // Same price for the quick modal, whose Start Agent reaches the same
+    // redeem when the task has passed.
+    quickTaskRedeemCost() {
+      const task = (this.displayTasklist || []).find((t) => t.id === this.selectedTaskRef);
+      return this.redeemCostForTask(task);
+    },
     /**
-     * Week goals filtered for the current task.
+     * Week goals for the streak card.
      * Consumed by the WeekGoalStreak organism and by the dashboard's
      * v-if on whether to render it at all.
+     *
+     * Deliberately NOT scoped to the current task. The streak is a property of
+     * the week, but this used to be `filterTaskGoalsPeriod(currentTask.id, …)`,
+     * so the whole card vanished for every minute of the day spent on a routine
+     * item that carries no goal item (05:45 "Wake Up" hid it; 09:10 "Start
+     * Work" brought it back on the same data).
      */
-    weekGoalsForCurrentTask() {
-      return this.currentTask && this.currentTask.id
-        ? this.filterTaskGoalsPeriod(this.currentTask.id, this.displayGoals, 'week')
-        : [];
+    weekGoalsForStreak() {
+      return (this.displayGoals || []).filter((goal) => goal
+        && goal.period === 'week'
+        && !!(goal.goalItems && goal.goalItems.length));
     },
     currentAgentStatus() {
       const id = this.currentTask && this.currentTask.id;
