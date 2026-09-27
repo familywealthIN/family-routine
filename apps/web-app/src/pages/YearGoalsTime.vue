@@ -48,7 +48,7 @@
                       <strong>Description</strong>
                     </atom-layout>
                     <div v-if="yearGoal.contribution" class="contribution-text">
-                      <vue-markdown :source="yearGoal.contribution"></vue-markdown>
+                      <vue-markdown :source="yearGoal.contribution" :html="false"></vue-markdown>
                     </div>
                     <div v-else class="grey--text">
                       No description provided
@@ -146,7 +146,7 @@
                         <atom-flex xs12 md6 class="pr-md-2">
                           <atom-card-text v-if="monthGoal.contribution" class="py-2">
                             <div class="contribution-text small">
-                              <vue-markdown :source="monthGoal.contribution"></vue-markdown>
+                              <vue-markdown :source="monthGoal.contribution" :html="false"></vue-markdown>
                             </div>
                           </atom-card-text>
                           <atom-card-text v-else class="py-2">
