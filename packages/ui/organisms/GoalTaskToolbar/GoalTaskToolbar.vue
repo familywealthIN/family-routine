@@ -409,4 +409,17 @@ export default {
     gap: 12px;
     padding: 0 !important;
   }
+
+  /* Narrow viewports: the selectors are a fixed 180px each, so three of them
+     never fit one row of a ~500px dialog. Wrap them onto further rows instead
+     of leaving the last one outside the toolbar's scroll port, where the
+     dialog around it reports nothing to scroll. The content height is set
+     inline by VToolbar, so it has to be released for the extra rows. */
+  @media (max-width: 600px) {
+    .goal-task-toolbar .v-toolbar__content {
+      flex-wrap: wrap;
+      height: auto !important;
+      padding: 4px 0 !important;
+    }
+  }
 </style>
