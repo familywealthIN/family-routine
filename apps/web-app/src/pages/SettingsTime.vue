@@ -168,6 +168,7 @@ import draggable from 'vuedraggable';
 import CircadianCycle from '@routine-notes/ui/organisms/CircadianCycle/CircadianCycle.vue';
 import GoalTagsInput from '@routine-notes/ui/molecules/GoalTagsInput/GoalTagsInput.vue';
 import getJSON from '../utils/getJSON';
+import { describeSlotChanges } from '../utils/routineSlotCounts';
 import {
   AtomButton,
   AtomCard,
@@ -591,8 +592,26 @@ export default {
       return +100 - +(this.getPointsTotal() - editPoints);
     },
 
+    // A card's daily task target is its window — the gap to the next item —
+    // at one task per two hours, so moving one item's time re-slices its
+    // neighbour's window too. Saying which targets moved keeps a
+    // "Start Work 0/1" that turned into "0/6" from arriving unannounced.
+    notifySlotChanges(before, after) {
+      const changes = describeSlotChanges(before, after);
+      if (!changes.length) return;
+
+      this.$notify({
+        title: 'Daily task targets changed',
+        text: `${changes.join(', ')}. A routine item asks for one task per two hours of the gap to the next item.`,
+        group: 'notify',
+        type: 'info',
+        duration: 5000,
+      });
+    },
+
     updateRoutineItem() {
       const item = this.editedItem;
+      const scheduleBefore = this.routineItems.map(({ id, name, time }) => ({ id, name, time }));
       this.$apollo.mutate({
         mutation: gql`          mutation updateRoutineItem(
             $id: ID!
@@ -636,6 +655,7 @@ export default {
         },
         update: () => {
           Object.assign(this.routineItems[this.editedIndex], this.editedItem);
+          this.notifySlotChanges(scheduleBefore, this.routineItems);
           this.resetEditItem();
           this.buttonLoading = false;
           this.close(false);

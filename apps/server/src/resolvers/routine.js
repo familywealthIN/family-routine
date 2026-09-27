@@ -105,6 +105,37 @@ function buildStimuliForRoutineItem(taskId, tasklist) {
 }
 
 /**
+ * Re-derive a carried-over day copy's split rates from the current schedule,
+ * keeping whatever that day has already earned.
+ *
+ * D's split rate is the gap to the next routine item, so editing any item's
+ * time re-slices its neighbour's window. A day document written before the
+ * edit kept the rate it was created with for ever, and the same routine item
+ * then read 0/6 on one day of the week and 0/1 on the next.
+ *
+ * A task that has already banked K keeps its stored rate: that K was credited
+ * as points/count against the old slicing, so re-slicing underneath it would
+ * move the completed figure as well as the total.
+ */
+function refreshStimuliSplitRates(stimuli, taskId, tasklist) {
+  const k = stimuli.find((stimulus) => stimulus.name === 'K');
+  if (k && k.earned) {
+    return stimuli;
+  }
+
+  const rebuilt = buildStimuliForRoutineItem(taskId, tasklist);
+
+  return stimuli.map((stimulus) => {
+    const current = rebuilt.find((built) => built.name === stimulus.name);
+    if (current) {
+      stimulus.splitRate = current.splitRate;
+    }
+
+    return stimulus;
+  });
+}
+
+/**
  * Clear the per-day state on a routine item seeded from the shared
  * `routineItems` template.
  *
@@ -292,7 +323,7 @@ const query = {
             task.redeemed = foundTask.redeemed;
             task.passedPoints = foundTask.passedPoints;
             task.stimuli = foundTask.stimuli && foundTask.stimuli.length
-              ? foundTask.stimuli
+              ? refreshStimuliSplitRates(foundTask.stimuli, task._id, tasklist)
               : buildStimuliForRoutineItem(task._id, tasklist);
           } else {
             // Not in this day's document yet — there is no per-day state to
@@ -510,5 +541,10 @@ const mutation = {
 };
 
 module.exports = {
-  query, mutation, buildStimuliForRoutineItem, aggregateStimuliForRoutine, resetDayState,
+  query,
+  mutation,
+  buildStimuliForRoutineItem,
+  refreshStimuliSplitRates,
+  aggregateStimuliForRoutine,
+  resetDayState,
 };
