@@ -198,6 +198,17 @@ function filterByTaskPeriod(goals, taskId, period) {
   return bucket;
 }
 
+// Week/month/year goals belong to the period, not to a routine slot. Their
+// `taskRef` only records which item happened to be selected when they were
+// created, so scoping them to the current item made a month goal blink in and
+// out as the clock moved between slots. Whole goals, no projection.
+function filterByPeriod(goals, period) {
+  if (!Array.isArray(goals)) return [];
+  return goals.filter((goal) => goal
+    && goal.period === period
+    && !!(goal.goalItems && goal.goalItems.length));
+}
+
 export default {
   name: 'OrganismCurrentTaskCard',
   components: {
@@ -241,15 +252,19 @@ export default {
   },
   computed: {
     weekGoals() {
-      return filterByTaskPeriod(this.goals, this.task && this.task.id, 'week');
+      return filterByPeriod(this.goals, 'week');
     },
     monthGoals() {
-      return filterByTaskPeriod(this.goals, this.task && this.task.id, 'month');
+      return filterByPeriod(this.goals, 'month');
     },
     hasWeekGoal() { return this.weekGoals.length > 0; },
     hasMonthGoal() { return this.monthGoals.length > 0; },
+    // Day goals are this routine item's milestones, so they stay task-scoped.
+    // Every longer period is a property of the period itself.
     filteredPeriodGoals() {
-      return filterByTaskPeriod(this.goals, this.task && this.task.id, this.goalPeriod);
+      return this.goalPeriod === 'day'
+        ? filterByTaskPeriod(this.goals, this.task && this.task.id, 'day')
+        : filterByPeriod(this.goals, this.goalPeriod);
     },
     agentStatusBadge() {
       // A completed task is done regardless of its agent. An agent failure on
