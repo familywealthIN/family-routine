@@ -14,14 +14,15 @@
       <div v-else-if="error" class="error--text w-100">
         {{ error }}
       </div>
-      <div v-else class="text-body-1 w-100">
-        {{ summary }}
+      <div v-else class="text-body-1 w-100 summary-content">
+        <vue-markdown v-if="summary" :source="summary" :html="false"></vue-markdown>
       </div>
     </AtomCardText>
   </AtomCard>
 </template>
 
 <script>
+import VueMarkdown from 'vue-markdown';
 import {
   AtomButton,
   AtomCard,
@@ -35,6 +36,7 @@ import {
 export default {
   name: 'SummaryCards',
   components: {
+    VueMarkdown,
     AtomButton,
     AtomCard,
     AtomCardText,
@@ -63,5 +65,9 @@ export default {
 <style scoped>
 .next-steps-content {
   padding: 0 16px;
+}
+/* Read-only markdown summary rendered by vue-markdown. */
+.summary-content >>> p:last-child {
+  margin-bottom: 0;
 }
 </style>

@@ -286,9 +286,9 @@
           <span class="headline">{{ quickTaskTitle }}</span>
         </atom-card-title>
         <atom-card-text>
-          <p>
-            {{ quickTaskDescription }}
-          </p>
+          <div v-if="quickTaskDescription" class="description-text">
+            <vue-markdown :source="quickTaskDescription" :html="false"></vue-markdown>
+          </div>
           <quick-goal-creation
             :key="quickModalKey"
             :goals="displayGoals"
@@ -310,10 +310,14 @@
           <span class="headline">{{ goalActionTask.name }}</span>
         </atom-card-title>
         <atom-card-text>
-          <p>{{ goalActionTask.description }}</p>
+          <div v-if="goalActionTask.description" class="description-text">
+            <vue-markdown :source="goalActionTask.description" :html="false"></vue-markdown>
+          </div>
           <div v-if="goalActionItem" class="goal-action-item mb-3">
             <div class="subheading font-weight-medium">{{ goalActionItem.body }}</div>
-            <div v-if="goalActionItem.contribution" class="grey--text">{{ goalActionItem.contribution }}</div>
+            <div v-if="goalActionItem.contribution" class="description-text grey--text">
+              <vue-markdown :source="goalActionItem.contribution" :html="false"></vue-markdown>
+            </div>
           </div>
           <related-tasks-timeline-container
             v-if="goalActionItem && goalActionItem.goalRef"
@@ -405,6 +409,7 @@
 /* eslint-disable no-param-reassign */
 import moment from 'moment';
 import gql from 'graphql-tag';
+import VueMarkdown from 'vue-markdown';
 
 import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import WakeCheck from '@routine-notes/ui/atoms/WakeCheck/WakeCheck.vue';
@@ -490,6 +495,7 @@ export default {
   mixins: [MeasurementMixin, intelligentRefreshMixin, TimeFormatMixin],
   components: {
     GoalList,
+    VueMarkdown,
     ContainerBox,
     WakeCheck,
     QuickGoalCreation,
@@ -3012,6 +3018,21 @@ export default {
 .new-day-label {
   font-size: 13px;
   color: #174ea6;
+}
+/* Read-only markdown descriptions rendered by vue-markdown. */
+.description-text>>>p {
+  margin-bottom: 8px;
+}
+.description-text>>>ul,
+.description-text>>>ol {
+  margin-bottom: 8px;
+  padding-left: 20px;
+}
+.description-text>>>h1,
+.description-text>>>h2,
+.description-text>>>h3 {
+  margin-top: 12px;
+  margin-bottom: 8px;
 }
 </style>
 
