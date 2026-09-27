@@ -16,6 +16,9 @@ jest.mock('vue-easymde', () => ({ __esModule: true, default: {} }));
 // Same for the native sign-in plugins, which ship untranspiled ESM.
 jest.mock('@codetrix-studio/capacitor-google-auth', () => ({ GoogleAuth: {} }));
 jest.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false } }));
+// MobileLayout reads the native client ids from the gitignored blob config, which is
+// absent on CI; only the native sign-in path uses them and that path is off in jsdom.
+jest.mock('../../blob/config', () => ({ gauthOption: {} }), { virtual: true });
 
 const DesktopLayout = require('../DesktopLayout.vue').default;
 const MobileLayout = require('../MobileLayout.vue').default;
