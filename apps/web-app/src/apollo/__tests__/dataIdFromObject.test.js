@@ -14,6 +14,17 @@ import { InMemoryCache } from 'apollo-cache-inmemory';
 import gql from 'graphql-tag';
 import dataIdFromObject from '../dataIdFromObject';
 
+// D-13: /progress and /history both read the Routine Efficiency card, and a
+// card's id is a slot name that every period reuses.
+const PROGRESS_QUERY = gql`
+  query getProgress($period: String!, $startDate: String!, $endDate: String!) {
+    getProgress(period: $period, startDate: $startDate, endDate: $endDate) {
+      period
+      cards { id value description }
+    }
+  }
+`;
+
 const ROUTINE_ITEMS_QUERY = gql`
   query routineItems {
     routineItems {
@@ -89,6 +100,38 @@ const readBackFromDashboard = (cache) => {
   return byName(cache.readQuery({ query: ROUTINE_DATE_QUERY, variables }).routineDate.tasklist);
 };
 
+const progressVariables = (period) => ({
+  period,
+  startDate: period === 'week' ? '16-08-2026' : '01-08-2026',
+  endDate: '22-08-2026',
+});
+
+// Two screens asking for two periods, the way a tester who set /progress to
+// 'month' and then opened /history does.
+const writeProgress = (cache, period, value) => {
+  const variables = progressVariables(period);
+  cache.writeQuery({
+    query: PROGRESS_QUERY,
+    variables,
+    data: {
+      getProgress: {
+        __typename: 'Progress',
+        period,
+        cards: [{
+          __typename: 'ProgressItem',
+          id: 'efficiency',
+          value,
+          description: `for this ${period}`,
+        }],
+      },
+    },
+  });
+};
+
+const readProgress = (cache, period) => cache
+  .readQuery({ query: PROGRESS_QUERY, variables: progressVariables(period) })
+  .getProgress.cards[0].value;
+
 describe('dataIdFromObject', () => {
   it('does not normalize an object whose id is null', () => {
     expect(dataIdFromObject({ __typename: 'StepItem', id: null, name: 'Stretch' })).toBeNull();
@@ -112,6 +155,32 @@ describe('dataIdFromObject', () => {
     expect(steps['Morning movement']).toEqual(['Stretch - 5 min', 'Walk - 10 min', 'Breathe']);
     expect(steps['Evening wind-down']).toEqual(['journal', 'plan tomorrow', 'lights out']);
     expect(steps['Wake Up']).toEqual([]);
+  });
+
+  it('does not normalize a progress card, whose id names a slot not an entity', () => {
+    expect(dataIdFromObject({ __typename: 'ProgressItem', id: 'efficiency' })).toBeNull();
+    expect(dataIdFromObject({ __typename: 'ProgressItemValues', id: 'efficiency' })).toBeNull();
+  });
+
+  it('keeps each period\'s Routine Efficiency card reading back its own number', () => {
+    const cache = new InMemoryCache({ dataIdFromObject });
+
+    writeProgress(cache, 'month', '41%');
+    writeProgress(cache, 'week', '75%');
+
+    expect(readProgress(cache, 'month')).toBe('41%');
+    expect(readProgress(cache, 'week')).toBe('75%');
+  });
+
+  it('is what stops the second Routine Efficiency number — the default id shape reproduces it', () => {
+    // One shared `ProgressItem:efficiency` record: the week fetch repaints the
+    // month card, which is two numbers for one metric all over again.
+    const cache = new InMemoryCache();
+
+    writeProgress(cache, 'month', '41%');
+    writeProgress(cache, 'week', '75%');
+
+    expect(readProgress(cache, 'month')).toBe('75%');
   });
 
   it('is what stops the collapse — the default id shape reproduces the bug', () => {
