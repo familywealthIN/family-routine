@@ -11,10 +11,23 @@
  *
  * An id that is null is not an identity. Leave those objects un-normalized and
  * Apollo stores them inline under their parent, where they belong.
+ *
+ * A progress card's id is the same kind of non-identity: `getProgress` labels
+ * its cards 'efficiency', 'radar-chart' and so on, and those labels are slots
+ * in the report, not entities — the same slot holds a different number for
+ * every period and every date range asked for. Normalizing them puts /progress
+ * on 'month' and /history's week card into the single record
+ * `ProgressItem:efficiency`, where whichever query resolved last wins and the
+ * other screen silently repaints with a figure for a period it never asked
+ * about. That is the D-13 symptom (two Routine Efficiency numbers at the same
+ * instant) arriving by a second route.
  */
 import { defaultDataIdFromObject } from 'apollo-cache-inmemory';
 
+const UNNORMALIZED_TYPES = ['ProgressItem', 'ProgressItemValues'];
+
 export default function dataIdFromObject(object) {
   if (object && object.id === null) return null;
+  if (object && UNNORMALIZED_TYPES.includes(object.__typename)) return null;
   return defaultDataIdFromObject(object);
 }

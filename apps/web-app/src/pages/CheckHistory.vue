@@ -9,10 +9,17 @@
             name="history"
           />
           <atom-layout column align-start>
-            <div class="caption grey--text text-uppercase">Routine Efficiency</div>
+            <div class="caption grey--text text-uppercase">
+              Routine Efficiency
+              <v-tooltip v-if="efficiency.description" bottom>
+                <template #activator="{ on }">
+                  <atom-icon size="14" v-on="on">info_outline</atom-icon>
+                </template>
+                <span>{{ efficiency.description }}</span>
+              </v-tooltip>
+            </div>
             <div>
-              <span class="display-2 font-weight-black" v-text="avg || '—'"></span>
-              <strong v-if="avg">%</strong>
+              <span class="display-2 font-weight-black" v-text="efficiency.value || '—'"></span>
             </div>
           </atom-layout>
 
@@ -25,7 +32,7 @@
 
         <atom-sheet class="grey lighten-4 pb-4">
           <atom-sparkline
-            :key="String(avg)"
+            :key="String(efficiency.value)"
             :smooth="16"
             :gradient="['#f72047', '#ffd200', '#1feaea']"
             :line-width="3"
@@ -44,6 +51,7 @@
 
 <script>
 import gql from 'graphql-tag';
+import moment from 'moment';
 
 import UserHistory from '@routine-notes/ui/organisms/UserHistory/UserHistory.vue';
 import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
@@ -58,6 +66,11 @@ import {
   AtomSpacer,
   AtomSparkline,
 } from '@routine-notes/ui/atoms';
+
+// The scope /progress opens on (Progress.vue defaults its period prop to
+// 'week'). This screen asks getProgress for the same window so the two
+// headline numbers are the same number, not two readings of one name.
+const EFFICIENCY_PERIOD = 'week';
 
 export default {
   components: {
@@ -95,23 +108,49 @@ export default {
         }
       `,
     },
+    // Routine Efficiency is not worked out here. This screen used to average
+    // every routine day ever recorded while /progress averaged only the days
+    // that scored, so one account read 6% here and 15% there at the same
+    // instant. The server owns the single definition now and both screens read
+    // the card it returns.
+    progress: {
+      query: gql`
+        query getProgress($period: String!, $startDate: String!, $endDate: String!) {
+          getProgress(period: $period, startDate: $startDate, endDate: $endDate) {
+            period
+            cards {
+              id
+              value
+              description
+            }
+          }
+        }
+      `,
+      update(data) {
+        return data.getProgress;
+      },
+      variables() {
+        return {
+          period: EFFICIENCY_PERIOD,
+          startDate: moment().startOf(EFFICIENCY_PERIOD).format('DD-MM-YYYY'),
+          endDate: moment().format('DD-MM-YYYY'),
+        };
+      },
+    },
   },
   data() {
     return {
       routines: [],
-      graphArray: [],
+      progress: null,
     };
   },
   computed: {
-    avg() {
-      const sum = this.routines.reduce((acc, cur) => acc + this.countTotal(cur.tasklist), 0);
-      // eslint-disable-next-line vue/no-side-effects-in-computed-properties
-      this.graphArray = this.routines.map((routine) => this.countTotal(routine.tasklist));
-      const { length } = this.routines;
-
-      if (!sum && !length) return 0;
-
-      return Math.ceil(sum / length);
+    efficiency() {
+      const cards = (this.progress && this.progress.cards) || [];
+      return cards.find((card) => card && card.id === 'efficiency') || {};
+    },
+    graphArray() {
+      return this.routines.map((routine) => this.countTotal(routine.tasklist));
     },
   },
   methods: {

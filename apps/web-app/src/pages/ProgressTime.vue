@@ -164,6 +164,7 @@ export default {
               id
               name
               value
+              description
               values {
                 name
                 value
