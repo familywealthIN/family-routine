@@ -45,7 +45,7 @@
           ></goal-tags-input>
         </AtomFlex>
         <AtomLayout row wrap>
-        <AtomFlex sm8>
+        <AtomFlex xs12 sm8>
           <AtomCard flat>
             <AtomCardText class="pt-2 pr-0 pb-0 pl-0">
               <markdown-editor
@@ -96,7 +96,7 @@
             </AtomCardText>
           </AtomCard>
         </AtomFlex>
-        <AtomFlex sm4  d-flex v-if="localGoalItem.period === 'day' && localGoalItem.id">
+        <AtomFlex xs12 sm4  d-flex v-if="localGoalItem.period === 'day' && localGoalItem.id">
           <sub-task-item-list
             :subTasks="localGoalItem.subTasks"
             :taskId="localGoalItem.id"
@@ -572,12 +572,22 @@ export default {
     padding-top: 0;
   }
 
-  /* Mobile: full-bleed EasyMDE editor inside the goal creation dialog */
+  /* Mobile: the dialog has to fit the viewport, nothing may sit outside it */
   @media (max-width: 600px) {
+    /* A 36px title only shows about 25 characters of a narrow dialog. */
+    .goal-creation #newGoalItemBody {
+      font-size: 24px;
+    }
+
+    /* Editor fills its column rather than the viewport. The 100vw + negative
+       margin full bleed only lines up when the containing block is centred on
+       the viewport; here it is the narrower goal column, so it pulled the
+       editor and its toolbar off the left edge, where nothing can scroll
+       them back — left overflow is not part of scrollWidth. */
     .goal-creation .markdown-editor {
-      width: 100vw;
-      margin-left: calc(50% - 50vw);
-      margin-right: calc(50% - 50vw);
+      width: 100%;
+      margin-left: 0;
+      margin-right: 0;
     }
     .goal-creation .markdown-editor .EasyMDEContainer .CodeMirror,
     .goal-creation .markdown-editor .EasyMDEContainer .editor-toolbar,
