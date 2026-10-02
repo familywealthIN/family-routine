@@ -114,3 +114,33 @@ describe('routine item save', () => {
     expect(vm.addRoutineItem).not.toHaveBeenCalled();
   });
 });
+
+// D-03: a card's daily task target is the gap to the next item at one task per
+// two hours, so moving Wind-down to 21:30 took Start Work from 0/1 to 0/6 with
+// nothing on screen saying it had.
+describe('routine item time edit', () => {
+  const before = [
+    { id: 'start-work', name: 'Start Work', time: '09:00' },
+    { id: 'wind-down', name: 'Wind-down', time: '11:30' },
+  ];
+
+  it('names the other item whose target the new time moved', () => {
+    const vm = { $notify: jest.fn() };
+    const after = [before[0], { ...before[1], time: '21:30' }];
+
+    SettingsTime.methods.notifySlotChanges.call(vm, before, after);
+
+    expect(vm.$notify).toHaveBeenCalledTimes(1);
+    expect(vm.$notify.mock.calls[0][0].text)
+      .toContain('Start Work: 1 -> 6');
+  });
+
+  it('stays quiet when the edit moves no target', () => {
+    const vm = { $notify: jest.fn() };
+    const after = [{ ...before[0], name: 'Deep Work' }, before[1]];
+
+    SettingsTime.methods.notifySlotChanges.call(vm, before, after);
+
+    expect(vm.$notify).not.toHaveBeenCalled();
+  });
+});

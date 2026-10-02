@@ -15,7 +15,7 @@
         {{ error }}
       </div>
       <div v-else class="next-steps-content">
-        <vue-markdown :source="nextSteps"></vue-markdown>
+        <vue-markdown :source="nextSteps" :html="false"></vue-markdown>
       </div>
     </v-card-text>
   </v-card>

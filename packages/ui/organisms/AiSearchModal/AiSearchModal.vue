@@ -207,6 +207,16 @@
             {{ error }}
           </AtomAlert>
 
+          <!-- Dropped parent goal notice -->
+          <AtomAlert
+            v-if="goalRefNotice && !isSearchMode"
+            type="warning"
+            dismissible
+            @input="goalRefNotice = ''"
+          >
+            {{ goalRefNotice }}
+          </AtomAlert>
+
           <!-- Task Creation Form (Task Mode) -->
           <component
             :is="resolvedTaskFormComponent"
@@ -476,6 +486,16 @@
           <!-- Error Display -->
           <AtomAlert v-if="error && !isSearchMode" type="error" dismissible @input="error = ''">
             {{ error }}
+          </AtomAlert>
+
+          <!-- Dropped parent goal notice -->
+          <AtomAlert
+            v-if="goalRefNotice && !isSearchMode"
+            type="warning"
+            dismissible
+            @input="goalRefNotice = ''"
+          >
+            {{ goalRefNotice }}
           </AtomAlert>
 
           <!-- Task Creation Form (Task Mode) -->
@@ -748,6 +768,7 @@ export default {
       toolbarDate: '',
       toolbarTaskRef: null,
       toolbarGoalRef: null,
+      goalRefNotice: '', // Shown when a parent goal is dropped as out of period
       // Tags
       promptTags: [],
       routineTagsSet: [], // Tags auto-added from current routine (for auto-removal)
@@ -1096,13 +1117,32 @@ export default {
     toolbarGoalRef(newVal) {
       if (!newVal) {
         this.associateParentGoal = false;
+      } else {
+        // A parent is selected again — the dropped-parent notice is spent
+        this.goalRefNotice = '';
       }
     },
 
     // Auto-select goal in toolbar when goalItemsRef changes
     // Prioritizes goals matching the current task's taskRef
     goalItemsRef: {
-      handler(newVal) {
+      handler(newVal, oldVal) {
+        // goalItemsRef is refetched for the period above whenever the period or
+        // date changes, so a goal picked against the previous list survives into
+        // one it is not part of. GoalRefSelector falls back to the placeholder
+        // for a ref it cannot find, but that ref is still what the forms save as
+        // goalRef — which is how a month plan ended up parented to a week goal.
+        // Drop it, and say so, because a cleared chip tells the user nothing.
+        const goals = newVal || [];
+        if (this.toolbarGoalRef && !goals.some((goal) => goal.id === this.toolbarGoalRef)) {
+          const dropped = (oldVal || []).find((goal) => goal.id === this.toolbarGoalRef);
+          this.goalRefNotice = `Parent goal ${dropped ? `"${dropped.body}" ` : ''}is not in the `
+            + 'period above this one, so it has been cleared. Pick a parent goal from the toolbar, '
+            + 'or this will be saved without one.';
+          this.toolbarGoalRef = null;
+          return;
+        }
+
         if (newVal && newVal.length > 0 && !this.toolbarGoalRef) {
           // If there's a current task, try to find a goal that matches its taskRef
           if (this.$currentTaskData && this.$currentTaskData.id) {
@@ -1748,6 +1788,7 @@ export default {
     resetForm() {
       this.searchQuery = '';
       this.error = '';
+      this.goalRefNotice = '';
       this.loading = false;
       this.saving = false;
       this.hasSubmitted = false;

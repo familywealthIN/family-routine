@@ -11,7 +11,7 @@
         <span class="headline">{{ title }}</span>
       </AtomCardTitle>
       <AtomCardText>
-        <p>{{ description }}</p>
+        <VueMarkdown v-if="description" :source="description" :html="false" />
         <QuickGoalCreation
           :key="modalKey"
           :goals="goals"
@@ -29,6 +29,7 @@
 </template>
 
 <script>
+import VueMarkdown from 'vue-markdown';
 import {
   AtomCard, AtomCardText, AtomCardTitle, AtomDialog,
 } from '@routine-notes/ui/atoms';
@@ -37,7 +38,7 @@ import QuickGoalCreation from './QuickGoalCreationContainer.vue';
 export default {
   name: 'QuickTaskModalContainer',
   components: {
-    QuickGoalCreation, AtomCard, AtomCardText, AtomCardTitle, AtomDialog,
+    QuickGoalCreation, VueMarkdown, AtomCard, AtomCardText, AtomCardTitle, AtomDialog,
   },
   props: {
     value: { type: Boolean, default: false },

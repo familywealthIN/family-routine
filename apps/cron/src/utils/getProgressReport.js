@@ -184,25 +184,42 @@ function getCompletedTotal({
   // return aggregatePoints;
 }
 
-function getEfficiency({ periodRoutines }) {
+/**
+ * The one definition of "Routine Efficiency", shipped next to the number so
+ * every screen that prints it can also explain it.
+ *
+ * /progress and /history used to each average the day's points their own way —
+ * this function divided by the days that happened to score, CheckHistory.vue
+ * divided by every routine day ever — so the same account read 15% on one
+ * screen and 6% on the other. Neither quotient was a percentage: both are a
+ * mean of raw points, unbounded, and the old denominator here also made a
+ * missed day invisible (a zero day left both sum and consideredDays alone, so
+ * the figure sat still while the week got worse).
+ *
+ * Earned over available is the share the name claims: bounded by 100, it falls
+ * when a day is missed, and it is scoped to the period asked for. Skipped days
+ * stay out of it — a skip day is spent quota, not a failure.
+ */
+const efficiencyFormula = (period) => `Routine points earned ÷ routine points available, across this ${period}'s days. Skipped days do not count.`;
+
+function getEfficiency({ periodRoutines, period }) {
   // TODO: Get the dharma points to determine efficiency
   try {
-    let consideredDays = 0;
-    const sum = periodRoutines.reduce((acc, routine) => {
-      if (countTotal(routine) > 0 && !routine.skip) {
-        console.log('=== routine', routine);
-        consideredDays += 1;
-        return acc + countTotal(routine);
-      }
-      return acc;
-    }, 0);
+    const { earned, available } = periodRoutines.reduce((acc, routine) => {
+      if (routine.skip) return acc;
 
-    if (!sum && !consideredDays) return 0;
+      acc.earned += countTotal(routine);
+      acc.available += routine.tasklist.reduce((total, task) => total + (task.points || 0), 0);
+      return acc;
+    }, { earned: 0, available: 0 });
+
+    const value = available ? Math.min(100, Math.round((earned / available) * 100)) : 0;
 
     return {
       id: 'efficiency',
       name: 'Routine Efficiency',
-      value: `${Math.ceil(sum / consideredDays)}%`,
+      value: `${value}%`,
+      description: efficiencyFormula(period),
     };
   } catch (e) {
     console.log(e);
@@ -575,7 +592,7 @@ function getProgressReport({
     progressStatement: getProgressStatement({ periodRoutines: currentPeriodRoutines }),
     cards: mock.cards.map((card) => {
       if (card.id === 'efficiency') {
-        return getEfficiency({ periodRoutines: currentPeriodRoutines });
+        return getEfficiency({ periodRoutines: currentPeriodRoutines, period });
       }
 
       if (card.id === 'radar-chart') {
@@ -627,6 +644,7 @@ function getProgressReport({
 }
 
 module.exports = {
+  efficiencyFormula,
   getEfficiency,
   getStimuli,
   getOnTrack,
