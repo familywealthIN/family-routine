@@ -1,8 +1,8 @@
 <template>
   <!--
     Container home for the RelatedTasksTimeline molecule. Owns its READ: the
-    goalsByGoalRef query for a goalRef, mapped to the timeline's task shape
-    (same derivation the quick-goal modal uses). Renders nothing until there is
+    goalsByGoalRef query for a goalRef, mapped to the timeline's task shape and
+    scoped to the day being viewed. Renders nothing until there is
     related activity. Used by the goal-action modal (and reusable elsewhere).
   -->
   <related-tasks-timeline v-if="relatedTasks.length" :tasks="relatedTasks" />
@@ -39,6 +39,9 @@ export default {
   apollo: {
     relatedGoalsData: {
       query: GOALS_BY_GOAL_REF_QUERY,
+      // principle #4 — cache-first served the list fetched the first time this
+      // goalRef's modal was opened, so days added after that never appeared.
+      fetchPolicy: 'cache-and-network',
       variables() {
         return { goalRef: this.goalRef };
       },
@@ -58,17 +61,18 @@ export default {
         return [];
       }
 
-      const today = moment(this.date, 'DD-MM-YYYY');
+      const viewedDay = moment(this.date, 'DD-MM-YYYY');
       const seen = new Set();
       const tasks = [];
 
       this.relatedGoalsData.forEach((goal) => {
         if (!goal.goalItems || !Array.isArray(goal.goalItems)) return;
 
-        // Show the whole history for this goal ref; exclude only future-dated items.
-        if (goal.date) {
+        // A goalRef spans every day it was planned for, so keep only the day
+        // being viewed — the other days are a different day's milestone.
+        if (goal.date && viewedDay.isValid()) {
           const goalDate = moment(goal.date, 'DD-MM-YYYY');
-          if (goalDate.isValid() && goalDate.isAfter(today, 'day')) return;
+          if (goalDate.isValid() && !goalDate.isSame(viewedDay, 'day')) return;
         }
 
         goal.goalItems.forEach((goalItem) => {
