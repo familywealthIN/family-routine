@@ -1,7 +1,7 @@
 /**
- * missedDay — spot the most recent day of the current week that got away, so
- * the dashboard can say something about it instead of carrying on as if the
- * day had gone to plan.
+ * missedDay — spot the days of the current week that got away, so the dashboard
+ * can say something about them instead of carrying on as if the week had gone
+ * to plan.
  *
  * It reuses the rule the rest of the app already grades days by (see the
  * server's buildMilestoneDays): only a day BEFORE the reference date can be
@@ -32,10 +32,11 @@ const earnedOn = (day) => (day.D || 0) + (day.K || 0) + (day.G || 0);
  * @param {Array}  days      week-strip entries ({ date, D, K, G, skipped }),
  *                           any order — `weekStimuli`'s shape
  * @param {string} reference DD-MM-YYYY the dashboard is showing (today)
- * @returns {{ date: string, weekday: string }|null} the most recent missed day
+ * @returns {Array<{ date: string, weekday: string }>} every missed day, in
+ *                           calendar order
  */
-export function findMissedDay(days, reference) {
-  if (!Array.isArray(days) || !days.length || !reference) return null;
+export function findMissedDays(days, reference) {
+  if (!Array.isArray(days) || !days.length || !reference) return [];
 
   const referenceKey = sortableDate(reference);
   const calendarOrder = days
@@ -44,7 +45,7 @@ export function findMissedDay(days, reference) {
     .sort((a, b) => sortableDate(a.date).localeCompare(sortableDate(b.date)));
 
   let seenActivity = false;
-  let missed = null;
+  const missed = [];
 
   calendarOrder.forEach((day) => {
     if (sortableDate(day.date) >= referenceKey) return;
@@ -53,16 +54,24 @@ export function findMissedDay(days, reference) {
       return;
     }
     if (day.skipped || !seenActivity) return;
-    // Later matches win, so the user hears about the day nearest to now.
-    missed = day;
+    missed.push({
+      date: day.date,
+      weekday: moment(day.date, DATE_FORMAT).format('dddd'),
+    });
   });
 
-  if (!missed) return null;
-
-  return {
-    date: missed.date,
-    weekday: moment(missed.date, DATE_FORMAT).format('dddd'),
-  };
+  return missed;
 }
 
-export default { findMissedDay };
+/**
+ * @param {Array}  days      as findMissedDays
+ * @param {string} reference as findMissedDays
+ * @returns {{ date: string, weekday: string }|null} the most recent missed day
+ */
+export function findMissedDay(days, reference) {
+  const missed = findMissedDays(days, reference);
+  // The last match wins, so the user hears about the day nearest to now.
+  return missed.length ? missed[missed.length - 1] : null;
+}
+
+export default { findMissedDay, findMissedDays };

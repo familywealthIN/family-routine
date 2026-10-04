@@ -4,7 +4,10 @@
       v-for="(weekDay, i) in weekDays"
       :key="weekDay.day"
       @click="!isLoading && handleDateSelect(i)"
-      :class="['day-column', { active: weekDay.isActive, disabled: isLoading }]"
+      :class="['day-column', {
+        active: weekDay.isActive, missed: isMissed(weekDay.fullDate), disabled: isLoading,
+      }]"
+      :title="dayTitle(weekDay)"
     >
       <div class="day-label">{{ weekDay.day }}</div>
       <div class="ring-container">
@@ -12,15 +15,18 @@
           <!-- Track circles (background) -->
           <circle
             :cx="center" :cy="center" :r="ringG.radius"
-            fill="none" :stroke="trackColor" :stroke-width="strokeWidth"
+            fill="none" :stroke="trackColorFor(weekDay.fullDate)" :stroke-width="strokeWidth"
+            :stroke-dasharray="trackDashFor(weekDay.fullDate)"
           />
           <circle
             :cx="center" :cy="center" :r="ringK.radius"
-            fill="none" :stroke="trackColor" :stroke-width="strokeWidth"
+            fill="none" :stroke="trackColorFor(weekDay.fullDate)" :stroke-width="strokeWidth"
+            :stroke-dasharray="trackDashFor(weekDay.fullDate)"
           />
           <circle
             :cx="center" :cy="center" :r="ringD.radius"
-            fill="none" :stroke="trackColor" :stroke-width="strokeWidth"
+            fill="none" :stroke="trackColorFor(weekDay.fullDate)" :stroke-width="strokeWidth"
+            :stroke-dasharray="trackDashFor(weekDay.fullDate)"
           />
           <!-- Value circles (filled progress) -->
           <circle
@@ -77,6 +83,14 @@ export default {
       type: Boolean,
       default: false,
     },
+    // DD-MM-YYYY dates of the week's missed days, derived by the container from
+    // the app's one definition of missed. A missed day scores nothing, exactly
+    // like a day that has not happened yet, so without this the two draw the
+    // same empty rings.
+    missedDates: {
+      type: Array,
+      default: () => [],
+    },
   },
   data() {
     const svgSize = 48;
@@ -91,6 +105,9 @@ export default {
       center,
       strokeWidth,
       trackColor: 'rgba(0,0,0,0.08)',
+      // Amber, not the status red: red is already the K ring's own colour on
+      // this same glyph, and the day is being acknowledged, not scolded.
+      missedTrackColor: 'rgba(245,124,0,0.45)',
       ringD: { radius: radiusD, circumference: 2 * Math.PI * radiusD },
       ringK: { radius: radiusK, circumference: 2 * Math.PI * radiusK },
       ringG: { radius: radiusG, circumference: 2 * Math.PI * radiusG },
@@ -156,6 +173,22 @@ export default {
       }));
 
       this.$emit('date-selected', newDate);
+    },
+    isMissed(dateStr) {
+      return this.missedDates.indexOf(dateStr) !== -1;
+    },
+    trackColorFor(dateStr) {
+      return this.isMissed(dateStr) ? this.missedTrackColor : this.trackColor;
+    },
+    // Dashed as well as amber, so the state does not rest on colour alone.
+    trackDashFor(dateStr) {
+      return this.isMissed(dateStr) ? '2 3' : null;
+    },
+    dayTitle(weekDay) {
+      if (!this.isMissed(weekDay.fullDate)) {
+        return null;
+      }
+      return `${moment(weekDay.fullDate, 'DD-MM-YYYY').format('dddd')} went unlogged`;
     },
     getRingOffset(dateStr, stimulus, circumference) {
       const stimuli = this.weekStimuliMap[dateStr];
@@ -248,6 +281,13 @@ export default {
 .day-column.active .day-number {
   font-weight: 700;
   color: rgba(0, 0, 0, 0.85);
+}
+
+/* A day that got away: amber rings and an amber number, so it cannot be read
+   as a day still to come. */
+.day-column.missed .day-number,
+.day-column.missed .day-label {
+  color: #ef6c00;
 }
 
 /* Mobile: smaller rings */
