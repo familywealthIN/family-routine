@@ -1452,6 +1452,15 @@ const mutation = {
       const email = getEmailfromSession(context);
       const { goalItems } = args;
 
+      // One tag write for the whole batch. Every entry of a generated plan
+      // carries the same tags, so doing this per item issued the identical
+      // $addToSet once per milestone — and once per milestone it tripped
+      // setUserTag's duplicate-key fallback, an N+1 write-then-catch.
+      const allTags = [...new Set(
+        goalItems.reduce((acc, goalItemData) => [...acc, ...(goalItemData.tags || [])], []),
+      )];
+      await setUserTag(email, allTags);
+
       const addOne = async (goalItemData) => {
         const {
           date,
@@ -1471,8 +1480,6 @@ const mutation = {
         if (goalRef && !isMilestone) {
           throw new Error(`When goalRef is provided, isMilestone must be true for item: ${body || 'Unknown'}`);
         }
-
-        await setUserTag(email, tags);
 
         const goalToAdd = {
           date,

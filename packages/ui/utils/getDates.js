@@ -266,9 +266,17 @@ export function periodGoalDates(period, date) {
 }
 
 export function getPeriodDate(period, date, separator = ' - ') {
+  // An item saved with a missing or unparseable date must not stamp moment's
+  // "Invalid date" across the row — drop the prefix and let the body stand alone.
+  if (!moment(date, 'DD-MM-YYYY').isValid()) {
+    return '';
+  }
+
   switch (period) {
+    // The month is part of the day label: milestone rows are listed across
+    // months, so a bare day-of-month ("08") does not identify the entry.
     case 'day':
-      return moment(date, 'DD-MM-YYYY').format('DD') + separator;
+      return moment(date, 'DD-MM-YYYY').format('DD MMMM') + separator;
     case 'week':
       return `Week ${moment(date, 'DD-MM-YYYY').week()}${separator}`;
     case 'month':

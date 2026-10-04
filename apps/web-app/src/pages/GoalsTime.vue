@@ -93,7 +93,7 @@
             >
               <template v-slot:day="{ date }">
                 <template v-for="goal in goalsMap[date]">
-                  {{goal.goalItems.length}} Goals
+                  {{goal.goalItems.length}} Goal{{goal.goalItems.length !== 1 ? 's' : ''}}
                 </template>
               </template>
             </atom-calendar>
