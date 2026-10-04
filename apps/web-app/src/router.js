@@ -18,14 +18,6 @@ export default new Router({
       meta: { focusHome: true },
     },
     {
-      // The previous dashboard, kept reachable: it is still the only screen with
-      // the skip-day switch, the agenda view for other dates and the
-      // upcoming/past task lists.
-      path: '/home/classic',
-      name: 'homeClassic',
-      component: () => import(/* webpackChunkName: "home" */'./views/Home.vue'),
-    },
-    {
       // Push-notification deep link.
       path: '/home/:routineId/:action(complete|start|build)',
       name: 'homeRoutineAction',
@@ -158,9 +150,10 @@ export default new Router({
       component: Login,
     },
     {
-      // Keep this last. Retired routes (/areas, /projects) and any mistyped
-      // URL otherwise match nothing and render a blank page. `*` only matches
-      // what every route above missed, so it cannot shadow the login at `/`.
+      // Keep this last. Retired routes (/areas, /projects, /home/classic) and
+      // any mistyped URL otherwise match nothing and render a blank page. `*`
+      // only matches what every route above missed, so it cannot shadow the
+      // login at `/`.
       path: '*',
       redirect: '/home',
     },

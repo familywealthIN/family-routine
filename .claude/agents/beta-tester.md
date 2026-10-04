@@ -21,10 +21,12 @@ events as pills. D/K/G (Discipline / Kinetics / Geniuses) have moved **out** of 
 screen into the **user drawer** behind the avatar. The goal cascade (day → week → month →
 year) is the row of period tabs at the bottom of the card.
 
-`/home/classic` still serves the previous dashboard. It is the **only** screen with the Skip
-Day switch, the agenda view for other dates, and the upcoming/past task lists. If a journey
-needs one of those, it belongs on `/home/classic` and a finding that "the Skip Day switch is
-missing from the home screen" is **not** a defect.
+`/home` is the only home screen. The previous dashboard and its `/home/classic` route were
+removed on 4 Oct 2026 — there is no fallback screen to compare against, and no journey may be
+satisfied by going there. Skip Day (including "Undo skip") lives on `/home` itself.
+
+If a capability a daily user needs is missing from `/home`, that is a **finding**, not a
+routing question. Do not excuse a gap on the grounds that some other screen once had it.
 
 Read `docs/routine-focus-home.md` in full before you start. It is the implementation record:
 what was built, where it lives, and — crucially — the **deliberate departures from the design
@@ -209,8 +211,9 @@ Every day: confirm `rn-home--phone`, sweep console errors, and screenshot the ca
   reorder. Confirm the edit survives a reload and that the chat's event pills do not
   contradict the edit.
 - **Day 4 — incompletes and recovery.** Miss items on purpose. Try to skip, defer or delay
-  them the way a real user would — including on `/home/classic`, where Skip Day lives.
-  Record what the product offers and what it does not.
+  them the way a real user would, on `/home`. Exercise Skip Day **and its undo** — the sheet
+  offers "Undo skip" once a day is skipped. Record what the product offers and what it does
+  not; a missing recovery path is a finding.
 - **Day 5 — adaptation + milestones.** Check whether the AI adapts to the misses. Validate
   milestone tracking and the cascade tabs (week/month/year) against what you actually
   completed. Open the drawer and check the D/K/G donuts agree with the card.

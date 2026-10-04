@@ -1,19 +1,20 @@
 /* eslint-env jest */
 /**
- * Both home screens must generate the day's area/project AI context.
+ * The home screen must generate the day's area/project AI context.
  *
  * The kick-off used to sit in DashBoard.vue only. Routine Focus then took over
- * `/home` and the dashboard moved to `/home/classic`, so on the screen users
- * land on the 24h cache was never filled and the AI Search Modal's "Build on
- * Next Steps" toggle could never be enabled. The mixin's own behaviour is
- * covered in mixins/__tests__/dashboardContextMixin.test.js — what is asserted
- * here is the wiring: each page registers it, and each page's tasklist watcher
- * calls it once the routine arrives.
+ * `/home`, so on the screen users land on the 24h cache was never filled and
+ * the AI Search Modal's "Build on Next Steps" toggle could never be enabled.
+ * The classic dashboard was removed on 4 Oct 2026, leaving Routine Focus as the
+ * only page this applies to. The mixin's own behaviour is covered in
+ * mixins/__tests__/dashboardContextMixin.test.js — what is asserted here is the
+ * wiring: the page registers it, and its tasklist watcher calls it once the
+ * routine arrives.
  *
  * Watchers are exercised against a minimal vm-like context (no mount), matching
  * the page test convention.
  */
-// Both pages pull the ui barrels, which transitively import third-party
+// The page pulls the ui barrels, which transitively import third-party
 // components shipped as raw .vue files in node_modules (jest won't transform
 // them). Stub them — they play no part in this wiring.
 jest.mock('vue-radar', () => ({ __esModule: true, default: {} }));
@@ -27,7 +28,6 @@ jest.mock('../../blob/config', () => ({ gauthOption: {}, graphQLUrl: '' }), { vi
 const { dashboardContextMixin } = require('../../mixins/dashboardContextMixin');
 
 const RoutineFocus = require('../RoutineFocus.vue').default;
-const DashBoard = require('../DashBoard.vue').default;
 
 const TASKLIST = [{ id: 'sw', name: 'Start Work', tags: ['area:work'] }];
 
@@ -47,7 +47,6 @@ const fire = (page, vm, tasklist) => {
 
 describe.each([
   ['RoutineFocus', RoutineFocus, { isToday: true }],
-  ['DashBoard', DashBoard, { isTodaySelected: true }],
 ])('%s area/project context', (name, page, todayFlag) => {
   it('registers the shared context mixin', () => {
     expect(page.mixins).toContain(dashboardContextMixin);

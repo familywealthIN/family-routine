@@ -22,9 +22,22 @@ Three shells, one page:
 | tablet | 600–1263 (iPad mini landscape is 1133) | 76px nav rail · header + day chips · focus card ∥ 400px chat pane |
 | desktop | ≥ 1264 | 264px sidebar with today's routine rail · header · focus card ∥ 420px chat pane |
 
-`/home/classic` still serves the previous dashboard. It remains the only screen
-with the Skip Day switch, the agenda view for other dates, and the
-upcoming/past task lists.
+`/home` is the only home screen. The previous dashboard — `pages/DashBoard.vue`
+behind `views/Home.vue` on `/home/classic` — was **removed on 4 Oct 2026**.
+
+Skip Day moved onto this screen with it (`SkipDayContainer`, which the sheet
+also uses for "Undo skip"), so nothing was lost there. Three things the old
+dashboard carried did go, deliberately: the upcoming/past task lists, the
+related-tasks timeline and the Week Goal Streak card. The other-dates agenda
+had already been unreachable — `/agenda` was commented out of the router long
+before this.
+
+Removing it also retired `MissedDayRecoveryContainer` and the
+`MissedDayRecovery` organism, `RelatedTasksTimelineContainer`, the
+`TaskActionButtons` molecule and `utils/missedDay.js`. Four containers were
+already orphaned before the removal and are untouched by it:
+`AgendaTaskListContainer`, `UpcomingPastTasksContainer`, `CurrentTaskContainer`
+and `WeekGoalStreakContainer` — nothing imports them.
 
 ## Where the code is
 
@@ -35,7 +48,7 @@ upcoming/past task lists.
 | Pure derivations — current routine, window, button states, cascade | `apps/web-app/src/utils/routineFocusModel.js` |
 | Chat data layer + intent handling | `apps/web-app/src/containers/RoutineChatContainer.vue` |
 | Chat GraphQL operations | `apps/web-app/src/composables/graphql/chatQueries.js` |
-| `passed` / `wait` sweep (shared with the classic dashboard) | `apps/web-app/src/mixins/routinePassWaitMixin.js` |
+| `passed` / `wait` sweep | `apps/web-app/src/mixins/routinePassWaitMixin.js` |
 | Sign out (shared with MobileLayout) | `apps/web-app/src/utils/signOut.js` |
 | Focus card, cascade panel, chat thread, composer, deck, sheet, top bar, drawer | `packages/ui/organisms/Routine*`, `packages/ui/organisms/UserDrawer` |
 | Routine rail / day chips, points chip | `packages/ui/molecules/RoutineRail`, `packages/ui/molecules/FocusPointsChip` |

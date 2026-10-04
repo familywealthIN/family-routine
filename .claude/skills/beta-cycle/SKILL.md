@@ -16,8 +16,11 @@ the README's worktree instruction applies to the **cloud** half only — see §3
 
 `/home` is the **Routine Focus** screen: one focused routine, its ring and checklist, and a
 chat thread underneath that replies with tappable checkboxes. D/K/G live in the user drawer.
-`/home/classic` is the previous dashboard and is still the only screen with Skip Day, the
-agenda for other dates, and the upcoming/past lists.
+Skip Day and its undo live here too.
+
+It is also the **only** home screen: the previous dashboard and its `/home/classic` route
+were removed on 4 Oct 2026. A gap on `/home` is therefore a finding in its own right — there
+is no second screen to defer the journey to.
 
 **The phone shell is the primary surface.** It is selected below 600 CSS px and renders as
 `rn-home rn-home--phone`. Read `docs/routine-focus-home.md` before the cycle starts — it
@@ -231,7 +234,7 @@ concurrent fixers own the same files. Give each one ticket: its ref, gid, title 
 | 3 | Agents, points & redeem | agent lifecycle, points ledger, `redeemClick`, slot counter |
 | 4 | Goals, milestones & cascade | plan/milestone resolvers, period tabs, completion gating |
 | 5 | Focus organisms & drawer | `packages/ui/organisms/Routine*`, `UserDrawer`, phone layout |
-| 6 | Classic dashboard & everything else | `/home/classic`, polish, copy, formatting |
+| 6 | Everything else | other routes, polish, copy, formatting |
 
 Keep a wave to about five agents. Two files draw almost every wave's fire —
 `RoutineFocus.vue` (2.3k lines) and `routineFocusModel.js` — so check that no two tickets in

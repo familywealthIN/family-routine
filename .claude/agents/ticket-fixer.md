@@ -39,7 +39,9 @@ Specifically, **do not**:
 
 ## The new home screen
 
-`/home` is the **Routine Focus** screen; `/home/classic` is the previous dashboard. Most
+`/home` is the **Routine Focus** screen, and the only home screen — the previous dashboard
+(`DashBoard.vue`, `views/Home.vue`) and its `/home/classic` route were removed on
+4 Oct 2026, so do not reintroduce either as a fallback. Most
 tickets in the current epic land on the new screen, so read `docs/routine-focus-home.md`
 before your first edit — it is the implementation record and the file map.
 
