@@ -49,7 +49,6 @@
           </v-list-tile-content>
         </v-list-tile>
         <year-goal-sidebar :yearGoals="yearGoals" />
-        <area-sidebar :areaTags="areaTags" />
         <v-list-tile v-for="item in otherItems" :key="item.title" :to="item.route">
           <v-list-tile-action>
             <v-icon>{{ item.icon }}</v-icon>
@@ -59,8 +58,6 @@
             <v-list-tile-title>{{ item.title }}</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
-
-        <project-sidebar :projectTags="projectTags" />
 
         <!-- Settings Group with Submenu -->
         <v-list class="pa-0">
@@ -147,8 +144,6 @@
 <script>
 import gql from 'graphql-tag';
 import moment from 'moment';
-import ProjectSidebar from '@routine-notes/ui/molecules/ProjectSidebar/ProjectSidebar.vue';
-import AreaSidebar from '@routine-notes/ui/molecules/AreaSidebar/AreaSidebar.vue';
 import YearGoalSidebar from '@routine-notes/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue';
 import PointsChip from '@routine-notes/ui/molecules/PointsChip/PointsChip.vue';
 import localforage from 'localforage';
@@ -165,8 +160,6 @@ import { clearData, getSessionItem } from '../token';
 export default {
   components: {
     PendingList,
-    ProjectSidebar,
-    AreaSidebar,
     YearGoalSidebar,
     TaskTimingBar,
     PointsChip,
@@ -188,8 +181,6 @@ export default {
         { title: 'Agents', icon: 'smart_toy', route: '/agents' },
       ],
       yearGoals: [],
-      projectTags: [],
-      areaTags: [],
     };
   },
   apollo: {
@@ -214,26 +205,6 @@ export default {
       update(data) {
         return data.currentYearGoals || [];
       },
-      skip() {
-        return !this.$root.$data.email;
-      },
-    },
-    projectTags: {
-      query: gql`
-        query projectTags {
-          projectTags
-        }
-      `,
-      skip() {
-        return !this.$root.$data.email;
-      },
-    },
-    areaTags: {
-      query: gql`
-        query areaTags {
-          areaTags
-        }
-      `,
       skip() {
         return !this.$root.$data.email;
       },

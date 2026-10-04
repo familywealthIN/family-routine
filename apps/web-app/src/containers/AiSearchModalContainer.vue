@@ -2,6 +2,7 @@
   <AiSearchModal
     :value="value"
     :open-mode="openMode"
+    :preselect-task-ref="taskRef"
     :goalItemsRef="goalItemsRef"
     :relatedGoalsData="relatedGoalsData"
     :routines="routines"
@@ -41,6 +42,15 @@ export default {
     openMode: {
       type: String,
       default: 'add',
+    },
+    /**
+     * Routine the opener is showing (e.g. the focused Routine Focus card).
+     * Preselected in place of the clock-current routine; empty keeps the
+     * modal's own current-routine default.
+     */
+    taskRef: {
+      type: String,
+      default: '',
     },
   },
   data() {
@@ -179,6 +189,17 @@ export default {
     },
   },
   methods: {
+    /** The modal has already closed, so a failed save needs its own notice. */
+    notifySaveFailed(goalItemData) {
+      if (typeof this.$notify !== 'function') return;
+      this.$notify({
+        title: 'Task not saved',
+        text: `"${goalItemData.body}" could not be saved. Check your connection and try again.`,
+        group: 'notify',
+        type: 'error',
+        duration: 6000,
+      });
+    },
     handleRefetchRelatedGoals(goalRef = '') {
       if (goalRef) {
         this.activeGoalRef = goalRef;
@@ -245,22 +266,25 @@ export default {
 
       // Close modal immediately
       this.$emit('input', false);
-      notifyNonCurrentTaskGoalCreation({
-        vm: this,
-        goalItemData: payload,
-        routines: this.routines,
-      });
 
       // Fire mutation in background — Apollo's optimistic response makes
-      // the new goal item appear in the list right away.
-      this.$goals.addGoalItem(payload)
+      // the new goal item appear in the list right away. Only confirm once
+      // the server has it; on failure the optimistic item rolls back, so the
+      // user must be told rather than watch it vanish.
+      return this.$goals.addGoalItem(payload)
         .then((addedItem) => {
           if (addedItem) {
             eventBus.$emit(EVENTS.TASK_CREATED, addedItem);
           }
+          notifyNonCurrentTaskGoalCreation({
+            vm: this,
+            goalItemData: payload,
+            routines: this.routines,
+          });
         })
         .catch((error) => {
           console.error('Error saving direct task:', error);
+          this.notifySaveFailed(payload);
         });
     },
   },

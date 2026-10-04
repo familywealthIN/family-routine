@@ -141,3 +141,53 @@ describe('OrganismGoalCreation off-ramp visibility', () => {
     )).toBe(false);
   });
 });
+
+describe('OrganismGoalCreation unsaved-changes indicator', () => {
+  const unsaved = (contribution, lastSavedContribution) => GoalCreation.computed
+    .hasUnsavedContribution.call({ localGoalItem: { contribution }, lastSavedContribution });
+
+  it('reads a goal with no notes (null) as saved on open', () => {
+    expect(unsaved(null, '')).toBe(false);
+    expect(unsaved(undefined, '')).toBe(false);
+  });
+
+  it('reports an edit once the notes differ from the last save', () => {
+    expect(unsaved('new notes', '')).toBe(true);
+    expect(unsaved('same', 'same')).toBe(false);
+  });
+
+  it('does not treat a null contribution as unsaved after the item loads', () => {
+    const vm = {
+      lastSavedContribution: '',
+      previousPeriod: null,
+      isInitialLoad: true,
+      markdownEditorKey: 0,
+      $emit: jest.fn(),
+      $nextTick: (fn) => fn(),
+    };
+    GoalCreation.watch.newGoalItem.call(vm, dayItem({ contribution: null }), {});
+    expect(vm.lastSavedContribution).toBe('');
+  });
+});
+
+describe('OrganismGoalCreation null item', () => {
+  it('falls back to an empty item so the template can read fields', () => {
+    const item = GoalCreation.computed.localGoalItem.get.call({ newGoalItem: null });
+    expect(item).toEqual({});
+    expect(item.period).toBeUndefined();
+  });
+
+  it('survives the item being cleared to null and back', () => {
+    const vm = {
+      lastSavedContribution: 'x',
+      previousPeriod: 'day',
+      isInitialLoad: false,
+      markdownEditorKey: 0,
+      $emit: jest.fn(),
+      $nextTick: (fn) => fn(),
+    };
+    expect(() => GoalCreation.watch.newGoalItem.call(vm, null, dayItem())).not.toThrow();
+    expect(vm.lastSavedContribution).toBe('');
+    expect(() => GoalCreation.watch.newGoalItem.call(vm, dayItem(), null)).not.toThrow();
+  });
+});

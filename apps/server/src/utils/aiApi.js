@@ -26,13 +26,26 @@ function cleanJsonResponse(text) {
   return cleaned;
 }
 
-async function fetchFromAi(prompt, isJsonMode = false) {
+/**
+ * @param {string} prompt
+ * @param {boolean} [isJsonMode]
+ * @param {{maxTokens?: ?number}} [options] `maxTokens` caps the answer. Pass it
+ *   wherever the caller's UI has a fixed shape to fill: unbounded, a model
+ *   answers a one-sentence ask with a page of prose, and this path is the paid
+ *   one, so it pays for every token of that page.
+ */
+async function fetchFromAi(prompt, isJsonMode = false, { maxTokens = null } = {}) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const openRouterApiKey = process.env.OPENROUTER_API_KEY;
 
   const fullPrompt = isJsonMode
     ? `${prompt}\n\nRespond ONLY with a valid JSON object.`
     : prompt;
+
+  const generationConfig = {
+    ...(isJsonMode && { response_mime_type: 'application/json' }),
+    ...(maxTokens && { maxOutputTokens: maxTokens }),
+  };
 
   if (geminiApiKey) {
     try {
@@ -44,7 +57,7 @@ async function fetchFromAi(prompt, isJsonMode = false) {
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: fullPrompt }] }],
-          ...(isJsonMode && { generationConfig: { response_mime_type: 'application/json' } }),
+          ...(Object.keys(generationConfig).length && { generationConfig }),
         }),
       });
 
@@ -77,6 +90,7 @@ async function fetchFromAi(prompt, isJsonMode = false) {
         body: JSON.stringify({
           model: OPENROUTER_MODEL,
           messages: [{ role: 'user', content: fullPrompt }],
+          ...(maxTokens && { max_tokens: maxTokens }),
           ...(isJsonMode && { response_format: { type: 'json_object' } }),
         }),
       });
@@ -132,33 +146,208 @@ Please respond with ONLY a JSON object in this exact format:
   }
 }
 
+/*
+ * The area/project description and next steps below feed the chat's "Before
+ * you start" card (chassis.md -> "Areas and projects live in chat"), which has
+ * a hard shape: a description of 8-18 words, and at most three verb-first
+ * fragments of 2-6 words. Each fragment is appended to the user's checklist
+ * VERBATIM when they tap Add, so a paragraph where a fragment belongs does not
+ * merely look wrong - it puts a paragraph on the checklist.
+ *
+ * Models drift back to prose and numbered lists given the slightest slack, so
+ * the shape is enforced below, after the fact, rather than asked for in the
+ * prompt and trusted.
+ */
+
+// Not 40: these models spend output tokens on reasoning before the answer, and
+// a budget too tight returns nothing and burns the paid fallback on a retry.
+// The cap only has to stop a runaway essay; the shape is enforced in code.
+const CARD_MAX_TOKENS = 400;
+// The design asks 8-18 words. Past 24 it has stopped being a commitment and
+// started being prose.
+const MAX_DESC_WORDS = 24;
+// The design's own descriptions are two clipped clauses ("Product +
+// engineering. Mornings for the hardest thing."), so a strict first-sentence
+// cut would mangle the register. The word budget is the real guard.
+const MAX_DESC_SENTENCES = 2;
+const MAX_NEXT_STEPS = 3;
+// The design asks 2-6 words; one word of slack keeps a near miss rather than
+// throwing it away, and is still nowhere near a sentence.
+const MAX_STEP_WORDS = 7;
+// The Add pill renders the fragment on one line.
+const MAX_STEP_CHARS = 60;
+
+const SUMMARY_FALLBACK = 'Unable to generate summary at this time. Please try again later.';
+const NEXT_STEPS_FALLBACK = 'Unable to generate next steps at this time. Please try again later.';
+
+const LIST_MARKER = /^(?:[-*>•–—#]+|\(?\d+[.)])\s*/;
+
+/**
+ * One line of model output as the card would have to show it: no list marker,
+ * no markdown emphasis, no wrapping quotes, single-spaced.
+ */
+function stripMarkers(line) {
+  return String(line || '')
+    .trim()
+    .replace(LIST_MARKER, '')
+    // "Step 1: clear the inbox" - the label is the model talking about the
+    // answer, not part of the task.
+    .replace(/^(?:step\s*\d*|description|summary|commitment|next steps?)\s*:\s*/i, '')
+    // A model likes to bold the verb or quote the whole fragment. Both would
+    // land on the checklist as literal punctuation.
+    .replace(/[*`]/g, '')
+    .replace(/^["“‘]+/, '')
+    .replace(/["”]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function wordCount(text) {
+  return String(text || '').split(' ').filter(Boolean).length;
+}
+
+/** The lines of a response that could stand on their own in the card. */
+function contentLines(raw) {
+  return String(raw || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    // "Next steps:" / "Here are three actions:" - a model loves to announce
+    // its answer, and that announcement is not a task.
+    .filter((line) => line && !line.endsWith(':'))
+    .map(stripMarkers)
+    .filter(Boolean);
+}
+
+/**
+ * The standing commitment as one short line, or '' when the model answered
+ * with nothing the card can show.
+ */
+function normaliseDescription(raw) {
+  const first = contentLines(raw)[0];
+  if (!first) return '';
+
+  const sentences = first.match(/[^.!?]+[.!?]*/g) || [first];
+  let kept = '';
+  for (let i = 0; i < sentences.length && i < MAX_DESC_SENTENCES; i += 1) {
+    const candidate = kept + sentences[i];
+    // The first clause is always kept; a second one only if it stays in budget.
+    if (i > 0 && wordCount(candidate.trim()) > MAX_DESC_WORDS) break;
+    kept = candidate;
+  }
+
+  const text = kept.trim();
+  const words = text.split(' ').filter(Boolean);
+  if (words.length <= MAX_DESC_WORDS) return text;
+
+  // A single sentence can be a paragraph by itself. Clip it rather than drop
+  // it: a blank card is worse than a clipped commitment, and unlike a next
+  // step this string is never appended to anything.
+  return `${words.slice(0, MAX_DESC_WORDS).join(' ').replace(/[,;:.]+$/, '')}...`;
+}
+
+/**
+ * At most three checklist-ready fragments. Accepts either the newline list the
+ * prompt asks for or an array, since a model given a list shape sometimes
+ * answers in JSON anyway.
+ *
+ * @returns {string[]} Possibly empty - the caller decides what a blank card says.
+ */
+function normaliseNextSteps(raw) {
+  const lines = Array.isArray(raw)
+    ? raw
+      .map((entry) => stripMarkers(typeof entry === 'string' ? entry : entry && entry.body))
+      .filter(Boolean)
+    : contentLines(raw);
+
+  const seen = new Set();
+
+  return lines
+    // Trailing punctuation reads as a sentence; the pill has to read as a task.
+    // One pass over the whole trailing run, because a model closes a quoted
+    // step after the full stop (`"Log shoe mileage";`).
+    .map((line) => line.replace(/[\s.,;:!"”]+$/, ''))
+    .filter((line) => {
+      if (!/[a-z0-9]/i.test(line)) return false;
+      // A sentence cannot be shortened into a fragment safely here, and
+      // appending one to the checklist is exactly the failure this guard
+      // exists to prevent - so drop it rather than pass it through.
+      if (wordCount(line) > MAX_STEP_WORDS || line.length > MAX_STEP_CHARS) return false;
+      // A repeated suggestion would become two identical checklist items.
+      const key = line.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, MAX_NEXT_STEPS);
+}
+
 async function getSummaryFromGoalItems(goalItems) {
-  const prompt = `Summarize these goal items in a concise paragraph:
-    ${JSON.stringify(goalItems)}
-    
-    Provide a clear, actionable summary that highlights the main objectives and themes.`;
+  const prompt = `You write the description line of an area or project in Routine Notes.
+
+These are its goal items:
+${JSON.stringify(goalItems)}
+
+Write the standing commitment this area or project represents - what it always means, not what happened this week.
+Rules:
+- 8 to 18 words in total, at most two short clauses
+- plain language, no markdown, no list, no quotes, no preamble, no heading
+Examples of the exact register:
+Product + engineering. Mornings for the hardest thing.
+Race on 15 Nov. Build to 16 km long runs by end of October.
+
+Reply with that one line and nothing else.`;
 
   try {
-    return await fetchFromAi(prompt);
+    const raw = await fetchFromAi(prompt, false, { maxTokens: CARD_MAX_TOKENS });
+    return normaliseDescription(raw) || SUMMARY_FALLBACK;
   } catch (error) {
     console.error('Error in getSummaryFromGoalItems:', error);
-    return 'Unable to generate summary at this time. Please try again later.';
+    return SUMMARY_FALLBACK;
+  }
+}
+
+/**
+ * The next steps as the card consumes them: up to three fragments, each ready
+ * to be appended to the checklist verbatim.
+ *
+ * @returns {Promise<string[]>} Empty when the model is unavailable or answered
+ *   with prose - deliberately empty rather than apologetic copy, because
+ *   anything returned here can end up on a checklist.
+ */
+async function getNextStepsListFromGoalItems(goalItems) {
+  const prompt = `You write the NEXT STEPS of an area or project in Routine Notes.
+
+These are its goal items:
+${JSON.stringify(goalItems)}
+
+Give at most 3 next steps, one per line.
+Rules for every step:
+- verb first, 2 to 6 words, a fragment and never a sentence
+- no numbering, no bullets, no markdown, no trailing full stop
+- it is appended to the user's checklist exactly as written, so it must read as a task on its own
+Examples of the exact register:
+Clear inbox to zero
+Log shoe mileage
+Outline sections 2-3
+
+Reply with those lines and nothing else.`;
+
+  try {
+    const raw = await fetchFromAi(prompt, false, { maxTokens: CARD_MAX_TOKENS });
+    return normaliseNextSteps(raw);
+  } catch (error) {
+    console.error('Error in getNextStepsFromGoalItems:', error);
+    return [];
   }
 }
 
 async function getNextStepsFromGoalItems(goalItems) {
-  const prompt = `Based on these goal items, suggest 3-5 specific next action steps to achieve these goals:
-    ${JSON.stringify(goalItems)}
-    
-    Format your response as a numbered list with clear, actionable steps.
-    Focus on practical actions the user can take immediately.`;
-
-  try {
-    return await fetchFromAi(prompt);
-  } catch (error) {
-    console.error('Error in getNextStepsFromGoalItems:', error);
-    return 'Unable to generate next steps at this time. Please try again later.';
-  }
+  const steps = await getNextStepsListFromGoalItems(goalItems);
+  if (!steps.length) return NEXT_STEPS_FALLBACK;
+  // Blank-line separated, not newline: the dashboard renders this string as
+  // markdown, which collapses a single newline and would run the three
+  // fragments together into one line.
+  return steps.join('\n\n');
 }
 
 /**
@@ -517,6 +706,9 @@ Guidance:
 module.exports = {
   getSummaryFromGoalItems,
   getNextStepsFromGoalItems,
+  getNextStepsListFromGoalItems,
+  normaliseDescription,
+  normaliseNextSteps,
   generateMilestonePlan,
   extractTaskFromNaturalLanguage,
   enhanceRoutineItemWithAI,

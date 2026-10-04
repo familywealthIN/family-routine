@@ -1,615 +1,663 @@
-<script>
-/* eslint-disable max-len */
-</script>
 <template>
-  <container-box
-    :isLoading="$apollo.queries.userItems.loading
-      || $apollo.queries.userDetails.loading" >
-    <atom-card
-      dark
-      flat
-      class="image-card"
-    >
-      <atom-button
-        absolute
-        bottom
-        color="info"
-        right
-        fab
-        :disabled="userItems && userItems.length > 10"
-        @click="sendInviteDialog = true"
+  <app-shell-container
+    class="rn-groups"
+    active="groups"
+    title="Group"
+    :subtitle="subLabel"
+    @navigate="onNavigate"
+    @sign-out="onSignOut"
+  >
+    <template v-slot:header-actions>
+      <div
+        class="rn-groups__invite-btn"
+        :class="{ 'rn-groups__invite-btn--full': isFull || loadFailed }"
+        title="Invite member"
+        data-testid="groups-invite-button"
+        @click="openInvite"
       >
-        <atom-icon>add</atom-icon>
-      </atom-button>
-      <atom-img
-        src="https://cdn.vuetifyjs.com/images/cards/forest.jpg"
-        gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
-        class="image-card-img"
-      >
-        <atom-container fill-height>
-          <atom-layout align-center>
-            <strong class="display-4 font-weight-regular mr-4">{{(userItems && userItems.length) || 0}}</strong>
-            <atom-layout column justify-end>
-              <div class="headline font-weight-light">Members</div>
-            </atom-layout>
-          </atom-layout>
-        </atom-container>
-      </atom-img>
-    </atom-card>
-    <atom-card-text class="image-card-page py-0 px-0">
-      <atom-dialog v-model="sendInviteDialog" persistent max-width="600px">
-        <atom-card>
-          <atom-card-title>
-            <span class="headline">Invite User</span>
-          </atom-card-title>
-          <atom-card-text>
-            <atom-container grid-list-md>
-              <atom-layout wrap>
-                <atom-flex xs12>
-                  <atom-form
-                    ref="sendInviteForm"
-                    v-model="valid"
-                    lazy-validation
-                  >
-                    <atom-text-field
-                      label="Email"
-                      v-model="invitedEmail"
-                      :rules="emailRules"
-                      required>
-                    </atom-text-field>
-                  </atom-form>
-                </atom-flex>
-              </atom-layout>
-            </atom-container>
-          </atom-card-text>
-          <atom-card-actions>
-            <atom-spacer></atom-spacer>
-            <atom-button color="blue darken-1" flat @click="sendInviteDialog = false">Close</atom-button>
-            <atom-button
-              color="primary"
-              :loading="buttonLoading"
-              @click="sendInviteSubmit">
-              Invite
-            </atom-button>
-          </atom-card-actions>
-        </atom-card>
-      </atom-dialog>
-      <atom-list v-if="userItems && userItems.length" three-line>
-        <atom-subheader>Members</atom-subheader>
-        <template v-for="(userItem, index) in userItems">
+        <i class="rn-mi rn-groups__invite-glyph">person_add</i>Invite
+      </div>
+    </template>
 
-          <atom-divider :key="userItem.id" v-if="index !== 0"></atom-divider>
+    <!-- The root read: who I am, which group, who invited me. -->
+    <group-identity-container
+      ref="identity"
+      @identity="onIdentity"
+      @failed="onIdentityFailed"
+    />
+    <!-- The invites you sent that are still open, and the unit that withdraws one. -->
+    <group-pending-invites-container ref="pendingInvites" @pending="onPending" />
+    <group-invite-cancel-container ref="cancelInvite" />
 
-          <atom-list-tile
-            :key="userItem.id"
-            avatar
-            @click="groupDetailsClick(userItem.email)"
-          >
-            <atom-list-tile-avatar>
-              <img v-bind:src="userItem.picture || './img/default-user.png'">
-            </atom-list-tile-avatar>
+    <div class="rn-groups__layout" :class="`rn-groups__layout--${shell}`" data-testid="groups-page">
+      <div class="rn-groups__list-col">
+        <group-join-request-container
+          v-if="inviterEmail"
+          :inviter-email="inviterEmail"
+          :in-group="!!groupId"
+          @accepted="onInviteAccepted"
+          @declined="onInviteDeclined"
+          @failed="onInviteResponseFailed"
+        />
 
-            <atom-list-tile-content>
-              <atom-list-tile-title v-html="userItem.name"></atom-list-tile-title>
-              <atom-list-tile-sub-title>
-                <span class="pt-2"
-                  style="display: flex;align-items: center;justify-content: center;"
-                >
-                  <template
-                    v-for="(score, index)
-                    in getGroupUserSevenDayScore(userItem.email)"
-                  >
-                    <atom-avatar :key="String(userItem.email) + String(score.date)" size="24" :color="getButtonColor(score.count)">
-                      <atom-icon color="white" size="16">{{getButtonIcon(score.count)}}</atom-icon>
-                    </atom-avatar>
-                    <atom-divider :key="String(userItem.email) + String(score.date)" v-if="index !== 6"></atom-divider>
-                  </template>
-                </span>
-              </atom-list-tile-sub-title>
-            </atom-list-tile-content>
-          </atom-list-tile>
-        </template>
-      </atom-list>
-      <p v-else class="pt-3 pb-3 text-xs-center">
-        No Group Members have been added.
-      </p>
-      <atom-button
-        v-if="groupId"
-        color="primary"
-        flat
-        text
-        @click="leaveGroup"
-      >
-        Leave Group
-      </atom-button>
-    </atom-card-text>
-    <atom-dialog
-      v-model="userInviteDialog"
-      max-width="290"
+        <!-- With the root read failed, membership is unknown: no member rows or
+             pulse built on a guess (they drew 0% today / a 1-day streak). -->
+        <load-error-state
+          v-if="loadFailed"
+          class="rn-groups__load-error"
+          message="Couldn't load your group."
+          data-testid="groups-load-error"
+          @retry="refreshIdentity"
+        />
+
+        <group-pulse-container
+          v-if="!loadFailed"
+          :members="members"
+          :stats="memberStats"
+          :my-email="myEmail"
+        />
+
+        <group-members-container
+          v-if="!loadFailed"
+          :group-id="groupId"
+          :me="me"
+          :pending="pending"
+          :stats="memberStats"
+          :selected-email="selectedEmail"
+          :today="today"
+          :now-minutes="nowMinutes"
+          :full="isFull"
+          @members="onMembers"
+          @stats="onMemberStats"
+          @open="openMember"
+          @invite="openInvite"
+          @cancel-invite="cancelInvite"
+        />
+
+        <div
+          v-if="groupId"
+          class="rn-groups__leave"
+          data-testid="groups-leave-button"
+          @click="sheet = 'leave'"
+        >
+          <i class="rn-mi rn-groups__leave-glyph">logout</i>Leave group
+        </div>
+      </div>
+
+      <!-- Tablet / desktop: the detail panel is permanently beside the list. -->
+      <div v-if="!isPhone" class="rn-groups__detail-col" data-testid="groups-detail-pane">
+        <div class="rn-groups__panel">
+          <group-member-week-container
+            v-if="selectedMember && !loadFailed"
+            :key="selectedMember.email"
+            :group-id="groupId"
+            :email="selectedMember.email"
+            :name="selectedMember.name"
+            :picture="selectedMember.picture"
+            :you="isMe(selectedMember)"
+            :today="today"
+            :now-minutes="nowMinutes"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone: the same panel, in a near-full-height sheet. -->
+    <responsive-sheet
+      v-if="isPhone"
+      class="rn-groups__member-sheet"
+      :open="sheet === 'member' && !!selectedMember"
+      shell="phone"
+      :closable="false"
+      data-testid="groups-detail-sheet"
+      @close="closeSheet"
     >
-      <atom-card>
-        <atom-card-title class="headline">Join Group</atom-card-title>
+      <group-member-week-container
+        v-if="selectedMember && !loadFailed"
+        :key="selectedMember.email"
+        :group-id="groupId"
+        :email="selectedMember.email"
+        :name="selectedMember.name"
+        :picture="selectedMember.picture"
+        :you="isMe(selectedMember)"
+        :today="today"
+        :now-minutes="nowMinutes"
+        closable
+        @close="closeSheet"
+      />
+    </responsive-sheet>
 
-        <atom-card-text>
-          User {{inviterEmail}} has invited you to join their group.
-          Do you want to join?
-        </atom-card-text>
+    <group-invite-container
+      :open="sheet === 'invite'"
+      :shell="shell"
+      :taken="takenEmails"
+      :slots-left="slotsRemaining"
+      :full="isFull"
+      @sent="onInviteSent"
+      @failed="onInviteFailed"
+      @close="closeSheet"
+    />
 
-        <atom-card-actions>
-          <atom-spacer></atom-spacer>
+    <group-leave-container
+      :open="sheet === 'leave'"
+      :shell="shell"
+      :others-names="othersNames"
+      @left="onLeft"
+      @failed="onLeaveFailed"
+      @close="closeSheet"
+    />
 
-          <atom-button
-            color="primary"
-            flat
-            text
-            @click="declineInviteSubmit"
-          >
-            Decline
-          </atom-button>
-
-          <atom-button
-            color="primary"
-            text
-            :loading="buttonLoading"
-            @click="acceptInviteSubmit"
-          >
-            Accept
-          </atom-button>
-        </atom-card-actions>
-      </atom-card>
-    </atom-dialog>
-    <atom-dialog
-      v-model="groupDetailsDialog"
-      fullscreen
-      hide-overlay
-      transition="dialog-bottom-transition"
-    >
-      <atom-card>
-        <atom-toolbar dark color="primary">
-          <atom-button icon dark @click="groupDetailsDialog = false">
-            <atom-icon>close</atom-icon>
-          </atom-button>
-          <atom-toolbar-title>{{ settingsName || 'Settings'}}</atom-toolbar-title>
-          <atom-spacer></atom-spacer>
-        </atom-toolbar>
-        <family-user-history :routines="groupDetail" />
-      </atom-card>
-    </atom-dialog>
-  </container-box>
+    <app-toast
+      :shell="shell"
+      :title="toast.title"
+      :sub="toast.sub"
+      :icon="toast.icon"
+      :icon-color="toast.color"
+      :seq="toast.seq"
+      @done="clearToast"
+    />
+  </app-shell-container>
 </template>
 
 <script>
-import gql from 'graphql-tag';
-
-import FamilyUserHistory from '@routine-notes/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue';
-import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
+/**
+ * Groups — "today together" (`packages/design/Groups.dc.html`).
+ *
+ * The forest stock photo and its member count are gone; in their place a group
+ * pulse, member rows that say what each person is doing right now, and a week
+ * grid one tap away. Leaving the group asks in a sheet, never a browser
+ * `confirm()`.
+ *
+ * ## No GraphQL lives here
+ *
+ * The page composes containers and owns layout, the one clock, and the overlay
+ * that is open (ARCHITECTURE.md §1). Every read and write is a container:
+ * `AppShellContainer` (the chassis shell plus the header's points read),
+ * `GroupIdentityContainer` (who/which group), `GroupMembersContainer` (the
+ * roster), one `GroupMemberRowContainer` per member, `GroupMemberWeekContainer`
+ * (the selected week), and the four write containers — invite, leave, accept,
+ * decline.
+ *
+ * What the page does own is **cross-container orchestration** (§6): accepting an
+ * invite changes which group every container below reads, so the page clears the
+ * derived state and asks the identity container to re-read.
+ *
+ * ## Pending invites come from the server
+ *
+ * `sendInvite` stamps `inviterEmail` on the invitee; `pendingInvites` lists the
+ * invites *you* sent that are still open (`GroupPendingInvitesContainer`), and
+ * `cancelInvite` withdraws one (`GroupInviteCancelContainer`). A declined or
+ * cancelled invite clears the invitee's `inviterEmail`, so it drops out and
+ * frees its slot on every device. The 10-member cap counts them, exactly as the
+ * design says: `slots = 10 - (members + pending)`.
+ */
+import AppToast from '@routine-notes/ui/molecules/AppToast/AppToast.vue';
+import ResponsiveSheet from '@routine-notes/ui/molecules/ResponsiveSheet/ResponsiveSheet.vue';
+import LoadErrorState from '@routine-notes/ui/molecules/LoadErrorState/LoadErrorState.vue';
 import {
-  AtomAvatar,
-  AtomButton,
-  AtomCard,
-  AtomCardActions,
-  AtomCardText,
-  AtomCardTitle,
-  AtomContainer,
-  AtomDialog,
-  AtomDivider,
-  AtomFlex,
-  AtomForm,
-  AtomIcon,
-  AtomImg,
-  AtomLayout,
-  AtomList,
-  AtomListTile,
-  AtomListTileAvatar,
-  AtomListTileContent,
-  AtomListTileSubTitle,
-  AtomListTileTitle,
-  AtomSpacer,
-  AtomSubheader,
-  AtomTextField,
-  AtomToolbar,
-  AtomToolbarTitle,
-} from '@routine-notes/ui/atoms';
+  MEMBER_CAP, FULL_LABEL, slotsLeft, isGroupFull,
+} from '@routine-notes/ui/constants/groups';
+import { resolveShell } from '@routine-notes/ui/constants/navigation';
+import moment from 'moment';
+import { signOut } from '../utils/signOut';
+import { DAY_FORMAT, otherNames } from '../utils/groupModel';
+import AppShellContainer from '../containers/AppShellContainer.vue';
+import GroupIdentityContainer from '../containers/GroupIdentityContainer.vue';
+import GroupPulseContainer from '../containers/GroupPulseContainer.vue';
+import GroupMembersContainer from '../containers/GroupMembersContainer.vue';
+import GroupMemberWeekContainer from '../containers/GroupMemberWeekContainer.vue';
+import GroupInviteContainer from '../containers/GroupInviteContainer.vue';
+import GroupLeaveContainer from '../containers/GroupLeaveContainer.vue';
+import GroupJoinRequestContainer from '../containers/GroupJoinRequestContainer.vue';
+import GroupPendingInvitesContainer from '../containers/GroupPendingInvitesContainer.vue';
+import GroupInviteCancelContainer from '../containers/GroupInviteCancelContainer.vue';
+
+/** The clock behind "In Start Work" / "12 min ago". A minute is granular enough. */
+const CLOCK_MS = 60000;
+
+const lower = (email) => String(email || '').toLowerCase();
 
 export default {
+  name: 'FamilyRoutine',
   components: {
-    FamilyUserHistory,
-    ContainerBox,
-    AtomAvatar,
-    AtomButton,
-    AtomCard,
-    AtomCardActions,
-    AtomCardText,
-    AtomCardTitle,
-    AtomContainer,
-    AtomDialog,
-    AtomDivider,
-    AtomFlex,
-    AtomForm,
-    AtomIcon,
-    AtomImg,
-    AtomLayout,
-    AtomList,
-    AtomListTile,
-    AtomListTileAvatar,
-    AtomListTileContent,
-    AtomListTileSubTitle,
-    AtomListTileTitle,
-    AtomSpacer,
-    AtomSubheader,
-    AtomTextField,
-    AtomToolbar,
-    AtomToolbarTitle,
+    LoadErrorState,
+    AppShellContainer,
+    AppToast,
+    ResponsiveSheet,
+    GroupIdentityContainer,
+    GroupPulseContainer,
+    GroupMembersContainer,
+    GroupMemberWeekContainer,
+    GroupInviteContainer,
+    GroupLeaveContainer,
+    GroupJoinRequestContainer,
+    GroupPendingInvitesContainer,
+    GroupInviteCancelContainer,
   },
-  apollo: {
-    userItems: {
-      query: gql`
-        query getUsersByGroupId($groupId: String!) {
-          getUsersByGroupId(groupId: $groupId) {
-            name
-            email
-            picture
-          }
-        }
-      `,
-      variables() {
-        return {
-          groupId: this.groupId,
-        };
+  data() {
+    const now = moment();
+    return {
+      /** From GroupIdentityContainer: `{ me, groupId, inviterEmail, loaded }`. */
+      identity: {
+        me: {}, groupId: '', inviterEmail: '', loaded: false,
       },
-      update({ getUsersByGroupId }) {
-        this.groupDetails = [];
-        if(Array.isArray(getUsersByGroupId)) {
-          getUsersByGroupId.forEach((userItem) => this.getGroupDetails(userItem.email));
-        }
-        return getUsersByGroupId || [];
+      /** The identity read failed and nothing is known about your group. */
+      identityFailed: false,
+      today: now.format(DAY_FORMAT),
+      nowMinutes: now.hours() * 60 + now.minutes(),
+      clockId: null,
+      /** `{ name, email, picture }` per member, reported by the members container. */
+      members: [],
+      /** email -> row stats, reported by each member row container. */
+      memberStats: {},
+      /** `{ id, email, name, picture }` per open sent invite, from the server. */
+      pending: [],
+      /** Lower-cased emails whose `cancelInvite` is in flight. */
+      cancelling: [],
+      selectedEmail: '',
+      /** 'invite' | 'leave' | 'member' | null — one overlay at a time. */
+      sheet: null,
+      toast: {
+        title: '', sub: '', icon: 'check_circle', color: '#4CAF50', seq: 0,
       },
-      skip() {
-        return this.skipQuery;
-      },
+    };
+  },
+  computed: {
+    shell() {
+      return resolveShell(this.$vuetify && this.$vuetify.breakpoint);
     },
-    userDetails: {
-      query: gql`
-        query showInvite {
-          showInvite {
-            name
-            picture
-            groupId
-            inviterEmail
-          }
-        }
-      `,
-      update({ showInvite }) {
-        if (showInvite && showInvite.groupId) {
-          this.triggerUserItems(showInvite.groupId);
-        }
-        if (showInvite && showInvite.inviterEmail) {
-          this.showUserInviteDialog(showInvite.inviterEmail);
-        }
-      },
-      error(error) {
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occured',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
-      },
+    isPhone() {
+      return this.shell === 'phone';
+    },
+    /** The server's record wins; `$root.$data` covers the first paint. */
+    me() {
+      const root = this.$root.$data || {};
+      const user = this.identity.me || {};
+      return {
+        name: user.name || root.name || '',
+        email: user.email || root.email || '',
+        picture: user.picture || root.picture || '',
+      };
+    },
+    myEmail() {
+      return this.me.email;
+    },
+    groupId() {
+      return this.identity.groupId;
+    },
+    inviterEmail() {
+      return this.identity.inviterEmail;
+    },
+    slotsRemaining() {
+      return slotsLeft(this.members.length, this.pending.length);
+    },
+    isFull() {
+      return isGroupFull(this.members.length, this.pending.length);
+    },
+    /**
+     * The root read failed with nothing cached: whether you are in a group, and
+     * with whom, is unknown — so the page must not claim "1 member · 9 spots
+     * left" or offer an invite built on that guess.
+     */
+    loadFailed() {
+      return this.identityFailed && !this.identity.loaded;
+    },
+    subLabel() {
+      if (this.loadFailed) return 'Could not load your group';
+      if (this.identity.loaded && !this.groupId) return 'You’re not in a group';
+      if (this.isFull) return FULL_LABEL;
+      const count = this.members.length;
+      const slots = this.slotsRemaining;
+      return `${count} member${count === 1 ? '' : 's'} · ${slots} spot${slots === 1 ? '' : 's'} left`;
+    },
+    /** Already a member or already invited — the invite form's duplicate check. */
+    takenEmails() {
+      return this.members.map((member) => member.email)
+        .concat(this.pending.map((invite) => invite.email));
+    },
+    othersNames() {
+      return otherNames(this.members, this.myEmail);
+    },
+    selectedMember() {
+      if (!this.members.length) return null;
+      const chosen = this.members.find((member) => member.email === this.selectedEmail);
+      if (chosen) return chosen;
+      // Default to someone else's week — your own day is the Home screen's job.
+      return this.members.find((member) => member.email !== this.myEmail) || this.members[0];
     },
   },
-  data: () => ({
-    valid: true,
-    skipQuery: true,
-    sendInviteDialog: false,
-    groupDetailsDialog: false,
-    userInviteDialog: false,
-    buttonLoading: false,
-    invitedEmail: '',
-    inviterEmail: '',
-    settingsName: '',
-    groupId: '',
-    emailRules: [
-      (v) => !!v || 'E-mail is required',
-      (v) => /.+@.+/.test(v) || 'E-mail must be valid',
-    ],
-    groupDetail: [],
-    groupDetails: [],
-  }),
+  created() {
+    this.clockId = setInterval(this.tickClock, CLOCK_MS);
+  },
+  beforeDestroy() {
+    if (this.clockId) clearInterval(this.clockId);
+  },
   methods: {
-    triggerUserItems(groupId) {
-      this.groupId = groupId;
-      this.$apollo.queries.userItems.skip = false;
-      this.$apollo.queries.userItems.refetch();
+    // ---- shell -------------------------------------------------------------
+    onNavigate(key, item) {
+      const route = item && item.route;
+      if (!route || (this.$route && this.$route.path === route)) return;
+      this.$router.push(route).catch(() => {});
     },
-    showUserInviteDialog(inviterEmail) {
-      this.inviterEmail = inviterEmail;
-      this.userInviteDialog = true;
+    onSignOut() {
+      signOut(this);
     },
-    groupDetailsClick(email) {
-      this.settingsName = this.getNameByEmail(email);
-      this.groupDetail = this.groupDetails.find((userDetail) => userDetail[0].email === email);
-      this.groupDetailsDialog = true;
-    },
-    getNameByEmail(email) {
-      const currentUserItem = this.userItems.find((userItem) => userItem.email === email);
-      return currentUserItem.name;
-    },
-    sendInviteSubmit() {
-      if (this.$refs.sendInviteForm.validate()) {
-        this.buttonLoading = true;
-        this.sendInvite();
-      }
-    },
-    acceptInviteSubmit() {
-      this.buttonLoading = true;
-      this.acceptInvite();
-    },
-    declineInviteSubmit() {
-      this.declineInvite();
-      this.userInviteDialog = false;
-    },
-    sendInvite() {
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation sendInvite(
-            $invitedEmail: String!
-          ) {
-            sendInvite(
-              invitedEmail: $invitedEmail
-            ) {
-              email
-            }
-          }
-        `,
-        variables: {
-          invitedEmail: this.invitedEmail,
-        },
-        update: () => {
-          this.buttonLoading = false;
-          this.sendInviteDialog = false;
-          this.$notify({
-            title: 'Success',
-            text: `Invitation sent to ${this.invitedEmail}`,
-            group: 'notify',
-            duration: 3000,
-          });
-          this.invitedEmail = '';
-        },
-      }).catch((error) => {
-        this.buttonLoading = false;
-        this.$notify({
-          title: 'Error',
-          text: 'Unable to find the User',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
-      });
-    },
-    acceptInvite() {
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation acceptInvite(
-            $inviterEmail: String!
-          ) {
-            acceptInvite(
-              inviterEmail: $inviterEmail
-            ) {
-              email
-              groupId
-            }
-          }
-        `,
-        variables: {
-          inviterEmail: this.inviterEmail,
-        },
-        update: (store, { data: { acceptInvite } }) => {
-          this.buttonLoading = false;
-          this.userInviteDialog = false;
-          this.$notify({
-            title: 'Success',
-            text: 'You joined your special group',
-            group: 'notify',
-            duration: 3000,
-          });
-          this.inviterEmail = '';
-          this.triggerUserItems(acceptInvite.groupId);
-        },
-      }).catch((error) => {
-        this.buttonLoading = false;
-        this.$notify({
-          title: 'Error',
-          text: 'Unable to Join the Group',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
-      });
-    },
-    declineInvite() {
-      return this.$apollo.mutate({
-        mutation: gql`
-          mutation declineInvite {
-            declineInvite {
-              email
-              groupId
-            }
-          }
-        `,
-        update: () => {
-          this.inviterEmail = '';
-        },
-      }).catch((error) => {
-        this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-      });
-    },
-    leaveGroup() {
-      if (confirm('Do you want to leave the Group?')) {
-        return this.$apollo.mutate({
-          mutation: gql`
-            mutation leaveGroup {
-              leaveGroup {
-                email
-                groupId
-              }
-            }
-          `,
-          update: () => {
-            this.inviterEmail = '';
-            this.groupId = '';
-            this.userItems = [];
-          },
-        }).catch((error) => {
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
-      }
-    },
-    getGroupDetails(email) {
-      this.$apollo.addSmartQuery('groupDetail', {
-        query: gql`
-        query routinesByGroupEmail($groupId: String!, $email: String!) {
-          routinesByGroupEmail(groupId: $groupId, email: $email) {
-            id
-            date
-            email
-            tasklist {
-              id
-              name
-              time
-              points
-              ticked
-              passed
-              wait
-            }
-          }
-        }
-      `,
-        variables() {
-          return {
-            groupId: this.groupId,
-            email,
-          };
-        },
-        update({ routinesByGroupEmail }) {
-          this.groupDetails.push(routinesByGroupEmail);
-          return routinesByGroupEmail;
-        },
-      });
-    },
-    getButtonIcon(score) {
-      if (score >= 70) {
-        return 'check';
-      } if (score > 33 && score < 70) {
-        return 'warning';
-      } if (score <= 33) {
-        return 'close';
-      }
-      return 'check';
-    },
-    getButtonColor(score) {
-      if (score >= 70) {
-        return 'success';
-      } if (score > 33 && score < 70) {
-        return 'warning';
-      } if (score <= 33) {
-        return 'error';
-      }
-      return 'success';
-    },
-    getGroupUserSevenDayScore(email) {
-      const scores = [];
-      // eslint-disable-next-line max-len
-      const currentGroupUserDays = this.groupDetails.find((userDetail) => userDetail[0] && userDetail[0].email === email);
 
-      if(Array.isArray(currentGroupUserDays)) {
-        currentGroupUserDays.forEach((currentGroupUserDay) => {
-          scores.push({
-            date: currentGroupUserDay.date,
-            count: this.countTotal(currentGroupUserDay.tasklist)
-          });
-        });
-      }
-
-      return scores;
+    // ---- clock -------------------------------------------------------------
+    tickClock() {
+      const now = moment();
+      this.nowMinutes = now.hours() * 60 + now.minutes();
+      const date = now.format(DAY_FORMAT);
+      // Midnight rollover: every derivation keys off `today`, so moving it IS the
+      // whole of this page's new-day reset.
+      if (date !== this.today) this.today = date;
     },
-    countTotal(tasklist) {
-      return tasklist.reduce((total, num) => {
-        if (num.ticked) {
-          return total + num.points;
+
+    // ---- container feedback ------------------------------------------------
+    onIdentity(identity) {
+      this.identity = identity;
+      if (identity && identity.loaded) this.identityFailed = false;
+    },
+    onIdentityFailed() {
+      this.identityFailed = true;
+      this.showToast({
+        title: 'Could not load your group',
+        sub: 'Check your connection and try again',
+        icon: 'cloud_off',
+        color: '#ef9a9a',
+      });
+    },
+    onMembers(members) {
+      this.members = members || [];
+      this.syncPending();
+    },
+    onMemberStats(stats) {
+      if (!stats || !stats.email) return;
+      // Replace the map: a new key on an existing object is not reactive in Vue 2.
+      this.memberStats = { ...this.memberStats, [stats.email]: stats };
+    },
+
+    // ---- member detail -----------------------------------------------------
+    openMember(email) {
+      this.selectedEmail = email;
+      if (this.isPhone) this.sheet = 'member';
+    },
+    closeSheet() {
+      this.sheet = null;
+    },
+
+    // ---- invites -----------------------------------------------------------
+    onPending(list) {
+      this.pending = list || [];
+      this.syncPending();
+    },
+    /** Drop any invite whose person has since joined (the roster may land first). */
+    syncPending() {
+      const emails = this.members.map((member) => lower(member.email));
+      const kept = this.pending.filter((invite) => emails.indexOf(lower(invite.email)) === -1);
+      if (kept.length !== this.pending.length) this.pending = kept;
+    },
+    refreshPending() {
+      const { pendingInvites } = this.$refs;
+      if (pendingInvites && pendingInvites.refresh) pendingInvites.refresh();
+    },
+    openInvite() {
+      if (this.loadFailed) {
+        // Nothing to invite into yet: say so, and try the read again.
+        this.showToast({
+          title: 'Could not load your group',
+          sub: 'Retrying — try inviting again in a moment',
+          icon: 'cloud_off',
+          color: '#ef9a9a',
+        });
+        this.refreshIdentity();
+        return;
+      }
+      if (this.isFull) {
+        this.showToast({
+          title: 'Group is full',
+          sub: `${MEMBER_CAP} members max`,
+          icon: 'block',
+          color: '#ffb74d',
+        });
+        return;
+      }
+      this.sheet = 'invite';
+    },
+    onInviteSent(email) {
+      // Optimistic row until the server's list comes back with it.
+      if (!this.pending.some((invite) => lower(invite.email) === lower(email))) {
+        this.pending = this.pending.concat([{
+          id: lower(email), email, name: '', picture: '',
+        }]);
+      }
+      this.refreshPending();
+      this.sheet = null;
+      this.showToast({
+        title: 'Invite sent', sub: email, icon: 'send', color: '#64b5f6',
+      });
+      // Sending your first invite is what MINTS a group for you, so re-read the
+      // root: `groupId` goes from empty to real and the roster starts loading.
+      if (!this.groupId) this.refreshIdentity();
+    },
+    onInviteFailed(failure) {
+      this.showToast({
+        title: 'Invite not sent',
+        sub: failure.reason,
+        icon: 'error_outline',
+        color: '#ef9a9a',
+      });
+    },
+    /**
+     * Withdraw the invite on the server; the row goes only once it agrees, so
+     * "Invite cancelled" is never shown for an invite that is still live.
+     */
+    cancelInvite(invite) {
+      const key = lower(invite && invite.email);
+      const unit = this.$refs.cancelInvite;
+      if (!key || !unit || this.cancelling.indexOf(key) !== -1) return Promise.resolve(false);
+      this.cancelling = this.cancelling.concat([key]);
+      return unit.run(invite.email).then((ok) => {
+        this.cancelling = this.cancelling.filter((item) => item !== key);
+        if (ok) {
+          this.pending = this.pending.filter((item) => lower(item.email) !== key);
+          this.showToast({
+            title: 'Invite cancelled',
+            sub: invite.email,
+            icon: 'cancel_schedule_send',
+            color: '#bdbdbd',
+          });
+        } else {
+          this.showToast({
+            title: 'Could not cancel that invite',
+            sub: 'Try again in a moment',
+            icon: 'error_outline',
+            color: '#ef9a9a',
+          });
         }
-        return total;
-      }, 0);
+        // Either way, re-read the server's list: a failure may mean the invite
+        // was already accepted, declined or cancelled elsewhere.
+        this.refreshPending();
+        return ok;
+      });
+    },
+
+    // ---- join request ------------------------------------------------------
+    onInviteAccepted({ inviterEmail, groupId }) {
+      // The real switch the mock skipped: clear what was derived from the group we
+      // just left, then re-read the root so every container re-queries.
+      this.resetGroupState();
+      this.refreshIdentity();
+      // "Still pending" is relative to your group, which just changed.
+      this.refreshPending();
+      this.showToast({
+        title: `You joined ${inviterEmail}’s group`,
+        sub: groupId ? 'Your scores are now shared there' : 'Reloading your group',
+        icon: 'group_add',
+        color: '#81c784',
+      });
+    },
+    onInviteDeclined(inviterEmail) {
+      this.refreshIdentity();
+      this.showToast({
+        title: 'Invite declined', sub: inviterEmail, icon: 'close', color: '#bdbdbd',
+      });
+    },
+    onInviteResponseFailed(which) {
+      this.showToast({
+        title: which === 'accept' ? 'Could not join that group' : 'Could not decline',
+        sub: 'Try again in a moment',
+        icon: 'error_outline',
+        color: '#ef9a9a',
+      });
+    },
+
+    // ---- leaving -----------------------------------------------------------
+    onLeft() {
+      this.sheet = null;
+      this.resetGroupState();
+      this.pending = [];
+      this.refreshIdentity();
+      this.refreshPending();
+      this.showToast({
+        title: 'You left the group',
+        sub: 'Your routines and history are unchanged',
+        icon: 'logout',
+        color: '#ef9a9a',
+      });
+    },
+    onLeaveFailed() {
+      this.sheet = null;
+      this.showToast({
+        title: 'Could not leave the group',
+        sub: 'Try again in a moment',
+        icon: 'error_outline',
+        color: '#ef9a9a',
+      });
+    },
+
+    // ---- plumbing ----------------------------------------------------------
+    isMe(member) {
+      return !!member && !!this.myEmail
+        && String(member.email || '').toLowerCase() === String(this.myEmail).toLowerCase();
+    },
+    resetGroupState() {
+      this.members = [];
+      this.memberStats = {};
+      this.selectedEmail = '';
+    },
+    refreshIdentity() {
+      const { identity } = this.$refs;
+      if (identity && identity.refresh) identity.refresh();
+    },
+    showToast({
+      title, sub, icon, color,
+    }) {
+      this.toast = {
+        title,
+        sub,
+        icon: icon || 'check_circle',
+        color: color || '#4CAF50',
+        seq: this.toast.seq + 1,
+      };
+    },
+    clearToast() {
+      this.toast = { ...this.toast, title: '', sub: '' };
     },
   },
 };
 </script>
 
-<style scoped>
-  .image-card {
-    border-radius: 16px;
-  }
+<style>
+/* Root-class-prefixed so none of this leaks into the rest of the app. */
+.rn-groups .rn-groups__invite-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 14px 0 10px;
+  border-radius: 18px;
+  background: #288bd5;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
 
-  .image-card-img {
-    border-radius: 16px !important;
-  }
+/* Full: dimmed and still tappable — tapping is how you learn why (toast). */
+.rn-groups .rn-groups__invite-btn--full {
+  background: rgba(0, 0, 0, .25);
+}
 
-  @media (max-width: 767px) {
-    .image-card {
-      border-radius: 0;
-    }
+.rn-groups .rn-groups__invite-glyph {
+  font-size: 18px;
+}
 
-    .image-card-img {
-      border-radius: 0 !important;
-    }
-  }
+.rn-groups .rn-groups__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-content: start;
+}
 
-  .custom-loader {
-    animation: loader 1s infinite;
-    display: flex;
-  }
-  @-moz-keyframes loader {
-    from {
-      transform: rotate(0);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  @-webkit-keyframes loader {
-    from {
-      transform: rotate(0);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  @-o-keyframes loader {
-    from {
-      transform: rotate(0);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  @keyframes loader {
-    from {
-      transform: rotate(0);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
+/* Tablet / desktop: the list takes 3, the member panel 2, and the panel stays
+   put while the list scrolls — the design keeps it permanently visible. */
+.rn-groups .rn-groups__layout--tablet,
+.rn-groups .rn-groups__layout--desktop {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.rn-groups .rn-groups__list-col {
+  flex: 3 1 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  gap: 12px;
+  align-content: start;
+}
+
+.rn-groups .rn-groups__detail-col {
+  flex: 2 1 0;
+  min-width: 0;
+  position: sticky;
+  top: 0;
+}
+
+.rn-groups .rn-groups__panel {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .08), 0 2px 4px -1px rgba(0, 0, 0, .05);
+  padding: 8px 20px 20px;
+  min-height: 120px;
+}
+
+.rn-groups .rn-groups__leave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  border-radius: 14px;
+  color: #d32f2f;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rn-groups .rn-groups__leave:hover {
+  background: rgba(211, 47, 47, .06);
+}
+
+/* The member sheet is the one sheet that is nearly full height: the week grid
+   needs the room, and the 56px gap keeps the page it came from in sight. */
+.rn-groups__member-sheet .rn-rsheet__panel--sheet {
+  top: 56px;
+  max-height: none;
+  border-radius: 20px 20px 0 0;
+}
 </style>

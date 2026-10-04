@@ -7,8 +7,8 @@
     <v-card-text class="pt-0">
       <v-timeline dense>
         <v-timeline-item
-          v-for="task in tasks"
-          :key="task.id"
+          v-for="(task, index) in tasks"
+          :key="task.id || index"
           :color="task.isComplete ? 'green' : 'orange'"
           small
           class="mb-1"

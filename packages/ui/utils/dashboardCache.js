@@ -1,12 +1,17 @@
 /**
  * Dashboard Cache Utility
  *
- * Caches Description and Next Steps from Area/Project dashboards
- * in localStorage with a 24-hour TTL. Used by the AI Search Modal
- * "Build on Next Steps" feature to inject cached context as a system prompt.
+ * Caches Description, Next Steps and recent activity from Area/Project
+ * dashboards in localStorage with a 24-hour TTL. Used by the AI Search Modal
+ * "Build on Next Steps" feature to inject cached context as a system prompt,
+ * and by the routine thread's "Before you start" brief card.
  *
  * Cache key format: DASHBOARD_CACHE:<tag>
- * Cache value: { description, nextSteps, timestamp }
+ * Cache value: { description, nextSteps, activity, timestamp }
+ *
+ * `activity` is the PAST ACTIVITY the brief card renders — `[{ date, text,
+ * done }]`, newest first. It was added after the first entries shipped, so a
+ * read always defaults it to `[]` rather than assuming it is there.
  */
 
 export const CACHE_KEY_PREFIX = 'DASHBOARD_CACHE:';
@@ -29,9 +34,25 @@ export function isCacheValid(tag) {
 }
 
 /**
+ * One PAST ACTIVITY row as the brief card consumes it. Anything else in the
+ * stored array is dropped — the card renders these three fields directly.
+ */
+function normaliseActivity(activity) {
+    if (!Array.isArray(activity)) return [];
+    return activity
+        .filter((row) => row && row.text)
+        .map((row) => ({
+            date: String(row.date || ''),
+            text: String(row.text),
+            done: !!row.done,
+        }));
+}
+
+/**
  * Get cached dashboard data for a tag
  * @param {string} tag - The area/project tag
- * @returns {{ description: string, nextSteps: string } | null}
+ * @returns {{ description: string, nextSteps: string,
+ *   activity: Array<{ date: string, text: string, done: boolean }> } | null}
  */
 export function getCachedDashboard(tag) {
     try {
@@ -46,6 +67,7 @@ export function getCachedDashboard(tag) {
         return {
             description: entry.description || '',
             nextSteps: entry.nextSteps || '',
+            activity: normaliseActivity(entry.activity),
         };
     } catch {
         return null;
@@ -54,15 +76,27 @@ export function getCachedDashboard(tag) {
 
 /**
  * Store dashboard data in cache
+ *
+ * `activity` is optional and, when omitted, the activity already stored for
+ * this tag is kept. The Area/Project page containers refresh only the
+ * description or only the next steps, so a 3-argument call must not silently
+ * blank the brief card's PAST ACTIVITY rows.
+ *
  * @param {string} tag - The area/project tag
  * @param {string} description - AI-generated description text
  * @param {string} nextSteps - AI-generated next steps markdown
+ * @param {Array<{ date: string, text: string, done: boolean }>} [activity]
+ *   Recent activity rows, newest first. Pass `[]` to clear them.
  */
-export function setCachedDashboard(tag, description, nextSteps) {
+export function setCachedDashboard(tag, description, nextSteps, activity) {
     try {
+        const kept = activity === undefined ? getCachedDashboard(tag) : null;
         const entry = {
             description: description || '',
             nextSteps: nextSteps || '',
+            activity: activity === undefined
+                ? ((kept && kept.activity) || [])
+                : normaliseActivity(activity),
             timestamp: Date.now(),
         };
         localStorage.setItem(CACHE_KEY_PREFIX + tag, JSON.stringify(entry));

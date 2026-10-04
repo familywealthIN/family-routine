@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Material+Icons&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#288bd5;text-decoration:none}a:hover{color:#1f6fab}
+.mi{font-family:'Material Icons';font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-notes{max-width:640px;font:13px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.7);margin:0 0 24px}
+.dv-notes b{color:#1a1a1a}
+.rn-hscroll::-webkit-scrollbar{display:none}
+@keyframes rn-toast{0%{opacity:0;transform:translateY(12px)}12%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+@keyframes rn-pop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.2);opacity:1}100%{transform:scale(1)}}
+@keyframes rn-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes rn-fade{from{opacity:0}to{opacity:1}}
+@keyframes rn-sheet-in{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes rn-shelf{from{transform:translateX(-100%)}to{transform:none}}
+@keyframes rn-list-in1{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes rn-list-in0{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">Goals</a><span class="dv-tname">The main Goals page, transformed: the cascade ladder is the navigation, there's a calendar of day rings, and every period is grouped by routine</span></div>
+<p class="dv-notes"><b>What changed from GoalsTime.vue:</b> the forest-photo hero with five "Total … Tasks" counters becomes a <b>cascade ladder</b>: Today → Week → Month → Year → Life. Each step shows a progress ring and its roll-up threshold (×5, ×3, ×6), and tapping a step switches the list below. The calendar's "N Goals" text becomes a <b>ring per day</b>. It shows only the selected week by default; pull it open for the full month and tap a day to load its checklist. Each period's goals are <b>grouped by routine</b> in time order. Year goals open the Year Goals page. The two FABs become a header "+" and a Milestones icon. <b>Try:</b> on Today, tick both Start Work tasks → "Ship the dashboard" reaches 5/5 days and auto-ticks → September's month goal goes to 2/3.</p>
+<div style="display:flex;align-items:center;gap:8px;margin:-8px 0 20px;font:12px system-ui,sans-serif;color:rgba(0,0,0,.55)">Jump to <a class="dv-oid" href="#gp">Phone</a><a class="dv-oid" href="#gt">iPad mini</a><a class="dv-oid" href="#gd">Desktop</a></div>
+<div class="dv-opts">
+
+<!-- GP PHONE -->
+<div class="dv-opt" id="gp"><div class="dv-olabel"><a class="dv-oid" href="#gp">Phone</a>Android · 412×892</div>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+<div style="height:100%;display:flex;flex-direction:column;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+  <div style="display:flex;align-items:center;gap:6px;height:64px;padding:0 8px 0 16px;flex-shrink:0">
+    <div style="flex:1;min-width:0"><div style="font-size:24px;font-weight:700;line-height:1.1">Goals</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Saturday, 12 September</div></div>
+    <div onClick="{{ openMilestones }}" title="Milestones" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(0,0,0,.6)" style-hover="background:rgba(0,0,0,.05)"><span class="mi">widgets</span></div>
+    <div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;flex-shrink:0"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div>
+    <div onClick="{{ openDrawer }}" title="Menu" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
+  </div>
+  <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 16px;scrollbar-width:none">
+
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:12px 8px 10px">
+      <div style="display:flex;align-items:flex-start">
+        <sc-for list="{{ ladder }}" as="s" hint-placeholder-count="5">
+          <div style="display:flex;align-items:flex-start;flex:1;min-width:0">
+            <div onClick="{{ s.onClick }}" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0 6px;border-radius:12px;background:{{ s.bg }};cursor:pointer;transition:background .2s">
+              <div style="position:relative;width:44px;height:44px">
+                <svg viewBox="0 0 48 48" style="width:44px;height:44px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="4"></circle><circle cx="24" cy="24" r="20" fill="none" stroke="{{ s.color }}" stroke-width="4" stroke-dasharray="125.66" stroke-dashoffset="{{ s.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .5s cubic-bezier(.3,1.3,.5,1)"></circle></svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:{{ s.numColor }};animation:{{ s.anim }}">{{ s.num }}</div>
+              </div>
+              <div style="font-size:11px;font-weight:700;color:{{ s.labelColor }}">{{ s.label }}</div>
+            </div>
+            <sc-if value="{{ s.hasArrow }}" hint-placeholder-val="{{ true }}"><div style="width:14px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:16px;color:rgba(0,0,0,.3)"><span class="mi" style="font-size:14px">chevron_right</span><div style="font-size:9px;font-weight:700">{{ s.th }}</div></div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin:8px 8px 0;padding-top:8px;border-top:1px solid rgba(0,0,0,.06);font-size:12px;color:rgba(0,0,0,.6)"><span class="mi" style="font-size:16px;color:#288bd5">{{ tabIcon }}</span><span style="flex:1;min-width:0">{{ tabRule }}</span></div>
+    </div>
+
+    <sc-if value="{{ isDay }}" hint-placeholder-val="{{ true }}">
+      <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:12px 10px 6px;margin-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 6px 6px"><div style="font-size:15px;font-weight:700">September 2026</div><div onClick="{{ toggleCal }}" style="display:flex;align-items:center;gap:2px;font-size:12px;font-weight:600;color:#288bd5;cursor:pointer">{{ calToggleLabel }}<span class="mi" style="font-size:18px">{{ calChev }}</span></div></div>
+        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px">
+          <sc-for list="{{ dowLabels }}" as="d" hint-placeholder-count="7"><div style="text-align:center;font-size:10px;font-weight:600;color:rgba(0,0,0,.4);padding-bottom:2px">{{ d.l }}</div></sc-for>
+          <sc-for list="{{ calCells }}" as="c" hint-placeholder-count="7">
+            <div onClick="{{ c.onClick }}" style="display:flex;align-items:center;justify-content:center;height:40px;cursor:{{ c.cursor }};visibility:{{ c.vis }}">
+              <div style="position:relative;width:34px;height:34px">
+                <svg viewBox="0 0 48 48" style="width:34px;height:34px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="21" fill="{{ c.fill }}" stroke="{{ c.track }}" stroke-width="3" style="transition:fill .2s"></circle><circle cx="24" cy="24" r="21" fill="none" stroke="{{ c.ring }}" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="{{ c.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:{{ c.weight }};color:{{ c.numColor }}">{{ c.n }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:14px 16px 6px;margin-top:12px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><div style="font-size:17px;font-weight:700">{{ listTitle }}</div><div style="font-size:12px;color:rgba(0,0,0,.54);white-space:nowrap"><b style="color:rgba(0,0,0,.87)">{{ listDone }}</b> of {{ listTotal }} done</div></div>
+      <div style="animation:{{ listAnim }}">
+        <sc-for list="{{ groups }}" as="gr" hint-placeholder-count="4">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 0 4px"><div style="font-size:12px;font-weight:600;color:{{ gr.timeColor }};font-variant-numeric:tabular-nums">{{ gr.time }}</div><div style="font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:rgba(0,0,0,.55)">{{ gr.name }}</div><sc-if value="{{ gr.isNow }}" hint-placeholder-val="{{ false }}"><div style="font-size:9px;font-weight:700;letter-spacing:.4px;padding:1px 6px;border-radius:999px;background:rgba(255,152,0,.14);color:#e68900">NOW</div></sc-if><div style="flex:1;height:1px;background:rgba(0,0,0,.06)"></div><div style="font-size:11px;color:rgba(0,0,0,.45)">{{ gr.count }}</div></div>
+            <sc-for list="{{ gr.rows }}" as="r" hint-placeholder-count="1">
+              <div>
+                <sc-if value="{{ r.isCheck }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:8px;min-height:54px;padding:4px 0">
+                    <span class="mi" onClick="{{ r.onToggle }}" title="Tick" style="font-size:28px;color:{{ r.boxColor }};cursor:pointer;width:40px;height:40px;margin-left:-6px;border-radius:50%;flex-shrink:0" style-hover="background:rgba(0,0,0,.04)">{{ r.boxIcon }}</span>
+                    <div onClick="{{ r.onOpen }}" title="Open" style="flex:1;min-width:0;cursor:pointer;padding:4px 0">
+                      <div style="font-size:16px;font-weight:500;line-height:1.3;text-decoration:{{ r.deco }};color:{{ r.color }}">{{ r.body }}</div>
+                      <sc-if value="{{ r.hasBar }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-top:5px"><div style="flex:1;height:5px;border-radius:3px;background:#eeeeee;overflow:hidden"><div style="height:100%;width:{{ r.barPct }}%;background:{{ r.barColor }};border-radius:3px;transition:width .4s"></div></div><div style="font-size:11px;color:rgba(0,0,0,.54);white-space:nowrap">{{ r.barLabel }}</div><div style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:{{ r.statusBg }};color:{{ r.statusColor }}">{{ r.status }}</div></div></sc-if>
+                      <sc-if value="{{ r.hasMeta }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,.5);margin-top:2px">{{ r.meta }}</div></sc-if>
+                      <sc-if value="{{ r.hasInfo }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:10px;margin-top:4px;font-size:12px;color:rgba(0,0,0,.5)"><sc-for list="{{ r.info }}" as="f" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:3px"><span class="mi" style="font-size:14px">{{ f.icon }}</span>{{ f.text }}</div></sc-for></div></sc-if>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ r.isYear }}" hint-placeholder-val="{{ false }}">
+                  <a href="Year Goals.dc.html" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:4px 0;color:inherit">
+                    <div style="position:relative;width:46px;height:46px;flex-shrink:0"><svg viewBox="0 0 96 96" style="width:46px;height:46px;transform:rotate(-90deg)"><circle cx="48" cy="48" r="40" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="11"></circle><circle cx="48" cy="48" r="40" fill="none" stroke="{{ r.ringColor }}" stroke-width="11" stroke-dasharray="251.3" stroke-dashoffset="{{ r.ringOff }}" stroke-linecap="round"></circle></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:{{ r.ringColor }}">{{ r.pct }}%</div></div>
+                    <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:600;line-height:1.3">{{ r.body }}</div><div style="font-size:12px;color:rgba(0,0,0,.54);margin-top:2px">{{ r.meta }}</div></div>
+                    <span class="mi" style="font-size:22px;color:rgba(0,0,0,.35)">chevron_right</span>
+                  </a>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+        <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 0 18px;text-align:center;font-size:14px;color:rgba(0,0,0,.45)">{{ emptyText }}</div></sc-if>
+        <div onClick="{{ openAdd }}" style="display:flex;align-items:center;gap:12px;min-height:50px;border-top:1px solid rgba(0,0,0,.06);margin-top:8px;color:{{ addColor }};font-size:15px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:28px">{{ addIcon }}</span>{{ addLabel }}</div>
+      </div>
+    </div>
+  </div>
+  <div style="height:64px;box-sizing:border-box;background:#fff;box-shadow:0 -1px 3px rgba(0,0,0,.08);display:flex;padding-bottom:4px;flex-shrink:0;z-index:5">
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+      <div onClick="{{ n.onClick }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ n.color }};font-size:12px;font-weight:500;cursor:pointer"><div style="position:relative;width:26px;height:26px;display:flex;align-items:center;justify-content:center"><sc-if value="{{ n.hasRing }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 26 26" style="position:absolute;inset:0;width:26px;height:26px;transform:rotate(-90deg)"><circle cx="13" cy="13" r="11" fill="none" stroke="rgba(0,0,0,.1)" stroke-width="2.4"></circle><circle cx="13" cy="13" r="11" fill="none" stroke="#288bd5" stroke-width="2.4" stroke-dasharray="69.1" stroke-dashoffset="{{ n.ringOff }}" stroke-linecap="round"></circle></svg></sc-if><span class="mi" style="font-size:{{ n.iconSize }}">{{ n.icon }}</span></div><span>{{ n.label }}</span></div>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ switchOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSwitch }}" style="position:absolute;inset:0;background:rgba(15,23,42,.38);z-index:24;animation:rn-fade .2s ease"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;max-height:78%;z-index:25;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;animation:rn-sheet-in .25s cubic-bezier(.3,1.1,.5,1)">
+      <div onClick="{{ closeSwitch }}" style="display:flex;justify-content:center;padding:8px 0 4px;cursor:pointer"><div style="width:40px;height:4px;border-radius:2px;background:#ccc"></div></div>
+      <div style="display:flex;align-items:center;padding:2px 12px 10px 20px"><div style="flex:1"><div style="font-size:18px;font-weight:700">Go to</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Tap Goals again anytime to open this</div></div><span class="mi" onClick="{{ closeSwitch }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px">close</span></div>
+      <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 0 16px;scrollbar-width:none">
+        <a href="Goals.dc.html" onClick="{{ closeSwitch }}" style="display:flex;align-items:center;gap:12px;min-height:58px;padding:6px 10px;margin:0 8px;border-radius:14px;background:rgba(40,139,213,.08);box-shadow:inset 0 0 0 1px rgba(40,139,213,.45);color:inherit">
+          <div style="width:42px;height:42px;border-radius:12px;background:#288bd5;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="mi" style="font-size:22px">assignment</span></div>
+          <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">Goals overview</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Today · Week · Month · Year · Life</div></div>
+          <span class="mi" style="font-size:20px;color:#288bd5">check</span>
+        </a>
+        <div style="padding:16px 18px 6px;font-size:11px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">YEAR GOALS · 2026 · BY ROUTINE TIME</div>
+        <sc-for list="{{ sideYears }}" as="y" hint-placeholder-count="7">
+          <a href="Year Goals.dc.html" style="display:flex;align-items:center;gap:12px;min-height:60px;padding:6px 10px;margin:0 8px;border-radius:14px;color:inherit;animation:rn-list-in0 .3s ease both;animation-delay:{{ y.delay }}" style-hover="background:rgba(40,139,213,.05)">
+            <div style="width:40px;flex-shrink:0;font-size:12px;font-weight:600;color:{{ y.timeColor }};font-variant-numeric:tabular-nums">{{ y.time }}</div>
+            <div style="position:relative;width:42px;height:42px;flex-shrink:0"><svg viewBox="0 0 96 96" style="width:42px;height:42px;transform:rotate(-90deg)"><circle cx="48" cy="48" r="40" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="12"></circle><circle cx="48" cy="48" r="40" fill="none" stroke="{{ y.color }}" stroke-width="12" stroke-dasharray="251.3" stroke-dashoffset="{{ y.off }}" stroke-linecap="round"></circle></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:{{ y.color }}">{{ y.pct }}%</div></div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ y.body }}</div><div style="font-size:12px;color:rgba(0,0,0,.54)">{{ y.rname }}</div></div>
+            <span class="mi" style="font-size:20px;color:rgba(0,0,0,.3)">chevron_right</span>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ itemOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeItem }}" style="position:absolute;inset:0;background:rgba(15,23,42,.38);z-index:40;animation:rn-fade .2s ease"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:92%;z-index:41;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;animation:rn-sheet-in .25s cubic-bezier(.3,1.1,.5,1)">
+      <div onClick="{{ closeItem }}" style="display:flex;justify-content:center;padding:8px 0 0;cursor:pointer;flex-shrink:0"><div style="width:40px;height:4px;border-radius:2px;background:#ccc"></div></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:12px 12px 4px 24px;flex-shrink:0">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:rgba(0,0,0,.5)"><span class="mi" style="font-size:16px">{{ giPeriodIcon }}</span>{{ giPeriodLabel }}</div>
+        <div onClick="{{ giToggleStatus }}" title="Change status" style="display:flex;align-items:center;gap:5px;height:28px;padding:0 12px;border-radius:14px;background:{{ giStatusBg }};color:{{ giStatusFg }};font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;transition:background .2s"><span class="mi" style="font-size:15px">{{ giStatusIcon }}</span>{{ giStatusLabel }}</div>
+        <span class="mi" onClick="{{ giAskDelete }}" title="Delete" style="font-size:20px;color:rgba(0,0,0,.5);cursor:pointer;width:36px;height:36px;border-radius:50%;flex-shrink:0" style-hover="background:rgba(0,0,0,.05)">delete_outline</span>
+        <span class="mi" onClick="{{ closeItem }}" title="Close" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;width:36px;height:36px;border-radius:50%;flex-shrink:0" style-hover="background:rgba(0,0,0,.05)">close</span>
+      </div>
+      <div class="rn-hscroll" style="flex:1;min-height:0;overflow-y:auto;padding:0 24px 24px;scrollbar-width:none">
+        <sc-if value="{{ giPast }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin:4px 0 6px;padding:8px 12px;border-radius:10px;background:#f4f4f4;font-size:12px;color:rgba(0,0,0,.6)"><span class="mi" style="font-size:16px">lock_clock</span>{{ giPastText }}</div></sc-if>
+        <textarea value="{{ giTitle }}" onChange="{{ giSetTitle }}" rows="1" placeholder="Untitled" style="field-sizing:content;display:block;width:100%;box-sizing:border-box;border:0;outline:0;resize:none;background:transparent;font-family:inherit;font-size:26px;font-weight:700;line-height:1.25;color:{{ giTitleColor }};padding:4px 0 2px;text-decoration:{{ giTitleDeco }}"></textarea>
+        <sc-if value="{{ giHasBar }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-top:6px"><div style="flex:1;height:6px;border-radius:3px;background:#eeeeee;overflow:hidden"><div style="height:100%;width:{{ giBarPct }}%;background:{{ giBarColor }};border-radius:3px;transition:width .4s"></div></div><div style="font-size:12px;color:rgba(0,0,0,.55);white-space:nowrap">{{ giBarLabel }}</div></div></sc-if>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:16px">
+          <div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">CONTRIBUTION</div>
+          <sc-if value="{{ giMdEditing }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:1px"><sc-for list="{{ giMdTools }}" as="b" hint-placeholder-count="5"><span class="mi" onMouseDown="{{ b.run }}" title="{{ b.title }}" style="font-size:18px;color:rgba(0,0,0,.6);cursor:pointer;width:30px;height:30px;border-radius:6px" style-hover="background:rgba(0,0,0,.05)">{{ b.icon }}</span></sc-for></div></sc-if>
+          <div onMouseDown="{{ giMdToggle }}" style="display:flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:14px;font-size:12px;font-weight:600;color:#288bd5;cursor:pointer" style-hover="background:rgba(40,139,213,.08)"><span class="mi" style="font-size:16px">{{ giMdBtnIcon }}</span>{{ giMdBtn }}</div>
+        </div>
+        <sc-if value="{{ giMdEditing }}" hint-placeholder-val="{{ false }}"><div style="border-radius:10px;border:1px solid #288bd5;box-shadow:0 0 0 3px rgba(40,139,213,.12);margin-top:6px;overflow:hidden"><textarea ref="{{ giMdRef }}" value="{{ giContribution }}" onChange="{{ giSetContribution }}" placeholder="Write in Markdown — **bold**, - list, - [ ] to-do" autoFocus="{{ true }}" style="field-sizing:content;display:block;width:100%;min-height:120px;box-sizing:border-box;border:0;outline:0;resize:none;padding:12px 14px;font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.6;color:#333;background:#fff"></textarea><div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-top:1px solid rgba(0,0,0,.06);background:#fafafa;font-size:11px;color:rgba(0,0,0,.45)"><span class="mi" style="font-size:14px">code</span>@routine-notes/markdown-editor</div></div></sc-if>
+        <sc-if value="{{ giMdPreviewing }}" hint-placeholder-val="{{ true }}"><div onClick="{{ giMdEdit }}" title="Click to edit" style="margin:4px -10px 0;padding:6px 10px;border-radius:8px;cursor:text;min-height:44px" style-hover="background:rgba(0,0,0,.03)">{{ giMdView }}</div></sc-if>
+        <div style="height:1px;background:rgba(0,0,0,.07);margin:16px 0 8px"></div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">account_tree</span>Linked to</div><div style="flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:34px;font-size:13px"><div style="display:flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:6px;background:#f4f4f4;color:rgba(0,0,0,.8);white-space:nowrap"><span class="mi" style="font-size:15px;color:#288bd5">history</span>{{ giRoutine }}</div><sc-if value="{{ giHasParent }}" hint-placeholder-val="{{ false }}"><span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)">chevron_right</span><div onClick="{{ giOpenParent }}" title="Open parent goal" style="display:flex;align-items:center;gap:5px;min-height:26px;padding:0 10px;border-radius:6px;background:rgba(40,139,213,.08);color:#1f6fab;font-weight:600;cursor:pointer" style-hover="background:rgba(40,139,213,.14)"><span class="mi" style="font-size:15px">north</span>{{ giParent }}</div></sc-if><sc-if value="{{ giNoParent }}" hint-placeholder-val="{{ false }}"><div style="color:rgba(0,0,0,.45)">{{ giNoParentText }}</div></sc-if></div></div>
+          <sc-if value="{{ giIsDay }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">event</span>Date</div><div style="flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:34px;font-size:13px"><sc-for list="{{ giDates }}" as="d" hint-placeholder-count="3"><div onClick="{{ d.onClick }}" style="height:28px;padding:0 12px;display:flex;align-items:center;border-radius:14px;font-size:12px;font-weight:600;background:{{ d.bg }};color:{{ d.fg }};border:1px solid {{ d.border }};cursor:{{ d.cursor }}">{{ d.label }}</div></sc-for><sc-if value="{{ giPast }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:4px;color:rgba(0,0,0,.45);font-size:12px"><span class="mi" style="font-size:15px">lock</span>Date locked on past days</div></sc-if></div></div></sc-if>
+          <div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">sell</span>Tags</div>
+            <div style="flex:1;min-width:0;position:relative">
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:34px">
+                <sc-for list="{{ giTags }}" as="t" hint-placeholder-count="2"><div style="display:flex;align-items:center;height:26px;border-radius:6px;background:{{ t.bg }};color:{{ t.fg }};font-size:12px;font-weight:600;overflow:hidden"><sc-for list="{{ t.segs }}" as="sg" hint-placeholder-count="2"><div style="padding:0 8px;height:26px;display:flex;align-items:center;border-left:{{ sg.border }}">{{ sg.text }}</div></sc-for><span class="mi" onClick="{{ t.remove }}" title="Remove tag" style="font-size:14px;width:22px;height:26px;cursor:pointer;opacity:.6" style-hover="opacity:1">close</span></div></sc-for>
+                <input value="{{ giTagIn }}" onChange="{{ giSetTagIn }}" onKeyDown="{{ giTagKey }}" placeholder="{{ giTagPh }}" style="flex:1;min-width:120px;height:30px;border:0;outline:0;background:transparent;font-family:inherit;font-size:13px;color:#333">
+              </div>
+              <sc-if value="{{ giShowSugs }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:-6px;right:0;top:calc(100% + 2px);z-index:6;background:#fff;border-radius:10px;box-shadow:0 10px 24px -6px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.06);padding:4px;max-height:180px;overflow-y:auto"><sc-for list="{{ giSugs }}" as="g" hint-placeholder-count="3"><div onMouseDown="{{ g.pick }}" style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer" style-hover="background:rgba(40,139,213,.08)"><span class="mi" style="font-size:15px;color:rgba(0,0,0,.4)">{{ g.icon }}</span>{{ g.text }}</div></sc-for></div></sc-if>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">checklist</span>Subtasks</div>
+            <div style="flex:1;min-width:0;padding-top:4px">
+              <sc-if value="{{ giHasSubs }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><div style="flex:1;height:4px;border-radius:2px;background:#eee;overflow:hidden"><div style="height:100%;width:{{ giSubPct }}%;background:#288bd5;transition:width .3s"></div></div><div style="font-size:12px;color:rgba(0,0,0,.5)">{{ giSubText }}</div></div></sc-if>
+              <sc-for list="{{ giSubs }}" as="s" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:6px;min-height:36px"><span class="mi" onClick="{{ s.toggle }}" style="font-size:20px;color:{{ s.boxColor }};cursor:pointer">{{ s.boxIcon }}</span><input value="{{ s.body }}" onChange="{{ s.rename }}" style="flex:1;min-width:0;height:30px;border:0;outline:0;background:transparent;font-family:inherit;font-size:14px;color:{{ s.color }};text-decoration:{{ s.deco }}"><span class="mi" onClick="{{ s.remove }}" title="Delete subtask" style="font-size:17px;color:rgba(0,0,0,.4);cursor:pointer;width:28px;height:28px;border-radius:50%" style-hover="background:rgba(0,0,0,.05)">close</span></div></sc-for>
+              <div style="display:flex;align-items:center;gap:6px;min-height:36px"><span class="mi" style="font-size:20px;color:#288bd5">add</span><input value="{{ giSubIn }}" onChange="{{ giSetSubIn }}" onKeyDown="{{ giSubKey }}" placeholder="Add subtask · Enter" style="flex:1;min-width:0;height:30px;border:0;outline:0;background:transparent;font-family:inherit;font-size:14px;color:#333"></div>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ giDelAsk }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:12px 14px;border-radius:12px;background:rgba(211,47,47,.06);border:1px solid rgba(211,47,47,.2)"><div style="flex:1;font-size:13px;color:#b71c1c;font-weight:600">Delete this goal?</div><div onClick="{{ giCancelDelete }}" style="height:32px;padding:0 12px;display:flex;align-items:center;border-radius:16px;font-size:13px;font-weight:600;color:rgba(0,0,0,.6);cursor:pointer">Cancel</div><div onClick="{{ giDelete }}" style="height:32px;padding:0 14px;display:flex;align-items:center;border-radius:16px;font-size:13px;font-weight:700;color:#fff;background:#d32f2f;cursor:pointer">Delete</div></div></sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:16px;right:16px;bottom:80px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none">
+      <span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span>
+      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(0,0,0,.32);z-index:20"></div></sc-if>
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;bottom:0;z-index:21;background:#fff;border-radius:16px 16px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:0 16px 22px;animation:rn-sheet-in .22s ease">
+      <div style="display:flex;justify-content:center;padding:8px 0 4px"><div style="width:40px;height:4px;border-radius:2px;background:#ccc"></div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 8px"><div style="font-size:18px;font-weight:700">New goal</div><span class="mi" onClick="{{ closeSheet }}" style="font-size:22px;color:rgba(0,0,0,.6);cursor:pointer;padding:6px">close</span></div>
+      <div style="display:flex;border-radius:20px;overflow:hidden;border:1px solid #288bd5;margin-bottom:12px">
+        <sc-for list="{{ periodChips }}" as="p" hint-placeholder-count="5"><div onClick="{{ p.onClick }}" style="flex:1;height:32px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:{{ p.bg }};color:{{ p.fg }};cursor:pointer;transition:background .2s">{{ p.label }}</div></sc-for>
+      </div>
+      <input value="{{ formText }}" onChange="{{ setFormText }}" onKeyDown="{{ formKey }}" placeholder="{{ formPlaceholder }}" autoFocus="{{ true }}" style="width:100%;box-sizing:border-box;border:0;border-bottom:2px solid #288bd5;outline:0;font:inherit;font-size:17px;line-height:1.6;color:#333;padding:6px 0;background:transparent">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin:14px 0 6px">{{ routineLabel }}</div>
+      <div class="rn-hscroll" style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px">
+        <sc-for list="{{ routineChips }}" as="c" hint-placeholder-count="7"><div onClick="{{ c.onClick }}" style="display:flex;align-items:center;gap:4px;height:32px;padding:0 12px;border-radius:16px;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.border }};cursor:pointer">{{ c.time }} {{ c.name }}</div></sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
+        <div style="flex:1;font-size:12px;color:rgba(0,0,0,.5)">{{ formHint }}</div>
+        <div onClick="{{ submitForm }}" style="height:38px;padding:0 18px;border-radius:19px;background:{{ formSendBg }};color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s">Add</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:-4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-fade .2s ease">
+      <div style="display:flex;align-items:center;gap:12px;padding:28px 16px 16px 20px"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div><span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px">close</span></div>
+      <div style="display:flex;gap:6px;padding:0 20px 14px"><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:#288bd5;color:#fff;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">diamond</span>128 points</div><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:rgba(255,152,0,.12);color:#b26a00;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">local_fire_department</span>6-day streak</div></div>
+      <div style="height:1px;background:rgba(0,0,0,.08);margin:0 0 6px"></div>
+      <sc-for list="{{ drawerItems }}" as="n" hint-placeholder-count="6"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:16px;height:48px;padding:0 20px;margin-top:{{ n.gap }};color:{{ n.color }};background:{{ n.bg }};font-size:14px;font-weight:600;text-decoration:none"><span class="mi" style="font-size:22px">{{ n.icon }}</span>{{ n.label }}</a></sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-import>
+</div>
+
+<!-- GT TABLET -->
+<div class="dv-opt" id="gt"><div class="dv-olabel"><a class="dv-oid" href="#gt">iPad mini</a>Landscape · 1133×744</div>
+<div style="width:1165px;height:776px;border-radius:40px;background:#121212;padding:16px;box-sizing:border-box;box-shadow:0 30px 60px -24px rgba(0,0,0,.4)">
+  <div style="width:100%;height:100%;border-radius:24px;overflow:hidden;position:relative;background:#f4f4f4;display:flex;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87)">
+    <div class="rn-hscroll" style="width:76px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 0 14px;overflow-y:auto;scrollbar-width:none;border-right:1px solid rgba(0,0,0,.06)">
+      <img src="assets/icon-192.png" alt="Routine Notes" style="width:38px;height:38px;object-fit:contain;margin-bottom:6px">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4"><div onClick="{{ n.onClick }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer"><div style="width:56px;height:32px;border-radius:16px;background:{{ n.railBg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center;transition:background .2s"><div style="position:relative;width:26px;height:26px;display:flex;align-items:center;justify-content:center"><sc-if value="{{ n.hasRing }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 26 26" style="position:absolute;inset:0;width:26px;height:26px;transform:rotate(-90deg)"><circle cx="13" cy="13" r="11" fill="none" stroke="rgba(0,0,0,.1)" stroke-width="2.4"></circle><circle cx="13" cy="13" r="11" fill="none" stroke="#288bd5" stroke-width="2.4" stroke-dasharray="69.1" stroke-dashoffset="{{ n.ringOff }}" stroke-linecap="round"></circle></svg></sc-if><span class="mi" style="font-size:{{ n.iconSize }}">{{ n.icon }}</span></div></div><div style="font-size:11px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></div></sc-for><div onClick="{{ toggleNavMore }}" title="More pages" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer"><div style="width:52px;height:30px;border-radius:15px;background:{{ navMoreBtnBg }};color:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;transition:background .2s"><span class="mi" style="font-size:21px">{{ navMoreIcon }}</span></div><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.6)">More</div></div><sc-if value="{{ navMoreOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0;border-radius:16px;background:#f7f7f7;animation:rn-fade .18s ease"><sc-for list="{{ navMore }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:inherit;text-decoration:none;margin-top:{{ n.gap }}"><div style="width:52px;height:30px;border-radius:15px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:21px">{{ n.icon }}</span></div><div style="font-size:10px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for></div></sc-if>
+      <div style="flex:1"></div>
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:40px;height:40px;border-radius:50%;object-fit:cover" alt="Profile picture">
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex-shrink:0"><span>9:30</span><span style="display:flex;gap:6px;align-items:center"><span class="mi" style="font-size:16px">wifi</span><span class="mi" style="font-size:16px">battery_full</span></span></div>
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;padding:4px 20px 20px">
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <div style="flex:1;min-width:0"><div style="font-size:22px;font-weight:700;line-height:1.1">Goals</div><div style="font-size:13px;color:rgba(0,0,0,.54)">Saturday, 12 September</div></div>
+        <div onClick="{{ openMilestones }}" style="display:flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:18px;border:1px solid rgba(0,0,0,.12);background:#fff;font-size:13px;font-weight:600;color:rgba(0,0,0,.7);cursor:pointer" style-hover="background:#fafafa"><span class="mi" style="font-size:18px">widgets</span>Milestones</div>
+        <div onClick="{{ openAdd }}" style="display:flex;align-items:center;gap:6px;height:36px;padding:0 16px;border-radius:18px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.14)"><span class="mi" style="font-size:18px">add</span>New goal</div>
+        <div style="display:flex;align-items:center;gap:4px;height:28px;padding:0 12px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;gap:12px">
+        <div style="width:380px;flex-shrink:0;display:flex;flex-direction:column;gap:12px">
+          <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 10px 12px;flex-shrink:0">
+      <div style="display:flex;align-items:flex-start">
+        <sc-for list="{{ ladder }}" as="s" hint-placeholder-count="5">
+          <div style="display:flex;align-items:flex-start;flex:1;min-width:0">
+            <div onClick="{{ s.onClick }}" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0 6px;border-radius:12px;background:{{ s.bg }};cursor:pointer;transition:background .2s">
+              <div style="position:relative;width:44px;height:44px">
+                <svg viewBox="0 0 48 48" style="width:44px;height:44px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="4"></circle><circle cx="24" cy="24" r="20" fill="none" stroke="{{ s.color }}" stroke-width="4" stroke-dasharray="125.66" stroke-dashoffset="{{ s.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .5s cubic-bezier(.3,1.3,.5,1)"></circle></svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:{{ s.numColor }};animation:{{ s.anim }}">{{ s.num }}</div>
+              </div>
+              <div style="font-size:11px;font-weight:700;color:{{ s.labelColor }}">{{ s.label }}</div>
+            </div>
+            <sc-if value="{{ s.hasArrow }}" hint-placeholder-val="{{ true }}"><div style="width:14px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:16px;color:rgba(0,0,0,.3)"><span class="mi" style="font-size:14px">chevron_right</span><div style="font-size:9px;font-weight:700">{{ s.th }}</div></div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin:8px 8px 0;padding-top:8px;border-top:1px solid rgba(0,0,0,.06);font-size:12px;color:rgba(0,0,0,.6)"><span class="mi" style="font-size:16px;color:#288bd5">{{ tabIcon }}</span><span style="flex:1;min-width:0">{{ tabRule }}</span></div>
+    </div>
+          <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 12px 8px;flex-shrink:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 6px 6px"><div style="font-size:15px;font-weight:700">September 2026</div><div style="font-size:12px;color:rgba(0,0,0,.45)">Tap a day</div></div>
+        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px">
+          <sc-for list="{{ dowLabels }}" as="d" hint-placeholder-count="7"><div style="text-align:center;font-size:10px;font-weight:600;color:rgba(0,0,0,.4);padding-bottom:2px">{{ d.l }}</div></sc-for>
+          <sc-for list="{{ calCellsAll }}" as="c" hint-placeholder-count="7">
+            <div onClick="{{ c.onClick }}" style="display:flex;align-items:center;justify-content:center;height:40px;cursor:{{ c.cursor }};visibility:{{ c.vis }}">
+              <div style="position:relative;width:34px;height:34px">
+                <svg viewBox="0 0 48 48" style="width:34px;height:34px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="21" fill="{{ c.fill }}" stroke="{{ c.track }}" stroke-width="3" style="transition:fill .2s"></circle><circle cx="24" cy="24" r="21" fill="none" stroke="{{ c.ring }}" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="{{ c.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:{{ c.weight }};color:{{ c.numColor }}">{{ c.n }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column"><div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:16px 20px 8px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:none" class="rn-hscroll">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><div style="font-size:17px;font-weight:700">{{ listTitle }}</div><div style="font-size:12px;color:rgba(0,0,0,.54);white-space:nowrap"><b style="color:rgba(0,0,0,.87)">{{ listDone }}</b> of {{ listTotal }} done</div></div>
+      <div style="animation:{{ listAnim }}">
+        <sc-for list="{{ groups }}" as="gr" hint-placeholder-count="4">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 0 4px"><div style="font-size:12px;font-weight:600;color:{{ gr.timeColor }};font-variant-numeric:tabular-nums">{{ gr.time }}</div><div style="font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:rgba(0,0,0,.55)">{{ gr.name }}</div><sc-if value="{{ gr.isNow }}" hint-placeholder-val="{{ false }}"><div style="font-size:9px;font-weight:700;letter-spacing:.4px;padding:1px 6px;border-radius:999px;background:rgba(255,152,0,.14);color:#e68900">NOW</div></sc-if><div style="flex:1;height:1px;background:rgba(0,0,0,.06)"></div><div style="font-size:11px;color:rgba(0,0,0,.45)">{{ gr.count }}</div></div>
+            <sc-for list="{{ gr.rows }}" as="r" hint-placeholder-count="1">
+              <div>
+                <sc-if value="{{ r.isCheck }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:8px;min-height:54px;padding:4px 0">
+                    <span class="mi" onClick="{{ r.onToggle }}" title="Tick" style="font-size:28px;color:{{ r.boxColor }};cursor:pointer;width:40px;height:40px;margin-left:-6px;border-radius:50%;flex-shrink:0" style-hover="background:rgba(0,0,0,.04)">{{ r.boxIcon }}</span>
+                    <div onClick="{{ r.onOpen }}" title="Open" style="flex:1;min-width:0;cursor:pointer;padding:4px 0">
+                      <div style="font-size:16px;font-weight:500;line-height:1.3;text-decoration:{{ r.deco }};color:{{ r.color }}">{{ r.body }}</div>
+                      <sc-if value="{{ r.hasBar }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-top:5px"><div style="flex:1;height:5px;border-radius:3px;background:#eeeeee;overflow:hidden"><div style="height:100%;width:{{ r.barPct }}%;background:{{ r.barColor }};border-radius:3px;transition:width .4s"></div></div><div style="font-size:11px;color:rgba(0,0,0,.54);white-space:nowrap">{{ r.barLabel }}</div><div style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:{{ r.statusBg }};color:{{ r.statusColor }}">{{ r.status }}</div></div></sc-if>
+                      <sc-if value="{{ r.hasMeta }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,.5);margin-top:2px">{{ r.meta }}</div></sc-if>
+                      <sc-if value="{{ r.hasInfo }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:10px;margin-top:4px;font-size:12px;color:rgba(0,0,0,.5)"><sc-for list="{{ r.info }}" as="f" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:3px"><span class="mi" style="font-size:14px">{{ f.icon }}</span>{{ f.text }}</div></sc-for></div></sc-if>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ r.isYear }}" hint-placeholder-val="{{ false }}">
+                  <a href="Year Goals.dc.html" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:4px 0;color:inherit">
+                    <div style="position:relative;width:46px;height:46px;flex-shrink:0"><svg viewBox="0 0 96 96" style="width:46px;height:46px;transform:rotate(-90deg)"><circle cx="48" cy="48" r="40" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="11"></circle><circle cx="48" cy="48" r="40" fill="none" stroke="{{ r.ringColor }}" stroke-width="11" stroke-dasharray="251.3" stroke-dashoffset="{{ r.ringOff }}" stroke-linecap="round"></circle></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:{{ r.ringColor }}">{{ r.pct }}%</div></div>
+                    <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:600;line-height:1.3">{{ r.body }}</div><div style="font-size:12px;color:rgba(0,0,0,.54);margin-top:2px">{{ r.meta }}</div></div>
+                    <span class="mi" style="font-size:22px;color:rgba(0,0,0,.35)">chevron_right</span>
+                  </a>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+        <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 0 18px;text-align:center;font-size:14px;color:rgba(0,0,0,.45)">{{ emptyText }}</div></sc-if>
+        <div onClick="{{ openAdd }}" style="display:flex;align-items:center;gap:12px;min-height:50px;border-top:1px solid rgba(0,0,0,.06);margin-top:8px;color:{{ addColor }};font-size:15px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:28px">{{ addIcon }}</span>{{ addLabel }}</div>
+      </div>
+    </div></div>
+      </div>
+      </div>
+    </div>
+    <sc-if value="{{ switchOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeSwitch }}" style="position:absolute;top:0;right:0;bottom:0;left:76px;background:rgba(15,23,42,.25);z-index:24;animation:rn-fade .2s ease"></div>
+      <div style="position:absolute;left:76px;top:0;bottom:0;width:360px;background:#fff;z-index:25;box-shadow:8px 0 24px rgba(0,0,0,.12);display:flex;flex-direction:column;animation:rn-shelf .28s cubic-bezier(.4,0,.2,1)">
+        <div style="display:flex;align-items:center;padding:30px 12px 12px 20px"><div style="flex:1"><div style="font-size:18px;font-weight:700">Go to</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Overview or a year goal</div></div><span class="mi" onClick="{{ closeSwitch }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px">close</span></div>
+        <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 0 16px;scrollbar-width:none">
+        <a href="Goals.dc.html" onClick="{{ closeSwitch }}" style="display:flex;align-items:center;gap:12px;min-height:58px;padding:6px 10px;margin:0 8px;border-radius:14px;background:rgba(40,139,213,.08);box-shadow:inset 0 0 0 1px rgba(40,139,213,.45);color:inherit">
+          <div style="width:42px;height:42px;border-radius:12px;background:#288bd5;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="mi" style="font-size:22px">assignment</span></div>
+          <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">Goals overview</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Today · Week · Month · Year · Life</div></div>
+          <span class="mi" style="font-size:20px;color:#288bd5">check</span>
+        </a>
+        <div style="padding:16px 18px 6px;font-size:11px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">YEAR GOALS · 2026 · BY ROUTINE TIME</div>
+        <sc-for list="{{ sideYears }}" as="y" hint-placeholder-count="7">
+          <a href="Year Goals.dc.html" style="display:flex;align-items:center;gap:12px;min-height:60px;padding:6px 10px;margin:0 8px;border-radius:14px;color:inherit;animation:rn-list-in0 .3s ease both;animation-delay:{{ y.delay }}" style-hover="background:rgba(40,139,213,.05)">
+            <div style="width:40px;flex-shrink:0;font-size:12px;font-weight:600;color:{{ y.timeColor }};font-variant-numeric:tabular-nums">{{ y.time }}</div>
+            <div style="position:relative;width:42px;height:42px;flex-shrink:0"><svg viewBox="0 0 96 96" style="width:42px;height:42px;transform:rotate(-90deg)"><circle cx="48" cy="48" r="40" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="12"></circle><circle cx="48" cy="48" r="40" fill="none" stroke="{{ y.color }}" stroke-width="12" stroke-dasharray="251.3" stroke-dashoffset="{{ y.off }}" stroke-linecap="round"></circle></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:{{ y.color }}">{{ y.pct }}%</div></div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ y.body }}</div><div style="font-size:12px;color:rgba(0,0,0,.54)">{{ y.rname }}</div></div>
+            <span class="mi" style="font-size:20px;color:rgba(0,0,0,.3)">chevron_right</span>
+          </a>
+        </sc-for>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ itemOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeItem }}" style="position:absolute;inset:0;background:rgba(15,23,42,.38);z-index:40;animation:rn-fade .2s ease"></div>
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:720px;max-width:92%;max-height:86%;z-index:41;background:#fff;border-radius:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.35);display:flex;flex-direction:column;animation:rn-fade .2s ease;padding-top:6px">
+      <div style="display:flex;align-items:center;gap:6px;padding:12px 12px 4px 24px;flex-shrink:0">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:rgba(0,0,0,.5)"><span class="mi" style="font-size:16px">{{ giPeriodIcon }}</span>{{ giPeriodLabel }}</div>
+        <div onClick="{{ giToggleStatus }}" title="Change status" style="display:flex;align-items:center;gap:5px;height:28px;padding:0 12px;border-radius:14px;background:{{ giStatusBg }};color:{{ giStatusFg }};font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;transition:background .2s"><span class="mi" style="font-size:15px">{{ giStatusIcon }}</span>{{ giStatusLabel }}</div>
+        <span class="mi" onClick="{{ giAskDelete }}" title="Delete" style="font-size:20px;color:rgba(0,0,0,.5);cursor:pointer;width:36px;height:36px;border-radius:50%;flex-shrink:0" style-hover="background:rgba(0,0,0,.05)">delete_outline</span>
+        <span class="mi" onClick="{{ closeItem }}" title="Close" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;width:36px;height:36px;border-radius:50%;flex-shrink:0" style-hover="background:rgba(0,0,0,.05)">close</span>
+      </div>
+      <div class="rn-hscroll" style="flex:1;min-height:0;overflow-y:auto;padding:0 24px 24px;scrollbar-width:none">
+        <sc-if value="{{ giPast }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin:4px 0 6px;padding:8px 12px;border-radius:10px;background:#f4f4f4;font-size:12px;color:rgba(0,0,0,.6)"><span class="mi" style="font-size:16px">lock_clock</span>{{ giPastText }}</div></sc-if>
+        <textarea value="{{ giTitle }}" onChange="{{ giSetTitle }}" rows="1" placeholder="Untitled" style="field-sizing:content;display:block;width:100%;box-sizing:border-box;border:0;outline:0;resize:none;background:transparent;font-family:inherit;font-size:26px;font-weight:700;line-height:1.25;color:{{ giTitleColor }};padding:4px 0 2px;text-decoration:{{ giTitleDeco }}"></textarea>
+        <sc-if value="{{ giHasBar }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-top:6px"><div style="flex:1;height:6px;border-radius:3px;background:#eeeeee;overflow:hidden"><div style="height:100%;width:{{ giBarPct }}%;background:{{ giBarColor }};border-radius:3px;transition:width .4s"></div></div><div style="font-size:12px;color:rgba(0,0,0,.55);white-space:nowrap">{{ giBarLabel }}</div></div></sc-if>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:16px">
+          <div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">CONTRIBUTION</div>
+          <sc-if value="{{ giMdEditing }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:1px"><sc-for list="{{ giMdTools }}" as="b" hint-placeholder-count="5"><span class="mi" onMouseDown="{{ b.run }}" title="{{ b.title }}" style="font-size:18px;color:rgba(0,0,0,.6);cursor:pointer;width:30px;height:30px;border-radius:6px" style-hover="background:rgba(0,0,0,.05)">{{ b.icon }}</span></sc-for></div></sc-if>
+          <div onMouseDown="{{ giMdToggle }}" style="display:flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:14px;font-size:12px;font-weight:600;color:#288bd5;cursor:pointer" style-hover="background:rgba(40,139,213,.08)"><span class="mi" style="font-size:16px">{{ giMdBtnIcon }}</span>{{ giMdBtn }}</div>
+        </div>
+        <sc-if value="{{ giMdEditing }}" hint-placeholder-val="{{ false }}"><div style="border-radius:10px;border:1px solid #288bd5;box-shadow:0 0 0 3px rgba(40,139,213,.12);margin-top:6px;overflow:hidden"><textarea ref="{{ giMdRef }}" value="{{ giContribution }}" onChange="{{ giSetContribution }}" placeholder="Write in Markdown — **bold**, - list, - [ ] to-do" autoFocus="{{ true }}" style="field-sizing:content;display:block;width:100%;min-height:120px;box-sizing:border-box;border:0;outline:0;resize:none;padding:12px 14px;font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.6;color:#333;background:#fff"></textarea><div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-top:1px solid rgba(0,0,0,.06);background:#fafafa;font-size:11px;color:rgba(0,0,0,.45)"><span class="mi" style="font-size:14px">code</span>@routine-notes/markdown-editor</div></div></sc-if>
+        <sc-if value="{{ giMdPreviewing }}" hint-placeholder-val="{{ true }}"><div onClick="{{ giMdEdit }}" title="Click to edit" style="margin:4px -10px 0;padding:6px 10px;border-radius:8px;cursor:text;min-height:44px" style-hover="background:rgba(0,0,0,.03)">{{ giMdView }}</div></sc-if>
+        <div style="height:1px;background:rgba(0,0,0,.07);margin:16px 0 8px"></div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">account_tree</span>Linked to</div><div style="flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:34px;font-size:13px"><div style="display:flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:6px;background:#f4f4f4;color:rgba(0,0,0,.8);white-space:nowrap"><span class="mi" style="font-size:15px;color:#288bd5">history</span>{{ giRoutine }}</div><sc-if value="{{ giHasParent }}" hint-placeholder-val="{{ false }}"><span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)">chevron_right</span><div onClick="{{ giOpenParent }}" title="Open parent goal" style="display:flex;align-items:center;gap:5px;min-height:26px;padding:0 10px;border-radius:6px;background:rgba(40,139,213,.08);color:#1f6fab;font-weight:600;cursor:pointer" style-hover="background:rgba(40,139,213,.14)"><span class="mi" style="font-size:15px">north</span>{{ giParent }}</div></sc-if><sc-if value="{{ giNoParent }}" hint-placeholder-val="{{ false }}"><div style="color:rgba(0,0,0,.45)">{{ giNoParentText }}</div></sc-if></div></div>
+          <sc-if value="{{ giIsDay }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">event</span>Date</div><div style="flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:34px;font-size:13px"><sc-for list="{{ giDates }}" as="d" hint-placeholder-count="3"><div onClick="{{ d.onClick }}" style="height:28px;padding:0 12px;display:flex;align-items:center;border-radius:14px;font-size:12px;font-weight:600;background:{{ d.bg }};color:{{ d.fg }};border:1px solid {{ d.border }};cursor:{{ d.cursor }}">{{ d.label }}</div></sc-for><sc-if value="{{ giPast }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:4px;color:rgba(0,0,0,.45);font-size:12px"><span class="mi" style="font-size:15px">lock</span>Date locked on past days</div></sc-if></div></div></sc-if>
+          <div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">sell</span>Tags</div>
+            <div style="flex:1;min-width:0;position:relative">
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:34px">
+                <sc-for list="{{ giTags }}" as="t" hint-placeholder-count="2"><div style="display:flex;align-items:center;height:26px;border-radius:6px;background:{{ t.bg }};color:{{ t.fg }};font-size:12px;font-weight:600;overflow:hidden"><sc-for list="{{ t.segs }}" as="sg" hint-placeholder-count="2"><div style="padding:0 8px;height:26px;display:flex;align-items:center;border-left:{{ sg.border }}">{{ sg.text }}</div></sc-for><span class="mi" onClick="{{ t.remove }}" title="Remove tag" style="font-size:14px;width:22px;height:26px;cursor:pointer;opacity:.6" style-hover="opacity:1">close</span></div></sc-for>
+                <input value="{{ giTagIn }}" onChange="{{ giSetTagIn }}" onKeyDown="{{ giTagKey }}" placeholder="{{ giTagPh }}" style="flex:1;min-width:120px;height:30px;border:0;outline:0;background:transparent;font-family:inherit;font-size:13px;color:#333">
+              </div>
+              <sc-if value="{{ giShowSugs }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:-6px;right:0;top:calc(100% + 2px);z-index:6;background:#fff;border-radius:10px;box-shadow:0 10px 24px -6px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.06);padding:4px;max-height:180px;overflow-y:auto"><sc-for list="{{ giSugs }}" as="g" hint-placeholder-count="3"><div onMouseDown="{{ g.pick }}" style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer" style-hover="background:rgba(40,139,213,.08)"><span class="mi" style="font-size:15px;color:rgba(0,0,0,.4)">{{ g.icon }}</span>{{ g.text }}</div></sc-for></div></sc-if>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">checklist</span>Subtasks</div>
+            <div style="flex:1;min-width:0;padding-top:4px">
+              <sc-if value="{{ giHasSubs }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><div style="flex:1;height:4px;border-radius:2px;background:#eee;overflow:hidden"><div style="height:100%;width:{{ giSubPct }}%;background:#288bd5;transition:width .3s"></div></div><div style="font-size:12px;color:rgba(0,0,0,.5)">{{ giSubText }}</div></div></sc-if>
+              <sc-for list="{{ giSubs }}" as="s" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:6px;min-height:36px"><span class="mi" onClick="{{ s.toggle }}" style="font-size:20px;color:{{ s.boxColor }};cursor:pointer">{{ s.boxIcon }}</span><input value="{{ s.body }}" onChange="{{ s.rename }}" style="flex:1;min-width:0;height:30px;border:0;outline:0;background:transparent;font-family:inherit;font-size:14px;color:{{ s.color }};text-decoration:{{ s.deco }}"><span class="mi" onClick="{{ s.remove }}" title="Delete subtask" style="font-size:17px;color:rgba(0,0,0,.4);cursor:pointer;width:28px;height:28px;border-radius:50%" style-hover="background:rgba(0,0,0,.05)">close</span></div></sc-for>
+              <div style="display:flex;align-items:center;gap:6px;min-height:36px"><span class="mi" style="font-size:20px;color:#288bd5">add</span><input value="{{ giSubIn }}" onChange="{{ giSetSubIn }}" onKeyDown="{{ giSubKey }}" placeholder="Add subtask · Enter" style="flex:1;min-width:0;height:30px;border:0;outline:0;background:transparent;font-family:inherit;font-size:14px;color:#333"></div>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ giDelAsk }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:12px 14px;border-radius:12px;background:rgba(211,47,47,.06);border:1px solid rgba(211,47,47,.2)"><div style="flex:1;font-size:13px;color:#b71c1c;font-weight:600">Delete this goal?</div><div onClick="{{ giCancelDelete }}" style="height:32px;padding:0 12px;display:flex;align-items:center;border-radius:16px;font-size:13px;font-weight:600;color:rgba(0,0,0,.6);cursor:pointer">Cancel</div><div onClick="{{ giDelete }}" style="height:32px;padding:0 14px;display:flex;align-items:center;border-radius:16px;font-size:13px;font-weight:700;color:#fff;background:#d32f2f;cursor:pointer">Delete</div></div></sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none">
+      <span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span>
+      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(0,0,0,.32);z-index:20"></div></sc-if>
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:500px;max-width:92%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:0 16px 22px;animation:rn-fade .2s ease">
+      <div style="height:12px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 8px"><div style="font-size:18px;font-weight:700">New goal</div><span class="mi" onClick="{{ closeSheet }}" style="font-size:22px;color:rgba(0,0,0,.6);cursor:pointer;padding:6px">close</span></div>
+      <div style="display:flex;border-radius:20px;overflow:hidden;border:1px solid #288bd5;margin-bottom:12px">
+        <sc-for list="{{ periodChips }}" as="p" hint-placeholder-count="5"><div onClick="{{ p.onClick }}" style="flex:1;height:32px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:{{ p.bg }};color:{{ p.fg }};cursor:pointer;transition:background .2s">{{ p.label }}</div></sc-for>
+      </div>
+      <input value="{{ formText }}" onChange="{{ setFormText }}" onKeyDown="{{ formKey }}" placeholder="{{ formPlaceholder }}" autoFocus="{{ true }}" style="width:100%;box-sizing:border-box;border:0;border-bottom:2px solid #288bd5;outline:0;font:inherit;font-size:17px;line-height:1.6;color:#333;padding:6px 0;background:transparent">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin:14px 0 6px">{{ routineLabel }}</div>
+      <div class="rn-hscroll" style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px">
+        <sc-for list="{{ routineChips }}" as="c" hint-placeholder-count="7"><div onClick="{{ c.onClick }}" style="display:flex;align-items:center;gap:4px;height:32px;padding:0 12px;border-radius:16px;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.border }};cursor:pointer">{{ c.time }} {{ c.name }}</div></sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
+        <div style="flex:1;font-size:12px;color:rgba(0,0,0,.5)">{{ formHint }}</div>
+        <div onClick="{{ submitForm }}" style="height:38px;padding:0 18px;border-radius:19px;background:{{ formSendBg }};color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s">Add</div>
+      </div>
+    </div>
+  </sc-if>
+
+  </div>
+</div>
+</div>
+
+<!-- GD DESKTOP -->
+<div class="dv-opt" id="gd"><div class="dv-olabel"><a class="dv-oid" href="#gd">Desktop</a>1440×900</div>
+<x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1440 }}" height="{{ 900 }}" url="app.routinenotes.com/goals" tabs="{{ browserTabs }}" hint-size="1440px,900px">
+  <div style="height:100%;display:flex;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+    <div style="width:264px;flex-shrink:0;background:#fff;border-right:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:10px;padding:20px 20px 16px"><img src="assets/icon-192.png" alt="Routine Notes" style="width:34px;height:34px;object-fit:contain"><div style="font-size:16px;font-weight:700">Routine Notes</div></div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:0 12px">
+        <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4"><div onClick="{{ n.go }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};font-size:14px;font-weight:600;cursor:pointer" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</div></sc-for><div onClick="{{ toggleNavMore }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;margin-top:6px;border-radius:10px;color:rgba(0,0,0,.6);font-size:14px;font-weight:600;cursor:pointer" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">more_horiz</span><div style="flex:1">More</div><span class="mi" style="font-size:20px;transition:transform .2s;transform:rotate({{ navMoreRot }})">expand_more</span></div><sc-if value="{{ navMoreOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;animation:rn-fade .18s ease"><sc-for list="{{ navMore }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px 0 20px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};text-decoration:none;font-size:14px;font-weight:600;margin-top:{{ n.gap }}" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for></div></sc-if>
+      </div>
+      <div style="padding:22px 20px 8px;font-size:11px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">YEAR GOALS · 2026</div>
+      <div class="rn-hscroll" style="display:flex;flex-direction:column;gap:2px;padding:0 12px;overflow-y:auto;min-height:0;flex:1;scrollbar-width:none">
+        <sc-for list="{{ sideYears }}" as="g" hint-placeholder-count="7">
+          <a href="Year Goals.dc.html" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:12px;color:inherit" style-hover="background:rgba(40,139,213,.06)">
+            <div style="position:relative;width:30px;height:30px;flex-shrink:0"><svg viewBox="0 0 96 96" style="width:30px;height:30px;transform:rotate(-90deg)"><circle cx="48" cy="48" r="40" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="13"></circle><circle cx="48" cy="48" r="40" fill="none" stroke="{{ g.color }}" stroke-width="13" stroke-dasharray="251.3" stroke-dashoffset="{{ g.off }}" stroke-linecap="round"></circle></svg></div>
+            <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.body }}</div><div style="font-size:12px;color:rgba(0,0,0,.54);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.time }} {{ g.rname }} · {{ g.pct }}%</div></div>
+          </a>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-top:1px solid rgba(0,0,0,.06)">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:36px;height:36px;border-radius:50%;object-fit:cover" alt="Profile picture">
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.5)">{{ points }} points</div></div>
+      </div>
+    </div>
+    <div style="max-width:1040px;margin:0 auto;width:100%;box-sizing:border-box;flex:1;min-width:0;display:flex;flex-direction:column;gap:16px;padding:22px 28px 28px">
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <div style="flex:1;min-width:0"><div style="font-size:26px;font-weight:700;line-height:1.1">Goals</div><div style="font-size:13px;color:rgba(0,0,0,.54)">Saturday, 12 September</div></div>
+        <div onClick="{{ openMilestones }}" style="display:flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:18px;border:1px solid rgba(0,0,0,.12);background:#fff;font-size:13px;font-weight:600;color:rgba(0,0,0,.7);cursor:pointer" style-hover="background:#fafafa"><span class="mi" style="font-size:18px">widgets</span>Milestones</div>
+        <div onClick="{{ openAdd }}" style="display:flex;align-items:center;gap:6px;height:36px;padding:0 16px;border-radius:18px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.14)"><span class="mi" style="font-size:18px">add</span>New goal</div>
+        <div style="display:flex;align-items:center;gap:4px;height:28px;padding:0 12px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;gap:20px">
+        <div style="width:420px;flex-shrink:0;display:flex;flex-direction:column;gap:16px">
+          <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 10px 12px;flex-shrink:0">
+      <div style="display:flex;align-items:flex-start">
+        <sc-for list="{{ ladder }}" as="s" hint-placeholder-count="5">
+          <div style="display:flex;align-items:flex-start;flex:1;min-width:0">
+            <div onClick="{{ s.onClick }}" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0 6px;border-radius:12px;background:{{ s.bg }};cursor:pointer;transition:background .2s">
+              <div style="position:relative;width:44px;height:44px">
+                <svg viewBox="0 0 48 48" style="width:44px;height:44px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="4"></circle><circle cx="24" cy="24" r="20" fill="none" stroke="{{ s.color }}" stroke-width="4" stroke-dasharray="125.66" stroke-dashoffset="{{ s.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .5s cubic-bezier(.3,1.3,.5,1)"></circle></svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:{{ s.numColor }};animation:{{ s.anim }}">{{ s.num }}</div>
+              </div>
+              <div style="font-size:11px;font-weight:700;color:{{ s.labelColor }}">{{ s.label }}</div>
+            </div>
+            <sc-if value="{{ s.hasArrow }}" hint-placeholder-val="{{ true }}"><div style="width:14px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:16px;color:rgba(0,0,0,.3)"><span class="mi" style="font-size:14px">chevron_right</span><div style="font-size:9px;font-weight:700">{{ s.th }}</div></div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin:8px 8px 0;padding-top:8px;border-top:1px solid rgba(0,0,0,.06);font-size:12px;color:rgba(0,0,0,.6)"><span class="mi" style="font-size:16px;color:#288bd5">{{ tabIcon }}</span><span style="flex:1;min-width:0">{{ tabRule }}</span></div>
+    </div>
+          <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 12px 8px;flex-shrink:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 6px 6px"><div style="font-size:15px;font-weight:700">September 2026</div><div style="font-size:12px;color:rgba(0,0,0,.45)">Tap a day</div></div>
+        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px">
+          <sc-for list="{{ dowLabels }}" as="d" hint-placeholder-count="7"><div style="text-align:center;font-size:10px;font-weight:600;color:rgba(0,0,0,.4);padding-bottom:2px">{{ d.l }}</div></sc-for>
+          <sc-for list="{{ calCellsAll }}" as="c" hint-placeholder-count="7">
+            <div onClick="{{ c.onClick }}" style="display:flex;align-items:center;justify-content:center;height:46px;cursor:{{ c.cursor }};visibility:{{ c.vis }}">
+              <div style="position:relative;width:34px;height:34px">
+                <svg viewBox="0 0 48 48" style="width:34px;height:34px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="21" fill="{{ c.fill }}" stroke="{{ c.track }}" stroke-width="3" style="transition:fill .2s"></circle><circle cx="24" cy="24" r="21" fill="none" stroke="{{ c.ring }}" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="{{ c.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:{{ c.weight }};color:{{ c.numColor }}">{{ c.n }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column"><div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:16px 20px 8px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:none" class="rn-hscroll">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><div style="font-size:17px;font-weight:700">{{ listTitle }}</div><div style="font-size:12px;color:rgba(0,0,0,.54);white-space:nowrap"><b style="color:rgba(0,0,0,.87)">{{ listDone }}</b> of {{ listTotal }} done</div></div>
+      <div style="animation:{{ listAnim }}">
+        <sc-for list="{{ groups }}" as="gr" hint-placeholder-count="4">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 0 4px"><div style="font-size:12px;font-weight:600;color:{{ gr.timeColor }};font-variant-numeric:tabular-nums">{{ gr.time }}</div><div style="font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:rgba(0,0,0,.55)">{{ gr.name }}</div><sc-if value="{{ gr.isNow }}" hint-placeholder-val="{{ false }}"><div style="font-size:9px;font-weight:700;letter-spacing:.4px;padding:1px 6px;border-radius:999px;background:rgba(255,152,0,.14);color:#e68900">NOW</div></sc-if><div style="flex:1;height:1px;background:rgba(0,0,0,.06)"></div><div style="font-size:11px;color:rgba(0,0,0,.45)">{{ gr.count }}</div></div>
+            <sc-for list="{{ gr.rows }}" as="r" hint-placeholder-count="1">
+              <div>
+                <sc-if value="{{ r.isCheck }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:8px;min-height:54px;padding:4px 0">
+                    <span class="mi" onClick="{{ r.onToggle }}" title="Tick" style="font-size:28px;color:{{ r.boxColor }};cursor:pointer;width:40px;height:40px;margin-left:-6px;border-radius:50%;flex-shrink:0" style-hover="background:rgba(0,0,0,.04)">{{ r.boxIcon }}</span>
+                    <div onClick="{{ r.onOpen }}" title="Open" style="flex:1;min-width:0;cursor:pointer;padding:4px 0">
+                      <div style="font-size:16px;font-weight:500;line-height:1.3;text-decoration:{{ r.deco }};color:{{ r.color }}">{{ r.body }}</div>
+                      <sc-if value="{{ r.hasBar }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-top:5px"><div style="flex:1;height:5px;border-radius:3px;background:#eeeeee;overflow:hidden"><div style="height:100%;width:{{ r.barPct }}%;background:{{ r.barColor }};border-radius:3px;transition:width .4s"></div></div><div style="font-size:11px;color:rgba(0,0,0,.54);white-space:nowrap">{{ r.barLabel }}</div><div style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:{{ r.statusBg }};color:{{ r.statusColor }}">{{ r.status }}</div></div></sc-if>
+                      <sc-if value="{{ r.hasMeta }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,.5);margin-top:2px">{{ r.meta }}</div></sc-if>
+                      <sc-if value="{{ r.hasInfo }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:10px;margin-top:4px;font-size:12px;color:rgba(0,0,0,.5)"><sc-for list="{{ r.info }}" as="f" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:3px"><span class="mi" style="font-size:14px">{{ f.icon }}</span>{{ f.text }}</div></sc-for></div></sc-if>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ r.isYear }}" hint-placeholder-val="{{ false }}">
+                  <a href="Year Goals.dc.html" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:4px 0;color:inherit">
+                    <div style="position:relative;width:46px;height:46px;flex-shrink:0"><svg viewBox="0 0 96 96" style="width:46px;height:46px;transform:rotate(-90deg)"><circle cx="48" cy="48" r="40" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="11"></circle><circle cx="48" cy="48" r="40" fill="none" stroke="{{ r.ringColor }}" stroke-width="11" stroke-dasharray="251.3" stroke-dashoffset="{{ r.ringOff }}" stroke-linecap="round"></circle></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:{{ r.ringColor }}">{{ r.pct }}%</div></div>
+                    <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:600;line-height:1.3">{{ r.body }}</div><div style="font-size:12px;color:rgba(0,0,0,.54);margin-top:2px">{{ r.meta }}</div></div>
+                    <span class="mi" style="font-size:22px;color:rgba(0,0,0,.35)">chevron_right</span>
+                  </a>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+        <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 0 18px;text-align:center;font-size:14px;color:rgba(0,0,0,.45)">{{ emptyText }}</div></sc-if>
+        <div onClick="{{ openAdd }}" style="display:flex;align-items:center;gap:12px;min-height:50px;border-top:1px solid rgba(0,0,0,.06);margin-top:8px;color:{{ addColor }};font-size:15px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:28px">{{ addIcon }}</span>{{ addLabel }}</div>
+      </div>
+    </div></div>
+      </div>
+    </div>
+    <sc-if value="{{ itemOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeItem }}" style="position:absolute;inset:0;background:rgba(15,23,42,.38);z-index:40;animation:rn-fade .2s ease"></div>
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:720px;max-width:92%;max-height:86%;z-index:41;background:#fff;border-radius:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.35);display:flex;flex-direction:column;animation:rn-fade .2s ease;padding-top:6px">
+      <div style="display:flex;align-items:center;gap:6px;padding:12px 12px 4px 24px;flex-shrink:0">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:rgba(0,0,0,.5)"><span class="mi" style="font-size:16px">{{ giPeriodIcon }}</span>{{ giPeriodLabel }}</div>
+        <div onClick="{{ giToggleStatus }}" title="Change status" style="display:flex;align-items:center;gap:5px;height:28px;padding:0 12px;border-radius:14px;background:{{ giStatusBg }};color:{{ giStatusFg }};font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;transition:background .2s"><span class="mi" style="font-size:15px">{{ giStatusIcon }}</span>{{ giStatusLabel }}</div>
+        <span class="mi" onClick="{{ giAskDelete }}" title="Delete" style="font-size:20px;color:rgba(0,0,0,.5);cursor:pointer;width:36px;height:36px;border-radius:50%;flex-shrink:0" style-hover="background:rgba(0,0,0,.05)">delete_outline</span>
+        <span class="mi" onClick="{{ closeItem }}" title="Close" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;width:36px;height:36px;border-radius:50%;flex-shrink:0" style-hover="background:rgba(0,0,0,.05)">close</span>
+      </div>
+      <div class="rn-hscroll" style="flex:1;min-height:0;overflow-y:auto;padding:0 24px 24px;scrollbar-width:none">
+        <sc-if value="{{ giPast }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin:4px 0 6px;padding:8px 12px;border-radius:10px;background:#f4f4f4;font-size:12px;color:rgba(0,0,0,.6)"><span class="mi" style="font-size:16px">lock_clock</span>{{ giPastText }}</div></sc-if>
+        <textarea value="{{ giTitle }}" onChange="{{ giSetTitle }}" rows="1" placeholder="Untitled" style="field-sizing:content;display:block;width:100%;box-sizing:border-box;border:0;outline:0;resize:none;background:transparent;font-family:inherit;font-size:26px;font-weight:700;line-height:1.25;color:{{ giTitleColor }};padding:4px 0 2px;text-decoration:{{ giTitleDeco }}"></textarea>
+        <sc-if value="{{ giHasBar }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-top:6px"><div style="flex:1;height:6px;border-radius:3px;background:#eeeeee;overflow:hidden"><div style="height:100%;width:{{ giBarPct }}%;background:{{ giBarColor }};border-radius:3px;transition:width .4s"></div></div><div style="font-size:12px;color:rgba(0,0,0,.55);white-space:nowrap">{{ giBarLabel }}</div></div></sc-if>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:16px">
+          <div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">CONTRIBUTION</div>
+          <sc-if value="{{ giMdEditing }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:1px"><sc-for list="{{ giMdTools }}" as="b" hint-placeholder-count="5"><span class="mi" onMouseDown="{{ b.run }}" title="{{ b.title }}" style="font-size:18px;color:rgba(0,0,0,.6);cursor:pointer;width:30px;height:30px;border-radius:6px" style-hover="background:rgba(0,0,0,.05)">{{ b.icon }}</span></sc-for></div></sc-if>
+          <div onMouseDown="{{ giMdToggle }}" style="display:flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:14px;font-size:12px;font-weight:600;color:#288bd5;cursor:pointer" style-hover="background:rgba(40,139,213,.08)"><span class="mi" style="font-size:16px">{{ giMdBtnIcon }}</span>{{ giMdBtn }}</div>
+        </div>
+        <sc-if value="{{ giMdEditing }}" hint-placeholder-val="{{ false }}"><div style="border-radius:10px;border:1px solid #288bd5;box-shadow:0 0 0 3px rgba(40,139,213,.12);margin-top:6px;overflow:hidden"><textarea ref="{{ giMdRef }}" value="{{ giContribution }}" onChange="{{ giSetContribution }}" placeholder="Write in Markdown — **bold**, - list, - [ ] to-do" autoFocus="{{ true }}" style="field-sizing:content;display:block;width:100%;min-height:120px;box-sizing:border-box;border:0;outline:0;resize:none;padding:12px 14px;font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.6;color:#333;background:#fff"></textarea><div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-top:1px solid rgba(0,0,0,.06);background:#fafafa;font-size:11px;color:rgba(0,0,0,.45)"><span class="mi" style="font-size:14px">code</span>@routine-notes/markdown-editor</div></div></sc-if>
+        <sc-if value="{{ giMdPreviewing }}" hint-placeholder-val="{{ true }}"><div onClick="{{ giMdEdit }}" title="Click to edit" style="margin:4px -10px 0;padding:6px 10px;border-radius:8px;cursor:text;min-height:44px" style-hover="background:rgba(0,0,0,.03)">{{ giMdView }}</div></sc-if>
+        <div style="height:1px;background:rgba(0,0,0,.07);margin:16px 0 8px"></div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">account_tree</span>Linked to</div><div style="flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:34px;font-size:13px"><div style="display:flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:6px;background:#f4f4f4;color:rgba(0,0,0,.8);white-space:nowrap"><span class="mi" style="font-size:15px;color:#288bd5">history</span>{{ giRoutine }}</div><sc-if value="{{ giHasParent }}" hint-placeholder-val="{{ false }}"><span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)">chevron_right</span><div onClick="{{ giOpenParent }}" title="Open parent goal" style="display:flex;align-items:center;gap:5px;min-height:26px;padding:0 10px;border-radius:6px;background:rgba(40,139,213,.08);color:#1f6fab;font-weight:600;cursor:pointer" style-hover="background:rgba(40,139,213,.14)"><span class="mi" style="font-size:15px">north</span>{{ giParent }}</div></sc-if><sc-if value="{{ giNoParent }}" hint-placeholder-val="{{ false }}"><div style="color:rgba(0,0,0,.45)">{{ giNoParentText }}</div></sc-if></div></div>
+          <sc-if value="{{ giIsDay }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">event</span>Date</div><div style="flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:34px;font-size:13px"><sc-for list="{{ giDates }}" as="d" hint-placeholder-count="3"><div onClick="{{ d.onClick }}" style="height:28px;padding:0 12px;display:flex;align-items:center;border-radius:14px;font-size:12px;font-weight:600;background:{{ d.bg }};color:{{ d.fg }};border:1px solid {{ d.border }};cursor:{{ d.cursor }}">{{ d.label }}</div></sc-for><sc-if value="{{ giPast }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:4px;color:rgba(0,0,0,.45);font-size:12px"><span class="mi" style="font-size:15px">lock</span>Date locked on past days</div></sc-if></div></div></sc-if>
+          <div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">sell</span>Tags</div>
+            <div style="flex:1;min-width:0;position:relative">
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:34px">
+                <sc-for list="{{ giTags }}" as="t" hint-placeholder-count="2"><div style="display:flex;align-items:center;height:26px;border-radius:6px;background:{{ t.bg }};color:{{ t.fg }};font-size:12px;font-weight:600;overflow:hidden"><sc-for list="{{ t.segs }}" as="sg" hint-placeholder-count="2"><div style="padding:0 8px;height:26px;display:flex;align-items:center;border-left:{{ sg.border }}">{{ sg.text }}</div></sc-for><span class="mi" onClick="{{ t.remove }}" title="Remove tag" style="font-size:14px;width:22px;height:26px;cursor:pointer;opacity:.6" style-hover="opacity:1">close</span></div></sc-for>
+                <input value="{{ giTagIn }}" onChange="{{ giSetTagIn }}" onKeyDown="{{ giTagKey }}" placeholder="{{ giTagPh }}" style="flex:1;min-width:120px;height:30px;border:0;outline:0;background:transparent;font-family:inherit;font-size:13px;color:#333">
+              </div>
+              <sc-if value="{{ giShowSugs }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:-6px;right:0;top:calc(100% + 2px);z-index:6;background:#fff;border-radius:10px;box-shadow:0 10px 24px -6px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.06);padding:4px;max-height:180px;overflow-y:auto"><sc-for list="{{ giSugs }}" as="g" hint-placeholder-count="3"><div onMouseDown="{{ g.pick }}" style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer" style-hover="background:rgba(40,139,213,.08)"><span class="mi" style="font-size:15px;color:rgba(0,0,0,.4)">{{ g.icon }}</span>{{ g.text }}</div></sc-for></div></sc-if>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:8px;min-height:38px"><div style="display:flex;align-items:center;gap:8px;width:110px;flex-shrink:0;height:34px;color:rgba(0,0,0,.5);font-size:13px"><span class="mi" style="font-size:17px">checklist</span>Subtasks</div>
+            <div style="flex:1;min-width:0;padding-top:4px">
+              <sc-if value="{{ giHasSubs }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><div style="flex:1;height:4px;border-radius:2px;background:#eee;overflow:hidden"><div style="height:100%;width:{{ giSubPct }}%;background:#288bd5;transition:width .3s"></div></div><div style="font-size:12px;color:rgba(0,0,0,.5)">{{ giSubText }}</div></div></sc-if>
+              <sc-for list="{{ giSubs }}" as="s" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:6px;min-height:36px"><span class="mi" onClick="{{ s.toggle }}" style="font-size:20px;color:{{ s.boxColor }};cursor:pointer">{{ s.boxIcon }}</span><input value="{{ s.body }}" onChange="{{ s.rename }}" style="flex:1;min-width:0;height:30px;border:0;outline:0;background:transparent;font-family:inherit;font-size:14px;color:{{ s.color }};text-decoration:{{ s.deco }}"><span class="mi" onClick="{{ s.remove }}" title="Delete subtask" style="font-size:17px;color:rgba(0,0,0,.4);cursor:pointer;width:28px;height:28px;border-radius:50%" style-hover="background:rgba(0,0,0,.05)">close</span></div></sc-for>
+              <div style="display:flex;align-items:center;gap:6px;min-height:36px"><span class="mi" style="font-size:20px;color:#288bd5">add</span><input value="{{ giSubIn }}" onChange="{{ giSetSubIn }}" onKeyDown="{{ giSubKey }}" placeholder="Add subtask · Enter" style="flex:1;min-width:0;height:30px;border:0;outline:0;background:transparent;font-family:inherit;font-size:14px;color:#333"></div>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ giDelAsk }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:12px 14px;border-radius:12px;background:rgba(211,47,47,.06);border:1px solid rgba(211,47,47,.2)"><div style="flex:1;font-size:13px;color:#b71c1c;font-weight:600">Delete this goal?</div><div onClick="{{ giCancelDelete }}" style="height:32px;padding:0 12px;display:flex;align-items:center;border-radius:16px;font-size:13px;font-weight:600;color:rgba(0,0,0,.6);cursor:pointer">Cancel</div><div onClick="{{ giDelete }}" style="height:32px;padding:0 14px;display:flex;align-items:center;border-radius:16px;font-size:13px;font-weight:700;color:#fff;background:#d32f2f;cursor:pointer">Delete</div></div></sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none">
+      <span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span>
+      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(0,0,0,.32);z-index:20"></div></sc-if>
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:500px;max-width:92%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:0 16px 22px;animation:rn-fade .2s ease">
+      <div style="height:12px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 8px"><div style="font-size:18px;font-weight:700">New goal</div><span class="mi" onClick="{{ closeSheet }}" style="font-size:22px;color:rgba(0,0,0,.6);cursor:pointer;padding:6px">close</span></div>
+      <div style="display:flex;border-radius:20px;overflow:hidden;border:1px solid #288bd5;margin-bottom:12px">
+        <sc-for list="{{ periodChips }}" as="p" hint-placeholder-count="5"><div onClick="{{ p.onClick }}" style="flex:1;height:32px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:{{ p.bg }};color:{{ p.fg }};cursor:pointer;transition:background .2s">{{ p.label }}</div></sc-for>
+      </div>
+      <input value="{{ formText }}" onChange="{{ setFormText }}" onKeyDown="{{ formKey }}" placeholder="{{ formPlaceholder }}" autoFocus="{{ true }}" style="width:100%;box-sizing:border-box;border:0;border-bottom:2px solid #288bd5;outline:0;font:inherit;font-size:17px;line-height:1.6;color:#333;padding:6px 0;background:transparent">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin:14px 0 6px">{{ routineLabel }}</div>
+      <div class="rn-hscroll" style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px">
+        <sc-for list="{{ routineChips }}" as="c" hint-placeholder-count="7"><div onClick="{{ c.onClick }}" style="display:flex;align-items:center;gap:4px;height:32px;padding:0 12px;border-radius:16px;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.border }};cursor:pointer">{{ c.time }} {{ c.name }}</div></sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
+        <div style="flex:1;font-size:12px;color:rgba(0,0,0,.5)">{{ formHint }}</div>
+        <div onClick="{{ submitForm }}" style="height:38px;padding:0 18px;border-radius:19px;background:{{ formSendBg }};color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s">Add</div>
+      </div>
+    </div>
+  </sc-if>
+
+  </div>
+</x-import>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const TH = { week: 5, month: 3, year: 6 };
+const R = [
+  { id: 'mp', time: '06:30', name: 'Morning Pages' }, { id: 'wo', time: '07:15', name: 'Workout' }, { id: 'sw', time: '09:00', name: 'Start Work' },
+  { id: 'lw', time: '12:30', name: 'Lunch Walk' }, { id: 'dw', time: '15:00', name: 'Deep Work' }, { id: 'fd', time: '18:00', name: 'Family Dinner' }, { id: 'wd', time: '21:30', name: 'Wind Down' },
+];
+const NOW_R = 'sw', TODAY = 12, FIRST_DOW = 2, DAYS = 30;
+const DN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const TPL = { mp: ['Write 3 pages'], wo: ['Easy 6 km', 'Intervals 5×800 m', 'Mobility 20 min'], sw: ['Code review', 'Standup notes', 'Fix 2 beta bugs'], lw: ['Walk 3 km'], dw: ['Deep work 90 min', 'Essay outline'], fd: ['Phones away'], wd: ['Read 20 pages'] };
+const seedDays = () => {
+  const items = {}, done = {};
+  for (let d = 1; d <= DAYS; d++) {
+    if (d === TODAY) continue;
+    if (d > 19) { items[d] = []; continue; }
+    const list = [];
+    R.forEach((r, i) => { if ((d + i) % 3 === 0 && r.id !== 'lw') return; const t = TPL[r.id]; list.push({ id: `x${d}_${r.id}`, r: r.id, body: t[(d + i) % t.length] }); });
+    items[d] = list;
+    if (d < TODAY) list.forEach((it, i) => { if ((d * 3 + i) % 5 !== 0) done[it.id] = true; });
+  }
+  items[TODAY] = [{ id: 't1', r: 'mp', body: 'Write 3 pages' }, { id: 't2', r: 'wo', body: '5k run' }, { id: 't3', r: 'sw', body: 'Ship dashboard PR' }, { id: 't4', r: 'sw', body: 'Reply to Ana about onboarding' }, { id: 't5', r: 'dw', body: 'Draft Q4 plan outline' }, { id: 't6', r: 'fd', body: 'Phones away' }, { id: 't7', r: 'wd', body: 'Read 20 pages' }];
+  done.t1 = true; done.t2 = true;
+  return { items, done };
+};
+const SEED = seedDays();
+const STAT = { done: { label: 'Done', color: '#4CAF50', bg: 'rgba(76,175,80,.12)' }, active: { label: 'Active', color: '#FF9800', bg: 'rgba(255,152,0,.14)' } };
+const TABS = [
+  { key: 'day', label: 'Today', icon: 'today' }, { key: 'week', label: 'Week', icon: 'view_week', th: '×5' },
+  { key: 'month', label: 'Month', icon: 'calendar_month', th: '×3' }, { key: 'year', label: 'Year', icon: 'event_repeat', th: '×6' }, { key: 'life', label: 'Life', icon: 'all_inclusive' },
+];
+
+const TAG_POOL = ['area:work', 'area:health', 'area:family', 'project:routine-notes:v2', 'project:routine-notes:mobile', 'project:q4-plan', 'context:deep', 'energy:high', 'energy:low'];
+const META0 = {
+  t3: { md: 'Ship the **dashboard** behind the beta flag.\n\n- [x] Charts wired to GraphQL\n- [x] Empty states\n- [ ] QA on iPad mini\n\nAsk Ana to review copy.', tags: ['project:routine-notes:v2', 'area:work'], subs: [{ id: 's1', body: 'Open PR', done: true }, { id: 's2', body: 'Address review', done: true }, { id: 's3', body: 'Merge + deploy', done: false }] },
+  t5: { md: 'Outline the **Q4 plan**: goals, bets, risks.', tags: ['project:q4-plan', 'context:deep'], subs: [] },
+  t2: { md: '5.2 km · 27:40 · easy pace', tags: ['area:health'], subs: [] },
+  k3: { md: 'Dashboard ships when 5 Start Work days are done this week.', tags: ['project:routine-notes:v2'], subs: [{ id: 'k3a', body: 'Design sign-off', done: true }, { id: 'k3b', body: 'Beta release', done: false }] },
+};
+const hh = React.createElement;
+const mdInline = (s) => s.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g).map((p, i) => p.startsWith('**') && p.endsWith('**') && p.length > 4 ? hh('b', { key: i }, p.slice(2, -2)) : p.startsWith('`') && p.length > 2 ? hh('code', { key: i, style: { background: '#f4f4f4', padding: '1px 5px', borderRadius: 4, fontSize: '.9em' } }, p.slice(1, -1)) : p.startsWith('*') && p.endsWith('*') && p.length > 2 ? hh('i', { key: i }, p.slice(1, -1)) : p);
+const mdView = (text, onCheck) => {
+  if (!text.trim()) return hh('div', { style: { fontSize: 14, color: 'rgba(0,0,0,.4)' } }, 'Add what you did, notes, links… (Markdown)');
+  return hh('div', { style: { fontSize: 15, lineHeight: 1.6, color: 'rgba(0,0,0,.82)' } }, text.split('\n').map((ln, i) => { let m;
+    if ((m = ln.match(/^- \[( |x)\] (.*)/i))) { const on = m[1] !== ' '; return hh('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start' } }, hh('span', { className: 'mi', onClick: (e) => { e.stopPropagation(); onCheck(i); }, style: { fontSize: 20, color: on ? '#288bd5' : 'rgba(0,0,0,.45)', cursor: 'pointer', marginTop: 2 } }, on ? 'check_box' : 'check_box_outline_blank'), hh('span', { style: { textDecoration: on ? 'line-through' : 'none', color: on ? 'rgba(0,0,0,.45)' : 'inherit' } }, mdInline(m[2]))); }
+    if ((m = ln.match(/^- (.*)/))) return hh('div', { key: i, style: { display: 'flex', gap: 8 } }, hh('span', { style: { color: 'rgba(0,0,0,.4)' } }, '•'), hh('span', null, mdInline(m[1])));
+    if ((m = ln.match(/^#{1,3} (.*)/))) return hh('div', { key: i, style: { fontSize: 17, fontWeight: 700, margin: '8px 0 2px' } }, mdInline(m[1]));
+    if (!ln.trim()) return hh('div', { key: i, style: { height: 8 } });
+    return hh('div', { key: i }, mdInline(ln)); }));
+};
+const NAV_MORE = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2']];
+const navMoreFor = (active) => NAV_MORE.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' ? '10px' : '0px', bg: label === active ? 'rgba(40,139,213,.12)' : 'transparent', fg: label === active ? '#1f6fab' : 'rgba(0,0,0,.6)' }));
+const DRAWER_ITEMS = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2'], ['logout', 'Log out', '#']];
+const drawerFor = (active) => DRAWER_ITEMS.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' || label === 'Log out' ? '8px' : '0px', color: label === 'Log out' ? '#d32f2f' : (label === active ? '#1f6fab' : 'rgba(0,0,0,.75)'), bg: label === active ? 'rgba(40,139,213,.08)' : 'transparent' }));
+const NAV_HREF = { Home: 'Routine Notes Final.dc.html', Priority: 'Priority.dc.html', Agents: 'Agents.dc.html', Goals: 'Goals.dc.html', Routines: 'Routines.dc.html', Progress: 'Progress.dc.html', Groups: 'Groups.dc.html', Profile: 'Profile and About.dc.html#t1', Settings: 'Profile and About.dc.html#t1', About: 'Profile and About.dc.html#t2' };
+const fixNav = (v) => { ['navItems', 'lgNav', 'drawerNav'].forEach(k => { if (Array.isArray(v[k])) v[k] = v[k].map(n => { const href = n.href && n.href !== '#' ? n.href : NAV_HREF[n.label]; const go = () => { if (href) window.location.href = href; }; return { ...n, href: href || '#', go, onClick: n.onClick || go, onPhone: n.onPhone || go, onTab: n.onTab || go }; }); }); return v; };
+class Component extends DCLogic {
+  timers = [];
+  later(ms, fn) { this.timers.push(setTimeout(fn, ms)); }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); clearTimeout(this.tt); }
+  state = {
+    tab: 'day', selDay: TODAY, calOpen: false, items: SEED.items, done: SEED.done, bonus: {}, mbonus: {},
+    week: [{ id: 'k1', r: 'mp', body: '6 morning pages', n: 5 }, { id: 'k2', r: 'wo', body: 'Run 20 km', n: 3 }, { id: 'k3', r: 'sw', body: 'Ship the dashboard', n: 4 }, { id: 'k4', r: 'sw', body: 'Close all beta tickets', n: 1 }, { id: 'k5', r: 'dw', body: 'Q4 plan drafted', n: 2 }, { id: 'k6', r: 'fd', body: '5 phone-free dinners', n: 4 }],
+    month: [{ id: 'n1', r: 'mp', body: '25 mornings', n: 1 }, { id: 'n2', r: 'wo', body: 'Long runs up to 18 km', n: 1 }, { id: 'n3', r: 'sw', body: 'Launch mobile dashboard', n: 1 }, { id: 'n4', r: 'lw', body: '90 km in September', n: 2 }, { id: 'n5', r: 'dw', body: 'Essay: Talking to routines', n: 0 }, { id: 'n6', r: 'fd', body: '17 phone-free dinners', n: 2 }, { id: 'n7', r: 'wd', body: 'Read 2 books', n: 1 }],
+    year: [{ id: 'y1', r: 'sw', body: 'Ship v2 of Routine Notes', n: 4 }, { id: 'y2', r: 'wo', body: 'Run a half marathon', n: 2 }, { id: 'y3', r: 'wd', body: 'Read 24 books', n: 3 }, { id: 'y4', r: 'mp', body: 'Journal 300 mornings', n: 5 }, { id: 'y5', r: 'lw', body: 'Walk 1,000 km', n: 2 }, { id: 'y6', r: 'dw', body: 'Publish 12 essays', n: 2 }, { id: 'y7', r: 'fd', body: '200 phone-free dinners', n: 6 }],
+    life: [{ id: 'l1', r: 'wo', body: 'Run a marathon', link: 'Run a half marathon' }, { id: 'l2', r: 'dw', body: 'Write a book', link: 'Publish 12 essays' }, { id: 'l3', r: null, body: 'Visit 30 countries' }],
+    manual: {}, meta: META0, item: null, mdEdit: false, tagIn: '', tagFocus: false, subIn: '', delAsk: false, sheet: false, form: { period: 'day', text: '', r: NOW_R }, toast: null, pop: null, listKey: 0,
+  };
+  showToast(t) { clearTimeout(this.tt); this.setState({ toast: { ...t, id: Date.now() } }); this.tt = setTimeout(() => this.setState({ toast: null }), 2800); }
+  weekN(st, w) { return w.n + (st.bonus[w.r] && w.id === (st.week.find(x => x.r === w.r) || {}).id ? 1 : 0); }
+  weekDone(st, w) { return !!st.manual[w.id] || this.weekN(st, w) >= TH.week; }
+  monthN(st, m) { return m.n + (st.mbonus[m.r] ? 1 : 0); }
+  monthDone(st, m) { return !!st.manual[m.id] || this.monthN(st, m) >= TH.month; }
+  yearDone(st, y) { return !!st.manual[y.id] || y.n >= TH.year; }
+  toggleDay(it) {
+    const st = this.state, on = !st.done[it.id], done = { ...st.done, [it.id]: on };
+    this.setState({ done });
+    if (!on || st.selDay !== TODAY) return;
+    const mine = st.items[TODAY].filter(x => x.r === it.r);
+    const rname = R.find(r => r.id === it.r).name;
+    if (mine.every(x => done[x.id]) && !st.bonus[it.r]) {
+      const w = st.week.find(x => x.r === it.r);
+      if (!w) { this.showToast({ icon: 'task_alt', color: '#81c784', title: `${rname} cleared for today`, sub: 'No week goal on this routine yet' }); return; }
+      const nb = { ...st.bonus, [it.r]: true }, nst = { ...st, done, bonus: nb };
+      const wasW = this.weekDone(st, w), isW = this.weekDone(nst, w);
+      this.setState({ bonus: nb, pop: 'week' }); this.later(700, () => this.setState({ pop: null }));
+      if (!wasW && isW) {
+        const m = st.month.find(x => x.r === it.r);
+        if (m && !st.mbonus[it.r]) { const mb = { ...st.mbonus, [it.r]: true }; this.setState({ mbonus: mb }); this.showToast({ icon: 'event_available', color: '#81c784', title: `“${w.body}” auto-ticked · ${this.weekN(nst, w)}/${TH.week} days`, sub: `${m.body} → ${this.monthN({ ...nst, mbonus: mb }, m)}/${TH.month} weeks` }); }
+        else this.showToast({ icon: 'event_available', color: '#81c784', title: `“${w.body}” auto-ticked`, sub: `${this.weekN(nst, w)}/${TH.week} days` });
+      } else this.showToast({ icon: 'check_circle', color: '#81c784', title: `${rname} cleared for today`, sub: `“${w.body}” → ${this.weekN(nst, w)}/${TH.week} days` });
+    }
+  }
+  toggleManual(kind, g) {
+    const st = this.state, auto = kind === 'week' ? this.weekN(st, g) >= TH.week : kind === 'month' ? this.monthN(st, g) >= TH.month : kind === 'year' ? g.n >= TH.year : false;
+    if (auto) { this.showToast({ icon: 'info', color: '#90caf9', title: 'Ticked automatically', sub: kind === 'week' ? `${this.weekN(st, g)} of ${TH.week} day goals` : kind === 'month' ? `${this.monthN(st, g)} of ${TH.month} week goals` : `${g.n} of ${TH.year} month goals` }); return; }
+    this.setState(s => ({ manual: { ...s.manual, [g.id]: !s.manual[g.id] } }));
+  }
+  mdRef = React.createRef();
+  getItem(st, it) { if (!it) return null; return it.kind === 'day' ? (st.items[it.day] || []).find(x => x.id === it.id) : st[it.kind].find(x => x.id === it.id); }
+  patchItem(patch) { const it = this.state.item; if (!it) return; if (it.kind === 'day') this.setState(s => ({ items: { ...s.items, [it.day]: (s.items[it.day] || []).map(x => x.id === it.id ? { ...x, ...patch } : x) } })); else this.setState(s => ({ [it.kind]: s[it.kind].map(x => x.id === it.id ? { ...x, ...patch } : x) })); }
+  meta(id) { return this.state.meta[id] || { md: '', tags: [], subs: [] }; }
+  patchMeta(fn) { const id = this.state.item.id; this.setState(s => ({ meta: { ...s.meta, [id]: fn(s.meta[id] || { md: '', tags: [], subs: [] }) } })); }
+  openItem(kind, id, day) { this.setState(s => ({ item: { kind, id, day: day ?? s.selDay }, mdEdit: false, tagIn: '', subIn: '', delAsk: false })); }
+  pastToast(what) { this.showToast({ icon: 'lock_clock', color: '#bdbdbd', title: 'Past day is locked', sub: what }); }
+  mdWrap(a, b, line) { const ta = this.mdRef.current, md = this.meta(this.state.item.id).md; const s0 = ta ? ta.selectionStart : md.length, s1 = ta ? ta.selectionEnd : md.length; let out, cur;
+    if (line) { const ls = md.lastIndexOf('\n', s0 - 1) + 1; out = md.slice(0, ls) + a + md.slice(ls); cur = s1 + a.length; } else { out = md.slice(0, s0) + a + md.slice(s0, s1) + b + md.slice(s1); cur = s1 + a.length; }
+    this.patchMeta(m => ({ ...m, md: out })); setTimeout(() => { if (ta) { ta.focus(); ta.setSelectionRange(cur, cur); } }, 0); }
+  addTag(t) { const v = t.trim().replace(/\s+/g, '-').replace(/:+$/, ''); if (!v) return; this.patchMeta(m => m.tags.includes(v) ? m : { ...m, tags: [...m.tags, v] }); this.setState({ tagIn: '' }); }
+  itemVals(st) {
+    const it = st.item, g = this.getItem(st, it);
+    if (!it || !g) return { itemOpen: false, closeItem: () => this.setState({ item: null }) };
+    const k = it.kind, m = this.meta(g.id), past = k === 'day' && it.day < TODAY;
+    const done = k === 'day' ? !!st.done[g.id] : k === 'week' ? this.weekDone(st, g) : k === 'month' ? this.monthDone(st, g) : !!st.manual[g.id];
+    const rr = R.find(x => x.id === g.r);
+    const parent = k === 'day' ? st.week.find(x => x.r === g.r) : k === 'week' ? st.month.find(x => x.r === g.r) : k === 'month' ? st.year.find(x => x.r === g.r) : null;
+    const pKind = { day: 'week', week: 'month', month: 'year' }[k];
+    const n = k === 'week' ? this.weekN(st, g) : k === 'month' ? this.monthN(st, g) : 0, th = k === 'week' ? TH.week : TH.month;
+    const subsDone = m.subs.filter(s => s.done).length;
+    const q = st.tagIn.trim().toLowerCase();
+    const pool = [...new Set([...TAG_POOL, ...Object.values(st.meta).flatMap(x => x.tags)])].filter(t => !m.tags.includes(t));
+    const lvl = q.split(':').length;
+    const sugs = q ? [...new Set(pool.filter(t => t.startsWith(q)).map(t => t.split(':').slice(0, lvl).join(':')))].slice(0, 6) : [];
+    const pal = { area: ['rgba(76,175,80,.12)', '#2e7d32'], project: ['rgba(40,139,213,.12)', '#1f6fab'], context: ['rgba(156,39,176,.1)', '#7b1fa2'], energy: ['rgba(255,152,0,.14)', '#b26a00'] };
+    const dayOpts = [[TODAY, 'Today'], [TODAY + 1, 'Tomorrow'], [TODAY + 2, 'Mon 14']];
+    const dates = past ? [{ key: 'p', label: `${DN[(FIRST_DOW + it.day - 1) % 7].slice(0, 3)} ${it.day} Sep`, bg: '#f4f4f4', fg: 'rgba(0,0,0,.55)', border: 'transparent', cursor: 'default', onClick: undefined }]
+      : [...(dayOpts.some(([d]) => d === it.day) ? [] : [[it.day, `${it.day} Sep`]]), ...dayOpts].map(([d, label]) => { const on = d === it.day; return { key: 'd' + d, label, bg: on ? 'rgba(40,139,213,.12)' : '#fff', fg: on ? '#1f6fab' : 'rgba(0,0,0,.65)', border: on ? 'rgba(40,139,213,.45)' : 'rgba(0,0,0,.12)', cursor: 'pointer', onClick: () => { if (on) return; this.setState(s => { const from = (s.items[it.day] || []).filter(x => x.id !== g.id); return { items: { ...s.items, [it.day]: from, [d]: [...(s.items[d] || []), g] }, item: { ...it, day: d } }; }); this.showToast({ icon: 'event', color: '#90caf9', title: `Moved to ${label}`, sub: g.body }); } }; });
+    const T = TABS.find(x => x.key === k);
+    return {
+      itemOpen: true, closeItem: () => this.setState({ item: null, mdEdit: false }),
+      giPeriodIcon: T.icon, giPeriodLabel: k === 'day' ? `Day goal · ${DN[(FIRST_DOW + it.day - 1) % 7]} ${it.day} Sep` : k === 'week' ? 'Week goal · Week 37' : k === 'month' ? 'Month goal · September 2026' : 'Lifetime goal',
+      giStatusLabel: done ? 'Complete' : 'Open', giStatusIcon: done ? 'check_circle' : 'radio_button_unchecked', giStatusBg: done ? 'rgba(76,175,80,.12)' : 'rgba(255,152,0,.14)', giStatusFg: done ? '#2e7d32' : '#b26a00',
+      giToggleStatus: () => { if (past) return this.pastToast('Status can’t change on past days'); if (k === 'day') this.toggleDay(g); else this.toggleManual(k, g); },
+      giPast: past, giPastText: 'Past day · you can edit the title, contribution, tags and subtasks, or delete it. Date and status are locked.',
+      giTitle: g.body, giSetTitle: (e) => this.patchItem({ body: e.target.value.replace(/\n/g, ' ') }), giTitleColor: done ? 'rgba(0,0,0,.5)' : 'rgba(0,0,0,.87)', giTitleDeco: 'none',
+      giHasBar: k === 'week' || k === 'month', giBarPct: Math.min(100, n / th * 100), giBarColor: done ? '#4CAF50' : '#FF9800', giBarLabel: `${n}/${th} ${k === 'week' ? 'day goals' : 'week goals'} · auto-ticks at ${th}`,
+      giMdEditing: st.mdEdit, giMdPreviewing: !st.mdEdit, giMdBtn: st.mdEdit ? 'Done' : 'Edit', giMdBtnIcon: st.mdEdit ? 'check' : 'edit',
+      giMdToggle: (e) => { e.preventDefault(); this.setState(s => ({ mdEdit: !s.mdEdit })); }, giMdEdit: () => this.setState({ mdEdit: true }), giMdRef: this.mdRef,
+      giContribution: m.md, giSetContribution: (e) => { const v = e.target.value; this.patchMeta(x => ({ ...x, md: v })); },
+      giMdView: mdView(m.md, (li) => this.patchMeta(x => ({ ...x, md: x.md.split('\n').map((l, i) => i === li ? (/^- \[ \]/.test(l) ? l.replace('- [ ]', '- [x]') : l.replace(/^- \[x\]/i, '- [ ]')) : l).join('\n') }))),
+      giMdTools: [['format_bold', 'Bold', '**', '**'], ['format_italic', 'Italic', '*', '*'], ['title', 'Heading', '## ', '', true], ['format_list_bulleted', 'List', '- ', '', true], ['check_box', 'To-do', '- [ ] ', '', true]].map(([icon, title, a, b, line]) => ({ key: icon, icon, title, run: (e) => { e.preventDefault(); this.mdWrap(a, b, line); } })),
+      giRoutine: rr ? `${rr.time} ${rr.name}` : 'No routine',
+      giHasParent: !!parent, giParent: parent ? parent.body : '', giNoParent: !parent, giNoParentText: k === 'life' ? 'Top of the chain' : 'No parent goal on this routine',
+      giOpenParent: () => { if (!parent) return; if (pKind === 'year') { window.location.href = 'Year Goals.dc.html'; return; } this.openItem(pKind, parent.id); },
+      giIsDay: k === 'day', giDates: dates,
+      giTags: m.tags.map(t => { const segs = t.split(':'), c = pal[segs[0]] || ['#f0f0f0', 'rgba(0,0,0,.7)']; return { key: t, bg: c[0], fg: c[1], segs: segs.map((s, i) => ({ key: i, text: s, border: i ? '1px solid rgba(0,0,0,.12)' : '0' })), remove: () => this.patchMeta(x => ({ ...x, tags: x.tags.filter(y => y !== t) })) }; }),
+      giTagIn: st.tagIn, giSetTagIn: (e) => this.setState({ tagIn: e.target.value }), giTagPh: m.tags.length ? 'Add tag' : 'Add tag · use : for levels, e.g. project:app',
+      giTagKey: (e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); this.addTag(st.tagIn); } else if (e.key === 'Backspace' && !st.tagIn && m.tags.length) this.patchMeta(x => ({ ...x, tags: x.tags.slice(0, -1) })); else if (e.key === 'Escape') this.setState({ tagIn: '' }); },
+      giShowSugs: sugs.length > 0, giSugs: sugs.map(s => { const leaf = pool.includes(s); return { key: s, text: s, icon: leaf ? 'sell' : 'subdirectory_arrow_right', pick: (e) => { e.preventDefault(); if (leaf) this.addTag(s); else this.setState({ tagIn: s + ':' }); } }; }),
+      giHasSubs: m.subs.length > 0, giSubPct: m.subs.length ? subsDone / m.subs.length * 100 : 0, giSubText: `${subsDone}/${m.subs.length} done`,
+      giSubs: m.subs.map(s => ({ key: s.id, body: s.body, boxIcon: s.done ? 'check_box' : 'check_box_outline_blank', boxColor: s.done ? '#288bd5' : 'rgba(0,0,0,.5)', color: s.done ? 'rgba(0,0,0,.45)' : '#333', deco: s.done ? 'line-through' : 'none',
+        toggle: () => this.patchMeta(x => ({ ...x, subs: x.subs.map(y => y.id === s.id ? { ...y, done: !y.done } : y) })), rename: (e) => { const v = e.target.value; this.patchMeta(x => ({ ...x, subs: x.subs.map(y => y.id === s.id ? { ...y, body: v } : y) })); }, remove: () => this.patchMeta(x => ({ ...x, subs: x.subs.filter(y => y.id !== s.id) })) })),
+      giSubIn: st.subIn, giSetSubIn: (e) => this.setState({ subIn: e.target.value }),
+      giSubKey: (e) => { if (e.key !== 'Enter') return; e.preventDefault(); const v = st.subIn.trim(); if (!v) return; this.patchMeta(x => ({ ...x, subs: [...x.subs, { id: 's' + Date.now(), body: v, done: false }] })); this.setState({ subIn: '' }); },
+      giDelAsk: st.delAsk, giAskDelete: () => this.setState(s => ({ delAsk: !s.delAsk })), giCancelDelete: () => this.setState({ delAsk: false }),
+      giDelete: () => { if (k === 'day') this.setState(s => ({ items: { ...s.items, [it.day]: (s.items[it.day] || []).filter(x => x.id !== g.id) } })); else this.setState(s => ({ [k]: s[k].filter(x => x.id !== g.id) })); this.setState({ item: null, delAsk: false }); this.showToast({ icon: 'delete', color: '#ef9a9a', title: 'Goal deleted', sub: g.body }); },
+    };
+  }
+  submitForm() {
+    const st = this.state, f = st.form, body = f.text.trim(); if (!body) return;
+    const id = 'u' + Date.now(), r = f.period === 'life' ? f.r || null : f.r;
+    if (f.period === 'day') this.setState(s => ({ items: { ...s.items, [s.selDay]: [...(s.items[s.selDay] || []), { id, r, body }] } }));
+    else this.setState(s => ({ [f.period]: [...s[f.period], f.period === 'life' ? { id, r, body } : { id, r, body, n: 0 }] }));
+    const rn = r ? R.find(x => x.id === r).name : 'No routine';
+    this.setState({ sheet: false, tab: f.period, listKey: st.listKey + 1, form: { ...f, text: '' } });
+    this.showToast({ icon: 'add_task', color: '#90caf9', title: `${TABS.find(t => t.key === f.period).label} goal added`, sub: `${body} · ${rn}` });
+  }
+  renderVals() { return { ...fixNav(this.__rv()), drawerOpen: !!this.state.__dr, openDrawer: () => this.setState({ __dr: true }), closeDrawer: () => this.setState({ __dr: false }), drawerItems: drawerFor(''), navMore: navMoreFor(''), navMoreOpen: this.state.navMore ?? false, toggleNavMore: () => this.setState(st => ({ navMore: !(st.navMore ?? false) })), navMoreRot: (this.state.navMore ?? false) ? '180deg' : '0deg', navMoreIcon: (this.state.navMore ?? false) ? 'expand_less' : 'more_horiz', navMoreBtnBg: (this.state.navMore ?? false) ? 'rgba(0,0,0,.06)' : 'transparent' }; }
+  __rv() {
+    const st = this.state, t = st.tab;
+    const dayList = st.items[st.selDay] || [], dayDone = dayList.filter(x => st.done[x.id]).length;
+    const wkDone = st.week.filter(w => this.weekDone(st, w)).length, mDone = st.month.filter(m => this.monthDone(st, m)).length;
+    const yAvg = st.year.length ? Math.round(st.year.reduce((a, y) => a + Math.min(1, y.n / TH.year), 0) / st.year.length * 100) : 0, yDone = st.year.filter(y => this.yearDone(st, y)).length;
+    const lDone = st.life.filter(l => st.manual[l.id]).length;
+    const vals = { day: [dayDone, dayList.length], week: [wkDone, st.week.length], month: [mDone, st.month.length], year: [yDone, st.year.length], life: [lDone, st.life.length] };
+    const ladder = TABS.map((T, i) => { const [a, b] = vals[T.key], p = T.key === 'year' ? yAvg / 100 : (b ? a / b : 0), act = T.key === t;
+      return { key: T.key, label: T.key === 'day' && st.selDay !== TODAY ? `Sep ${st.selDay}` : T.label, num: T.key === 'year' ? `${yAvg}%` : `${a}/${b}`, off: 125.66 * (1 - p), color: p >= 1 ? '#4CAF50' : (T.key === 'day' ? '#FF9800' : '#288bd5'), numColor: act ? 'rgba(0,0,0,.87)' : 'rgba(0,0,0,.6)', labelColor: act ? '#1f6fab' : 'rgba(0,0,0,.5)', bg: act ? 'rgba(40,139,213,.1)' : 'transparent', hasArrow: i < TABS.length - 1, th: TABS[i + 1] ? TABS[i + 1].th || '' : '', anim: st.pop === T.key ? 'rn-pop .6s cubic-bezier(.3,1.6,.5,1)' : 'none', onClick: () => this.setState(s => ({ tab: T.key, listKey: s.listKey + 1 })) }; });
+    const rules = { day: st.selDay === TODAY ? 'Day goals count toward this week’s goal for the same routine (5 days auto-tick it).' : `${DN[(FIRST_DOW + st.selDay - 1) % 7]}, ${st.selDay} September`, week: 'Week 37 · 6–12 Sep. A week goal auto-ticks after 5 day goals.', month: 'September 2026. A month goal auto-ticks after 3 week goals.', year: '2026. A year goal auto-ticks after 6 month goals. Tap one to open it.', life: 'Lifetime goals have no date. Year goals link up into them; tick them by hand.' };
+    // calendar
+    const cells = [];
+    for (let i = 0; i < FIRST_DOW; i++) cells.push({ key: 'e' + i, n: '', vis: 'hidden' });
+    for (let d = 1; d <= DAYS; d++) { const li = st.items[d] || [], dn = li.filter(x => st.done[x.id]).length, p = li.length ? dn / li.length : 0, sel = d === st.selDay, today = d === TODAY;
+      cells.push({ key: 'd' + d, n: d, vis: 'visible', cursor: 'pointer', fill: sel ? '#288bd5' : 'transparent', track: li.length ? (sel ? '#288bd5' : 'rgba(0,0,0,.08)') : 'transparent', ring: sel ? '#fff' : (p >= 1 ? '#4CAF50' : (d > TODAY ? 'transparent' : (today ? '#FF9800' : '#288bd5'))), off: 131.95 * (1 - (sel ? (li.length ? p : 0) : p)), numColor: sel ? '#fff' : (today ? '#e68900' : (d > TODAY ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.8)')), weight: sel || today ? 700 : 500, onClick: () => this.setState(s => ({ selDay: d, tab: 'day', listKey: s.listKey + 1 })) }); }
+    while (cells.length % 7) cells.push({ key: 'z' + cells.length, n: '', vis: 'hidden' });
+    const selIdx = cells.findIndex(c => c.n === st.selDay), rowStart = Math.floor(selIdx / 7) * 7;
+    const calCells = st.calOpen ? cells : cells.slice(rowStart, rowStart + 7);
+    // groups
+    const rows = (kind) => {
+      if (kind === 'day') return dayList.map(x => { const dn = !!st.done[x.id]; return { r: x.r, key: x.id, isCheck: true, isYear: false, body: x.body, boxIcon: dn ? 'check_box' : 'check_box_outline_blank', boxColor: dn ? '#288bd5' : 'rgba(0,0,0,.54)', deco: dn ? 'line-through' : 'none', color: dn ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.87)', hasBar: false, hasMeta: false, done: dn, onToggle: () => this.toggleDay(x) }; });
+      if (kind === 'week' || kind === 'month') return st[kind].map(g => { const n = kind === 'week' ? this.weekN(st, g) : this.monthN(st, g), th = kind === 'week' ? TH.week : TH.month, dn = kind === 'week' ? this.weekDone(st, g) : this.monthDone(st, g), S = STAT[dn ? 'done' : 'active'];
+        return { r: g.r, key: g.id, isCheck: true, isYear: false, body: g.body, boxIcon: dn ? 'check_box' : 'check_box_outline_blank', boxColor: dn ? '#4CAF50' : 'rgba(0,0,0,.54)', deco: 'none', color: dn ? 'rgba(0,0,0,.55)' : 'rgba(0,0,0,.87)', hasBar: true, barPct: Math.min(100, n / th * 100), barColor: dn ? '#4CAF50' : '#FF9800', barLabel: `${n}/${th} ${kind === 'week' ? 'days' : 'weeks'}`, status: S.label, statusColor: S.color, statusBg: S.bg, hasMeta: false, done: dn, onToggle: () => this.toggleManual(kind, g) }; });
+      if (kind === 'year') return st.year.map(y => { const p = Math.min(100, Math.round(y.n / TH.year * 100)), dn = this.yearDone(st, y); return { r: y.r, key: y.id, isCheck: false, isYear: true, body: y.body, pct: p, ringOff: 251.3 * (1 - p / 100), ringColor: dn ? '#4CAF50' : '#288bd5', meta: `${y.n}/${TH.year} months · ${dn ? 'Done' : 'Active'}`, done: dn }; });
+      return st.life.map(l => { const dn = !!st.manual[l.id]; return { r: l.r || 'none', key: l.id, isCheck: true, isYear: false, body: l.body, boxIcon: dn ? 'check_box' : 'check_box_outline_blank', boxColor: dn ? '#4CAF50' : 'rgba(0,0,0,.54)', deco: 'none', color: 'rgba(0,0,0,.87)', hasBar: false, hasMeta: true, meta: l.link ? `↑ From year goal: ${l.link}` : 'No linked year goal yet', done: dn, onToggle: () => this.toggleManual('life', l) }; });
+    };
+    const pastDay = t === 'day' && st.selDay < TODAY;
+    const all = rows(t).map(x => { if (x.isYear) return x; const m = st.meta[x.key]; const info = []; if (m && m.subs.length) info.push({ key: 's', icon: 'checklist', text: `${m.subs.filter(s => s.done).length}/${m.subs.length}` }); if (m && m.md.trim()) info.push({ key: 'n', icon: 'notes', text: 'Notes' }); if (m && m.tags.length) info.push({ key: 't', icon: 'sell', text: m.tags.length === 1 ? m.tags[0].split(':').pop() : `${m.tags.length} tags` });
+      return { ...x, onOpen: () => this.openItem(t, x.key), hasInfo: info.length > 0, info, onToggle: pastDay ? () => this.pastToast('Ticks can’t change on past days') : x.onToggle }; });
+    const order = [...R, { id: 'none', time: '—', name: 'No routine' }];
+    const groups = order.map(r => { const rs = all.filter(x => x.r === r.id); if (!rs.length) return null; return { key: r.id, time: r.time, name: r.name, isNow: r.id === NOW_R && t === 'day' && st.selDay === TODAY, timeColor: r.id === NOW_R ? '#e68900' : 'rgba(0,0,0,.5)', count: `${rs.filter(x => x.done).length}/${rs.length}`, rows: rs }; }).filter(Boolean);
+    const [ld, lt] = vals[t];
+    const titles = { day: st.selDay === TODAY ? 'Today' : `${DN[(FIRST_DOW + st.selDay - 1) % 7]} ${st.selDay} Sep`, week: 'This week', month: 'September', year: '2026', life: 'Lifetime' };
+    const f = st.form;
+    const tt = st.toast;
+    return {
+      browserTabs: [{ title: 'Routine Notes — Goals' }],
+      sideYears: st.year.map(y => { const p = Math.min(100, Math.round(y.n / TH.year * 100)), rr = R.find(x => x.id === y.r); return { key: y.id, body: y.body, pct: p, off: 251.3 * (1 - p / 100), color: p >= 100 ? '#4CAF50' : '#288bd5', time: rr ? rr.time : '', rname: rr ? rr.name : '', min: rr ? +rr.time.replace(':', '') : 0, timeColor: y.r === NOW_R ? '#e68900' : 'rgba(0,0,0,.5)' }; }).sort((a, b) => a.min - b.min).map((y, i) => ({ ...y, delay: (i * 0.03) + 's' })),
+      ladder, tabIcon: TABS.find(x => x.key === t).icon, tabRule: rules[t], isDay: t === 'day',
+      calCells, dowLabels: ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((l, i) => ({ key: i, l })), calToggleLabel: st.calOpen ? 'Week' : 'Month', calChev: st.calOpen ? 'expand_less' : 'expand_more', toggleCal: () => this.setState(s => ({ calOpen: !s.calOpen })),
+      listTitle: titles[t], listDone: ld, listTotal: lt, groups, listEmpty: !all.length, emptyText: t === 'day' && st.selDay > TODAY ? 'Nothing planned yet for this day.' : 'No goals here yet.', listAnim: `rn-list-in${st.listKey % 2} .3s ease`, calCellsAll: cells,
+      ...this.itemVals(st),
+      addLabel: pastDay ? 'Past day · adding is locked' : `Add ${t === 'day' ? 'day' : t === 'life' ? 'lifetime' : t} goal`, addIcon: pastDay ? 'lock_clock' : 'add_circle_outline', addColor: pastDay ? 'rgba(0,0,0,.4)' : '#288bd5',
+      openAdd: pastDay ? () => this.pastToast('Pick today or a future day to add') : () => this.setState(s => ({ sheet: true, form: { ...s.form, period: t, text: '', r: t === 'life' ? null : (s.form.r || NOW_R) } })),
+      openMilestones: () => this.showToast({ icon: 'widgets', color: '#90caf9', title: 'Milestones', sub: 'Opens /goals/milestones' }),
+      points: 120 + Object.values(st.done).filter(Boolean).length,
+      navItems: [['home', 'Home'], ['dashboard', 'Priority'], ['smart_toy', 'Agents'], ['assignment', 'Goals']].map(([icon, label], i) => ({ key: label, icon, label, color: i === 3 ? '#288bd5' : 'rgba(0,0,0,.54)', bg: i === 3 ? 'rgba(40,139,213,.12)' : 'transparent', railBg: i === 3 ? (st.sw ? 'rgba(40,139,213,.22)' : 'rgba(40,139,213,.12)') : 'transparent', fg: i === 3 ? '#1f6fab' : 'rgba(0,0,0,.6)', hasRing: i === 3, ringOff: 69.1 * (1 - yAvg / 100), iconSize: i === 3 ? '14px' : '24px', onClick: i === 3 ? () => this.setState(s => ({ sw: !s.sw })) : undefined })),
+      switchOpen: !!st.sw, closeSwitch: () => this.setState({ sw: false }),
+      sheetOpen: st.sheet, closeSheet: () => this.setState({ sheet: false }),
+      periodChips: TABS.map(T => ({ key: T.key, label: T.label === 'Today' ? 'Day' : T.label, bg: f.period === T.key ? '#288bd5' : '#fff', fg: f.period === T.key ? '#fff' : 'rgba(0,0,0,.7)', onClick: () => this.setState(s => ({ form: { ...s.form, period: T.key } })) })),
+      routineChips: [...(f.period === 'life' ? [{ id: null, time: '', name: 'No routine' }] : []), ...R].map(r => { const on = f.r === r.id; return { key: String(r.id), time: r.time, name: r.name, bg: on ? 'rgba(40,139,213,.12)' : '#fff', fg: on ? '#1f6fab' : 'rgba(0,0,0,.7)', border: on ? 'rgba(40,139,213,.45)' : 'rgba(0,0,0,.12)', onClick: () => this.setState(s => ({ form: { ...s.form, r: r.id } })) }; }),
+      routineLabel: f.period === 'life' ? 'LINK TO A ROUTINE (OPTIONAL)' : 'ROUTINE',
+      formText: f.text, setFormText: (e) => { const v = e.target.value; this.setState(s => ({ form: { ...s.form, text: v } })); }, formKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.submitForm(); } }, submitForm: () => this.submitForm(),
+      formSendBg: f.text.trim() ? '#288bd5' : 'rgba(0,0,0,.2)', formPlaceholder: { day: 'e.g. Write release notes', week: 'e.g. Beta feedback triage', month: 'e.g. Retention push', year: 'e.g. Learn Spanish to B1', life: 'e.g. Run a marathon' }[f.period],
+      formHint: { day: st.selDay === TODAY ? 'For today · counts toward the week' : `For ${st.selDay} Sep`, week: 'Week 37 · 6–12 Sep', month: 'September 2026', year: '2026 · opens as its own Year Goals page', life: 'No date' }[f.period],
+      hasToast: !!tt, toastIcon: tt && tt.icon, toastColor: tt && tt.color, toastTitle: tt && tt.title, toastSub: tt && tt.sub,
+    };
+  }
+}
+</script>
+</body>
+</html>

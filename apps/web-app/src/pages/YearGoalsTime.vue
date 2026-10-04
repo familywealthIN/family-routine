@@ -1,1214 +1,959 @@
 <template>
-  <container-box transparent="true" :isLoading="loading">
-    <div class="year-goals-container">
-      <!-- Header with Add Goal Button -->
-      <atom-layout row wrap align-center class="mb-4">
-        <atom-flex xs12>
-          <h1 class="display-1">{{ yearGoalTitle }}</h1>
-        </atom-flex>
-      </atom-layout>
+  <app-shell-container
+    active="goals"
+    :title="shellTitle"
+    :subtitle="shellSubtitle"
+    :year-average="yearAverage"
+    @navigate="onNavigate"
+    @sign-out="onSignOut"
+  >
+    <!--
+      Desktop lists every year goal in the persistent sidebar, so there is no
+      switcher overlay on that shell at all (Year Goals.dc.html § Desktop).
+    -->
+    <template v-if="shell === 'desktop'" v-slot:sidebar>
+      <year-goal-list-container
+        ref="list"
+        compact
+        :active-id="goalId"
+        :sort="goalSort"
+        :today="today"
+        @select="switchGoal"
+        @ids="onGoalIds"
+      />
+    </template>
 
-      <!-- Auto-check threshold legend -->
-      <atom-layout v-if="yearGoalsTree.length" row wrap class="mb-3">
-        <atom-flex xs12>
-          <atom-alert :value="true" type="info" outlined dense icon="info" class="threshold-legend">
-            <strong>Auto-complete rules:</strong>
-            a <strong>week</strong> auto-ticks after {{ thresholds.day }} day goals,
-            a <strong>month</strong> after {{ thresholds.week }} week goals,
-            a <strong>year</strong> after {{ thresholds.month }} month goals.
-          </atom-alert>
-        </atom-flex>
-      </atom-layout>
-
-      <!-- Empty State -->
-      <atom-layout v-if="!yearGoalsTree.length" justify-center class="mt-5">
-        <atom-flex xs12 md8>
-          <atom-card class="text-xs-center pa-5">
-            <atom-icon size="64" color="grey lighten-1">timeline</atom-icon>
-            <h2 class="headline mt-3">No Year Goals to Manage</h2>
-            <p class="subheading grey--text mt-2">
-              Create year goals from the Goals section to start adding month, week, and day milestones here
-            </p>
-          </atom-card>
-        </atom-flex>
-      </atom-layout>
-
-      <!-- Year Goals Tree View -->
-      <atom-layout v-else row wrap>
-        <atom-flex xs12>
-          <div v-for="yearGoal in yearGoalsTree" :key="yearGoal.id" class="year-goal-card mb-4">
-            <atom-card>
-              <!-- Year Goal Content: Description (3/4) + Progress Bar (1/4) -->
-              <atom-card-text class="pa-3">
-                <atom-layout row wrap>
-                  <!-- Contribution/Description (3/4 width) -->
-                  <atom-flex xs8 md9 class="pr-md-3">
-                    <atom-layout align-center class="mb-2">
-                      <atom-icon small class="mr-2">description</atom-icon>
-                      <strong>Description</strong>
-                    </atom-layout>
-                    <div v-if="yearGoal.contribution" class="contribution-text">
-                      <vue-markdown :source="yearGoal.contribution" :html="false"></vue-markdown>
-                    </div>
-                    <div v-else class="grey--text">
-                      No description provided
-                    </div>
-                  </atom-flex>
-
-                  <!-- Progress Donut (1/4 width) -->
-                  <atom-flex xs4 md3 class="text-xs-center">
-                    <atom-layout column align-center justify-center fill-height>
-                      <atom-progress-circular
-                        :value="calculateYearProgress(yearGoal)"
-                        :color="yearGoal.isComplete ? 'success' : 'primary'"
-                        size="120"
-                        width="8"
-                      >
-                        <div class="text-xs-center">
-                          <div class="display-1 font-weight-bold">
-                            {{ Math.round(calculateYearProgress(yearGoal)) }}%
-                          </div>
-                          <div class="caption grey--text">
-                            {{ progressCount(yearGoal, 'monthGoals') }}/{{ thresholds.month }} months
-                          </div>
-                        </div>
-                      </atom-progress-circular>
-                    </atom-layout>
-                  </atom-flex>
-                </atom-layout>
-              </atom-card-text>
-
-              <atom-divider></atom-divider>
-
-              <!-- Action Buttons -->
-              <atom-card-actions class="px-3">
-                <atom-button flat small color="primary" @click="editGoal(yearGoal)">
-                  <atom-icon small left>edit</atom-icon>
-                  Edit
-                </atom-button>
-                <atom-button flat small color="accent" @click="openCreateGoalDrawer('month', yearGoal)">
-                  <atom-icon small left>add</atom-icon>
-                  Add Month Goal
-                </atom-button>
-              </atom-card-actions>
-
-              <atom-divider></atom-divider>
-
-              <!-- Month Goals (Nested) -->
-              <div v-if="yearGoal.monthGoals && yearGoal.monthGoals.length" class="nested-goals month-goals">
-                <atom-subheader class="nested-header">
-                  <atom-icon small class="mr-2">event</atom-icon>
-                  Month Goals ({{ yearGoal.monthGoals.length }})
-                </atom-subheader>
-
-                <atom-expansion-panel v-model="yearGoal.expandedMonthIndex" class="nested-expansion">
-                  <atom-expansion-panel-content v-for="monthGoal in yearGoal.monthGoals" :key="monthGoal.id"
-                    class="month-goal-panel">
-                    <!-- Month Goal Header -->
-                    <template v-slot:header>
-                      <atom-layout align-center>
-                        <atom-flex shrink class="status-icon-cell">
-                          <atom-icon :color="monthGoal.isComplete ? 'success' : 'info'" small>
-                            {{ monthGoal.isComplete ? 'check_circle' : 'radio_button_unchecked' }}
-                          </atom-icon>
-                        </atom-flex>
-                        <atom-flex grow class="pr-3">
-                          <div class="nested-goal-title">{{ monthGoal.body }}</div>
-                          <div class="nested-goal-meta">
-                            <span class="grey--text caption">{{ formatMonthDate(monthGoal.date) }}</span>
-                          </div>
-                        </atom-flex>
-                        <atom-flex shrink class="period-progress-cell">
-                          <div class="period-progress" @click.stop>
-                            <div class="period-progress-label">
-                              <strong>{{ progressCount(monthGoal, 'weekGoals') }}</strong>
-                              / {{ thresholds.week }} weeks
-                              <span class="period-progress-status" :class="periodStatusClass(monthGoal, isCurrentMonth(monthGoal.date))">
-                                &middot; {{ periodStatusLabel(monthGoal, isCurrentMonth(monthGoal.date)) }}
-                              </span>
-                            </div>
-                            <atom-progress-linear
-                              :value="calculateMonthProgress(monthGoal)"
-                              :color="periodColor(monthGoal, isCurrentMonth(monthGoal.date))"
-                              background-color="grey lighten-3"
-                              height="6"
-                              rounded
-                            />
-                          </div>
-                        </atom-flex>
-                      </atom-layout>
-                    </template>
-
-                    <!-- Month Goal Content -->
-                    <atom-card flat class="nested-goal-content">
-                      <atom-layout row wrap>
-                        <!-- Month Description (50% on md+) -->
-                        <atom-flex xs12 md6 class="pr-md-2">
-                          <atom-card-text v-if="monthGoal.contribution" class="py-2">
-                            <div class="contribution-text small">
-                              <vue-markdown :source="monthGoal.contribution" :html="false"></vue-markdown>
-                            </div>
-                          </atom-card-text>
-                          <atom-card-text v-else class="py-2">
-                            <div class="grey--text caption">No description</div>
-                          </atom-card-text>
-
-                          <atom-card-actions class="px-3 py-1">
-                            <atom-button flat x-small color="primary" @click="editGoal(monthGoal)">
-                              <atom-icon x-small left>edit</atom-icon>
-                              Edit
-                            </atom-button>
-                            <atom-button flat x-small color="accent" @click="openCreateGoalDrawer('week', monthGoal)">
-                              <atom-icon x-small left>add</atom-icon>
-                              Add Week Goal
-                            </atom-button>
-                          </atom-card-actions>
-                        </atom-flex>
-
-                        <!-- Week Goals (50% on md+) -->
-                        <atom-flex xs12 md6 class="pl-md-2">
-                          <div v-if="monthGoal.weekGoals && monthGoal.weekGoals.length" class="nested-goals week-goals">
-                            <atom-subheader class="nested-header py-0">
-                              <atom-icon x-small class="mr-1">view_week</atom-icon>
-                              Week Goals ({{ monthGoal.weekGoals.length }})
-                            </atom-subheader>
-
-                            <atom-list dense class="nested-list">
-                              <template v-for="weekGoal in monthGoal.weekGoals">
-                                <atom-list-tile v-if="weekGoal" :key="weekGoal.id" @click="toggleWeekGoal(weekGoal)"
-                                  class="week-goal-tile">
-                                  <atom-list-tile-action>
-                                    <atom-icon :color="weekGoal.isComplete ? 'success' : 'warning'" small>
-                                      {{ weekGoal.isComplete ? 'check_circle' : 'radio_button_unchecked' }}
-                                    </atom-icon>
-                                  </atom-list-tile-action>
-                                  <atom-list-tile-content class="week-goal-content">
-                                    <atom-list-tile-title>{{ weekGoal.body }}</atom-list-tile-title>
-                                    <atom-list-tile-sub-title>{{ formatWeekDate(weekGoal.date) }}</atom-list-tile-sub-title>
-                                    <div class="period-progress period-progress--inline" @click.stop>
-                                      <div class="period-progress-label">
-                                        <strong>{{ progressCount(weekGoal, 'dayGoals') }}</strong>
-                                        / {{ thresholds.day }} days
-                                        <span class="period-progress-status" :class="periodStatusClass(weekGoal, isCurrentWeek(weekGoal.date))">
-                                          &middot; {{ periodStatusLabel(weekGoal, isCurrentWeek(weekGoal.date)) }}
-                                        </span>
-                                      </div>
-                                      <atom-progress-linear
-                                        :value="calculateWeekProgress(weekGoal)"
-                                        :color="periodColor(weekGoal, isCurrentWeek(weekGoal.date))"
-                                        background-color="grey lighten-3"
-                                        height="5"
-                                        rounded
-                                      />
-                                    </div>
-                                  </atom-list-tile-content>
-                                  <atom-list-tile-action>
-                                    <atom-menu offset-y>
-                                      <template v-slot:activator="{ on }">
-                                        <atom-button icon small v-on="on" @click.stop>
-                                          <atom-icon small>more_vert</atom-icon>
-                                        </atom-button>
-                                      </template>
-                                      <atom-list dense>
-                                        <atom-list-tile @click="editGoal(weekGoal)">
-                                          <atom-list-tile-title>
-                                            <atom-icon small left>edit</atom-icon>
-                                            Edit
-                                          </atom-list-tile-title>
-                                        </atom-list-tile>
-                                        <atom-list-tile @click="openCreateGoalDrawer('day', weekGoal)">
-                                          <atom-list-tile-title>
-                                            <atom-icon small left>add</atom-icon>
-                                            Add Day Goal
-                                          </atom-list-tile-title>
-                                        </atom-list-tile>
-                                        <atom-divider></atom-divider>
-                                        <atom-list-tile @click="deleteGoal(weekGoal)">
-                                          <atom-list-tile-title class="red--text">
-                                            <atom-icon small left color="red">delete</atom-icon>
-                                            Delete
-                                          </atom-list-tile-title>
-                                        </atom-list-tile>
-                                      </atom-list>
-                                    </atom-menu>
-                                  </atom-list-tile-action>
-                                </atom-list-tile>
-
-                                <!-- Day Goals (Nested under expanded week) -->
-                                <atom-expand-transition :key="`expand-${weekGoal.id}`">
-                                  <div
-                                    v-if="weekGoal && weekGoal.expanded && weekGoal.dayGoals && weekGoal.dayGoals.length"
-                                    class="nested-goals day-goals">
-                                    <atom-list dense class="nested-list">
-                                      <atom-list-tile v-for="dayGoal in weekGoal.dayGoals" :key="dayGoal.id"
-                                        class="day-goal-tile">
-                                        <atom-list-tile-action>
-                                          <atom-icon :color="dayGoal.isComplete ? 'success' : 'grey'" small>
-                                            {{ dayGoal.isComplete ? 'check_circle' : 'radio_button_unchecked' }}
-                                          </atom-icon>
-                                        </atom-list-tile-action>
-                                        <atom-list-tile-content>
-                                          <atom-list-tile-title class="caption">{{ dayGoal.body }}</atom-list-tile-title>
-                                          <atom-list-tile-sub-title class="caption">{{ formatDayDate(dayGoal.date)
-                                            }}</atom-list-tile-sub-title>
-                                        </atom-list-tile-content>
-                                        <atom-list-tile-action>
-                                          <atom-button icon x-small @click="editGoal(dayGoal)">
-                                            <atom-icon x-small>edit</atom-icon>
-                                          </atom-button>
-                                        </atom-list-tile-action>
-                                      </atom-list-tile>
-                                    </atom-list>
-                                  </div>
-                                </atom-expand-transition>
-                              </template>
-                            </atom-list>
-                          </div>
-                        </atom-flex>
-                      </atom-layout>
-                    </atom-card>
-                  </atom-expansion-panel-content>
-                </atom-expansion-panel>
-              </div>
-            </atom-card>
-          </div>
-        </atom-flex>
-      </atom-layout>
-
-      <!-- Goal Edit/Create Dialog -->
-      <atom-dialog v-model="goalDrawer" fullscreen hide-overlay transition="dialog-bottom-transition">
-        <atom-card>
-          <atom-toolbar color="white">
-            <atom-toolbar-title>
-              <atom-icon left>{{ drawerGoal.id ? 'edit' : 'add' }}</atom-icon>
-              {{ drawerGoal.id ? 'Edit' : 'Create' }} {{ drawerGoal.period }} Goal
-            </atom-toolbar-title>
-            <atom-spacer></atom-spacer>
-            <atom-button icon @click="closeDrawer">
-              <atom-icon>close</atom-icon>
-            </atom-button>
-          </atom-toolbar>
-          <atom-card class="no-shadow">
-            <atom-card-text class="pa-0">
-              <goal-creation :newGoalItem="drawerGoal" v-on:add-update-goal-entry="handleGoalSaved" />
-            </atom-card-text>
-          </atom-card>
-        </atom-card>
-      </atom-dialog>
+    <div class="year-goals" :class="`year-goals--${shell}`">
+      <year-goal-container
+        ref="tree"
+        :goal-id="goalId"
+        :shell="shell"
+        :selected-month="selectedMonth"
+        :open-week-id="openWeekId"
+        :about-open="aboutOpen"
+        :index-label="indexLabel"
+        :has-prev="hasPrev"
+        :has-next="hasNext"
+        :today="today"
+        @tree="onTree"
+        @retry="refetchGoalList"
+        @select-month="selectMonth"
+        @toggle-about="aboutOpen = !aboutOpen"
+        @open-switcher="openSwitcher"
+        @step="stepGoal"
+        @expand="toggleWeek"
+        @tick-day="onTickDay"
+        @tick-week="onTickWeek"
+        @tick-month="onTickMonth"
+        @menu="openMenu"
+        @edit-day="onEditDay"
+        @add-month="openCreate('month')"
+        @add-week="openCreate('week')"
+        @add-day="onAddDay"
+      >
+        <template v-slot:chat>
+          <year-goal-chat-container
+            ref="chat"
+            :goal="tree"
+            :month="focusedMonth"
+            @open-create="openCreate"
+            @create-weeks="onCreateWeeksFromChat"
+            @complete-week="onTickWeek"
+            @toggle-item="onTickWeek"
+            @model-error="onModelError"
+          />
+        </template>
+        <template v-slot:composer>
+          <routine-composer
+            :value="chatText"
+            :variant="shell"
+            placeholder="Ask about this goal…"
+            @input="chatText = $event"
+            @send="sendChat"
+            @add-task="openCreate('week')"
+          />
+        </template>
+      </year-goal-container>
     </div>
-  </container-box>
+
+    <!--
+      Phone sheet / tablet shelf. Mounted on every paint, not only while open: the
+      same list feeds the hero's ‹ › steppers and tells the page where to go when
+      the route carries no goal id.
+    -->
+    <year-goal-list-container
+      v-if="shell !== 'desktop'"
+      ref="list"
+      :open="switcherOpen"
+      :shell="shell"
+      :active-id="goalId"
+      :sort="goalSort"
+      :query="goalQuery"
+      :today="today"
+      @select="switchGoal"
+      @ids="onGoalIds"
+      @sort="goalSort = $event"
+      @query="goalQuery = $event"
+      @open-overview="goTo(GOALS_ROUTE)"
+      @close="closeSwitcher"
+    />
+
+    <!--
+      Create: the goal-item sheet every page adds goals with (Home, Goals). The
+      plan fixes what a new goal rolls up into, so period, date and Linked to
+      are locked to the draft and shown read-only.
+    -->
+    <goal-item-create-container
+      :open="sheet === 'create' && !!draft && !draft.edit"
+      :shell="shell"
+      locked
+      :period="createDraftFor.period"
+      :date="createDraftFor.date"
+      :task-ref="createDraftFor.taskRef || ''"
+      :goal-ref="createDraftFor.goalRef || ''"
+      :heading="createDraftFor.title || ''"
+      :placeholder="createDraftFor.placeholder || ''"
+      :locked-date-label="createDraftFor.periodLabel || ''"
+      locked-routine-label=""
+      :locked-goal-ref-label="createDraftFor.parentLabel || ''"
+      :selected-date="createDraftFor.date || today"
+      :today="today"
+      @close="closeSheet"
+      @created="onDraftCreated"
+      @failed="onDraftFailed"
+    />
+
+    <!-- Rename. 480px on tablet and desktop (chassis.md § per-page). -->
+    <responsive-sheet
+      :open="sheet === 'create' && !!draft && !!draft.edit"
+      :shell="shell"
+      :width="SHEET_WIDTH"
+      :title="draft ? draft.title : ''"
+      @close="closeSheet"
+    >
+      <goal-period-form
+        v-if="draft"
+        :key="draftKey"
+        :draft="draft"
+        :value="draftText"
+        @input="draftText = $event"
+        @submit="submitDraft"
+      />
+    </responsive-sheet>
+
+    <!-- The ⋮ action sheet, and the delete confirmation it leads to. -->
+    <responsive-sheet
+      :open="sheet === 'menu' || sheet === 'confirm'"
+      :shell="shell"
+      :width="SHEET_WIDTH"
+      :handle="sheet === 'menu'"
+      @close="closeSheet"
+    >
+      <goal-action-menu
+        :title="menuTitle"
+        :items="menuItems"
+        @select="onMenuSelect"
+      />
+    </responsive-sheet>
+
+    <!--
+      The day goal's real editor — body, markdown contribution, hierarchical
+      tags, subtasks, the milestone link. It is DashBoard's own fullscreen dialog
+      around the dashboard's `GoalCreationContainer`, so a day goal saved here
+      runs the same `$goals.updateGoalItem` with the same optimistic response and
+      the same cache update as one saved from Home or from the Goals page.
+
+      Month and week goals do NOT come here. On this page their title genuinely
+      is the whole form and their parent is locked by the ladder, which is what
+      `GoalPeriodForm` in the create sheet above is; routing them through a
+      fullscreen editor with a period tab would offer a move the cascade cannot
+      take. No `shell`: a fullscreen dialog has no per-shell geometry. No
+      `@delete` either — deleting cascades to every transitive `goalRef`
+      descendant, so it stays behind the ⋮ and its confirmation.
+    -->
+    <goal-edit-dialog-container
+      :open="editorOpen"
+      :item="editItem"
+      :period="editorPeriod"
+      :date="editorDate"
+      @close="closeEditor"
+      @saved="onGoalSaved"
+    />
+
+    <app-toast
+      :shell="shell"
+      :title="toast.title"
+      :sub="toast.sub"
+      :icon="toast.icon"
+      :icon-color="toast.color"
+      :seq="toast.seq"
+      @done="clearToast"
+    />
+
+    <!-- Single-op write units. Renderless: they own a mutation, not a pixel. -->
+    <goal-period-tick-container ref="tick" />
+    <goal-period-create-container ref="create" />
+    <goal-period-update-container ref="update" />
+    <goal-period-delete-container ref="remove" />
+  </app-shell-container>
 </template>
 
 <script>
-import gql from 'graphql-tag';
+/**
+ * /year-goals and /year-goals/:id, rebuilt to packages/design/Year Goals.dc.html.
+ *
+ * WHAT THIS PAGE OWNS
+ * -------------------
+ * Layout, route (which goal), and the UI state that is nobody's server data:
+ * which month is focused, which week is unfolded, which sheet is open, the toast.
+ * Plus the one thing that genuinely belongs to a page — orchestration of a write
+ * that crosses domains (ARCHITECTURE § 6): a single tick can complete a day, a
+ * week, a month AND the year, and each crossing posts a chat event. The cascade
+ * is PLANNED by a pure function (`utils/yearGoalModel.planTick`) and APPLIED by a
+ * single-op write container, so neither the arithmetic nor the mutation lives
+ * here — only the sequencing.
+ *
+ * WHY THE PAGE TICKS THE PARENTS
+ * ------------------------------
+ * The server does not reliably cascade on demand. `completeGoalItem` only runs
+ * `autoCheckTaskPeriod` when `isComplete && moment(date).weekday() >= 4`, and for
+ * a non-day item it persists `isComplete` alone. A user who finishes their fifth
+ * day on a Monday would otherwise see the week stay empty until some unrelated
+ * read happened to pass through `autoCheckTaskPeriod`. So the page ticks every
+ * crossed parent explicitly, in child-to-parent order, which lands the same state
+ * the server's own helper would — just when the user earned it.
+ *
+ * WHAT USED TO BE HERE AND IS NOT
+ * -------------------------------
+ * The old page held an inline `currentYearGoal` query, three mutations through
+ * `$goals`, `confirm()`-based deletion and a fullscreen `GoalCreationContainer`
+ * dialog. The query is now `YearGoalContainer`'s, each mutation is its own
+ * single-op container, deletion is a sheet that states the cascade, and creating
+ * is one text field with a locked parent.
+ *
+ * TWO FORMS, AND WHY
+ * ------------------
+ * A month or week goal on this page IS its title: the ladder locks its parent and
+ * its date, so `GoalPeriodForm` in the create sheet is the whole form, and the ⋮
+ * edits it there. A DAY goal is a whole goal item — markdown contribution,
+ * hierarchical tags, subtasks, the milestone link — and none of that fits in a
+ * title field, so it opens `GoalEditDialogContainer`: the dashboard's own
+ * fullscreen editor, running the dashboard's mutations. Creating a day goal still
+ * goes through the sheet, because a new one needs nothing but a title and the
+ * sheet is the one place that already derives its date and parent
+ * (`yearGoalModel.createDraft`); the editor is then one glyph away on its row.
+ */
 import moment from 'moment';
-import VueMarkdown from 'vue-markdown';
-import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
+import AppToast from '@routine-notes/ui/molecules/AppToast/AppToast.vue';
+import ResponsiveSheet from '@routine-notes/ui/molecules/ResponsiveSheet/ResponsiveSheet.vue';
+import GoalPeriodForm from '@routine-notes/ui/molecules/GoalPeriodForm/GoalPeriodForm.vue';
+import GoalActionMenu from '@routine-notes/ui/molecules/GoalActionMenu/GoalActionMenu.vue';
+import RoutineComposer from '@routine-notes/ui/organisms/RoutineComposer/RoutineComposer.vue';
+import { resolveShell } from '@routine-notes/ui/constants/navigation';
+import AppShellContainer from '../containers/AppShellContainer.vue';
+import YearGoalContainer from '../containers/YearGoalContainer.vue';
+import YearGoalListContainer from '../containers/YearGoalListContainer.vue';
+import YearGoalChatContainer from '../containers/YearGoalChatContainer.vue';
+import GoalEditDialogContainer from '../containers/GoalEditDialogContainer.vue';
+import GoalPeriodTickContainer from '../containers/GoalPeriodTickContainer.vue';
+import GoalPeriodCreateContainer from '../containers/GoalPeriodCreateContainer.vue';
+import GoalItemCreateContainer from '../containers/GoalItemCreateContainer.vue';
+import GoalPeriodUpdateContainer from '../containers/GoalPeriodUpdateContainer.vue';
+import GoalPeriodDeleteContainer from '../containers/GoalPeriodDeleteContainer.vue';
+import { signOut } from '../utils/signOut';
 import {
-  AtomAlert,
-  AtomButton,
-  AtomCard,
-  AtomCardActions,
-  AtomCardText,
-  AtomDialog,
-  AtomDivider,
-  AtomExpandTransition,
-  AtomExpansionPanel,
-  AtomExpansionPanelContent,
-  AtomFlex,
-  AtomIcon,
-  AtomLayout,
-  AtomList,
-  AtomListTile,
-  AtomListTileAction,
-  AtomListTileContent,
-  AtomListTileSubTitle,
-  AtomListTileTitle,
-  AtomMenu,
-  AtomProgressCircular,
-  AtomProgressLinear,
-  AtomSpacer,
-  AtomSubheader,
-  AtomToolbar,
-  AtomToolbarTitle,
-} from '@routine-notes/ui/atoms';
-import { defaultGoalItem } from '@/constants/goals';
-import { PROFILE_SETTINGS } from '../constants/settings';
-import GoalCreation from '../containers/GoalCreationContainer.vue';
+  TH, DATE_FORMAT, createDraft, planTick, findWeek, findMonthOfWeek, nextWeekDate, parseDate,
+  itemForRow,
+} from '../utils/yearGoalModel';
+
+/** Year Goals' sheets are 480px on tablet and desktop — chassis.md § Sheet vs dialog. */
+export const SHEET_WIDTH = 480;
+export const GOALS_ROUTE = '/goals';
+export const LOGOUT_KEY = 'logout';
+export const GOALS_NAV_KEY = 'goals';
+
+const noToast = () => ({
+  title: '', sub: '', icon: 'check_circle', color: '#4CAF50', seq: 0,
+});
 
 export default {
   name: 'YearGoalsTime',
+
   components: {
-    GoalCreation,
-    VueMarkdown,
-    ContainerBox,
-    AtomAlert,
-    AtomButton,
-    AtomCard,
-    AtomCardActions,
-    AtomCardText,
-    AtomDialog,
-    AtomDivider,
-    AtomExpandTransition,
-    AtomExpansionPanel,
-    AtomExpansionPanelContent,
-    AtomFlex,
-    AtomIcon,
-    AtomLayout,
-    AtomList,
-    AtomListTile,
-    AtomListTileAction,
-    AtomListTileContent,
-    AtomListTileSubTitle,
-    AtomListTileTitle,
-    AtomMenu,
-    AtomProgressCircular,
-    AtomProgressLinear,
-    AtomSpacer,
-    AtomSubheader,
-    AtomToolbar,
-    AtomToolbarTitle,
+    AppShellContainer,
+    YearGoalContainer,
+    YearGoalListContainer,
+    YearGoalChatContainer,
+    GoalEditDialogContainer,
+    GoalPeriodTickContainer,
+    GoalPeriodCreateContainer,
+    GoalItemCreateContainer,
+    GoalPeriodUpdateContainer,
+    GoalPeriodDeleteContainer,
+    RoutineComposer,
+    ResponsiveSheet,
+    GoalPeriodForm,
+    GoalActionMenu,
+    AppToast,
   },
+
   props: {
-    tag: {
-      type: String,
-      default: '',
-    },
+    /** Kept from the old page: `views/YearGoals.vue` still passes it. Unused by
+     *  the rebuild — the goal comes from the route id, not a tag. */
+    tag: { type: String, default: '' },
   },
+
   data() {
     return {
-      loading: true,
-      yearGoalsTree: [],
-      goalDrawer: false,
-      drawerGoal: {
-        ...defaultGoalItem, // Use defaultGoalItem as base
-        period: 'year', // Override period for year goals
-      },
-      thresholds: PROFILE_SETTINGS.autoCheckThreshold,
+      SHEET_WIDTH,
+      GOALS_ROUTE,
+      /** The tree the read container derived, so the page can plan a cascade. */
+      tree: null,
+      /**
+       * Today, DD-MM-YYYY, read once. One definition for the whole page — the
+       * tree, the switcher rows and the create dates all take it — and a test can
+       * set it to a fixed day instead of mocking the clock.
+       */
+      today: moment().format(DATE_FORMAT),
+      selectedMonth: moment().month(),
+      openWeekId: '',
+      aboutOpen: false,
+      switcherOpen: false,
+      goalQuery: '',
+      goalSort: 'routine',
+      goalIds: [],
+      /** 'create' | 'menu' | 'confirm' | null */
+      sheet: null,
+      draft: null,
+      draftText: '',
+      menu: null,
+      /**
+       * The day-goal editor. The flag lives here, not in the container, because
+       * the editor is opened from more than one place on this page — the same
+       * split `GoalsTime` and `GoalDisplayModalContainer` use.
+       */
+      editorOpen: false,
+      /** The COMPLETE goal-item record being edited, never a row view-model. */
+      editItem: null,
+      chatText: '',
+      toast: noToast(),
     };
   },
+
   computed: {
+    /** The one breakpoint rule — `constants/navigation.resolveShell`. */
+    shell() {
+      return resolveShell(this.$vuetify && this.$vuetify.breakpoint);
+    },
+    /** `props: true` on both routes, but only `/year-goals/:id` carries one. */
     goalId() {
-      return this.$route.params.id || null;
+      return (this.$route && this.$route.params && this.$route.params.id) || '';
     },
-    yearGoalTitle() {
-      if (this.yearGoal && this.yearGoal.body) {
-        return this.yearGoal.body;
+    shellTitle() {
+      return (this.tree && this.tree.body) || 'Year goals';
+    },
+    shellSubtitle() {
+      if (!this.tree) return '';
+      return `Year goal · ${this.tree.year} · ${this.tree.monthsDone}/${TH.year} months`;
+    },
+    /** The Goals nav ring reads the focused year goal's own percentage; null
+        (unknown, ring hidden) until the tree has loaded, never a fake 0%. */
+    yearAverage() {
+      return this.tree ? (this.tree.percent || 0) : null;
+    },
+    focusedMonth() {
+      if (!this.tree) return null;
+      return this.tree.months[this.selectedMonth] || null;
+    },
+    goalIndex() {
+      return this.goalIds.indexOf(this.goalId);
+    },
+    indexLabel() {
+      if (this.goalIndex < 0 || this.goalIds.length < 2) return '';
+      return `${this.goalIndex + 1} of ${this.goalIds.length}`;
+    },
+    hasPrev() {
+      return this.goalIndex > 0;
+    },
+    hasNext() {
+      return this.goalIndex > -1 && this.goalIndex < this.goalIds.length - 1;
+    },
+    /** The open create draft, or an empty one so the sheet's props stay defined. */
+    createDraftFor() {
+      return (this.draft && !this.draft.edit) ? this.draft : { period: 'day', date: '' };
+    },
+    /** Re-key the form so a new draft resets the field and re-focuses it. */
+    draftKey() {
+      if (!this.draft) return 'none';
+      return `${this.draft.kind}-${this.draft.edit || this.draft.date}`;
+    },
+    /**
+     * The address a blank editor would start on. Only ever a day here: the
+     * editor is opened from a day row, and the item it is handed already carries
+     * the `period` + `date` of the Goal document that owns it, which is what the
+     * mutation is addressed with. These two are the fallback, not the source.
+     */
+    editorPeriod() {
+      return (this.editItem && this.editItem.period) || 'day';
+    },
+    editorDate() {
+      return (this.editItem && this.editItem.date) || this.today;
+    },
+    menuTitle() {
+      if (!this.menu) return '';
+      if (this.sheet === 'confirm') {
+        return this.menu.kind === 'month'
+          ? `Delete “${this.menu.item.body}”? Its week and day goals go too.`
+          : `Delete “${this.menu.item.body}”? Its day goals go too.`;
       }
-      if (this.tag) {
-        return this.tag;
+      return this.menu.item.body;
+    },
+    menuItems() {
+      if (!this.menu) return [];
+      if (this.sheet === 'confirm') {
+        return [
+          {
+            key: 'confirm-delete', icon: 'delete', label: 'Delete anyway', color: '#d32f2f',
+          },
+          { key: 'cancel', icon: 'close', label: 'Keep it' },
+        ];
       }
-      return `Year Goals ${moment().format('YYYY')}`;
+      const isMonth = this.menu.kind === 'month';
+      return [
+        { key: 'edit', icon: 'edit', label: isMonth ? 'Edit month goal' : 'Edit week goal' },
+        { key: 'add', icon: 'add_task', label: isMonth ? 'Add week goal' : 'Add day goal' },
+        {
+          key: 'delete',
+          icon: 'delete',
+          label: isMonth ? 'Delete month goal' : 'Delete',
+          color: '#d32f2f',
+        },
+      ];
     },
   },
+
   watch: {
-    tag() {
-      // Rebuild tree when tag changes
-      if (this.yearGoal) {
-        this.buildGoalTree(this.yearGoal);
-      }
-    },
-    goalId(newVal) {
-      // Refetch when goalId changes
-      if (newVal) {
-        this.loading = true;
-        this.$apollo.queries.yearGoal.refetch();
-      } else {
-        // Clear data and stop loading when goalId is cleared
-        this.loading = false;
-        this.yearGoalsTree = [];
-      }
+    /**
+     * Switching goals resets the view but NOT the thread: each goal's chat is a
+     * separate `routineChat(date, taskRef)` cache entry keyed by the goal's own
+     * id and date, so coming back finds the conversation where it was left.
+     */
+    goalId() {
+      this.selectedMonth = moment(this.today, DATE_FORMAT).month();
+      this.openWeekId = '';
+      this.aboutOpen = false;
+      this.chatText = '';
+      this.closeSheet();
+      this.closeEditor();
+      this.switcherOpen = false;
     },
   },
-  apollo: {
-    yearGoal: {
-      query: gql`
-        query currentYearGoal($id: ID!) {
-          currentYearGoal(id: $id) {
-            id
-            body
-            date
-            period
-            status
-            tags
-            contribution
-            taskRef
-            goalRef
-            progress
-            routine {
-              id
-              name
-            }
-            milestones {
-              id
-              body
-              date
-              period
-              status
-              isComplete
-              contribution
-              taskRef
-              goalRef
-              progress
-              routine {
-                id
-                name
-              }
-              milestones {
-                id
-                body
-                date
-                period
-                status
-                isComplete
-                contribution
-                taskRef
-                goalRef
-                progress
-                milestones {
-                  id
-                  body
-                  date
-                  period
-                  status
-                  isComplete
-                  contribution
-                  taskRef
-                  goalRef
-                  progress
-                }
-              }
-            }
-          }
-        }
-      `,
-      variables() {
-        return {
-          id: this.goalId,
-        };
-      },
-      skip() {
-        return !this.$root.$data.email || !this.goalId;
-      },
-      update(data) {
-        this.loading = false;
-        console.log('[YearGoals] currentYearGoal response:', data.currentYearGoal);
-        if (data.currentYearGoal) {
-          this.buildGoalTree(data.currentYearGoal);
-        }
-        return data.currentYearGoal;
-      },
-      error(error) {
-        this.loading = false;
-        console.error('Error fetching year goal:', error);
-      },
-    },
-  },
-  mounted() {
-    // If no goalId is provided, the query will be skipped, so set loading to false
-    if (!this.goalId) {
-      this.loading = false;
-    }
-  },
+
   methods: {
-    buildGoalTree(goalItem) {
-      console.log('[buildGoalTree] Input goalItem:', goalItem);
+    // =====================================================================
+    // Route + nav
+    // =====================================================================
+    goTo(route) {
+      if (!route || (this.$route && this.$route.path === route)) return;
+      this.$router.push(route).catch(() => {});
+    },
+    onNavigate(key, item) {
+      if (key === LOGOUT_KEY) {
+        this.onSignOut();
+        return;
+      }
+      // Tapping Goals while already here opens the switcher rather than leaving
+      // the page — the phone tab and the tablet rail are how you change goal.
+      // Desktop has the whole list in its sidebar, so there it just navigates.
+      if (key === GOALS_NAV_KEY && this.shell !== 'desktop') {
+        this.switcherOpen = !this.switcherOpen;
+        return;
+      }
+      this.goTo(item && item.route);
+    },
+    onSignOut() {
+      signOut(this);
+    },
+    onGoalIds(ids) {
+      this.goalIds = Array.isArray(ids) ? ids : [];
+      // `/year-goals` with no id: land on the first goal rather than render an
+      // empty page the user has to guess their way out of.
+      if (!this.goalId && this.goalIds.length) {
+        this.$router.replace(`/year-goals/${this.goalIds[0]}`).catch(() => {});
+      }
+    },
+    switchGoal(id) {
+      this.switcherOpen = false;
+      if (!id || id === this.goalId) return;
+      this.goTo(`/year-goals/${id}`);
+    },
+    stepGoal(delta) {
+      const next = this.goalIndex + Number(delta || 0);
+      if (this.goalIndex < 0 || next < 0 || next >= this.goalIds.length) return;
+      this.switchGoal(this.goalIds[next]);
+    },
+    openSwitcher() {
+      if (this.shell === 'desktop') return;
+      this.switcherOpen = true;
+    },
+    closeSwitcher() {
+      this.switcherOpen = false;
+    },
 
-      // Handle single GoalItem instead of array
-      if (!goalItem) {
-        this.yearGoalsTree = [];
+    // =====================================================================
+    // View state
+    // =====================================================================
+    onTree(tree) {
+      this.tree = tree;
+    },
+    selectMonth(index) {
+      this.selectedMonth = index;
+      // A different month's weeks are different rows; keeping one unfolded would
+      // leave an open panel belonging to a month that is no longer on screen.
+      this.openWeekId = '';
+    },
+    toggleWeek(week) {
+      this.openWeekId = this.openWeekId === week.id ? '' : week.id;
+    },
+
+    // =====================================================================
+    // The cascade
+    // =====================================================================
+    onTickDay({ day }) {
+      return this.applyTick('day', day && day.id);
+    },
+    onTickWeek(week) {
+      return this.applyTick('week', week && week.id);
+    },
+    onTickMonth(month) {
+      return this.applyTick('month', month && month.goal && month.goal.id);
+    },
+
+    /**
+     * One gesture: plan it, apply it, log one chat event per crossing, show one
+     * rollup toast, then re-read. Nothing is disabled while this runs — the
+     * pending-entity guard stops a late query payload from reverting the tick.
+     */
+    async applyTick(level, id) {
+      if (!this.tree || !id) return;
+      const plan = planTick(this.tree, { level, id });
+
+      // Blocked, not ignored: a week that already has its 5 done days says so.
+      if (plan.blocked) {
+        this.showToast(plan.toast);
+        return;
+      }
+      if (!plan.ticks.length) return;
+
+      try {
+        await this.$refs.tick.tick(plan.ticks);
+      } catch (error) {
+        this.showToast({
+          icon: 'error_outline',
+          color: '#ef9a9a',
+          title: "That tick didn't save",
+          sub: 'Nothing was lost — check your connection and tap it again.',
+        });
+        this.refetchTree();
         return;
       }
 
-      const tree = {
-        ...goalItem,
-        isComplete: goalItem.isComplete !== undefined ? goalItem.isComplete : this.isGoalComplete(goalItem),
-        routineName: goalItem.routine ? goalItem.routine.name : null,
-        monthGoals: [],
-        expanded: false,
-        expandedMonthIndex: null,
-      };
+      await this.postEvents(plan.events);
+      if (plan.toast) this.showToast(plan.toast);
+      this.refetchTree();
+    },
 
-      // Extract month goals from milestones. Server returns milestones in
-      // insertion order, which doesn't match calendar order — sort by date.
-      // Dates are DD-MM-YYYY strings, so parse via moment before comparing.
-      const byDateAsc = (a, b) => {
-        const ta = moment(a.date, 'DD-MM-YYYY').valueOf();
-        const tb = moment(b.date, 'DD-MM-YYYY').valueOf();
-        return ta - tb;
-      };
+    postEvents(events) {
+      const { chat } = this.$refs;
+      if (!chat || !events || !events.length) return Promise.resolve();
+      return events.reduce(
+        (chain, event) => chain.then(() => chat.postEvent({
+          text: event.text, tone: event.tone, icon: event.icon,
+        })),
+        Promise.resolve(),
+      );
+    },
 
-      if (goalItem.milestones && goalItem.milestones.length > 0) {
-        tree.monthGoals = goalItem.milestones
-          .filter((m) => m && m.period === 'month')
-          .map((monthGoal) => ({
-            ...monthGoal,
-            isComplete: monthGoal.isComplete !== undefined ? monthGoal.isComplete : this.isGoalComplete(monthGoal),
-            weekGoals: monthGoal.milestones && monthGoal.milestones.length > 0
-              ? monthGoal.milestones
-                .filter((w) => w && w.period === 'week')
-                .map((weekGoal) => ({
-                  ...weekGoal,
-                  isComplete: weekGoal.isComplete !== undefined ? weekGoal.isComplete : this.isGoalComplete(weekGoal),
-                  expanded: this.isCurrentWeek(weekGoal.date),
-                  dayGoals: weekGoal.milestones && weekGoal.milestones.length > 0
-                    ? weekGoal.milestones
-                      .filter((d) => d && d.period === 'day')
-                      .map((dayGoal) => ({
-                        ...dayGoal,
-                        isComplete: dayGoal.isComplete !== undefined ? dayGoal.isComplete : this.isGoalComplete(dayGoal),
-                      }))
-                      .sort(byDateAsc)
-                    : [],
-                }))
-                .sort(byDateAsc)
-              : [],
-          }))
-          .sort(byDateAsc);
+    refetchTree() {
+      if (this.$refs.tree) this.$refs.tree.refetch();
+    },
+    /**
+     * The main card's Retry re-reads the goal list too: one outage fails both
+     * reads, and recovering only the card would leave the switcher wrong.
+     */
+    refetchGoalList() {
+      if (this.$refs.list) this.$refs.list.refetch();
+    },
 
-        // Auto-expand current month (do this AFTER sorting so the index is right)
-        const currentMonthIndex = tree.monthGoals.findIndex((m) => this.isCurrentMonth(m.date));
-        if (currentMonthIndex !== -1) {
-          tree.expandedMonthIndex = currentMonthIndex;
+    // =====================================================================
+    // Create / rename / delete
+    // =====================================================================
+    /**
+     * @param {string} kind 'month' | 'week' | 'day'
+     * @param {Object} [context] `{ weekId }` for a day goal
+     */
+    openCreate(kind, context) {
+      const draft = createDraft(this.tree, kind, {
+        monthIndex: this.selectedMonth,
+        weekId: (context && context.weekId) || '',
+        today: this.today || undefined,
+      });
+      if (!draft) {
+        const month = this.focusedMonth;
+        if (kind === 'week' && month && month.goal) {
+          // The month has a goal but no week left in it (`nextWeekDate`).
+          this.showToast(this.monthFullToast(month));
+          return;
         }
+        // Otherwise: asking for a week under a month with no goal.
+        this.showToast({
+          icon: 'flag',
+          color: '#90caf9',
+          title: 'Set the month goal first',
+          sub: 'Weeks and days roll up into a month goal.',
+        });
+        return;
       }
-
-      this.yearGoalsTree = [tree];
+      this.draft = draft;
+      this.draftText = '';
+      this.sheet = 'create';
     },
-
-    isGoalComplete(goal) {
-      if (!goal) return false;
-      return goal.status === 'done';
+    monthFullToast(month) {
+      return {
+        icon: 'event_available',
+        color: '#90caf9',
+        title: `${month.name} is fully planned`,
+        sub: 'Its last week goal already reaches the end of the month.',
+      };
     },
-
-    completedCount(goals) {
-      if (!goals || !goals.length) return 0;
-      return goals.filter((g) => g && g.isComplete).length;
+    onAddDay(week) {
+      this.openCreate('day', { weekId: week && week.id });
     },
-
-    // Prefer the server-maintained `progress` integer (set in autoCheckTaskPeriod,
-    // goal.js:168-181) — it counts the sub-period items that are complete and is
-    // the source of truth the auto-tick logic uses. Fall back to a client-side
-    // count for legacy docs that pre-date the `progress` field.
-    progressCount(goal, fallbackChildrenKey) {
-      if (goal && typeof goal.progress === 'number') return goal.progress;
-      return this.completedCount(goal && goal[fallbackChildrenKey]);
+    openMenu(payload) {
+      const item = payload.kind === 'month'
+        ? payload.month && payload.month.goal
+        : payload.week;
+      if (!item) return;
+      this.menu = { kind: payload.kind, item };
+      this.sheet = 'menu';
     },
-
-    calculateYearProgress(yearGoal) {
-      // Year auto-ticks when `threshold.month` months are complete
-      // (default 6). Cap at 100% so the donut doesn't exceed full.
-      if (yearGoal.isComplete) return 100;
-      const threshold = this.thresholds.month || 1;
-      const completedMonths = this.progressCount(yearGoal, 'monthGoals');
-      return Math.min(100, (completedMonths / threshold) * 100);
-    },
-
-    calculateMonthProgress(monthGoal) {
-      // Month auto-ticks when `threshold.week` weeks are complete (default 3)
-      if (monthGoal.isComplete) return 100;
-      const threshold = this.thresholds.week || 1;
-      const completedWeeks = this.progressCount(monthGoal, 'weekGoals');
-      return Math.min(100, (completedWeeks / threshold) * 100);
-    },
-
-    calculateWeekProgress(weekGoal) {
-      // Week auto-ticks when `threshold.day` days are complete (default 5)
-      if (weekGoal.isComplete) return 100;
-      const threshold = this.thresholds.day || 1;
-      const completedDays = this.progressCount(weekGoal, 'dayGoals');
-      return Math.min(100, (completedDays / threshold) * 100);
-    },
-
-    // Backwards-compatible alias if anything still references it
-    calculateGoalProgress(yearGoal) {
-      return this.calculateYearProgress(yearGoal);
-    },
-
-    periodColor(goal, isActive) {
-      if (goal && goal.isComplete) return 'success';
-      if (isActive) return 'warning';
-      return 'grey';
-    },
-
-    periodStatusLabel(goal, isActive) {
-      if (goal && goal.isComplete) return 'Done';
-      return isActive ? 'Active' : 'Inactive';
-    },
-
-    periodStatusClass(goal, isActive) {
-      if (goal && goal.isComplete) return 'status-done';
-      return isActive ? 'status-active' : 'status-inactive';
-    },
-
-    formatYearDate(date) {
-      const m = moment(date, 'DD-MM-YYYY');
-      return m.isValid() ? m.format('YYYY') : date;
-    },
-
-    formatMonthDate(date) {
-      const m = moment(date, 'DD-MM-YYYY');
-      return m.isValid() ? m.format('MMMM') : date;
-    },
-
-    formatWeekDate(date) {
-      if (date && date.includes('W')) {
-        const [, week] = date.split('-W');
-        return `Week ${parseInt(week, 10)}`;
+    onMenuSelect(key) {
+      const { kind, item } = this.menu || {};
+      if (!item) return undefined;
+      if (key === 'edit') return this.editGoal(kind, item);
+      if (key === 'add') {
+        if (kind === 'month') this.openCreate('week');
+        else this.openCreate('day', { weekId: item.id });
+        return undefined;
       }
-      const m = moment(date, 'DD-MM-YYYY');
-      return m.isValid() ? `Week ${m.week()}` : date;
+      if (key === 'delete') {
+        this.sheet = 'confirm';
+        return undefined;
+      }
+      // Returned, not fired and forgotten: the caller (and the test) needs to
+      // know when the delete has actually landed.
+      if (key === 'confirm-delete') return this.removeGoal(item);
+      if (key === 'cancel') this.closeSheet();
+      return undefined;
+    },
+    /**
+     * The ONE edit path for every level of the ladder, so the ⋮'s Edit and the
+     * day row's edit glyph cannot drift into opening two different things.
+     *
+     * A day goal is a real goal item — a markdown contribution, hierarchical
+     * tags, subtasks, the milestone link — so it opens the full editor the
+     * dashboard and the Goals page open. A month or week goal does not: here its
+     * title IS the whole form and its parent is locked by the ladder it hangs
+     * from, which is exactly what the create sheet's `GoalPeriodForm` is.
+     *
+     * @param {string} kind 'month' | 'week' | 'day'
+     * @param {Object} row  the ROW that was acted on, not a record
+     */
+    editGoal(kind, row) {
+      if (!row) return undefined;
+      if (kind === 'day') return this.openEditor(row);
+
+      // The rename echoes every stored field back through `updateGoalItem`,
+      // which `$set`s them all — so it must be handed the COMPLETE record. The
+      // row carries no tags, contribution, reward or deadline, and sending it
+      // would wipe them. A row with no record behind it is not edited at all.
+      const item = itemForRow(this.tree, row);
+      if (!item) return undefined;
+
+      this.draft = {
+        kind,
+        edit: row.id,
+        item,
+        period: row.period,
+        date: row.date,
+        goalRef: row.goalRef,
+        parentLabel: this.parentLabelOf(kind, row),
+        periodIcon: kind === 'month' ? 'calendar_month' : 'view_week',
+        periodLabel: this.periodLabelOf(kind, row),
+        placeholder: row.body,
+        title: kind === 'month' ? 'Edit month goal' : 'Edit week goal',
+      };
+      this.draftText = row.body;
+      this.sheet = 'create';
+      return undefined;
+    },
+    /** The day row's edit glyph. `.stop` there kept the row tap as the tick. */
+    onEditDay(payload) {
+      return this.openEditor(payload && payload.day);
+    },
+    /**
+     * Open the full editor on the COMPLETE record a row stands for.
+     *
+     * A row carries only what it draws, and the editor needs the whole goal item
+     * plus the `period` + `date` of the Goal document that owns it — the address
+     * every goal-item mutation is sent to. `itemForRow` is the single pure
+     * resolution of row → record (`GoalsCascadeContainer` solves the same problem
+     * the same way), so nothing here reaches into the read container.
+     */
+    openEditor(row) {
+      const item = itemForRow(this.tree, row);
+      if (!item) return undefined;
+      // The sheets and the fullscreen editor are two layers over the same board;
+      // leaving a sheet open underneath it would be two forms for one goal.
+      this.closeSheet();
+      this.editItem = item;
+      this.editorOpen = true;
+      return undefined;
+    },
+    closeEditor() {
+      this.editorOpen = false;
+      this.editItem = null;
+    },
+    /**
+     * A save went through the same mutation the dashboard runs, so the normalized
+     * `GoalItem:<id>` is already right. What is NOT is this page's arithmetic: the
+     * week's `n/5`, the month's `n/3` and the year ring are all derived from the
+     * milestone TREE, and an edit can move an item to another week entirely — so
+     * the tree is re-read and every count above the row follows.
+     */
+    onGoalSaved({ goalItem, created } = {}) {
+      const item = goalItem || {};
+      // Follow the goal: a re-parented day goal belongs to a different week now,
+      // and the one it moved to is the one worth looking at.
+      if (item.period === 'day' && item.goalRef) this.openWeekId = item.goalRef;
+      this.showToast({
+        icon: created ? 'add_task' : 'edit',
+        color: '#90caf9',
+        title: created ? 'Day goal added' : 'Saved',
+        sub: item.body || '',
+      });
+      this.refetchTree();
+    },
+    parentLabelOf(kind, item) {
+      if (kind === 'month') return this.tree ? this.tree.body : '';
+      const month = findMonthOfWeek(this.tree, item.id);
+      return month && month.goal ? month.goal.body : '';
+    },
+    periodLabelOf(kind, item) {
+      const parsed = parseDate(item.date);
+      if (kind === 'month') {
+        return parsed ? parsed.format('MMMM YYYY') : item.date;
+      }
+      const week = findWeek(this.tree, item.id);
+      return week ? `Week ${week.week} · ${week.rangeLabel}` : item.date;
     },
 
-    formatDayDate(date) {
-      const m = moment(date, 'DD-MM-YYYY');
-      return m.isValid() ? m.format('dddd, MMM D, YYYY') : date;
+    /** The rename form. Creates go through the goal-item create sheet. */
+    async submitDraft() {
+      const body = String(this.draftText || '').trim();
+      if (!body || !this.draft || !this.draft.edit) return;
+      const { draft } = this;
+      await this.$refs.update.rename(draft.item, body).catch(() => null);
+      this.closeSheet();
+      this.showToast({
+        icon: 'edit', color: '#90caf9', title: 'Saved', sub: body,
+      });
+      this.refetchTree();
     },
 
-    isCurrentMonth(date) {
-      // Check if the given date is in the current month
-      const currentMonth = moment().format('YYYY-MM');
-      const goalMonth = moment(date, 'DD-MM-YYYY').format('YYYY-MM');
-      return currentMonth === goalMonth;
+    /** The create sheet saved. It reports before closing, so `draft` is still set. */
+    async onDraftCreated({ body }) {
+      const { draft } = this;
+      if (!draft) return;
+      await this.afterCreate(draft, body);
     },
 
-    isCurrentWeek(date) {
-      // Check if the given date is in the current week
-      const currentWeek = moment().format('YYYY-[W]WW');
-      const goalWeek = moment(date, 'DD-MM-YYYY').format('YYYY-[W]WW');
-      return currentWeek === goalWeek;
+    onDraftFailed() {
+      this.showToast({
+        icon: 'error_outline',
+        color: '#ef9a9a',
+        title: "That goal didn't save",
+        sub: 'Check your connection and try again.',
+      });
     },
 
-    openCreateGoalDrawer(period, parentGoal = null) {
-      const currentDate = moment();
-      let date = '';
+    async afterCreate(draft, body) {
+      // A day goal was added to a week, so show that week's rows straight away.
+      if (draft.kind === 'day') this.openWeekId = draft.goalRef;
 
-      // Calculate appropriate date based on period
-      // CRITICAL: All dates must be in DD-MM-YYYY format
-      switch (period) {
-        case 'year':
-          // Year period: last day of the year (December 31st)
-          date = currentDate.clone().endOf('year').format('DD-MM-YYYY');
-          break;
-        case 'month':
-          // Month period: last day of the month
-          date = currentDate.clone().endOf('month').format('DD-MM-YYYY');
-          break;
-        case 'week': {
-          // Week period: last Friday of current week (DD-MM-YYYY format)
-          // Week ends on Friday, not Sunday
-          const currentDayOfWeek = currentDate.day(); // 0 = Sunday, 5 = Friday
-          const daysUntilFriday = currentDayOfWeek <= 5 ? 5 - currentDayOfWeek : 7 - currentDayOfWeek + 5;
-          date = currentDate.clone().add(daysUntilFriday, 'days').format('DD-MM-YYYY');
-          break;
+      this.showToast(this.createdToast(draft, body));
+      await this.postEvents([{
+        icon: draft.kind === 'month' ? 'flag' : 'add_task',
+        tone: 'blue',
+        text: draft.kind === 'month'
+          ? `${draft.periodLabel}: ${body}`
+          : `${draft.periodLabel}: ${body}`,
+      }]);
+      this.refetchTree();
+    },
+
+    createdToast(draft, body) {
+      if (draft.kind === 'month') {
+        return {
+          icon: 'flag',
+          color: '#90caf9',
+          title: `${draft.periodLabel} goal set`,
+          sub: `Rolls up into ${this.tree ? this.tree.body : 'this year goal'}`,
+        };
+      }
+      return {
+        icon: 'add_task',
+        color: '#90caf9',
+        title: draft.kind === 'week' ? 'Week goal added' : 'Day goal added',
+        sub: `${body} · ${draft.periodLabel}`,
+      };
+    },
+
+    async removeGoal(item) {
+      this.closeSheet();
+      const result = await this.$refs.remove.remove(item).catch(() => null);
+      if (!result) {
+        this.showToast({
+          icon: 'error_outline',
+          color: '#ef9a9a',
+          title: "That goal wasn't deleted",
+          sub: 'Nothing has changed — try again.',
+        });
+        return;
+      }
+      if (this.openWeekId === item.id) this.openWeekId = '';
+      this.showToast({
+        icon: 'delete',
+        color: '#ef9a9a',
+        title: 'Deleted',
+        sub: `${item.body} · its milestones went with it`,
+      });
+      this.refetchTree();
+    },
+
+    closeSheet() {
+      this.sheet = null;
+      this.draft = null;
+      this.draftText = '';
+      this.menu = null;
+    },
+
+    // =====================================================================
+    // Chat
+    // =====================================================================
+    sendChat(text) {
+      const { chat } = this.$refs;
+      if (!chat) return;
+      this.chatText = '';
+      chat.send(text);
+    },
+    /**
+     * The model proposed week goals. Only the page can number them: consecutive
+     * weeks need consecutive dates, derived from the ones the month already has.
+     */
+    async onCreateWeeksFromChat({ bodies, done }) {
+      const month = this.focusedMonth;
+      if (!this.tree || !month || !month.goal) {
+        done([]);
+        return;
+      }
+      const taken = month.weeks.map((week) => ({ date: week.date }));
+      const drafts = [];
+      let overflow = 0;
+      (bodies || []).forEach((body) => {
+        const text = String(body || '').trim();
+        if (!text) return;
+        const date = nextWeekDate(
+          this.tree.year,
+          { ...month, weeks: taken },
+          this.today || undefined,
+        );
+        // No week left in this month: never file one from the next month here.
+        if (!date) {
+          overflow += 1;
+          return;
         }
-        case 'day':
-          // Day period: current day in DD-MM-YYYY format
-          date = currentDate.format('DD-MM-YYYY');
-          break;
-        default:
-          date = currentDate.clone().endOf('year').format('DD-MM-YYYY');
-          break;
-      }
-
-      this.drawerGoal = {
-        body: '',
-        period,
-        date,
-        tags: [],
-        contribution: '',
-        isMilestone: !!parentGoal,
-        goalRef: parentGoal ? parentGoal.id : null,
-      };
-
-      this.goalDrawer = true;
-    },
-
-    editGoal(goal) {
-      this.drawerGoal = {
-        id: goal.id,
-        body: goal.body,
-        period: goal.period,
-        date: goal.date,
-        tags: goal.tags || [],
-        contribution: goal.contribution || '',
-        status: goal.status,
-        taskRef: goal.taskRef || '',
-        isMilestone: !!goal.goalRef,
-        goalRef: goal.goalRef || null,
-      };
-
-      this.goalDrawer = true;
-    },
-
-    closeDrawer() {
-      this.goalDrawer = false;
-      this.drawerGoal = {
-        body: '',
-        period: 'year',
-        date: '',
-        tags: [],
-        contribution: '',
-        isMilestone: false,
-        goalRef: null,
-      };
-    },
-
-    handleGoalSaved() {
-      // Refetch year goal to update tree
-      this.$apollo.queries.yearGoal.refetch();
-      this.closeDrawer();
-    },
-
-    handleGoalUpdated() {
-      // Refetch year goal to update tree
-      this.$apollo.queries.yearGoal.refetch();
-      this.closeDrawer();
-    },
-
-    toggleWeekGoal(weekGoal) {
-      // Toggle expansion of week goal to show day goals
-      this.$set(weekGoal, 'expanded', !weekGoal.expanded);
-    },
-
-    async markComplete(goal) {
-      try {
-        await this.$goals.updateGoalItem({
-          id: goal.id,
-          body: goal.body,
-          status: 'done',
+        taken.push({ date });
+        drafts.push({
+          kind: 'week',
+          period: 'week',
+          date,
+          goalRef: month.goal.id,
+          body: text,
         });
-
-        // Refetch to update UI
-        this.$apollo.queries.yearGoal.refetch();
-
-        this.$notify({
-          title: 'Success',
-          text: 'Goal marked as complete',
-          group: 'notify',
-          type: 'success',
-          duration: 3000,
-        });
-      } catch (error) {
-        console.error('Error marking goal complete:', error);
-        this.$notify({
-          title: 'Error',
-          text: 'Failed to mark goal as complete',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
-      }
-    },
-
-    async deleteGoal(goal) {
-      if (!confirm(`Are you sure you want to delete "${goal.body}"?`)) {
+      });
+      if (overflow) this.showToast(this.monthFullToast(month));
+      if (!drafts.length) {
+        done([]);
         return;
       }
 
-      try {
-        await this.$goals.deleteGoalItem({
-          id: goal.id,
-          period: goal.period,
-          date: goal.date,
-        });
+      const created = await this.$refs.create.createMany(drafts);
+      done(created.map((item) => item.id));
+      if (created.length) this.refetchTree();
+    },
+    onModelError(message) {
+      this.showToast({
+        icon: 'cloud_off',
+        color: '#90caf9',
+        title: 'The model could not answer',
+        sub: String(message || 'Try again in a moment.'),
+      });
+    },
 
-        // Refetch to update UI
-        this.$apollo.queries.yearGoal.refetch();
-
-        this.$notify({
-          title: 'Success',
-          text: 'Goal deleted successfully',
-          group: 'notify',
-          type: 'success',
-          duration: 3000,
-        });
-      } catch (error) {
-        console.error('Error deleting goal:', error);
-        this.$notify({
-          title: 'Error',
-          text: 'Failed to delete goal',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
-      }
+    // =====================================================================
+    // Toast
+    // =====================================================================
+    showToast(toast) {
+      if (!toast || !toast.title) return;
+      this.toast = {
+        title: toast.title,
+        sub: toast.sub || '',
+        icon: toast.icon || 'check_circle',
+        color: toast.color || '#4CAF50',
+        seq: this.toast.seq + 1,
+      };
+    },
+    clearToast() {
+      this.toast = { ...this.toast, title: '', sub: '' };
     },
   },
 };
 </script>
 
-<style scoped>
-
-/* Year Goal Panels */
-.year-goal-panel {
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-}
-
-.year-goal-title {
-  font-size: 18px;
-  font-weight: 500;
-  color: #1976d2;
-}
-
-.year-goal-meta {
-  margin-top: 4px;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.year-goal-content {
-  background: #fafafa;
-}
-
-/* Contribution Section */
-.contribution-section {
-  background: white;
-  border-left: 4px solid #1976d2;
-  margin: 12px;
-  border-radius: 4px;
-}
-
-.contribution-text {
-  line-height: 1.6;
-  color: #424242;
-}
-
-.contribution-text.small {
-  font-size: 13px;
-}
-
-.contribution-text>>>p {
-  margin-bottom: 8px;
-}
-
-.contribution-text>>>h1,
-.contribution-text>>>h2,
-.contribution-text>>>h3 {
-  margin-top: 12px;
-  margin-bottom: 8px;
-}
-
-/* Nested Goals Styling */
-.nested-goals {
-  background: white;
-  margin: 8px 12px 12px 12px;
-  border-radius: 4px;
-  border: 1px solid #e0e0e0;
-}
-
-.month-goals {
-  border-left: 4px solid #0288d1;
-}
-
-.week-goals {
-  border-left: 4px solid #ffa726;
-  margin: 8px;
-}
-
-.day-goals {
-  border-left: 4px solid #9e9e9e;
-  margin-left: 48px;
-  background: #f5f5f5;
-}
-
-.nested-header {
-  font-weight: 500;
-  color: #616161;
-  height: 36px;
-}
-
-.nested-expansion {
-  box-shadow: none !important;
-}
-
-.month-goal-panel {
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.month-goal-panel:last-child {
-  border-bottom: none;
-}
-
-/* Match month header horizontal padding to the week/day list tiles (12px)
-   so the leading status icon column aligns down the nested tree. */
-.month-goal-panel >>> .v-expansion-panel__header {
-  padding: 8px 12px;
-  min-height: 56px;
-}
-
-/* Match the month status icon's column width and right-gap to the
-   .v-list__tile__action used on week/day tiles (32px wide, 8px gap). */
-.status-icon-cell {
-  min-width: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  margin-right: 8px;
-}
-
-.nested-goal-title {
-  font-size: 15px;
-  font-weight: 400;
-  color: #424242;
-}
-
-.nested-goal-meta {
-  margin-top: 2px;
-}
-
-.nested-goal-content {
-  background: #fafafa;
-}
-
-/* Week and Day Goal Tiles */
-.week-goal-tile {
-  border-bottom: 1px solid #eeeeee;
-  cursor: pointer;
-}
-
-.week-goal-tile:hover {
-  background: #f5f5f5;
-}
-
-.week-goal-tile:last-child {
-  border-bottom: none;
-}
-
-.day-goal-tile {
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.day-goal-tile:last-child {
-  border-bottom: none;
-}
-
-/* Shrink the action slots and let the title wrap so more of it is visible */
-.day-goal-tile >>> .v-list__tile {
-  height: auto !important;
-  min-height: 40px;
-  padding: 4px 12px;
-  align-items: center;
-}
-
-.day-goal-tile >>> .v-list__tile__action {
-  min-width: 32px;
-  padding: 0;
-  margin: 0;
-}
-
-.day-goal-tile >>> .v-list__tile__action:first-child {
-  margin-right: 8px;
-}
-
-.day-goal-tile >>> .v-list__tile__action:last-child {
-  margin-left: 8px;
-}
-
-.day-goal-tile >>> .v-list__tile__content {
-  min-width: 0;
-  overflow: visible;
-  padding: 4px 0;
-}
-
-.day-goal-tile >>> .v-list__tile__title,
-.day-goal-tile >>> .v-list__tile__sub-title {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-  line-height: 1.3;
-  height: auto !important;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .year-goals-container {
-    padding: 12px;
-  }
-
-  .year-goal-title {
-    font-size: 16px;
-  }
-
-  .nested-goals {
-    margin: 4px 8px 8px 8px;
-  }
-}
-
-/* Year Goal Card Styling */
-.year-goal-card {
-  transition: box-shadow 0.3s ease;
-}
-
-.year-goal-card:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Threshold legend */
-.threshold-legend {
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-/* Rounded edges for every progress bar on the page (bar + its inner fill) */
-.year-goals-container >>> .v-progress-linear,
-.year-goals-container >>> .v-progress-linear__background,
-.year-goals-container >>> .v-progress-linear__bar,
-.year-goals-container >>> .v-progress-linear__bar__determinate {
-  border-radius: 999px !important;
-  overflow: hidden;
-}
-
-/* Year progress block (1/4 column, sits next to the description) */
-.progress-block {
-  width: 100%;
-}
-
-.progress-label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #616161;
-  margin-bottom: 6px;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.progress-label-text strong {
-  color: #212121;
-}
-
-.progress-label-value {
-  font-weight: 600;
-  color: #212121;
-}
-
-.progress-caption {
-  font-size: 11px;
-  margin-top: 4px;
-  text-align: right;
-}
-
-/* Combined counter + status + bar used on month headers and week tiles */
-.period-progress {
-  min-width: 140px;
-  width: 100%;
-}
-
-.period-progress--compact {
-  min-width: 120px;
-}
-
-/* Week tile variant: bar lives under the title/subtitle on its own line */
-.period-progress--inline {
-  margin-top: 6px;
+<style>
+/*
+  Root-class prefixed: this page renders the chassis shell, so nothing here may
+  leak into the legacy toolbar layouts (MEMORY: web-app CSS lives inline in
+  organisms).
+*/
+.year-goals {
   min-width: 0;
 }
 
-.period-progress--inline .period-progress-label {
-  justify-content: flex-start;
-}
-
-.period-progress-label {
-  font-size: 12px;
-  color: #616161;
-  margin-bottom: 4px;
-  white-space: nowrap;
+/* Tablet and desktop give the board the shell body's full height, because its
+   two columns scroll independently of each other. */
+.year-goals--tablet,
+.year-goals--desktop {
+  height: 100%;
+  min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
+  flex-direction: column;
 }
 
-.period-progress-label strong {
-  color: #212121;
-}
-
-.period-progress-status {
-  font-weight: 500;
-}
-
-.period-progress-status.status-done {
-  color: #2e7d32;
-}
-
-.period-progress-status.status-active {
-  color: #ef6c00;
-}
-
-.period-progress-status.status-inactive {
-  color: #9e9e9e;
-}
-
-.period-progress-cell {
-  min-width: 140px;
-  max-width: 200px;
-}
-
-/* Allow the week tile to grow so the inline progress bar doesn't clip
-   the title. Vuetify's v-list-tile pins the tile and its content column
-   at ~48px with overflow:hidden — we relax both here. */
-.week-goal-tile {
-  height: auto !important;
-  min-height: 72px;
-}
-
-.week-goal-tile >>> .v-list__tile {
-  height: auto !important;
-  min-height: 72px;
-  padding: 8px 12px;
-  align-items: flex-start;
-}
-
-.week-goal-tile >>> .v-list__tile__content {
-  height: auto !important;
-  min-width: 0;
-  overflow: visible;
-  padding: 0;
-}
-
-.week-goal-tile >>> .v-list__tile__title,
-.week-goal-tile >>> .v-list__tile__sub-title {
-  height: auto !important;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-}
-
-.week-goal-tile >>> .v-list__tile__action {
-  align-self: center;
-  min-width: 32px;
-  padding: 0;
-  margin: 0;
-}
-
-/* Leading status-icon action: consistent 8px gap to the title column */
-.week-goal-tile >>> .v-list__tile__action:first-child {
-  margin-right: 8px;
-}
-
-/* Trailing action (menu): consistent 8px gap from the content column */
-.week-goal-tile >>> .v-list__tile__action:last-child {
-  margin-left: 8px;
-}
-
-.week-goal-content {
-  min-width: 0;
-}
-
-@media (max-width: 600px) {
-  .period-progress,
-  .period-progress--compact,
-  .period-progress-cell {
-    min-width: 100px;
-  }
-  .period-progress-label {
-    font-size: 11px;
-  }
+.year-goals--tablet > *,
+.year-goals--desktop > * {
+  flex: 1;
+  min-height: 0;
 }
 </style>

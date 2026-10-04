@@ -37,6 +37,44 @@ Specifically, **do not**:
 - move CSS out of the inline root-class-prefixed `<style>` blocks in organisms;
 - reuse an entity's id for a filtered projection.
 
+## The new home screen
+
+`/home` is the **Routine Focus** screen, and the only home screen — the previous dashboard
+(`DashBoard.vue`, `views/Home.vue`) and its `/home/classic` route were removed on
+4 Oct 2026, so do not reintroduce either as a fallback. Most
+tickets in the current epic land on the new screen, so read `docs/routine-focus-home.md`
+before your first edit — it is the implementation record and the file map.
+
+| Piece | File |
+|---|---|
+| The screen (data, mutations, three shells) | `apps/web-app/src/pages/RoutineFocus.vue` |
+| Pure derivations — current routine, window, button states, cascade | `apps/web-app/src/utils/routineFocusModel.js` |
+| Chat data layer + intent handling | `apps/web-app/src/containers/RoutineChatContainer.vue` |
+| Design tokens (colours, agent stages, per-shell geometry) | `packages/ui/constants/routineFocus.js` |
+| Focus card, chat thread, composer, deck, sheet, top bar, drawer | `packages/ui/organisms/Routine*`, `packages/ui/organisms/UserDrawer` |
+| Chat model calls / persistence | `apps/server/src/utils/chatApi.js`, `apps/server/src/schema/RoutineChatSchema.js` |
+
+Its documented departures from the design handoff are **decisions, not bugs**. Do not "fix"
+one as a side effect of another ticket:
+
+- Tapping a ticked ring does not undo the tick (the XP ledger settles a day's stimuli once);
+- the Add-task sheet is deliberately still the shared global `AiSearchModal`;
+- D/K/G live in the user drawer, not on the home screen;
+- the streak is derived, not persisted;
+- the checklist header counts goal items while the agent's end-event rule counts **slots**
+  from the routine's time gap (D-20) — these two numbers must stay separate.
+
+Routine chat answers through **OpenRouter's free tier only** (`chatApi.js`), with the roster
+discovered at runtime and ranked by JSON-contract support. Never pin a hardcoded roster, and
+never let a paid model id (one without the `:free` suffix) through — both have already caused
+outages. `aiApi.js` is the separate, paid-capable module for milestone planning; keep them
+apart.
+
+Put the per-shell geometry you need in `packages/ui/constants/routineFocus.js` rather than
+hardcoding a breakpoint in an organism — that file exists so the phone, tablet and desktop
+shells cannot drift apart. Fixes filed against the phone shell must be verified at a 412px
+viewport; the shell only becomes `phone` below 600 CSS px.
+
 ## Method
 
 1. **Reproduce first, from the code.** Find the actual code path named in the ticket. Quote

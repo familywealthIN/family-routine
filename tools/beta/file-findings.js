@@ -19,9 +19,17 @@ const label = (() => {
   const i = rest.indexOf('--label');
   return i >= 0 ? rest[i + 1] : 'unlabelled run';
 })();
+// Append to an epic that already exists instead of opening another one. A cycle
+// produces more than one batch of findings - a scoped re-verification of last
+// cycle's tickets, say - and those belong on the same board with continuous
+// refs, not on a second epic for the same week.
+const epicGid = (() => {
+  const i = rest.indexOf('--epic');
+  return i >= 0 ? rest[i + 1] : null;
+})();
 
 if (!findingsPath) {
-  console.error('usage: node tools/beta/file-findings.js <findings.json> [--label "..."] [--dry]');
+  console.error('usage: node tools/beta/file-findings.js <findings.json> [--label "..."] [--epic <gid>] [--dry]');
   process.exit(1);
 }
 
@@ -102,8 +110,15 @@ Found in the seven-day beta simulation, ${label} (account grvpanchalus@gmail.com
     console.log(`${onClosed.length} of them land on a ticket that is already CLOSED:`);
     onClosed.forEach((r) => console.log(`  !! ${r.hit.gid}  ${r.hit.name}`));
   }
+  // Appending continues the ref sequence, so the dry run has to know the offset
+  // too - otherwise it previews D-01 for a ticket that will be filed as D-15.
+  const refOffset = epicGid
+    ? (await api('GET', `/tasks/${epicGid}/subtasks?opt_fields=name`)).length
+    : 0;
+
   if (DRY) {
-    fresh.forEach((f, i) => console.log(`  NEW  D-${String(i + 1).padStart(2, '0')} [${f.severity}] ${f.title}`));
+    if (epicGid) console.log(`  (appending to epic ${epicGid}, after ${refOffset} existing)`);
+    fresh.forEach((f, i) => console.log(`  NEW  D-${String(refOffset + i + 1).padStart(2, '0')} [${f.severity}] ${f.title}`));
     repeats.forEach((r) => console.log(`  RPT  ${r.hit.gid}${r.hit.completed ? ' [closed]' : ''}  ${r.hit.name}`));
     return;
   }
@@ -119,17 +134,24 @@ Found in the seven-day beta simulation, ${label} (account grvpanchalus@gmail.com
   }
   if (!fresh.length) { console.log('\nNothing new to file.'); return; }
 
-  const epic = await api('POST', '/tasks', {
-    name: `Beta Test fixes — ${label}`,
-    notes: `${run.summary || ''}\n\nRelease recommendation: ${run.releaseRecommendation || 'unstated'}\n\n${fresh.length} defect(s) filed from the seven-day beta simulation, ${label}.`,
-    projects: [IDS.project],
-    memberships: [{ project: IDS.project, section: IDS.sectionTodo }],
-  });
-  console.log(`\nEPIC  ${epic.gid}  ${epic.name}`);
+  let epic;
+  const offset = refOffset;
+  if (epicGid) {
+    epic = await api('GET', `/tasks/${epicGid}?opt_fields=name,permalink_url`);
+    console.log(`\nEPIC  ${epic.gid}  ${epic.name}  (appending after ${offset} existing)`);
+  } else {
+    epic = await api('POST', '/tasks', {
+      name: `Beta Test fixes — ${label}`,
+      notes: `${run.summary || ''}\n\nRelease recommendation: ${run.releaseRecommendation || 'unstated'}\n\n${fresh.length} defect(s) filed from the seven-day beta simulation, ${label}.`,
+      projects: [IDS.project],
+      memberships: [{ project: IDS.project, section: IDS.sectionTodo }],
+    });
+    console.log(`\nEPIC  ${epic.gid}  ${epic.name}`);
+  }
 
   for (let i = 0; i < fresh.length; i += 1) {
     const f = fresh[i];
-    const ref = `D-${String(i + 1).padStart(2, '0')}`;
+    const ref = `D-${String(offset + i + 1).padStart(2, '0')}`;
     const t = await api('POST', `/tasks/${epic.gid}/subtasks`, {
       name: `${ref} [${f.severity}] ${f.title}`,
       notes: renderNotes(f, ref, run.reportUrl),

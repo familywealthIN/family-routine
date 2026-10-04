@@ -73,7 +73,7 @@
                   Auto-saving...
                 </div>
                 <div
-                  v-else-if="localGoalItem.contribution !== lastSavedContribution"
+                  v-else-if="hasUnsavedContribution"
                   small
                   color="orange"
                   outlined
@@ -181,9 +181,11 @@ export default {
   },
   mixins: [taskStatusMixin],
   props: {
+    // Hosts can mount the editor before an item is picked (null); every read
+    // goes through `localGoalItem`, which falls back to an empty object.
     newGoalItem: {
       type: Object,
-      required: true,
+      default: null,
     },
     tasklist: {
       type: Array,
@@ -294,9 +296,15 @@ export default {
     isMissed() {
       return this.localGoalItem.status === 'missed';
     },
+    // A goal with no notes carries `contribution: null`, while
+    // lastSavedContribution is normalised to '' — compare like with like or a
+    // freshly opened editor reports "Unsaved changes".
+    hasUnsavedContribution() {
+      return (this.localGoalItem.contribution || '') !== this.lastSavedContribution;
+    },
     localGoalItem: {
       get() {
-        return this.newGoalItem;
+        return this.newGoalItem || {};
       },
       set(val) {
         this.$emit('update:newGoalItem', val);
@@ -414,7 +422,9 @@ export default {
       immediate: true,
     },
 
-    newGoalItem(newVal, oldVal) {
+    newGoalItem(nextVal, prevVal) {
+      const newVal = nextVal || {};
+      const oldVal = prevVal || {};
       if (
         newVal.date !== oldVal.date
         && (oldVal.date === '' || typeof oldVal.date === 'undefined')
@@ -448,7 +458,7 @@ export default {
       }
 
       // Initialize lastSavedContribution when newGoalItem loads
-      if (newVal.id && newVal.contribution !== this.lastSavedContribution) {
+      if (newVal.id && (newVal.contribution || '') !== this.lastSavedContribution) {
         this.lastSavedContribution = newVal.contribution || '';
       }
 
@@ -463,7 +473,7 @@ export default {
     // Auto-save contribution field when user stops typing
     'newGoalItem.contribution': function watchContribution(newValue) {
       // Only auto-save if the item has an ID (exists in database) and it's not the initial load
-      if (!this.newGoalItem.id || newValue === this.lastSavedContribution || this.isInitialLoad) {
+      if (!this.localGoalItem.id || (newValue || '') === this.lastSavedContribution || this.isInitialLoad) {
         return;
       }
 
@@ -474,8 +484,8 @@ export default {
 
       // Set new timeout for auto-save (2 seconds after user stops typing)
       this.autoSaveTimeout = setTimeout(() => {
-        this.$emit('auto-save-contribution', this.newGoalItem.id, this.newGoalItem.contribution);
-        this.lastSavedContribution = this.newGoalItem.contribution || '';
+        this.$emit('auto-save-contribution', this.localGoalItem.id, this.localGoalItem.contribution);
+        this.lastSavedContribution = this.localGoalItem.contribution || '';
       }, 2000);
     },
 

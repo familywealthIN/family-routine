@@ -12,6 +12,7 @@ const motto = require('./motto');
 const progress = require('./progress');
 const ai = require('./ai');
 const agent = require('./agent');
+const routineChat = require('./routineChat');
 const xp = require('./xp');
 
 const schema = new GraphQLSchema({
@@ -27,6 +28,7 @@ const schema = new GraphQLSchema({
       ...progress.query,
       ...ai.query,
       ...agent.query,
+      ...routineChat.query,
       ...xp.query,
     },
   }),
@@ -42,6 +44,7 @@ const schema = new GraphQLSchema({
       ...progress.mutation,
       ...ai.mutation,
       ...agent.mutation,
+      ...routineChat.mutation,
       ...xp.mutation,
     },
   }),

@@ -1,880 +1,452 @@
-<script>
-/* eslint-disable max-len */
-</script>
 <template>
-  <container-box :isLoading="$apollo.queries.routineItems.loading">
-    <atom-card dark flat class="image-card">
-      <atom-button absolute bottom color="info" right fab @click="() => {
-        trackUserInteraction('add_routine_item_dialog_open', 'button_click', {
-          current_items_count: routineItems.length,
-        });
-        dialog = true;
-      }">
-        <atom-icon>add</atom-icon>
-      </atom-button>
-      <atom-container class="py-4">
-        <div class="d-flex justify-center">
-          <circadian-cycle
-            :routine-items="routineItems"
-            :size="320"
-          />
-        </div>
-      </atom-container>
-    </atom-card>
-    <atom-card-text class="image-card-page px-0">
+  <!--
+    The Routines screen — `/settings`, route name `routines`
+    (packages/design/Routines.dc.html).
 
-      <atom-data-table :headers="headers" :items="routineItems" class="elevation-0 mt-2" hide-actions>
-        <template v-slot:items="props">
-          <td>{{ props.item.name }}</td>
-          <td class="text-xs-right">{{ props.item.time }}</td>
-          <td class="text-xs-right">{{ props.item.points }}</td>
-          <td class="text-xs-right" style="width:105px; padding: 0">
-            <atom-button flat icon class="mr-0" @click="editItem(props.item)">
-              <atom-icon>edit</atom-icon>
-            </atom-button>
-            <atom-button flat icon class="ml-0" @click="deleteItem(props.item)">
-              <atom-icon>delete</atom-icon>
-            </atom-button>
-          </td>
-        </template>
-      </atom-data-table>
-    </atom-card-text>
-    <atom-dialog
-      v-model="dialog"
-      :fullscreen="isMobile"
-      :width="isMobile ? undefined : 600"
-      :max-width="isMobile ? undefined : 600"
-      :hide-overlay="isMobile"
-      :scrollable="!isMobile"
-      :transition="isMobile ? 'dialog-bottom-transition' : 'dialog-transition'"
-      :content-class="isMobile ? 'routine-item-dialog routine-item-dialog--mobile' : 'routine-item-dialog'"
-    >
-      <atom-card :class="isMobile ? 'routine-item-drawer' : ''">
-        <!-- Mobile drawer header: sticky top with close + title + save -->
-        <div v-if="isMobile" class="routine-item-drawer__header">
-          <atom-button icon flat @click="close(true)" aria-label="Close">
-            <atom-icon>close</atom-icon>
-          </atom-button>
-          <span class="routine-item-drawer__title">{{ formTitle }}</span>
-          <atom-button
-            flat
-            color="primary"
-            class="routine-item-drawer__save"
-            :loading="buttonLoading"
-            @click="save"
-          >
-            Save
-          </atom-button>
-        </div>
+    Layout + composition only; every read and write belongs to a container
+    (ARCHITECTURE.md §1). What the page genuinely owns is page state — which
+    routine is selected, which one just saved, and the toast — plus the two
+    cross-domain consequences of a save that no single container may reach for:
+    the agent editor, and the daily-task-target notice (§6).
 
-        <!-- Desktop header -->
-        <atom-card-title v-else>
-          <span class="headline">{{ formTitle }}</span>
-        </atom-card-title>
+    `AppShellContainer` owns the one piece of server state the chassis header
+    needs (the points balance), so this page runs no query of its own.
+  -->
+  <app-shell-container
+    active="routines"
+    title="Routines"
+    :subtitle="subLabel"
+    @navigate="onNavigate"
+    @sign-out="onSignOut"
+  >
+    <template v-slot:header-actions>
+      <button
+        type="button"
+        class="rn-routines__new"
+        :class="`rn-routines__new--${shell}`"
+        title="New routine"
+        data-testid="routines-new"
+        @click="openNew()"
+      >
+        <i class="rn-mi rn-routines__new-glyph">add</i>
+        <span v-if="!isPhone" class="rn-routines__new-label">New routine</span>
+      </button>
+    </template>
 
-        <atom-form ref="form" :class="isMobile ? 'routine-item-drawer__form' : ''">
-          <atom-card-text :class="isMobile ? 'routine-item-drawer__body' : ''">
-              <atom-layout wrap> <atom-flex xs12 sm12 md12>
-                  <atom-text-field v-model="editedItem.name" :rules="nameRules" label="Routine Name"
-                    required></atom-text-field>
-                </atom-flex>                  <atom-flex xs12 sm12 md12>
-                  <atom-textarea :rules="descriptionRules" label="Description"
-                    v-model="editedItem.description"></atom-textarea>
-                </atom-flex>
-                <atom-flex xs12 sm12 md12>
-                  <goal-tags-input
-                    :goalTags="editedItem.tags"
-                    :userTags="userTags"
-                    @update-new-tag-items="updateNewTagItems"
-                  />
-                </atom-flex>
-                <div class="steps-section">
-                  <atom-list subheader>
-                    <atom-subheader>Steps</atom-subheader>
-                    <div class="formStep pl-3">
-                      <atom-text-field clearable v-model="stepBody" id="newStepBody" name="newStepBody"
-                        label="Type your step" class="inputGoal" @keyup.enter="addStep">
-                      </atom-text-field>
-                      <atom-button
-                        color="success"
-                        :icon="!isMobile"
-                        :fab="!isMobile"
-                        :block="isMobile"
-                        class="step-add-btn"
-                        :loading="buttonLoading"
-                        @click="addStep(editedItem.steps)"
-                      >
-                        <atom-icon :dark="!isMobile" class="step-add-btn-icon">send</atom-icon>
-                        <span v-if="isMobile" class="step-add-btn-label">Add Step</span>
-                      </atom-button>
-                    </div>
-                  </atom-list>
-                  <draggable v-model="editedItem.steps">
-                    <transition-group>
-                      <atom-list-tile v-for="step in editedItem.steps" :key="step.id" class="step-row">
-                        <atom-list-tile-action class="mr-3">
-                          <atom-icon color="grey lighten-1" class="drag-handle">drag_indicator</atom-icon>
-                        </atom-list-tile-action>
-                        <atom-list-tile-content>
-                          <atom-list-tile-title>{{ step.name }}</atom-list-tile-title>
-                        </atom-list-tile-content>
-                        <atom-list-tile-action @click="removeStep(editedItem.steps, step.id)">
-                          <atom-icon color="grey">close</atom-icon>
-                        </atom-list-tile-action>
-                      </atom-list-tile>
-                    </transition-group>
-                  </draggable>
-                </div>
-                <atom-flex xs12 sm12 md12>
-                  <atom-text-field type="time" :rules="timeRules" v-model="editedItem.time" step="600" label="Time"
-                    required></atom-text-field>
-                </atom-flex>
-                <atom-flex xs12 sm12 md12>                    <atom-text-field type="number" v-model="editedItem.points" :rules="pointsRules" label="Points"
-                    required></atom-text-field>
-                  Point Remaining: {{ maxInputPoints() }}
-                </atom-flex>
-                <atom-flex xs12 sm12 md12 v-if="linkedAgent">
-                  <atom-subheader class="pa-0">Linked agent</atom-subheader>
-                  <div class="linked-agent-row">
-                    <span class="linked-agent-name">{{ linkedAgent.name }}</span>
-                    <span class="linked-agent-status">{{ linkedAgent.executionStatus || 'idle' }}</span>
-                    <atom-spacer></atom-spacer>
-                    <atom-button flat small color="primary" @click="goToAgents">Manage</atom-button>
-                  </div>
-                </atom-flex>
-              </atom-layout>
-          </atom-card-text>
+    <!-- Renderless: the year-goal link map feeds BOTH the timeline chip and the
+         editor's LINKED row, so it has one owner and the page hands it to both. -->
+    <routine-year-goal-links-container @links="onYearGoalLinks" />
 
-          <atom-card-actions v-if="!isMobile">
-            <atom-spacer></atom-spacer>
-            <atom-button color="blue darken-1" flat @click="close(true)">Cancel</atom-button>
-            <atom-button color="primary" :loading="buttonLoading" @click="save">
-              Save
-            </atom-button>
-          </atom-card-actions>
-        </atom-form>
-      </atom-card>
-    </atom-dialog>
-  </container-box>
+    <div class="rn-routines" :class="`rn-routines--${shell}`" data-testid="routines-page">
+      <routine-day-plan-container
+        ref="plan"
+        :shell="shell"
+        :selected-id="selectedId"
+        :flash-id="flashId"
+        :year-goals="yearGoalLinks"
+        @items="onItems"
+        @select="onSelect"
+        @open="openEdit"
+        @insert="openNew"
+        @new="openNew()"
+      />
+    </div>
+
+    <routine-item-editor-container
+      ref="editor"
+      :shell="shell"
+      :siblings="siblings"
+      :tag-universe="tagUniverse"
+      :tag-usage="tagUsage"
+      :year-goals="yearGoalLinks"
+      @saved="onSaved"
+      @removed="onRemoved"
+      @failed="onFailed"
+      @manage-agent="manageAgent"
+      @open-goal="openYearGoal"
+    />
+
+    <!-- The mock leaves "Manage" unwired. The real agent editor is the chassis
+         AgentFormContainer, which owns the agent write CRUD; it is mounted AFTER
+         the routine editor so its own sheet stacks above it. -->
+    <agent-form-container
+      ref="agentForm"
+      :shell="shell"
+      @saved="onAgentSaved"
+      @removed="onAgentRemoved"
+      @failed="onFailed"
+    />
+
+    <app-toast
+      :shell="shell"
+      :title="toast.title"
+      :sub="toast.sub"
+      :icon="toast.icon"
+      :icon-color="toast.color"
+      :seq="toast.seq"
+    />
+  </app-shell-container>
 </template>
 
 <script>
-/* eslint-disable max-len */
-import gql from 'graphql-tag';
+import AppToast from '@routine-notes/ui/molecules/AppToast/AppToast.vue';
+import { resolveShell } from '@routine-notes/ui/constants/navigation';
+import { countLabel, pointsLabel, totalPoints } from '@routine-notes/ui/utils/dayDial';
 import { MeasurementMixin } from '@/utils/measurementMixins';
-
-import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
-import draggable from 'vuedraggable';
-import CircadianCycle from '@routine-notes/ui/organisms/CircadianCycle/CircadianCycle.vue';
-import GoalTagsInput from '@routine-notes/ui/molecules/GoalTagsInput/GoalTagsInput.vue';
+import AppShellContainer from '../containers/AppShellContainer.vue';
+import AgentFormContainer from '../containers/AgentFormContainer.vue';
+import RoutineDayPlanContainer from '../containers/RoutineDayPlanContainer.vue';
+import RoutineItemEditorContainer from '../containers/RoutineItemEditorContainer.vue';
+import RoutineYearGoalLinksContainer from '../containers/RoutineYearGoalLinksContainer.vue';
 import getJSON from '../utils/getJSON';
 import { describeSlotChanges } from '../utils/routineSlotCounts';
-import {
-  AtomButton,
-  AtomCard,
-  AtomCardActions,
-  AtomCardText,
-  AtomCardTitle,
-  AtomContainer,
-  AtomDataTable,
-  AtomDialog,
-  AtomFlex,
-  AtomForm,
-  AtomIcon,
-  AtomLayout,
-  AtomList,
-  AtomListTile,
-  AtomListTileAction,
-  AtomListTileContent,
-  AtomListTileTitle,
-  AtomSpacer,
-  AtomSubheader,
-  AtomTextarea,
-  AtomTextField,
-} from '@routine-notes/ui/atoms';
+import { signOut } from '../utils/signOut';
+
+export const LOGOUT_KEY = 'logout';
+/** Where the LINKED year-goal row goes. `/year-goals` is the un-linked case. */
+export const YEAR_GOALS_ROUTE = '/year-goals';
+
+const noToast = () => ({
+  title: '', sub: '', icon: 'check_circle', color: '#81c784', seq: 0,
+});
 
 export default {
+  name: 'SettingsTime',
+
   mixins: [MeasurementMixin],
+
   components: {
-    ContainerBox,
-    draggable,
-    CircadianCycle,
-    GoalTagsInput,
-    AtomButton,
-    AtomCard,
-    AtomCardActions,
-    AtomCardText,
-    AtomCardTitle,
-    AtomContainer,
-    AtomDataTable,
-    AtomDialog,
-    AtomFlex,
-    AtomForm,
-    AtomIcon,
-    AtomLayout,
-    AtomList,
-    AtomListTile,
-    AtomListTileAction,
-    AtomListTileContent,
-    AtomListTileTitle,
-    AtomSpacer,
-    AtomSubheader,
-    AtomTextarea,
-    AtomTextField,
+    AppShellContainer,
+    AppToast,
+    AgentFormContainer,
+    RoutineDayPlanContainer,
+    RoutineItemEditorContainer,
+    RoutineYearGoalLinksContainer,
   },
-  apollo: {
-    routineItems: {
-      query: gql`
-        query routineItems {
-          routineItems {
-            id
-            name
-            steps {
-              id
-              name
-            }
-            description
-            tags
-            time
-            points
-            ticked
-            passed
-            tags
-          }
-        }
-      `,
-    },
-  },
+
   data() {
     return {
-      dialog: false,
-      buttonLoading: false,
-      editedIndex: -1,
-      stepBody: '',
-      routineItems: [],
-      editedItem: {
-        id: '',
-        name: '',
-        steps: [],
-        description: '',
-        time: '00:00',
-        points: 0,
-        tags: [],
-      },
-      defaultItem: {
-        id: '',
-        name: '',
-        steps: [],
-        description: '',
-        time: '00:00',
-        points: 0,
-        tags: [],
-      },
-      nameRules: [
-        (v) => !!v || 'Name is required',
-        (v) => (v && v.length <= 100) || 'Name must be less than 100 characters',
-      ],
-      // Description carries no required marker and the server stores it
-      // empty, so the only rule it has is the length cap.
-      descriptionRules: [
-        (v) => !v || v.length <= 255
-          || 'Description must be less than 255 characters',
-      ],
-      pointsRules: [
-        (v) => !!v || 'points is required',
-        (v) => !v || Number(v) <= this.maxInputPoints()
-          || `Points must be ${this.maxInputPoints()} or fewer`,
-      ],
-      timeRules: [(v) => !!v || 'Time is required'],
-      goalRules: [(v) => !!v || 'At least one goal is required'],
-      headers: [
-        {
-          text: 'Task',
-          align: 'left',
-          sortable: false,
-          value: 'name',
-        },
-        {
-          text: 'Time',
-          align: 'right',
-          value: 'time',
-          sortable: true,
-        },
-        {
-          text: 'Points',
-          align: 'right',
-          value: 'points',
-          sortable: false,
-        },
-        {
-          text: 'Action',
-          align: 'right',
-          sortable: false,
-        },
-      ],
-      userTags: getJSON(localStorage.getItem('userTags'), []),
+      /** The sorted, de-duped list the read container publishes. */
+      items: [],
+      /**
+       * Whether that list has arrived. The container publishes nothing before
+       * its first result, so until then `items: []` means "unknown" — and the
+       * day's points budget cannot be worked out from it (E2E BUG-5).
+       */
+      loaded: false,
+      /**
+       * A New routine asked for before the list arrived: `{ minutes }`. It opens
+       * the moment the list lands rather than against an empty day — or being
+       * dropped, which would read as a dead button.
+       */
+      pendingNew: null,
+      yearGoalLinks: {},
+      /**
+       * `{ id, name, time }` as they stood when the editor opened. Snapshotted
+       * there rather than read back at save time, because a mutation result that
+       * has already landed in the cache would make "before" and "after"
+       * identical and the slot-change notice would never fire.
+       */
+      scheduleBefore: [],
+      selectedId: '',
+      flashId: '',
+      flashTimer: null,
+      toast: noToast(),
+      /** The tag vocabulary the user has typed before — same source as before. */
+      storedTags: getJSON(localStorage.getItem('userTags'), []),
     };
   },
+
   computed: {
-    formTitle() {
-      return this.editedIndex === -1 ? 'New Item' : 'Edit Item';
+    /** The ONE breakpoint rule — `resolveShell`, never a second scheme. */
+    shell() {
+      return resolveShell(this.$vuetify && this.$vuetify.breakpoint);
     },
-    isMobile() {
-      return this.$vuetify && this.$vuetify.breakpoint && this.$vuetify.breakpoint.xs;
+    isPhone() {
+      return this.shell === 'phone';
     },
-    linkedAgent() {
-      return this.editedItem && this.editedItem.id
-        ? this.$agent.getByTaskRef(this.editedItem.id)
-        : null;
+    /** "7 routines · 83 points a day" (+ the hint tablet and desktop have room for). */
+    subLabel() {
+      if (!this.loaded) return 'Loading routines…';
+      const base = `${countLabel(this.items.length)} · ${totalPoints(this.items)} points a day`;
+      return this.isPhone ? base : `${base} · tap a routine on the dial or the list`;
     },
-  },
-
-  watch: {
-    dialog(val) {
-      if (!val) {
-        this.close(false);
-      }
+    /**
+     * `{ id, time, points }` — the two things the editor needs about the OTHER
+     * routines: `time` for its "Until 12:30 · 3h 30m" caption, and `points`
+     * because the day's 100-point budget is shared across the whole list.
+     */
+    siblings() {
+      return this.items.map((item) => ({ id: item.id, time: item.time, points: item.points }));
     },
-  },
-  methods: {
-    addStep(steps) {
-      this.stepBody = this.stepBody.trim();
-      if (this.stepBody && Array.isArray(steps)) {
-        this.editedItem.steps = [
-          ...steps,
-          {
-            id: window.crypto.randomUUID(),
-            name: this.stepBody,
-          },
-        ];
-        this.stepBody = '';
-      }
+    /** Everything already in use, so the autocomplete knows the real vocabulary. */
+    tagUniverse() {
+      const seen = new Set(this.storedTags.filter(Boolean).map(String));
+      this.items.forEach((item) => (item.tags || []).forEach((tag) => {
+        if (tag) seen.add(String(tag));
+      }));
+      return [...seen];
     },
-
-    removeStep(steps, id) {
-      if (Array.isArray(steps)) {
-        this.editedItem.steps = steps.filter((step) => step.id !== id);
-      }
-    },
-    editItem(item) {
-      this.editedIndex = this.routineItems.indexOf(item);
-      // A step's id is optional on the server, and the Steps list is keyed by
-      // it: a null key is no key at all, so `<transition-group>` drops the row
-      // and the section renders empty. It is also what removeStep matches on,
-      // which would delete every id-less step at once. Give the dialog's own
-      // copy an id the way addStep does, and the next save persists it.
-      this.editedItem = {
-        ...item,
-        steps: (item.steps || []).map((step) => ({
-          ...step,
-          id: step.id || window.crypto.randomUUID(),
-        })),
-      };
-      this.dialog = true;
-
-      // Track routine item edit
-      this.trackUserInteraction('routine_item_edit_opened', 'button_click', {
-        item_id: item.id,
-        item_name: item.name,
-        has_steps: item.steps && item.steps.length > 0,
-        steps_count: item.steps ? item.steps.length : 0,
+    /** tag -> how many routines carry it or something inside it. */
+    tagUsage() {
+      const counts = {};
+      this.items.forEach((item) => {
+        const own = new Set();
+        (item.tags || []).forEach((tag) => {
+          const t = String(tag || '');
+          if (!t) return;
+          own.add(t);
+          // A parent counts every routine filed anywhere beneath it.
+          const parts = t.split(':');
+          for (let i = 1; i < parts.length; i += 1) own.add(parts.slice(0, i).join(':'));
+        });
+        own.forEach((tag) => { counts[tag] = (counts[tag] || 0) + 1; });
       });
+      return counts;
     },
+  },
 
-    deleteItem(item) {
-      const index = this.routineItems.indexOf(item);
-      if (confirm('Are you sure you want to delete this item?')) {
-        // Track routine item deletion
-        this.trackUserInteraction('routine_item_delete_confirmed', 'button_click', {
-          item_id: item.id,
-          item_name: item.name,
-          has_steps: item.steps && item.steps.length > 0,
-          steps_count: item.steps ? item.steps.length : 0,
-        });
-        this.deleteRoutineItem(item, index);
-      } else {
-        // Track deletion cancellation
-        this.trackUserInteraction('routine_item_delete_cancelled', 'dialog_cancel', {
-          item_id: item.id,
-        });
+  mounted() {
+    this.trackPageView('routine_settings');
+  },
+
+  beforeDestroy() {
+    clearTimeout(this.flashTimer);
+  },
+
+  methods: {
+    onItems(items) {
+      this.items = items;
+      this.loaded = true;
+      // A selection that no longer exists would dim every arc and say nothing.
+      if (this.selectedId && !items.some((item) => String(item.id) === this.selectedId)) {
+        this.selectedId = '';
+      }
+      if (this.pendingNew) {
+        const { minutes } = this.pendingNew;
+        this.pendingNew = null;
+        this.openNew(minutes);
       }
     },
 
-    updateNewTagItems(tags) {
-      this.editedItem.tags = tags;
+    onYearGoalLinks(links) {
+      this.yearGoalLinks = links || {};
     },
 
-    deleteRoutineItem(item, index) {
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation deleteRoutineItem($id: ID!) {
-            deleteRoutineItem(id: $id) {
-              id
-            }
-          }
-        `,
-        variables: {
-          id: item.id,
-        },
-        update: () => {
-          this.routineItems.splice(index, 1);
-        },
-      }).catch(() => {
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
+    /** An arc toggles the selection; it does not open the editor. */
+    onSelect(id) {
+      this.selectedId = this.selectedId === id ? '' : String(id || '');
     },
 
-    close(auto = true) {
-      this.dialog = false;
-      if (auto) {
-        setTimeout(() => this.resetEditItem(), 100);
-      }
-    },
-
-    goToAgents() {
-      this.close(true);
-      this.$router.push('/agents');
-    },
-
-    // Vuetify hides a field's error until that field has been touched, so a
-    // refusal on an untouched one would name nothing. Re-run the same rules
-    // here, keeping the first failure per field as the inputs themselves do.
-    formErrors() {
-      const {
-        name, description, time, points,
-      } = this.editedItem;
-      return [
-        [this.nameRules, name],
-        [this.descriptionRules, description],
-        [this.timeRules, time],
-        [this.pointsRules, points],
-      ].reduce((messages, [rules, value]) => {
-        const failed = rules
-          .map((rule) => rule(value))
-          .find((message) => typeof message === 'string');
-        return failed ? [...messages, failed] : messages;
-      }, []);
-    },
-
-    save() {
-      // SAVE stays clickable: a button disabled for a reason the form never
-      // states leaves the user with nowhere to go. Validate on the click and
-      // say what is missing instead.
-      if (!this.$refs.form.validate()) {
-        this.$notify({
-          title: 'Cannot save this item',
-          text: this.formErrors().join('. '),
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
+    openNew(minutes = null) {
+      if (!this.loaded) {
+        this.pendingNew = { minutes };
         return;
       }
+      this.snapshotSchedule();
+      this.$refs.editor.openNew(minutes);
+    },
 
-      this.buttonLoading = true;
-      if (this.editedIndex > -1) {
-        this.updateRoutineItem();
-      } else {
-        this.addRoutineItem();
+    /** A timeline row both selects and opens — the design's `open(r)`. */
+    openEdit(id) {
+      const routine = this.items.find((item) => String(item.id) === String(id));
+      if (!routine) return;
+      this.snapshotSchedule();
+      this.selectedId = String(id);
+      this.$refs.editor.openEdit(routine);
+    },
+
+    snapshotSchedule() {
+      this.scheduleBefore = this.items.map(({ id, name, time }) => ({ id, name, time }));
+    },
+
+    /** The same schedule with this save applied — the "after" side of D-03. */
+    scheduleAfter(saved, created) {
+      const before = this.scheduleBefore;
+      if (!saved) return before;
+      const next = { id: saved.id, name: saved.name, time: saved.time };
+      if (created) return [...before, next];
+      return before.map((item) => (String(item.id) === String(saved.id) ? next : item));
+    },
+
+    onSaved(saved, created) {
+      if (!saved) return;
+      this.selectedId = String(saved.id);
+      this.flash(saved.id);
+      this.trackBusinessEvent(created ? 'routine_item_created' : 'routine_item_updated', {
+        item_id: saved.id,
+        item_name: saved.name,
+        time: saved.time,
+        points: saved.points,
+        steps_count: (saved.steps || []).length,
+        tags_count: (saved.tags || []).length,
+      });
+      this.notifySave(saved, created);
+    },
+
+    /**
+     * One toast, and the sub carries the consequence (chassis.md § Toast).
+     *
+     * When the new time re-slices a NEIGHBOUR's daily task target, that is the
+     * consequence worth printing — D-03 was filed because moving Wind-down took
+     * "Start Work 0/1" to "0/6" with nothing on screen saying it had. Otherwise
+     * the sub is the design's "{name} · {time} · +{pts} pts".
+     */
+    notifySave(saved, created) {
+      const changes = describeSlotChanges(this.scheduleBefore, this.scheduleAfter(saved, created));
+      const title = created ? 'Routine added' : 'Routine saved';
+      if (changes.length) {
+        this.notify(title, `Daily task targets moved — ${changes.join(', ')}`, 'schedule', '#ffb74d');
+        return;
       }
+      const tags = (saved.tags || []).length;
+      const tagLabel = tags ? ` · ${tags} ${tags === 1 ? 'tag' : 'tags'}` : '';
+      const sub = `${saved.name} · ${saved.time} · ${pointsLabel(saved.points)}${tagLabel}`;
+      this.notify(title, sub, created ? 'add_task' : 'check_circle', '#81c784');
     },
 
-    resetEditItem() {
-      this.$refs.form.reset();
-      this.editedItem = { ...this.defaultItem };
-      this.editedIndex = -1;
+    onRemoved(removed) {
+      const name = (removed && removed.name) || 'The routine';
+      if (removed && String(removed.id) === this.selectedId) this.selectedId = '';
+      this.trackBusinessEvent('routine_item_deleted', { item_id: removed && removed.id, item_name: name });
+      this.notify('Routine deleted', `${name} no longer earns points`, 'delete', '#ef9a9a');
     },
 
-    addRoutineItem() {
-      const item = this.editedItem;
-
-      // Track routine item creation
-      this.trackBusinessEvent('routine_item_created', {
-        item_name: item.name,
-        has_description: !!item.description,
-        time: item.time,
-        points: Number(item.points),
-        steps_count: item.steps ? item.steps.length : 0,
-        tags_count: item.tags ? item.tags.length : 0,
-      });
-
-      this.$apollo.mutate({
-        mutation: gql`
-          mutation addRoutineItem(
-            $name: String!
-            $description: String!
-            $time: String!
-            $points: Int!
-            $steps: [StepInputItem]!
-            $tags: [String]!
-          ) {
-            addRoutineItem(
-              name: $name
-              description: $description
-              time: $time
-              points: $points
-              steps: $steps
-              tags: $tags
-            ) {
-              id
-              name
-              steps {
-                id
-                name
-              }
-              description
-              time
-              points
-              tags
-            }
-          }
-        `,
-        variables: {
-          name: item.name,
-          description: item.description,
-          time: item.time,
-          points: Number(item.points),
-          steps: item.steps.map((step) => ({ id: step.id, name: step.name })),
-          tags: item.tags || [],
-        },
-        update: () => {
-          // Track successful routine item creation
-          this.trackBusinessEvent('routine_item_creation_success', {
-            item_name: item.name,
-            total_items: this.routineItems.length + 1,
-          });
-
-          // Refetch the routineItems query to ensure data consistency
-          this.$apollo.queries.routineItems.refetch();
-          this.buttonLoading = false;
-          this.close(false);
-          this.resetEditItem();
-        },
-      }).catch((error) => {
-          // Track routine item creation error
-          this.trackError('routine_item_creation_error', error, {
-            item_name: item.name,
-            steps_count: item.steps ? item.steps.length : 0,
-          });
-
-          this.resetEditItem();
-          this.buttonLoading = false;
-          this.close(false);
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
+    onFailed(message) {
+      this.notify("Couldn't save", message || 'An unexpected error occurred', 'error_outline', '#ef9a9a');
     },
 
-    getPointsTotal() {
-      return Array.isArray(this.routineItems)
-        ? this.routineItems.reduce((total, { points }) => +total + +points, 0)
-        : 0;
+    /**
+     * "Manage" on the editor's agent row. The mock leaves it unwired; the real
+     * editor is the chassis agent form, opened on the bound agent or prefilled
+     * with this routine when there is none.
+     */
+    manageAgent(routineId) {
+      if (!routineId) return;
+      const agent = this.$agent && this.$agent.getByTaskRef(String(routineId));
+      if (agent) this.$refs.agentForm.openEdit(agent);
+      else this.$refs.agentForm.openNew(String(routineId));
     },
 
-    maxInputPoints() {
-      const { editedIndex, routineItems } = this;
-      const editPoints = routineItems
-        && routineItems[editedIndex]
-        && Number(routineItems[editedIndex].points) > 0
-        ? Number(routineItems[editedIndex].points)
-        : 0;
-      return +100 - +(this.getPointsTotal() - editPoints);
+    onAgentSaved(agent, created) {
+      const name = (agent && agent.name) || 'The agent';
+      this.notify(
+        created ? 'Agent created' : 'Agent saved',
+        `${name} runs with this routine`,
+        'smart_toy',
+        '#64b5f6',
+      );
     },
 
-    // A card's daily task target is its window — the gap to the next item —
-    // at one task per two hours, so moving one item's time re-slices its
-    // neighbour's window too. Saying which targets moved keeps a
-    // "Start Work 0/1" that turned into "0/6" from arriving unannounced.
-    notifySlotChanges(before, after) {
-      const changes = describeSlotChanges(before, after);
-      if (!changes.length) return;
-
-      this.$notify({
-        title: 'Daily task targets changed',
-        text: `${changes.join(', ')}. A routine item asks for one task per two hours of the gap to the next item.`,
-        group: 'notify',
-        type: 'info',
-        duration: 5000,
-      });
+    onAgentRemoved(agent) {
+      this.notify('Agent deleted', `${(agent && agent.name) || 'The agent'} no longer fires events`, 'delete', '#ef9a9a');
     },
 
-    updateRoutineItem() {
-      const item = this.editedItem;
-      const scheduleBefore = this.routineItems.map(({ id, name, time }) => ({ id, name, time }));
-      this.$apollo.mutate({
-        mutation: gql`          mutation updateRoutineItem(
-            $id: ID!
-            $name: String!
-            $description: String!
-            $time: String!
-            $points: Int!
-            $steps: [StepInputItem]!
-            $tags: [String]!
-          ) {
-            updateRoutineItem(
-              id: $id
-              name: $name
-              steps: $steps
-              description: $description
-              time: $time
-              points: $points
-              tags: $tags
-            ) {
-              id
-              name
-              steps {
-                id
-                name
-              }
-              description
-              time
-              points
-              tags
-            }
-          }
-        `,
-        variables: {
-          id: item.id,
-          name: item.name,
-          steps: item.steps.map((step) => ({ id: step.id, name: step.name })),
-          description: item.description,
-          time: item.time,
-          points: Number(item.points),
-          tags: item.tags || [],
-        },
-        update: () => {
-          Object.assign(this.routineItems[this.editedIndex], this.editedItem);
-          this.notifySlotChanges(scheduleBefore, this.routineItems);
-          this.resetEditItem();
-          this.buttonLoading = false;
-          this.close(false);
-        },
-      }).catch((error) => {
-        console.log('error', error);
-          this.resetEditItem();
-          this.buttonLoading = false;
-          this.close(false);
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
+    /** The LINKED year-goal row. `/year-goals/:id` when one is linked. */
+    openYearGoal(goalId) {
+      this.goTo(goalId ? `${YEAR_GOALS_ROUTE}/${goalId}` : YEAR_GOALS_ROUTE);
     },
-  },
-  mounted() {
-    // Load agents so the edit dialog can surface the linked agent
-    this.$agent.fetchAll();
 
-    // Track settings page view
-    this.trackPageView('routine_settings');
+    /** `rn-flash` is one-shot, so the id has to be dropped again. */
+    flash(id) {
+      clearTimeout(this.flashTimer);
+      this.flashId = String(id);
+      this.flashTimer = setTimeout(() => { this.flashId = ''; }, 900);
+    },
 
-    // Track settings page access
-    this.trackUserInteraction('settings_page_accessed', 'navigation', {
-      routine_items_count: this.routineItems ? this.routineItems.length : 0,
-    });
+    notify(title, sub, icon, color) {
+      this.toast = {
+        title, sub, icon, color, seq: this.toast.seq + 1,
+      };
+    },
+
+    goTo(route) {
+      if (!route || (this.$route && this.$route.path === route)) return;
+      this.$router.push(route).catch(() => {});
+    },
+
+    onNavigate(key, item) {
+      if (key === LOGOUT_KEY) {
+        this.onSignOut();
+        return;
+      }
+      this.goTo(item && item.route);
+    },
+
+    onSignOut() {
+      signOut(this);
+    },
   },
 };
 </script>
 
-<style scoped>
-.inputGoal {
-  display: inline-block;
-  flex-shrink: 0;
-  flex-grow: 1;
+<!-- Unscoped on purpose — the header button is slotted into AppShell, which a
+     scoped block cannot reach. Every selector carries the page's root class, so
+     nothing leaks into the legacy toolbar layouts (see the web-app CSS
+     convention in MEMORY). -->
+<style>
+.rn-routines {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
 }
 
-.steps-section {
-  width: 100%;
+.rn-routines--tablet,
+.rn-routines--desktop {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
 }
 
-.linked-agent-row {
+.rn-routines--tablet > *,
+.rn-routines--desktop > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* --- the header's New routine control ----------------------------------- */
+
+.rn-routines__new {
   display: flex;
   align-items: center;
-  width: 100%;
-}
-
-.linked-agent-name {
-  font-weight: 500;
-}
-
-.linked-agent-status {
-  margin-left: 8px;
-  font-size: 12px;
-  color: #777;
-  text-transform: capitalize;
-}
-
-.formStep {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  padding-right: 12px;
-}
-
-.step-add-btn {
-  margin-left: 0;
-  margin-right: 0;
+  gap: 6px;
+  height: 36px;
+  border: 0;
+  cursor: pointer;
   flex-shrink: 0;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.step-add-btn-label {
-  margin-left: 8px;
+/* Phone has no room for a pill beside the points chip and the avatar, so the
+   design uses a bare blue +. */
+.rn-routines__new--phone {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  color: #288bd5;
 }
 
-.step-row >>> .v-list__tile__title {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  line-height: 1.3;
+.rn-routines__new--tablet,
+.rn-routines__new--desktop {
+  padding: 0 16px;
+  border-radius: 18px;
+  background: #288bd5;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .14);
 }
 
-.drag-handle {
-  cursor: move;
+.rn-routines__new--phone .rn-routines__new-glyph {
+  font-size: 24px;
 }
 
->>> .v-list__tile--active {
-  background: #f5f5f5;
-}
-
-.monospace-font >>> textarea {
-  font-family: 'Courier New', Courier, monospace !important;
-  font-size: 16px;
-}
-
-@media (max-width: 600px) {
-  .routine-item-drawer__header {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 8px;
-    padding-top: calc(6px + env(safe-area-inset-top));
-    min-height: 56px;
-    background: #fff;
-    border-bottom: 1px solid #e2e7ef;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
-
-  .routine-item-drawer__title {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: 17px;
-    font-weight: 600;
-    color: #151a23;
-    text-align: left;
-    padding: 0 6px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .routine-item-drawer__save {
-    margin: 0 !important;
-    flex-shrink: 0;
-  }
-
-  .routine-item-drawer__form {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-
-  .routine-item-drawer__body {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: calc(24px + env(safe-area-inset-bottom));
-  }
-
-  .formStep {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 2px;
-    padding-right: 0;
-    padding-left: 0 !important;
-  }
-
-  .formStep .inputGoal {
-    width: 100%;
-  }
-
-  .step-add-btn {
-    width: 100%;
-    min-height: 40px;
-    border-radius: 10px !important;
-  }
-
-  .step-add-btn-icon {
-    margin-right: 0;
-  }
-
-  .step-row >>> .v-list__tile {
-    min-height: 44px;
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-}
-</style>
-
-<style>
-/* v-dialog teleports content to document.body, so these rules must be
-   unscoped — the dialog wrapper never receives the component's data-v attr. */
-.routine-item-dialog {
-  overflow: hidden;
-}
-
-.routine-item-dialog .v-card {
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 96px);
-  overflow: hidden;
-}
-
-.routine-item-dialog .v-form {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.routine-item-dialog .v-card__text {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-@media (max-width: 600px) {
-  .routine-item-dialog--mobile {
-    align-self: stretch;
-    margin: 0 !important;
-    max-width: 100% !important;
-    width: 100vw;
-    height: 100vh;
-  }
-
-  .routine-item-dialog--mobile .v-card.routine-item-drawer {
-    border-radius: 0;
-    max-height: 100vh;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
+.rn-routines__new--tablet .rn-routines__new-glyph,
+.rn-routines__new--desktop .rn-routines__new-glyph {
+  font-size: 18px;
 }
 </style>

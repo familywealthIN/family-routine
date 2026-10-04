@@ -1,838 +1,617 @@
-<script>
-/* eslint-disable max-len */
-</script>
 <template>
-  <container-box :isLoading="!firstLoadDone">
-    <atom-card
-      dark
-      flat
-      class="image-card"
-    >
-      <atom-button
-        absolute
-        dark
-        fab
-        bottom
-        class="second-right-btn"
-        color="info"
-        @click="() => {
-          trackUserInteraction('milestones_navigation', 'button_click', {
-            from_page: 'goals',
-            to_page: 'milestones',
-          });
-          $router.push('/goals/milestones');
-        }"
+  <!--
+    The Goals page (`packages/design/Goals.dc.html`), rebuilt.
+
+    What changed: the forest-photo hero with five "Total … Tasks" counters is now a
+    CASCADE LADDER — Today → Week → Month → Year → Life — and the ladder is the
+    navigation: tapping a step swaps the list below it. The calendar's "N Goals"
+    text became a ring per day. Every period's goals are grouped by routine in time
+    order. Year goals open their own page instead of expanding. The two FABs became
+    a header "+" and a Milestones icon.
+
+    Layout + composition only (ARCHITECTURE.md § 1). Four containers own the data:
+    the shell's points, the cascade read, the calendar read, the routine index —
+    plus three write units (create, tick, delete) and the editor dialog. What the
+    PAGE owns is the five things that are genuinely page state: which ladder step
+    is showing, which day is selected, which MONTH the calendar is showing,
+    whether the phone calendar is pulled open, and the toast.
+
+    Why the tick is orchestrated here and not in a container: one tap on a day goal
+    can close its week goal, that week's month goal and that month's year goal in
+    the same gesture, and the server also moves the routine's G-stimulus for it. A
+    write that fans out across domains belongs to the page (ARCHITECTURE § 6); the
+    cascade container hands up the PLAN and `GoalPeriodTickContainer` applies it.
+    A delete is page-orchestrated for the same reason: the server cascades to every
+    transitive `goalRef` descendant, so both display reads go stale at once.
+
+    The editor is DashBoard's own fullscreen dialog, mounted again around the SAME
+    `GoalCreationContainer` — so a goal edited here looks like, and runs the same
+    mutations as, one edited from the dashboard. Delete sits on the cascade ROW,
+    which is where the dashboard has it too. See `GoalEditDialogContainer`.
+  -->
+  <app-shell-container
+    active="goals"
+    title="Goals"
+    :subtitle="dateLabel"
+    :year-average="yearAverage"
+    @navigate="onNavigate"
+    @sign-out="onSignOut"
+  >
+    <template v-slot:header-actions>
+      <button
+        type="button"
+        class="goals-page__act"
+        :class="labelledActions ? 'goals-page__act--label' : 'goals-page__act--icon'"
+        title="Milestones"
+        data-testid="goals-milestones"
+        @click="openMilestones"
       >
-        <atom-icon>widgets</atom-icon>
-      </atom-button>
-      <atom-button
-        absolute
-        dark
-        fab
-        bottom
-        right
-        color="info"
-        @click="() => {
-          trackUserInteraction('add_goal_dialog_open', 'button_click', {
-            from_page: 'goals',
-            goals_count: allGoals ? allGoals.length : 0,
-          });
-          addGoalItemDialog = true;
-        }"
+        <i class="rn-mi goals-page__act-glyph">widgets</i>
+        <span v-if="labelledActions">Milestones</span>
+      </button>
+      <button
+        type="button"
+        class="goals-page__act goals-page__act--primary"
+        :class="labelledActions ? 'goals-page__act--label' : 'goals-page__act--icon'"
+        title="New goal"
+        data-testid="goals-new"
+        @click="openSheet"
       >
-        <atom-icon>add</atom-icon>
-      </atom-button>
-      <atom-img
-        class="image-card-img"
-        src="https://cdn.vuetifyjs.com/images/cards/forest.jpg"
-        gradient="to top, rgba(0,0,0,.44), rgba(0,0,0,.44)"
-      >
-        <atom-container fill-height>
-          <atom-layout align-center justify-center class="goal-stats-row">
-            <div class="goal-stat-item text-xs-center">
-              <div class="overline white--text stat-label">Total Day Tasks</div>
-              <div class="display-3 white--text font-weight-medium">{{ statCount(getDayGoalsCount()) }}</div>
-            </div>
-            <v-divider vertical dark class="goal-stat-divider"></v-divider>
-            <div class="goal-stat-item text-xs-center">
-              <div class="overline white--text stat-label">Total Week Tasks</div>
-              <div class="display-3 white--text font-weight-medium">{{ statCount(getWeekGoalsCount()) }}</div>
-            </div>
-            <v-divider vertical dark class="goal-stat-divider"></v-divider>
-            <div class="goal-stat-item text-xs-center">
-              <div class="overline white--text stat-label">Total Month Tasks</div>
-              <div class="display-3 white--text font-weight-medium">{{ statCount(getMonthGoalsCount()) }}</div>
-            </div>
-            <v-divider vertical dark class="goal-stat-divider"></v-divider>
-            <div class="goal-stat-item text-xs-center">
-              <div class="overline white--text stat-label">Total Year Tasks</div>
-              <div class="display-3 white--text font-weight-medium">{{ statCount(getYearGoalsCount()) }}</div>
-            </div>
-            <v-divider vertical dark class="goal-stat-divider"></v-divider>
-            <div class="goal-stat-item text-xs-center">
-              <div class="overline white--text stat-label">Total Life Tasks</div>
-              <div class="display-3 white--text font-weight-medium">{{ statCount(getLifetimeGoalsCount()) }}</div>
-            </div>
-          </atom-layout>
-        </atom-container>
-      </atom-img>
-    </atom-card>
-    <atom-card-text class="image-card-page py-0 px-0">
-      <template v-for="period in periods">
-        <div v-if="period.name === 'day'" :key="period.name">
-          <div class="text-xs-center"><h2 class="pt-4 pb-3 pl-2">{{ currentMonth }}</h2></div>
-          <atom-sheet>
-            <atom-calendar
+        <i class="rn-mi goals-page__act-glyph">add</i>
+        <span v-if="labelledActions">New goal</span>
+      </button>
+    </template>
+
+    <!--
+      Desktop only: the 264px nav sidebar lists the year goals, which is the same
+      switcher the Year Goals screen mounts. One container, one query, two hosts.
+    -->
+    <template v-if="shell === 'desktop'" v-slot:sidebar>
+      <year-goal-list-container compact @select="openYear" />
+    </template>
+
+    <goal-routine-index-container v-slot="{ routines }">
+      <div class="goals-page" :class="`goals-page--${shell}`" data-testid="goals-page">
+        <goals-cascade-container
+          ref="cascade"
+          :tab="tab"
+          :selected-date="selectedDate"
+          :today="today"
+          :shell="shell"
+          :routines="routines"
+          :pop="pop"
+          @select-step="selectStep"
+          @tick="onTick"
+          @edit="openEditor"
+          @delete="confirmDelete"
+          @open-year="openYear"
+          @add="openSheet"
+          @year-average="yearAverage = $event"
+        >
+          <template v-slot:calendar>
+            <!--
+              `month-date` is deliberately NOT `selected-date`: stepping a month
+              must not move the selection, because the cascade read is keyed on
+              the selected DATE and its resolver writes (`autoCheckTaskPeriod`).
+              Browsing three months back would otherwise fire three auto-check
+              passes for days the user never chose.
+            -->
+            <goal-calendar-container
               ref="calendar"
-              v-model="start"
-              :type="type"
-              :end="end"
-              color="primary"
-              @change="updateRange"
-              @click:date="showGoalDialog"
-            >
-              <template v-slot:day="{ date }">
-                <template v-for="goal in goalsMap[date]">
-                  {{goal.goalItems.length}} Goals
-                </template>
-              </template>
-            </atom-calendar>
-          </atom-sheet>
-          <atom-layout>
-            <atom-flex
-              xs4
-              class="text-xs-left"
-            >
-              <atom-button outline color="primary" @click="calendarPrev" :loading="isNavigating" :disabled="isNavigating">
-                <atom-icon
-                  left
-                  dark
-                >keyboard_arrow_left</atom-icon>
-                Prev
-              </atom-button>
-            </atom-flex>
-            <atom-flex xs4></atom-flex>
-            <atom-flex
-              xs4
-              class="text-xs-right"
-            >
-              <atom-button outline color="primary" @click="calendarNext" :loading="isNavigating" :disabled="isNavigating">
-                Next
-                <atom-icon
-                  right
-                  dark
-                >keyboard_arrow_right</atom-icon>
-              </atom-button>
-            </atom-flex>
-          </atom-layout>
-          <div class="text-xs-center pt-3 pb-3" style="display: none;">
-            <atom-btn-toggle v-model="rangeType" >
-              <atom-button flat value="upcoming">
-                Upcoming
-              </atom-button>
-              <atom-button flat value="past">
-                Past
-              </atom-button>
-              <atom-button flat value="all">
-                All
-              </atom-button>
-            </atom-btn-toggle>
-          </div>
-        </div>
-        <div v-else :key="`${period.name}-filter`">
-          <goals-filter-time
-            :key="period.name"
-            :goals="allGoals"
-            :error="loadError"
-            :retrying="$apollo.queries.goals.loading"
-            :periodFilter="period.name"
-            :rangeType="rangeType"
-            :selectedMonth="currentMonthVariable"
-            :updateNewGoalItem="updateNewGoalItem"
-            @retry="retryGoals"
-            @delete-task-goal="deleteTaskGoal"
-            @complete-goal-item="completeGoalItem"
-            @complete-sub-task="completeSubTask"
-          />
-        </div>
-      </template>
-    </atom-card-text>
-    <atom-dialog
-      v-model="addGoalItemDialog"
-      fullscreen
-      hide-overlay
-      transition="dialog-bottom-transition"
-    >
-      <atom-card>
-        <atom-toolbar dark color="primary">
-          <atom-button icon dark @click="closeGoalItemDialog()">
-            <atom-icon>close</atom-icon>
-          </atom-button>
-          <atom-toolbar-title>{{ goalActionText || 'Add Goal'}}</atom-toolbar-title>
-          <atom-spacer></atom-spacer>
-        </atom-toolbar>
-        <atom-card class="no-shadow">
-          <atom-card-text class="pa-0">
-            <goal-creation :newGoalItem="newGoalItem" v-on:add-update-goal-entry="addUpdateGoalEntry" />
-          </atom-card-text>
-        </atom-card>
-      </atom-card>
-    </atom-dialog>
-    <atom-dialog v-model="goalDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
-      <atom-card>
-        <atom-toolbar color="white">
-          <atom-toolbar-title>{{selectedDayGoalTitle}}</atom-toolbar-title>
-          <atom-spacer></atom-spacer>
-          <atom-button icon @click="goalDialog = false">
-            <atom-icon>close</atom-icon>
-          </atom-button>
-        </atom-toolbar>
-        <atom-card class="no-shadow">
-          <atom-card-text class="pa-0">
-            <priority-goal-list
-              :items="selectedDayItems"
-              :tasklist="dayTasklist"
-              :show-delete="true"
-              :show-subtasks="true"
-              empty-text="No goals for this day"
-              @item-click="onDayEditItem"
-              @toggle-complete="onDayToggleComplete"
-              @toggle-subtask="onDaySubtaskToggle"
-              @edit-item="onDayEditItem"
-              @delete-item="onDayDeleteItem"
-              @open-transcript="onDayOpenTranscript"
+              :selected-date="selectedDate"
+              :month-date="monthDate"
+              :today="today"
+              :collapsible="isPhone"
+              :expanded="calendarOpen"
+              :hint="isPhone ? '' : 'Tap a day'"
+              @select-day="selectDay"
+              @prev-month="shiftMonth(-1)"
+              @next-month="shiftMonth(1)"
+              @toggle="calendarOpen = !calendarOpen"
             />
-          </atom-card-text>
-        </atom-card>
-      </atom-card>
-    </atom-dialog>
-    <goal-delete-confirm-container
-      ref="deleteConfirm"
-      @confirm="confirmDeleteTaskGoal"
-    />
-  </container-box>
+          </template>
+        </goals-cascade-container>
+
+        <goal-item-create-container
+          :open="sheetOpen"
+          :shell="shell"
+          :period="sheetPeriod"
+          :task-ref="defaultTaskRef(routines)"
+          :routines="routines"
+          :selected-date="selectedDate"
+          :today="today"
+          @close="sheetOpen = false"
+          @created="onCreated"
+          @failed="onCreateFailed"
+        />
+
+        <!--
+          The full editor — body, contribution, tags, subtasks, the milestone
+          link, defer / mark-missed. DashBoard's fullscreen dialog outside, the
+          dashboard's `GoalCreationContainer` inside, so neither the chrome nor
+          the behaviour is forked. It carries no delete: that is the row's.
+        -->
+        <goal-edit-dialog-container
+          :open="editorOpen"
+          :item="editItem"
+          :period="tab"
+          :date="editorDate"
+          @close="closeEditor"
+          @saved="onGoalSaved"
+        />
+
+        <!-- The write units. Renderless: one mutation each and nothing else. -->
+        <goal-period-tick-container ref="tick" />
+        <goal-period-delete-container ref="remove" />
+
+        <!-- Destructive, so it never happens without the dialog that names what
+             the server cascade will take with it. -->
+        <goal-delete-confirm-container ref="deleteConfirm" @confirm="removeGoalItem" />
+
+        <!--
+          Phone and tablet reach the year goals by tapping the Goals tab again —
+          the design's "Go to" switcher. Desktop has the sidebar instead.
+        -->
+        <responsive-sheet
+          v-if="!isDesktop"
+          :open="switcherOpen"
+          :shell="shell"
+          title="Go to"
+          @close="switcherOpen = false"
+        >
+          <year-goal-list-container
+            compact
+            @select="openYear"
+            @open-overview="switcherOpen = false"
+          />
+        </responsive-sheet>
+
+        <app-toast
+          :shell="shell"
+          :title="toast.title"
+          :sub="toast.sub"
+          :icon="toast.icon"
+          :icon-color="toast.color"
+          :seq="toast.seq"
+        />
+      </div>
+    </goal-routine-index-container>
+  </app-shell-container>
 </template>
 
 <script>
-import gql from 'graphql-tag';
 import moment from 'moment';
-import { MeasurementMixin } from '@/utils/measurementMixins.js';
-
-import { defaultGoalItem, periodsArray } from '../constants/goals';
-
-import GoalsFilterTime from '@routine-notes/ui/organisms/GoalsFilterTime/GoalsFilterTime.vue';
-import PriorityGoalList from '@routine-notes/ui/molecules/PriorityGoalList/PriorityGoalList.vue';
-
-import {
-  AtomButton,
-  AtomBtnToggle,
-  AtomCalendar,
-  AtomCard,
-  AtomCardText,
-  AtomContainer,
-  AtomDialog,
-  AtomFlex,
-  AtomIcon,
-  AtomImg,
-  AtomLayout,
-  AtomSheet,
-  AtomSpacer,
-  AtomToolbar,
-  AtomToolbarTitle,
-} from '@routine-notes/ui/atoms';
-import GoalCreation from '../containers/GoalCreationContainer.vue';
+import AppToast from '@routine-notes/ui/molecules/AppToast/AppToast.vue';
+import ResponsiveSheet from '@routine-notes/ui/molecules/ResponsiveSheet/ResponsiveSheet.vue';
+import { resolveShell } from '@routine-notes/ui/constants/navigation';
+import { MeasurementMixin } from '../utils/measurementMixins';
+import AppShellContainer from '../containers/AppShellContainer.vue';
+import GoalRoutineIndexContainer from '../containers/GoalRoutineIndexContainer.vue';
+import GoalsCascadeContainer from '../containers/GoalsCascadeContainer.vue';
+import GoalCalendarContainer from '../containers/GoalCalendarContainer.vue';
+import GoalItemCreateContainer from '../containers/GoalItemCreateContainer.vue';
+import GoalEditDialogContainer from '../containers/GoalEditDialogContainer.vue';
+import GoalPeriodTickContainer from '../containers/GoalPeriodTickContainer.vue';
+import GoalPeriodDeleteContainer from '../containers/GoalPeriodDeleteContainer.vue';
 import GoalDeleteConfirmContainer from '../containers/GoalDeleteConfirmContainer.vue';
-import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
+import YearGoalListContainer from '../containers/YearGoalListContainer.vue';
+import { signOut } from '../utils/signOut';
+import {
+  DATE_FORMAT, currentRoutineId, goalDateFor, normaliseTab,
+} from '../utils/goalCascade';
+
+/** Routes this page can leave by. One place, so one line changes per route. */
+export const MILESTONES_ROUTE = '/goals/milestones';
+export const YEAR_GOAL_ROUTE = '/year-goals';
+export const GOALS_ROUTE = '/goals';
+export const LOGOUT_KEY = 'logout';
+export const GOALS_NAV_KEY = 'goals';
+/** How long the auto-ticked ladder step keeps its `rn-pop`. */
+export const POP_MS = 700;
+
+const noToast = () => ({
+  title: '', sub: '', icon: 'check_circle', color: '#81c784', seq: 0,
+});
 
 export default {
+  name: 'GoalsTime',
+
+  /** The analytics the other pages emit — page view, dialog opens, goal writes. */
   mixins: [MeasurementMixin],
+
   components: {
-    PriorityGoalList,
-    GoalCreation,
+    AppShellContainer,
+    AppToast,
+    ResponsiveSheet,
+    GoalRoutineIndexContainer,
+    GoalsCascadeContainer,
+    GoalCalendarContainer,
+    GoalItemCreateContainer,
+    GoalEditDialogContainer,
+    GoalPeriodTickContainer,
+    GoalPeriodDeleteContainer,
     GoalDeleteConfirmContainer,
-    GoalsFilterTime,
-    ContainerBox,
-    AtomButton,
-    AtomBtnToggle,
-    AtomCalendar,
-    AtomCard,
-    AtomCardText,
-    AtomContainer,
-    AtomDialog,
-    AtomFlex,
-    AtomIcon,
-    AtomImg,
-    AtomLayout,
-    AtomSheet,
-    AtomSpacer,
-    AtomToolbar,
-    AtomToolbarTitle,
+    YearGoalListContainer,
   },
-  apollo: {
-    goals: {
-      query: gql`
-        query goalsOptimized($currentMonth: String) {
-          goalsOptimized(currentMonth: $currentMonth) {
-            id
-            date
-            period
-            goalItems {
-              id
-              body
-              tags
-              isComplete
-              isMilestone
-              contribution,
-              reward,
-              taskRef
-              goalRef
-              status
-              createdAt
-              originalDate
-              subTasks {
-                id
-                body
-                isComplete
-              },
-            }
-          }
-        }
-      `,
-      variables() {
-        return {
-          currentMonth: this.currentMonthVariable || moment().endOf('month').format('DD-MM-YYYY'),
-        };
-      },
-      skip() {
-        return !this.$root.$data.email;
-      },
-      result({ data }) {
-        this.firstLoadDone = true;
-        if (data) this.loadError = false;
-      },
-      // Without this the page drops through to the empty state and tells the
-      // user their goals are gone when the server is simply unreachable.
-      error(error) {
-        console.error('[GoalsTime] goals query failed:', error);
-        this.firstLoadDone = true;
-        this.isNavigating = false;
-        this.loadError = true;
-      },
-      update(data) {
-        console.log('[GoalsTime] goals query update:', data);
-        return data.goalsOptimized || [];
-      },
-    },
-    pastGoals: {
-      query: gql`
-        query goalsPast {
-          goalsPast {
-            id
-            date
-            period
-            goalItems {
-              id
-              body
-              tags
-              isComplete
-              isMilestone
-              contribution,
-              reward,
-              taskRef
-              goalRef
-              status
-              createdAt
-              originalDate
-              subTasks {
-                id
-                body
-                isComplete
-              },
-            }
-          }
-        }
-      `,
-      skip() {
-        return !this.$root.$data.email || this.rangeType !== 'past';
-      },
-      error(error) {
-        console.error('[GoalsTime] pastGoals query failed:', error);
-        this.loadError = true;
-      },
-      update(data) {
-        console.log('[GoalsTime] pastGoals query update:', data);
-        return data.goalsPast || [];
-      },
-    },
+
+  data() {
+    return {
+      /** Which ladder step is showing. Not in the URL: `/goals` takes no param. */
+      tab: 'day',
+      today: moment().format(DATE_FORMAT),
+      selectedDate: moment().format(DATE_FORMAT),
+      /**
+       * Which month the calendar grid is on. Separate from `selectedDate` so the
+       * prev/next chevrons can move the grid — and only the grid's own month read
+       * — without re-running the cascade read's writing resolver for a day the
+       * user never selected.
+       */
+      monthDate: moment().format(DATE_FORMAT),
+      /** Phone only: the calendar starts folded to the selected week. */
+      calendarOpen: false,
+      sheetOpen: false,
+      sheetPeriod: 'day',
+      /** The full editor: its open flag and the item it is editing (null = new). */
+      editorOpen: false,
+      editItem: null,
+      switcherOpen: false,
+      /** Ladder steps replaying `rn-pop` after a cascade. */
+      pop: [],
+      popTimer: null,
+      /** The year average the nav glyph's ring draws, from the cascade read. */
+      // Unknown until the cascade reports it, so the shell hides the ring rather than draw 0%.
+      yearAverage: null,
+      toast: noToast(),
+    };
   },
-  watch: {
-    goals(newVal) {
-      // Reset navigation loading state when goals are loaded
-      this.isNavigating = false;
-      console.log('[GoalsTime] goals updated:', {
-        count: newVal ? newVal.length : 0,
-        periods: newVal ? newVal.reduce((acc, g) => {
-          acc[g.period] = (acc[g.period] || 0) + 1;
-          return acc;
-        }, {}) : {},
-        sample: newVal ? newVal.slice(0, 5).map((g) => ({ period: g.period, date: g.date, itemsCount: g.goalItems.length })) : [],
-      });
-    },
-    allGoals(newVal) {
-      console.log('[GoalsTime] allGoals computed:', {
-        count: newVal ? newVal.length : 0,
-        periods: newVal ? newVal.reduce((acc, g) => {
-          acc[g.period] = (acc[g.period] || 0) + 1;
-          return acc;
-        }, {}) : {},
-      });
-    },
-  },
+
   computed: {
-    date() {
-      return moment().format('DD-MM-YYYY');
+    /** The ONE breakpoint rule — `resolveShell`, never a second scheme. */
+    shell() {
+      return resolveShell(this.$vuetify && this.$vuetify.breakpoint);
     },
-    // Merge goals from optimized query and past query
-    allGoals() {
-      const optimizedGoals = this.goals || [];
-      const past = this.pastGoals || [];
-
-      // Combine and deduplicate by id
-      const goalsMap = new Map();
-      [...optimizedGoals, ...past].forEach((goal) => {
-        if (goal && goal.id) {
-          goalsMap.set(goal.id, goal);
-        }
-      });
-
-      return Array.from(goalsMap.values());
+    isPhone() {
+      return this.shell === 'phone';
     },
-    // convert the list of events into a map of lists keyed by date
-    goalsMap() {
-      const map = {};
-      if(this.allGoals) {
-        this.allGoals.forEach((goal) => {
-          if(goal.period === 'day') {
-            const date = this.formatCalendarDate(goal.date);
-            (map[date] = map[date] || []).push(goal);
-          }
-        });
-      }
-      console.log('map', map);
-      return map;
+    isDesktop() {
+      return this.shell === 'desktop';
     },
-    // Dynamically look up the selected day's goal from the current goalsMap
-    selectedDayGoal() {
-      if (!this.selectedDayDate || !(this.selectedDayDate in this.goalsMap)) {
-        return {};
-      }
-      return this.goalsMap[this.selectedDayDate][0];
+    /** The phone header has room for glyphs only; the others carry labels. */
+    labelledActions() {
+      return !this.isPhone;
     },
-    // Day-drawer items shaped for PriorityGoalList: resolve each item's parent
-    // goal name (via goalRef, from all loaded goals) and carry the owning goal's
-    // period/date so the complete/edit/delete handlers have what they need.
-    selectedDayItems() {
-      const goal = this.selectedDayGoal;
-      const items = (goal && goal.goalItems) || [];
-      const bodyById = {};
-      (this.allGoals || []).forEach((g) => {
-        (g.goalItems || []).forEach((gi) => {
-          if (gi && gi.id) bodyById[gi.id] = gi.body;
-        });
-      });
-      return items.map((item) => ({
-        ...item,
-        period: item.period || (goal && goal.period),
-        date: item.date || (goal && goal.date),
-        parentGoalBody: item.goalRef ? bodyById[item.goalRef] || null : null,
-      }));
+    /** "Saturday, 12 September" — the shell's subtitle, always TODAY. */
+    dateLabel() {
+      return moment(this.today, DATE_FORMAT).format('dddd, D MMMM');
+    },
+    /**
+     * The date a BLANK editor starts on — the same `period → date` rule the quick
+     * sheet uses (`goalCascade.goalDateFor`), so a goal filed from either path
+     * lands under the same Goal document.
+     */
+    editorDate() {
+      return goalDateFor(normaliseTab(this.tab), this.selectedDate);
     },
   },
-  data: () => ({
-    type: 'month',
-    start: moment().format('YYYY-MM-DD'),
-    end: moment().endOf('year').format('YYYY-MM-DD'),
-    currentMonth: moment().format('MMMM YYYY'),
-    currentMonthVariable: moment().endOf('month').format('DD-MM-YYYY'),
-    valid: true,
-    addGoalItemDialog: false,
-    buttonLoading: false,
-    isNavigating: false,
-    firstLoadDone: false,
-    loadError: false,
-    goalActionText: 'Add Goal',
-    groupId: '',
-    defaultGoalItem,
-    newGoalItem: { ...defaultGoalItem }, // Use defaultGoalItem to ensure all fields are initialized
-    periods: periodsArray,
-    rangeType: 'upcoming',
-    goalDialog: false,
-    selectedDayGoalTitle: '',
-    selectedDayDate: null, // Store the selected date instead of the goal object
-    dayTasklist: [], // Routine tasks for the selected day (to show linked task names)
-  }),
-  methods: {
-    // A load we never received knows nothing about the totals — a dash beats
-    // asserting 0, which reads as "your goals were deleted".
-    statCount(count) {
-      return this.loadError && !this.allGoals.length ? '—' : count;
-    },
-    retryGoals() {
-      this.$apollo.queries.goals.refetch().catch(() => {});
-      if (this.rangeType === 'past') {
-        this.$apollo.queries.pastGoals.refetch().catch(() => {});
-      }
-    },
-    calendarPrev() {
-      if (this.isNavigating) return;
-      this.isNavigating = true;
-      // Navigate to previous month by updating the start date
-      const newDate = moment(this.start, 'YYYY-MM-DD').subtract(1, 'month');
-      this.start = newDate.format('YYYY-MM-DD');
-      this.currentMonth = newDate.format('MMMM YYYY');
-      this.currentMonthVariable = newDate.endOf('month').format('DD-MM-YYYY');
-    },
-    calendarNext() {
-      if (this.isNavigating) return;
-      this.isNavigating = true;
-      // Navigate to next month by updating the start date
-      const newDate = moment(this.start, 'YYYY-MM-DD').add(1, 'month');
-      this.start = newDate.format('YYYY-MM-DD');
-      this.currentMonth = newDate.format('MMMM YYYY');
-      this.currentMonthVariable = newDate.endOf('month').format('DD-MM-YYYY');
-    },
-    // A goal item can have milestones hanging off it, and deleting it deletes
-    // them too (server cascade). Nothing is destroyed until the dialog, which
-    // names them, is confirmed.
-    deleteTaskGoal({ id, period, date }) {
-      this.$refs.deleteConfirm.open({
-        id, period, date, body: this.goalItemBody(id),
-      });
-    },
-    goalItemBody(id) {
-      let body = '';
-      (this.allGoals || []).forEach((goal) => {
-        (goal.goalItems || []).forEach((goalItem) => {
-          if (goalItem && goalItem.id === id) body = goalItem.body;
-        });
-      });
-      return body;
-    },
-    confirmDeleteTaskGoal({ id, period, date }) {
-      this.$goals.deleteGoalItem({ id, period, date, dayDate: this.date })
-        // The mutation's cache update only knows about the item it was given;
-        // the milestones the server cascaded to would otherwise keep inflating
-        // the counters and the calendar until an unrelated refetch.
-        .then(() => this.retryGoals())
-        .catch(() => {
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
-    },
-    // --- Day drawer (PriorityGoalList) event handlers ---
-    onDayToggleComplete(item) {
-      this.completeGoalItem({
-        id: item.id,
-        period: item.period,
-        date: item.date,
-        taskRef: item.taskRef,
-        isComplete: !item.isComplete,
-        isMilestone: item.isMilestone,
-      });
-    },
-    onDayEditItem(item) {
-      this.updateNewGoalItem(item, item.period, item.date);
-    },
-    onDayDeleteItem(item) {
-      this.deleteTaskGoal({ id: item.id, period: item.period, date: item.date });
-    },
-    onDaySubtaskToggle({ item, subTask }) {
-      this.completeSubTask({
-        id: subTask.id,
-        taskId: item.id,
-        period: item.period,
-        date: item.date,
-        isComplete: !subTask.isComplete,
-      });
-    },
-    onDayOpenTranscript(item) {
-      if (item && item.reward) {
-        this.$agent.showSavedResult(item.taskRef || item.id, item.reward);
-      }
-    },
-    completeGoalItem(payload) {
-      console.log('[GoalsTime] completeGoalItem received:', payload);
-      const {
-        id, period, date, taskRef, isComplete, isMilestone, onSuccess,
-      } = payload;
 
-      this.$goals.completeGoalItem({
-        id, period, date, taskRef, isComplete, isMilestone, dayDate: this.date,
-      })
-        .then(() => {
-          if (onSuccess) onSuccess();
-        })
-        .catch(() => {
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
-    },
-    completeSubTask(payload) {
-      const {
-        id, taskId, period, date, isComplete, onSuccess, onError,
-      } = payload;
-
-      this.$goals.completeSubTaskItem({
-        id, taskId, period, date, isComplete, dayDate: this.date,
-      })
-        .then((result) => {
-          if (onSuccess) onSuccess(result);
-        })
-        .catch((error) => {
-          if (onError) onError(error);
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occurred while updating subtask',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
-    },
-    async updateRange({ start }) {
-      this.currentMonth = moment(start.date, 'YYYY-MM-DD').format('MMMM YYYY');
-      this.currentMonthVariable = moment(start.date, 'YYYY-MM-DD').endOf('month').format('DD-MM-YYYY');
-
-      // Refetch optimized goals for the new month
-      await this.$apollo.queries.goals.refetch({
-        currentMonth: this.currentMonthVariable,
-      });
-    },
-    formatCalendarDate(date) {
-      return moment(date, 'DD-MM-YYYY').format('YYYY-MM-DD');
-    },
-    // Human-friendly title for the day drawer, e.g. "Today, 14th July 2026" or
-    // "Tuesday, 14th July 2026" — instead of the raw "14-07-2026".
-    formatDayTitle(date) {
-      const day = moment(date, 'DD-MM-YYYY');
-      if (!day.isValid()) return date;
-      const diff = day.clone().startOf('day').diff(moment().startOf('day'), 'days');
-      const relative = { 0: 'Today', 1: 'Tomorrow', '-1': 'Yesterday' }[diff];
-      return relative
-        ? `${relative}, ${day.format('Do MMMM YYYY')}`
-        : day.format('dddd, Do MMMM YYYY');
-    },
-    getGoal(period, date) {
-      const goal = this.allGoals.find((aGoal) => aGoal.period === period && aGoal.date === date);
-      if (!goal) {
-        const newGoal = {
-          id: `${Math.random()}`,
-          period,
-          date,
-          goalItems: [],
-        };
-        if (!this.goals) {
-          this.goals = [];
-        }
-        this.goals.push(newGoal);
-        return newGoal;
-      }
-
-      return goal;
-    },
-    getLifetimeGoalsCount() {
-      const lifetimeGoals = this.allGoals && this.allGoals.find((goal) => goal && goal.period === 'lifetime');
-      return lifetimeGoals && lifetimeGoals.goalItems && lifetimeGoals.goalItems.length || 0
-    },
-    getMonthGoalsCount() {
-      if (!this.allGoals) return 0;
-      return this.allGoals
-        .filter((goal) => goal && goal.period === 'month')
-        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
-    },
-    getWeekGoalsCount() {
-      if (!this.allGoals) return 0;
-      return this.allGoals
-        .filter((goal) => goal && goal.period === 'week')
-        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
-    },
-    getDayGoalsCount() {
-      if (!this.allGoals) return 0;
-      return this.allGoals
-        .filter((goal) => goal && goal.period === 'day')
-        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
-    },
-    getYearGoalsCount() {
-      if (!this.allGoals) return 0;
-      return this.allGoals
-        .filter((goal) => goal && goal.period === 'year')
-        .reduce((sum, goal) => sum + (goal.goalItems ? goal.goalItems.length : 0), 0);
-    },
-    updateNewGoalItem(goalItem, period, date) {
-      this.newGoalItem = {
-        ...goalItem,
-        tags: Array.isArray(goalItem.tags) ? [...goalItem.tags] : [],
-        period,
-        date,
-      };
-      this.goalActionText = 'Edit Goal';
-      this.addGoalItemDialog = true;
-    },
-    closeGoalItemDialog() {
-      this.newGoalItem = {...this.defaultGoalItem};
-      this.addGoalItemDialog = false;
-      this.goalActionText = 'Add Goal';
-    },
-    addUpdateGoalEntry(newGoalItem) {
-      // An edit can reschedule the item to another date or period, in which
-      // case the bucket it used to live in still holds a copy of it.
-      if (newGoalItem.id) {
-        this.allGoals.forEach((aGoal) => {
-          if (!aGoal || !aGoal.goalItems) return;
-          if (aGoal.period === newGoalItem.period && aGoal.date === newGoalItem.date) return;
-          const staleIndex = aGoal.goalItems.findIndex((aGoalItem) => aGoalItem.id === newGoalItem.id);
-          if (staleIndex !== -1) {
-            aGoal.goalItems.splice(staleIndex, 1);
-          }
-        });
-      }
-      const goal = this.getGoal(newGoalItem.period, newGoalItem.date);
-      let goalItem = goal
-        .goalItems
-        .find((aGoalItem) => aGoalItem.id === newGoalItem.id);
-      if(goalItem && goalItem.id) {
-        // Track goal update
-        this.trackBusinessEvent('goal_updated', {
-          goal_id: goalItem.id,
-          period: newGoalItem.period,
-          is_milestone: newGoalItem.isMilestone,
-          has_deadline: !!newGoalItem.deadline,
-          tags_count: newGoalItem.tags ? newGoalItem.tags.length : 0,
-        });
-        const goalItemIndex = goal.goalItems.indexOf(goalItem);
-        Object.assign(goal.goalItems[goalItemIndex], newGoalItem);
-      } else {
-        // Track new goal creation
-        this.trackBusinessEvent('goal_created', {
-          period: newGoalItem.period,
-          is_milestone: newGoalItem.isMilestone,
-          has_deadline: !!newGoalItem.deadline,
-          tags_count: newGoalItem.tags ? newGoalItem.tags.length : 0,
-          goal_length: newGoalItem.body ? newGoalItem.body.length : 0,
-        });
-        goal.goalItems.push({
-          ...newGoalItem,
-        });
-      }
-
-      this.addGoalItemDialog = false;
-      this.newGoalItem = { ...this.defaultGoalItem };
-    },
-    async showGoalDialog({ date }) {
-      if (date in this.goalsMap) {
-        const dayGoal = this.goalsMap[date][0];
-        this.selectedDayGoalTitle = this.formatDayTitle(dayGoal.date);
-        this.selectedDayDate = date; // Store the date, computed property will look up the goal
-        this.goalDialog = true;
-        // Fetch the day's routine so items can show their linked task name.
-        try {
-          const routine = await this.$routine.fetchRoutine(dayGoal.date, { useCache: true });
-          this.dayTasklist = (routine && routine.tasklist) || [];
-        } catch (e) {
-          this.dayTasklist = [];
-        }
-      }
-    },
-  },
   mounted() {
-    // Track goals page view
     this.trackPageView('goals');
     this.trackUserInteraction('goals_page_mounted', 'lifecycle', {
       component: 'GoalsTime',
-      goals_count: this.allGoals ? this.allGoals.length : 0,
+      shell: this.shell,
     });
+  },
+
+  beforeDestroy() {
+    if (this.popTimer) clearTimeout(this.popTimer);
+  },
+
+  methods: {
+    goTo(route) {
+      if (!route || this.$route.path === route) return;
+      this.$router.push(route).catch(() => {});
+    },
+    /**
+     * Tapping the Goals tab while already on Goals opens the year-goal switcher
+     * instead of re-pushing the route — the design's "Tap Goals again anytime to
+     * open this". Desktop needs no sheet: its sidebar already lists them.
+     */
+    onNavigate(key, item) {
+      if (key === LOGOUT_KEY) {
+        this.onSignOut();
+        return;
+      }
+      if (key === GOALS_NAV_KEY && this.$route.path === GOALS_ROUTE) {
+        if (!this.isDesktop) this.switcherOpen = !this.switcherOpen;
+        return;
+      }
+      this.goTo(item && item.route);
+    },
+    onSignOut() {
+      signOut(this);
+    },
+    /** The mock only toasts "Opens /goals/milestones"; the route is real. */
+    openMilestones() {
+      this.trackUserInteraction('milestones_navigation', 'button_click', {
+        from_page: 'goals',
+        to_page: 'milestones',
+      });
+      this.goTo(MILESTONES_ROUTE);
+    },
+    /** A year goal NAVIGATES. It is never ticked from this page. */
+    openYear(id) {
+      if (!id) return;
+      this.switcherOpen = false;
+      this.goTo(`${YEAR_GOAL_ROUTE}/${id}`);
+    },
+    selectStep(key) {
+      this.tab = normaliseTab(key);
+    },
+    selectDay(date) {
+      if (!date) return;
+      this.selectedDate = date;
+      // The grid and the selection cannot disagree about the month once a day in
+      // it has been chosen.
+      this.monthDate = date;
+      // Tapping a day means "show me that day", so the ladder follows it.
+      this.tab = 'day';
+    },
+    /**
+     * Step the calendar one month. `startOf('month')` because the 31st minus a
+     * month is a different day in every month, and only the month is meant to
+     * change — `GoalCalendarContainer` keys its read on the month's last day.
+     */
+    shiftMonth(step) {
+      const next = moment(this.monthDate, DATE_FORMAT).add(step, 'month').startOf('month');
+      if (!next.isValid()) return;
+      this.monthDate = next.format(DATE_FORMAT);
+    },
+    openSheet() {
+      this.trackUserInteraction('add_goal_dialog_open', 'button_click', {
+        from_page: 'goals',
+        period: normaliseTab(this.tab),
+      });
+      this.sheetPeriod = this.tab;
+      this.sheetOpen = true;
+    },
+    /** The routine whose window contains now — the sheet's default choice. */
+    defaultTaskRef(routines) {
+      return currentRoutineId(routines, moment());
+    },
+
+    // ---- the tick, orchestrated -------------------------------------------
+    /**
+     * `plan` is what `goalCascade.planRowTick` resolved: the mutations to send, the
+     * rollup toast and the ladder steps to pop. A blocked tick carries a toast and
+     * no mutations, which is the whole of the "Ticked automatically" rule.
+     */
+    onTick(plan) {
+      if (plan.toast) this.notify(plan.toast);
+      this.playPop(plan.pop);
+      if (!plan.ticks.length) return;
+      this.$refs.tick.tick(plan.ticks)
+        // The server recomputes every `progress` from its own goalRef links, so the
+        // predicted counts in the toast are replaced by the real ones here.
+        .then(() => this.refreshReads())
+        .catch(() => {
+          this.refreshReads();
+          this.notify({
+            icon: 'error_outline',
+            color: '#ef9a9a',
+            title: "Couldn't save that tick",
+            sub: 'Nothing was changed — try again',
+          });
+        });
+    },
+    playPop(steps) {
+      if (!steps || !steps.length) return;
+      if (this.popTimer) clearTimeout(this.popTimer);
+      this.pop = steps;
+      this.popTimer = setTimeout(() => { this.pop = []; }, POP_MS);
+    },
+    /** Both display reads, because a tick changes a day count AND a streak. */
+    refreshReads() {
+      if (this.$refs.cascade) this.$refs.cascade.refresh();
+      if (this.$refs.calendar) this.$refs.calendar.refresh();
+    },
+    // ---- the editor, and the delete behind it -----------------------------
+    /**
+     * Open the full editor on one goal item. The item arrives COMPLETE from the
+     * cascade container's read — body, contribution, tags, subtasks, `goalRef`,
+     * and the `period` + `date` of the Goal document that owns it, which is the
+     * address every goal-item mutation is sent to.
+     */
+    openEditor(item) {
+      this.editItem = item || null;
+      this.editorOpen = true;
+      this.trackUserInteraction('edit_goal_dialog_open', 'button_click', {
+        from_page: 'goals',
+        period: (item && item.period) || normaliseTab(this.tab),
+        is_milestone: !!(item && item.isMilestone),
+      });
+    },
+    closeEditor() {
+      this.editorOpen = false;
+      this.editItem = null;
+    },
+    /**
+     * A save went through. Follow the goal to the level it now lives on (an edit
+     * can move it), re-read both displays, and post the business event the old
+     * page posted from the same place.
+     */
+    onGoalSaved({ goalItem, created }) {
+      const item = goalItem || {};
+      const tagsCount = Array.isArray(item.tags) ? item.tags.length : 0;
+      if (created) {
+        this.trackBusinessEvent('goal_created', {
+          period: item.period,
+          is_milestone: !!item.isMilestone,
+          has_deadline: !!item.deadline,
+          tags_count: tagsCount,
+          goal_length: (item.body || '').length,
+        });
+      } else {
+        this.trackBusinessEvent('goal_updated', {
+          goal_id: item.id,
+          period: item.period,
+          is_milestone: !!item.isMilestone,
+          has_deadline: !!item.deadline,
+          tags_count: tagsCount,
+        });
+      }
+      if (item.period) this.tab = normaliseTab(item.period);
+      this.refreshReads();
+    },
+    /**
+      * Asked for by the cascade ROW's delete glyph (never by the editor — the
+      * dashboard puts delete on the goal list too). Destructive: nothing is sent
+      * until the dialog that names the server cascade is confirmed.
+      */
+    confirmDelete(target) {
+      if (target && this.$refs.deleteConfirm) this.$refs.deleteConfirm.open(target);
+    },
+    removeGoalItem(target) {
+      this.closeEditor();
+      this.$refs.remove.remove(target)
+        // The server cascade also removed the item's milestones, which this
+        // page's two reads know nothing about until they are re-read.
+        .then(() => {
+          this.refreshReads();
+          this.notify({
+            icon: 'delete_outline',
+            color: '#90caf9',
+            title: 'Goal deleted',
+            sub: 'It and anything hanging off it is gone',
+          });
+        })
+        .catch(() => {
+          this.refreshReads();
+          this.notify({
+            icon: 'error_outline',
+            color: '#ef9a9a',
+            title: "Couldn't delete that goal",
+            sub: 'Nothing was changed — try again',
+          });
+        });
+    },
+    onCreated({
+      period, body, goalRef, tags,
+    }) {
+      this.trackBusinessEvent('goal_created', {
+        period,
+        is_milestone: !!goalRef,
+        has_deadline: false,
+        tags_count: (tags || []).length,
+        goal_length: (body || '').length,
+      });
+      this.tab = normaliseTab(period);
+      this.refreshReads();
+    },
+    onCreateFailed() {
+      this.notify({
+        icon: 'error_outline',
+        color: '#ef9a9a',
+        title: "Couldn't add that goal",
+        sub: 'It was not saved — try again',
+      });
+    },
+    /** Toast copy is always title + sub, the sub carrying the consequence. */
+    notify({
+      title, sub, icon, color,
+    }) {
+      this.toast = {
+        title,
+        sub,
+        icon: icon || 'check_circle',
+        color: color || '#81c784',
+        seq: this.toast.seq + 1,
+      };
+    },
   },
 };
 </script>
 
-<style scoped>
-  .image-card-img {
-    height: 180px;
-    border-radius: 12px 12px 0 0;
-  }
-  @media (max-width: 600px) {
-    .image-card-img {
-      height: 260px;
-    }
-  }
-  .goal-stats-row {
-    gap: 0;
-  }
-  .goal-stat-item {
-    flex: 1;
-    padding: 4px 8px;
-  }
-  .goal-stat-divider >>> .v-divider--vertical {
-    margin: 8px 0;
-    min-height: 48px;
-    opacity: 0.5;
-  }
-  .stat-label {
-    letter-spacing: 2px !important;
-    font-size: 11px !important;
-    margin-bottom: 4px;
-    opacity: 0.85;
-  }
-  .second-right-btn {
-   right: 84px;
-  }
-  >>> .theme--light.v-subheader {
-    border-bottom: 1px solid rgba(0,0,0,0.16);
-  }
-  .custom-loader {
-    animation: loader 1s infinite;
-    display: flex;
-  }
-  @-moz-keyframes loader {
-    from {
-      transform: rotate(0);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  @-webkit-keyframes loader {
-    from {
-      transform: rotate(0);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  @-o-keyframes loader {
-    from {
-      transform: rotate(0);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  @keyframes loader {
-    from {
-      transform: rotate(0);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
+<!-- Unscoped on purpose: the header buttons render into AppShell's own slot, which
+     a scoped block cannot address. Every selector carries the page's root class or
+     its own `goals-page__` prefix, so nothing leaks into the legacy layouts (see
+     the web-app CSS convention). -->
+<style>
+.goals-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Tablet and desktop give the two columns the body's full height to divide, so
+   each scrolls on its own instead of the page scrolling as one sheet.
+   `height: 100%` rather than `flex: 1`: `.rn-shell__body` is a BLOCK with a
+   resolved height (flex:1 of the 100vh shell column), not a flex container, so a
+   flex-grow on this child would do nothing. */
+.goals-page--tablet,
+.goals-page--desktop {
+  height: 100%;
+  overflow: hidden;
+}
+
+.goals-page--tablet > .rn-gcas,
+.goals-page--desktop > .rn-gcas {
+  flex: 1;
+  min-height: 0;
+}
+
+.goals-page__act {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(0, 0, 0, .12);
+  background: #fff;
+  color: rgba(0, 0, 0, .7);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.goals-page__act--label {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+}
+
+/* The phone header has 412px to hold a title, two actions, the points chip and
+   the avatar — so there the actions are bare glyphs. */
+.goals-page__act--icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+  background: transparent;
+  border-radius: 50%;
+  color: rgba(0, 0, 0, .6);
+}
+
+.goals-page__act--icon:hover {
+  background: rgba(0, 0, 0, .05);
+}
+
+.goals-page__act--primary.goals-page__act--label {
+  border-color: transparent;
+  background: #288bd5;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .14);
+}
+
+.goals-page__act--primary.goals-page__act--icon {
+  color: #288bd5;
+}
+
+.goals-page__act-glyph {
+  font-size: 18px;
+}
+
+.goals-page__act--icon .goals-page__act-glyph {
+  font-size: 24px;
+}
 </style>

@@ -1,0 +1,134 @@
+/* Motion for the Routine Focus home screen (design_handoff_routine_focus).
+   Keyframes are global by nature, so they live here once instead of being
+   redeclared by every organism that animates. Names are `rn-` prefixed to stay
+   out of Vuetify's namespace. */
+
+/* Agent ring: two expanding rings, the second offset half a cycle. */
+@keyframes rn-breathe {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+
+/* The tick button itself breathes with the rings while an agent runs. */
+@keyframes rn-btn-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* Phone tick: the ring arcs to the header centre through a lifted midpoint.
+   --dx/--dy/--s are measured per tick and set inline. */
+@keyframes rn-fly {
+  0% { transform: translate(0, 0) scale(1); }
+  50% {
+    transform: translate(calc(var(--dx) * 0.45), calc(var(--dy) * 0.45 - 60px))
+      scale(calc((1 + var(--s)) / 2 + 0.15));
+  }
+  100% { transform: translate(var(--dx), var(--dy)) scale(var(--s)); }
+}
+
+/* The header mini-ring pops in once the flight lands. */
+@keyframes rn-pop {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes rn-drawer-in {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+
+/* The chassis drawer is right-anchored (chassis.md § Drawer) — it is opened by
+   the avatar at the right end of the header, so it has to slide in from there. */
+@keyframes rn-drawer-in-right {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+
+@keyframes rn-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Status dot, agent badge, typing dots. */
+@keyframes rn-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* Toast: 2.6s total — in over 12%, hold, out from 85%. */
+@keyframes rn-toast {
+  0% { opacity: 0; transform: translateY(12px); }
+  12% { opacity: 1; transform: none; }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Scrollers inside the focus card and chat pane hide their bars — the card is
+   the frame, a track drawn over its padding reads as a seam. */
+.rn-hidescroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.rn-hidescroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Material Icons glyph used by the focus organisms directly (outside
+   <v-icon>), e.g. inside SVG-adjacent absolute layers. */
+.rn-mi {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------------------------------------------------------------------
+   Redesign chassis motion (docs/redesign/chassis.md § Motion).
+
+   The mocks ship `rn-in0`/`rn-in1` and `rn-c0`/`rn-c1` as identical pairs only
+   so React can restart a CSS animation by swapping the name on re-render. Vue
+   bumps a `:key` instead, so those pairs are deliberately NOT ported.
+   --------------------------------------------------------------------------- */
+
+/* Phone bottom sheet rising into place. */
+@keyframes rn-sheet-in {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* Tablet/desktop centred dialog. The panel is centred with
+   `translate(-50%,-50%)`, so both keyframes have to carry that transform —
+   otherwise the dialog jumps to the top-left corner for the first frame. */
+@keyframes rn-modal {
+  from { opacity: 0; transform: translate(-50%, -47%) scale(.97); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+/* A just-saved timeline row tints, then settles. */
+@keyframes rn-flash {
+  0% { background: rgba(40, 139, 213, .18); }
+  100% { background: transparent; }
+}
+
+/* A tapped Priority quadrant tile. */
+@keyframes rn-bump {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.12); }
+}
+
+/* Goals / Year Goals switcher sliding in from the rail edge. */
+@keyframes rn-shelf {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}

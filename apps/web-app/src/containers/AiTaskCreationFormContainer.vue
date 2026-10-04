@@ -108,6 +108,17 @@ export default {
     },
   },
   methods: {
+    /** The modal has already closed, so a failed save needs its own notice. */
+    notifySaveFailed(goalItemData) {
+      if (typeof this.$notify !== 'function') return;
+      this.$notify({
+        title: 'Task not saved',
+        text: `"${goalItemData.body}" could not be saved. Check your connection and try again.`,
+        group: 'notify',
+        type: 'error',
+        duration: 6000,
+      });
+    },
     getSelectedRoutineContext() {
       if (!this.selectedTaskRef || !Array.isArray(this.tasklist) || this.tasklist.length === 0) {
         return null;
@@ -253,23 +264,25 @@ export default {
       this.saving = false;
       this.$emit('task-created', goalItemData);
       this.$emit('success');
-      notifyNonCurrentTaskGoalCreation({
-        vm: this,
-        goalItemData,
-        routines: this.tasklist,
-      });
 
-      // Fire mutation in background — Apollo optimisticResponse handles instant UI
-      this.$goals.addGoalItem(goalItemData)
+      // Fire mutation in background — Apollo optimisticResponse handles instant
+      // UI. Confirm only once the server has it; the modal is already closed,
+      // so a failure (the optimistic item rolls back) must be a visible notice.
+      await this.$goals.addGoalItem(goalItemData)
         .then((addedItem) => {
           if (addedItem) {
             eventBus.$emit(EVENTS.TASK_CREATED, addedItem);
           }
+          notifyNonCurrentTaskGoalCreation({
+            vm: this,
+            goalItemData,
+            routines: this.tasklist,
+          });
         })
         .catch((error) => {
           console.error('Error saving task:', error);
-          // Optimistic update auto-rolls back on failure
           this.$emit('error', 'Failed to save task. Please try again.');
+          this.notifySaveFailed(goalItemData);
         });
     },
     resetForm() {

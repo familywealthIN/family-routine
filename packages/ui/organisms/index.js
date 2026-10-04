@@ -31,10 +31,19 @@ export { default as SummaryCards } from './SummaryCards/SummaryCards.vue';
 // Dashboard surfaces
 export { default as AgendaTaskList } from './AgendaTaskList/AgendaTaskList.vue';
 export { default as CurrentTaskCard } from './CurrentTaskCard/CurrentTaskCard.vue';
-export { default as MissedDayRecovery } from './MissedDayRecovery/MissedDayRecovery.vue';
 export { default as UpcomingPastTasks } from './UpcomingPastTasks/UpcomingPastTasks.vue';
 export { default as WeekGoalStreak } from './WeekGoalStreak/WeekGoalStreak.vue';
 
 // Agents
 export { default as AgentEditModal } from './AgentEditModal/AgentEditModal.vue';
 export { default as AgentResultModal } from './AgentResultModal/AgentResultModal.vue';
+
+// Routine Focus home screen (design_handoff_routine_focus)
+export { default as RoutineFocusCard } from './RoutineFocusCard/RoutineFocusCard.vue';
+export { default as RoutineCascadePanel } from './RoutineCascadePanel/RoutineCascadePanel.vue';
+export { default as RoutineChatThread } from './RoutineChatThread/RoutineChatThread.vue';
+export { default as RoutineComposer } from './RoutineComposer/RoutineComposer.vue';
+export { default as RoutineDeck } from './RoutineDeck/RoutineDeck.vue';
+export { default as RoutineSheet } from './RoutineSheet/RoutineSheet.vue';
+export { default as RoutineTopBar } from './RoutineTopBar/RoutineTopBar.vue';
+export { default as UserDrawer } from './UserDrawer/UserDrawer.vue';

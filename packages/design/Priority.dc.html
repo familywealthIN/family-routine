@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Material+Icons&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#288bd5;text-decoration:none}a:hover{color:#1f6fab}
+.mi{font-family:'Material Icons';font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-notes{max-width:640px;font:13px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.7);margin:0 0 24px}
+.dv-notes b{color:#1a1a1a}
+.rn-hscroll::-webkit-scrollbar{display:none}
+@keyframes rn-toast{0%{opacity:0;transform:translateY(12px)}12%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+@keyframes rn-pop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.2);opacity:1}100%{transform:scale(1)}}
+@keyframes rn-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes rn-fade{from{opacity:0}to{opacity:1}}
+@keyframes rn-sheet-in{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes rn-card0{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes rn-card1{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes rn-list0{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes rn-list1{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes rn-bump{0%,100%{transform:scale(1)}40%{transform:scale(1.12)}}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">Priority</a><span class="dv-tname">Priority page, transformed: triage the inbox into the matrix, the matrix is the navigation, and Delegate / Automate actually do something</span></div>
+<p class="dv-notes"><b>What changed from PriorityTime.vue / PriorityMatrix:</b> the four big count cards and the four stacked quadrant lists are merged into one <b>2×2 map</b>. Each tile shows its open count and a done ring, and tapping a tile switches the list below. New items without a priority wait in a <b>triage card</b>: one at a time, sent to a quadrant with the 2×2 buttons. Lists are grouped by routine, as everywhere else. <b>Delegate</b> rows can be handed to an agent (it breathes while running), and <b>Automate</b> rows can be turned into a recurring routine task. Any row can be moved with the ⤧ picker. <b>Try:</b> triage "Fix flaky CI test" → Do; open Delegate → "Hand to agent" on "Summarize beta feedback".</p>
+<div style="display:flex;align-items:center;gap:8px;margin:-8px 0 20px;font:12px system-ui,sans-serif;color:rgba(0,0,0,.55)">Jump to <a class="dv-oid" href="#pp">Phone</a><a class="dv-oid" href="#pt">iPad mini</a><a class="dv-oid" href="#pd">Desktop</a></div>
+<div class="dv-opts">
+
+<!-- PP PHONE -->
+<div class="dv-opt" id="pp"><div class="dv-olabel"><a class="dv-oid" href="#pp">Phone</a>Android · 412×892</div>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+<div style="height:100%;display:flex;flex-direction:column;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+  <div style="display:flex;align-items:center;gap:6px;height:64px;padding:0 8px 0 16px;flex-shrink:0">
+    <div style="flex:1;min-width:0"><div style="font-size:24px;font-weight:700;line-height:1.1">Priority</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Saturday, 12 September · {{ openTotal }} open</div></div>
+    <div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;flex-shrink:0"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div>
+    <div onClick="{{ openDrawer }}" title="Menu" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
+  </div>
+  <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 16px;scrollbar-width:none">
+
+    <sc-if value="{{ hasInbox }}" hint-placeholder-val="{{ true }}">
+      <div style="position:relative;margin-bottom:12px">
+        <sc-if value="{{ hasInboxBehind }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;left:12px;right:12px;bottom:-6px;height:30px;border-radius:16px;background:#fff;opacity:.6;box-shadow:0 2px 4px rgba(0,0,0,.06)"></div></sc-if>
+        <div style="position:relative;background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:14px 14px 12px;animation:{{ triageAnim }}">
+          <div style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:18px;color:#288bd5">move_to_inbox</span><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.5)">TRIAGE · {{ inboxCount }} LEFT</div><div onClick="{{ skipTriage }}" style="font-size:12px;font-weight:600;color:rgba(0,0,0,.5);cursor:pointer;padding:4px 6px">Skip</div></div>
+          <div style="font-size:18px;font-weight:700;line-height:1.3;margin:8px 0 2px;text-wrap:pretty">{{ triage.body }}</div>
+          <div style="font-size:12px;color:rgba(0,0,0,.54)">{{ triage.meta }}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px">
+            <sc-for list="{{ triageBtns }}" as="b" hint-placeholder-count="4">
+              <div onClick="{{ b.onClick }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-radius:12px;background:{{ b.bg }};color:{{ b.color }};font-size:13px;font-weight:700;cursor:pointer;transition:transform .1s" style-active="transform:scale(.97)"><span class="mi" style="font-size:18px">{{ b.icon }}</span><div style="min-width:0"><div>{{ b.label }}</div><div style="font-size:10px;font-weight:500;opacity:.8">{{ b.sub }}</div></div></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:12px 12px 12px 8px">
+      <div style="display:grid;grid-template-columns:18px 1fr 1fr;gap:6px">
+        <div></div><div style="text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">URGENT</div><div style="text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">NOT URGENT</div>
+        <div style="display:flex;align-items:center;justify-content:center"><div style="transform:rotate(-90deg);white-space:nowrap;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">IMPORTANT</div></div>
+        <sc-for list="{{ tilesTop }}" as="q" hint-placeholder-count="2">
+          <div onClick="{{ q.onClick }}" style="position:relative;border-radius:14px;padding:10px 10px 10px 12px;min-height:84px;box-sizing:border-box;background:{{ q.bg }};box-shadow:inset 0 0 0 {{ q.ringW }} {{ q.color }};cursor:pointer;transition:background .2s,box-shadow .2s;animation:{{ q.anim }}">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between"><div style="font-size:13px;font-weight:800;letter-spacing:.4px;color:{{ q.color }}">{{ q.label }}</div><div style="position:relative;width:26px;height:26px"><svg viewBox="0 0 48 48" style="width:26px;height:26px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="19" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="6"></circle><circle cx="24" cy="24" r="19" fill="none" stroke="{{ q.color }}" stroke-width="6" stroke-dasharray="119.4" stroke-dashoffset="{{ q.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg></div></div>
+            <div style="display:flex;align-items:baseline;gap:4px;margin-top:4px"><div style="font-size:28px;font-weight:700;line-height:1;color:rgba(0,0,0,.87)">{{ q.open }}</div><div style="font-size:11px;color:rgba(0,0,0,.5)">open · {{ q.done }} done</div></div>
+            <div style="font-size:10px;color:rgba(0,0,0,.5);margin-top:4px">{{ q.verb }}</div>
+          </div>
+        </sc-for>
+        <div style="display:flex;align-items:center;justify-content:center"><div style="transform:rotate(-90deg);white-space:nowrap;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">NOT IMPORTANT</div></div>
+        <sc-for list="{{ tilesBottom }}" as="q" hint-placeholder-count="2">
+          <div onClick="{{ q.onClick }}" style="position:relative;border-radius:14px;padding:10px 10px 10px 12px;min-height:84px;box-sizing:border-box;background:{{ q.bg }};box-shadow:inset 0 0 0 {{ q.ringW }} {{ q.color }};cursor:pointer;transition:background .2s,box-shadow .2s;animation:{{ q.anim }}">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between"><div style="font-size:13px;font-weight:800;letter-spacing:.4px;color:{{ q.color }}">{{ q.label }}</div><div style="position:relative;width:26px;height:26px"><svg viewBox="0 0 48 48" style="width:26px;height:26px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="19" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="6"></circle><circle cx="24" cy="24" r="19" fill="none" stroke="{{ q.color }}" stroke-width="6" stroke-dasharray="119.4" stroke-dashoffset="{{ q.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg></div></div>
+            <div style="display:flex;align-items:baseline;gap:4px;margin-top:4px"><div style="font-size:28px;font-weight:700;line-height:1;color:rgba(0,0,0,.87)">{{ q.open }}</div><div style="font-size:11px;color:rgba(0,0,0,.5)">open · {{ q.done }} done</div></div>
+            <div style="font-size:10px;color:rgba(0,0,0,.5);margin-top:4px">{{ q.verb }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:14px 16px 8px;margin-top:12px">
+      <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:3px;background:{{ selColor }}"></div><div style="flex:1;font-size:17px;font-weight:700">{{ selTitle }}</div><div style="font-size:12px;color:rgba(0,0,0,.54)"><b style="color:rgba(0,0,0,.87)">{{ selDone }}</b> of {{ selTotal }} done</div></div>
+      <div style="font-size:12px;color:rgba(0,0,0,.54);margin-top:2px">{{ selSub }}</div>
+      <div style="animation:{{ listAnim }}">
+        <sc-for list="{{ groups }}" as="gr" hint-placeholder-count="3">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 0 2px"><div style="font-size:12px;font-weight:600;color:{{ gr.timeColor }};font-variant-numeric:tabular-nums">{{ gr.time }}</div><div style="font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:rgba(0,0,0,.55)">{{ gr.name }}</div><sc-if value="{{ gr.isNow }}" hint-placeholder-val="{{ false }}"><div style="font-size:9px;font-weight:700;letter-spacing:.4px;padding:1px 6px;border-radius:999px;background:rgba(255,152,0,.14);color:#e68900">NOW</div></sc-if><div style="flex:1;height:1px;background:rgba(0,0,0,.06)"></div></div>
+            <sc-for list="{{ gr.rows }}" as="r" hint-placeholder-count="2">
+              <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;min-height:44px">
+                <span class="mi" onClick="{{ r.onToggle }}" style="font-size:28px;color:{{ r.boxColor }};cursor:pointer">{{ r.boxIcon }}</span>
+                <div style="flex:1;min-width:0;padding-top:3px">
+                  <div style="font-size:16px;font-weight:500;line-height:1.3;text-decoration:{{ r.deco }};color:{{ r.color }}">{{ r.body }}</div>
+                  <sc-if value="{{ r.hasMeta }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,.5);margin-top:2px">{{ r.meta }}</div></sc-if>
+                  <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.onAction }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;margin-top:8px;border-radius:15px;font-size:12px;font-weight:600;background:{{ r.actBg }};color:{{ r.actColor }};border:1px solid {{ r.actBorder }};cursor:{{ r.actCursor }}"><sc-if value="{{ r.actBreathing }}" hint-placeholder-val="{{ false }}"><div style="width:8px;height:8px;border-radius:50%;background:#1976d2;animation:rn-pulse 1s ease-in-out infinite"></div></sc-if><span class="mi" style="font-size:16px">{{ r.actIcon }}</span>{{ r.actLabel }}</div></sc-if>
+                </div>
+                <span class="mi" onClick="{{ r.onMove }}" title="Move to another quadrant" style="font-size:20px;color:rgba(0,0,0,.4);cursor:pointer;width:34px;height:34px;border-radius:50%" style-hover="background:rgba(0,0,0,.05)">open_with</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+        <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 0 16px;text-align:center;font-size:14px;color:rgba(0,0,0,.45)">Nothing here. Triage something in.</div></sc-if>
+      </div>
+    </div>
+  </div>
+  <div style="height:64px;box-sizing:border-box;background:#fff;box-shadow:0 -1px 3px rgba(0,0,0,.08);display:flex;padding-bottom:4px;flex-shrink:0;z-index:5">
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+      <div onClick="{{ n.go }}" style="cursor:pointer;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ n.color }};font-size:12px;font-weight:500"><span class="mi">{{ n.icon }}</span><span>{{ n.label }}</span></div>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:16px;right:16px;bottom:80px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none">
+      <span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span>
+      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ moveOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeMove }}" style="position:absolute;inset:0;background:rgba(0,0,0,.32);z-index:20"></div></sc-if>
+  <sc-if value="{{ moveOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;bottom:0;z-index:21;background:#fff;border-radius:16px 16px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:0 16px 22px;animation:rn-sheet-in .22s ease">
+      <div style="display:flex;justify-content:center;padding:8px 0 4px"><div style="width:40px;height:4px;border-radius:2px;background:#ccc"></div></div>
+      <div style="font-size:12px;color:rgba(0,0,0,.54);padding:6px 0 2px">Move</div>
+      <div style="font-size:17px;font-weight:700;line-height:1.3;padding-bottom:12px">{{ moveTitle }}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <sc-for list="{{ moveBtns }}" as="b" hint-placeholder-count="4">
+          <div onClick="{{ b.onClick }}" style="display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:14px;background:{{ b.bg }};box-shadow:inset 0 0 0 {{ b.ringW }} {{ b.color }};cursor:pointer"><div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800;color:{{ b.color }}"><span class="mi" style="font-size:18px">{{ b.icon }}</span>{{ b.label }}<sc-if value="{{ b.isCur }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:600;color:rgba(0,0,0,.45)">· current</span></sc-if></div><div style="font-size:11px;color:rgba(0,0,0,.55)">{{ b.sub }}</div></div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:-4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-fade .2s ease">
+      <div style="display:flex;align-items:center;gap:12px;padding:28px 16px 16px 20px"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div><span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px">close</span></div>
+      <div style="display:flex;gap:6px;padding:0 20px 14px"><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:#288bd5;color:#fff;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">diamond</span>128 points</div><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:rgba(255,152,0,.12);color:#b26a00;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">local_fire_department</span>6-day streak</div></div>
+      <div style="height:1px;background:rgba(0,0,0,.08);margin:0 0 6px"></div>
+      <sc-for list="{{ drawerItems }}" as="n" hint-placeholder-count="6"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:16px;height:48px;padding:0 20px;margin-top:{{ n.gap }};color:{{ n.color }};background:{{ n.bg }};font-size:14px;font-weight:600;text-decoration:none"><span class="mi" style="font-size:22px">{{ n.icon }}</span>{{ n.label }}</a></sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-import>
+</div>
+
+<!-- PT TABLET -->
+<div class="dv-opt" id="pt"><div class="dv-olabel"><a class="dv-oid" href="#pt">iPad mini</a>Landscape · 1133×744</div>
+<div style="width:1165px;height:776px;border-radius:40px;background:#121212;padding:16px;box-sizing:border-box;box-shadow:0 30px 60px -24px rgba(0,0,0,.4)">
+  <div style="width:100%;height:100%;border-radius:24px;overflow:hidden;position:relative;background:#f4f4f4;display:flex;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87)">
+    <div class="rn-hscroll" style="width:76px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 0 14px;overflow-y:auto;scrollbar-width:none;border-right:1px solid rgba(0,0,0,.06)">
+      <img src="assets/icon-192.png" alt="Routine Notes" style="width:38px;height:38px;object-fit:contain;margin-bottom:6px">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4"><div onClick="{{ n.go }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:56px;height:32px;border-radius:16px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi">{{ n.icon }}</span></div><div style="font-size:11px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></div></sc-for><div onClick="{{ toggleNavMore }}" title="More pages" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer"><div style="width:52px;height:30px;border-radius:15px;background:{{ navMoreBtnBg }};color:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;transition:background .2s"><span class="mi" style="font-size:21px">{{ navMoreIcon }}</span></div><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.6)">More</div></div><sc-if value="{{ navMoreOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0;border-radius:16px;background:#f7f7f7;animation:rn-fade .18s ease"><sc-for list="{{ navMore }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:inherit;text-decoration:none;margin-top:{{ n.gap }}"><div style="width:52px;height:30px;border-radius:15px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:21px">{{ n.icon }}</span></div><div style="font-size:10px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for></div></sc-if>
+      <div style="flex:1"></div>
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:40px;height:40px;border-radius:50%;object-fit:cover" alt="Profile picture">
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex-shrink:0"><span>9:30</span><span style="display:flex;gap:6px;align-items:center"><span class="mi" style="font-size:16px">wifi</span><span class="mi" style="font-size:16px">battery_full</span></span></div>
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;padding:4px 20px 20px">
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:22px;font-weight:700;line-height:1.1">Priority</div><div style="font-size:13px;color:rgba(0,0,0,.54)">Saturday, 12 September · {{ openTotal }} open · {{ inboxCount }} to triage</div></div><div style="display:flex;align-items:center;gap:4px;height:28px;padding:0 12px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div></div>
+        <div style="flex:1;min-height:0;display:flex;gap:14px">
+          <div style="width:290px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;min-height:0">
+          <sc-if value="{{ hasInbox }}" hint-placeholder-val="{{ true }}">
+      <div style="position:relative;margin-bottom:8px">
+        <sc-if value="{{ hasInboxBehind }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;left:12px;right:12px;bottom:-6px;height:30px;border-radius:16px;background:#fff;opacity:.6;box-shadow:0 2px 4px rgba(0,0,0,.06)"></div></sc-if>
+        <div style="position:relative;background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 14px 12px;animation:{{ triageAnim }}">
+          <div style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:18px;color:#288bd5">move_to_inbox</span><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.5)">TRIAGE · {{ inboxCount }} LEFT</div><div onClick="{{ skipTriage }}" style="font-size:12px;font-weight:600;color:rgba(0,0,0,.5);cursor:pointer;padding:4px 6px">Skip</div></div>
+          <div style="font-size:18px;font-weight:700;line-height:1.3;margin:8px 0 2px;text-wrap:pretty">{{ triage.body }}</div>
+          <div style="font-size:12px;color:rgba(0,0,0,.54)">{{ triage.meta }}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px">
+            <sc-for list="{{ triageBtns }}" as="b" hint-placeholder-count="4">
+              <div onClick="{{ b.onClick }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-radius:12px;background:{{ b.bg }};color:{{ b.color }};font-size:13px;font-weight:700;cursor:pointer;transition:transform .1s" style-active="transform:scale(.97)"><span class="mi" style="font-size:18px">{{ b.icon }}</span><div style="min-width:0"><div>{{ b.label }}</div><div style="font-size:10px;font-weight:500;opacity:.8">{{ b.sub }}</div></div></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+          <sc-if value="{{ noInbox }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:18px;display:flex;align-items:center;gap:12px;animation:rn-card0 .3s ease"><div style="width:40px;height:40px;border-radius:50%;background:rgba(76,175,80,.12);color:#2e7d32;display:flex;align-items:center;justify-content:center"><span class="mi">inbox</span></div><div><div style="font-size:15px;font-weight:700">Inbox clear</div><div style="font-size:12px;color:rgba(0,0,0,.54)">New items from chat and AI Search land here</div></div></div></sc-if>
+          <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">TODAY · {{ openTotal }} OPEN</div>
+            <sc-for list="{{ tiles }}" as="q" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px"><div style="width:10px;height:10px;border-radius:3px;background:{{ q.color }}"></div><div style="flex:1;font-size:13px;font-weight:700;color:{{ q.color }}">{{ q.label }}</div><div style="font-size:12px;color:rgba(0,0,0,.6)"><b style="color:rgba(0,0,0,.87)">{{ q.open }}</b> open · {{ q.done }} done</div></div></sc-for>
+          </div>
+        </div>
+          <div style="flex:1;min-width:0;min-height:0;display:grid;grid-template-columns:20px minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) minmax(0,1fr);gap:10px">
+          <div></div><div style="text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">URGENT</div><div style="text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">NOT URGENT</div>
+          <div style="display:flex;align-items:center;justify-content:center"><div style="transform:rotate(-90deg);white-space:nowrap;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">IMPORTANT</div></div>
+          <sc-for list="{{ quadsTop }}" as="qd" hint-placeholder-count="2">
+          <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);display:flex;flex-direction:column;min-height:0;overflow:hidden;animation:{{ qd.anim }}">
+            <div style="height:4px;background:{{ qd.color }};flex-shrink:0"></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px 4px;flex-shrink:0">
+              <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;letter-spacing:.4px;color:{{ qd.color }}">{{ qd.label }}</div><div style="font-size:11px;color:rgba(0,0,0,.5)">{{ qd.sub }} · {{ qd.verb }}</div></div>
+              <div style="text-align:right"><div style="font-size:20px;font-weight:700;line-height:1">{{ qd.open }}</div><div style="font-size:10px;color:rgba(0,0,0,.45)">open</div></div>
+              <div style="position:relative;width:30px;height:30px"><svg viewBox="0 0 48 48" style="width:30px;height:30px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="19" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="6"></circle><circle cx="24" cy="24" r="19" fill="none" stroke="{{ qd.color }}" stroke-width="6" stroke-dasharray="119.4" stroke-dashoffset="{{ qd.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg></div>
+            </div>
+            <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 10px;scrollbar-width:none">
+              <sc-for list="{{ qd.groups }}" as="gr" hint-placeholder-count="3">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 0 2px"><div style="font-size:12px;font-weight:600;color:{{ gr.timeColor }};font-variant-numeric:tabular-nums">{{ gr.time }}</div><div style="font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:rgba(0,0,0,.55)">{{ gr.name }}</div><sc-if value="{{ gr.isNow }}" hint-placeholder-val="{{ false }}"><div style="font-size:9px;font-weight:700;letter-spacing:.4px;padding:1px 6px;border-radius:999px;background:rgba(255,152,0,.14);color:#e68900">NOW</div></sc-if><div style="flex:1;height:1px;background:rgba(0,0,0,.06)"></div></div>
+            <sc-for list="{{ gr.rows }}" as="r" hint-placeholder-count="2">
+              <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;min-height:44px">
+                <span class="mi" onClick="{{ r.onToggle }}" style="font-size:28px;color:{{ r.boxColor }};cursor:pointer">{{ r.boxIcon }}</span>
+                <div style="flex:1;min-width:0;padding-top:3px">
+                  <div style="font-size:16px;font-weight:500;line-height:1.3;text-decoration:{{ r.deco }};color:{{ r.color }}">{{ r.body }}</div>
+                  <sc-if value="{{ r.hasMeta }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,.5);margin-top:2px">{{ r.meta }}</div></sc-if>
+                  <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.onAction }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;margin-top:8px;border-radius:15px;font-size:12px;font-weight:600;background:{{ r.actBg }};color:{{ r.actColor }};border:1px solid {{ r.actBorder }};cursor:{{ r.actCursor }}"><sc-if value="{{ r.actBreathing }}" hint-placeholder-val="{{ false }}"><div style="width:8px;height:8px;border-radius:50%;background:#1976d2;animation:rn-pulse 1s ease-in-out infinite"></div></sc-if><span class="mi" style="font-size:16px">{{ r.actIcon }}</span>{{ r.actLabel }}</div></sc-if>
+                </div>
+                <span class="mi" onClick="{{ r.onMove }}" title="Move to another quadrant" style="font-size:20px;color:rgba(0,0,0,.4);cursor:pointer;width:34px;height:34px;border-radius:50%" style-hover="background:rgba(0,0,0,.05)">open_with</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+              <sc-if value="{{ qd.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 0;text-align:center;font-size:13px;color:rgba(0,0,0,.45)">Nothing here</div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+          <div style="display:flex;align-items:center;justify-content:center"><div style="transform:rotate(-90deg);white-space:nowrap;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">NOT IMPORTANT</div></div>
+          <sc-for list="{{ quadsBottom }}" as="qd" hint-placeholder-count="2">
+          <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);display:flex;flex-direction:column;min-height:0;overflow:hidden;animation:{{ qd.anim }}">
+            <div style="height:4px;background:{{ qd.color }};flex-shrink:0"></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px 4px;flex-shrink:0">
+              <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;letter-spacing:.4px;color:{{ qd.color }}">{{ qd.label }}</div><div style="font-size:11px;color:rgba(0,0,0,.5)">{{ qd.sub }} · {{ qd.verb }}</div></div>
+              <div style="text-align:right"><div style="font-size:20px;font-weight:700;line-height:1">{{ qd.open }}</div><div style="font-size:10px;color:rgba(0,0,0,.45)">open</div></div>
+              <div style="position:relative;width:30px;height:30px"><svg viewBox="0 0 48 48" style="width:30px;height:30px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="19" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="6"></circle><circle cx="24" cy="24" r="19" fill="none" stroke="{{ qd.color }}" stroke-width="6" stroke-dasharray="119.4" stroke-dashoffset="{{ qd.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg></div>
+            </div>
+            <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 10px;scrollbar-width:none">
+              <sc-for list="{{ qd.groups }}" as="gr" hint-placeholder-count="3">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 0 2px"><div style="font-size:12px;font-weight:600;color:{{ gr.timeColor }};font-variant-numeric:tabular-nums">{{ gr.time }}</div><div style="font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:rgba(0,0,0,.55)">{{ gr.name }}</div><sc-if value="{{ gr.isNow }}" hint-placeholder-val="{{ false }}"><div style="font-size:9px;font-weight:700;letter-spacing:.4px;padding:1px 6px;border-radius:999px;background:rgba(255,152,0,.14);color:#e68900">NOW</div></sc-if><div style="flex:1;height:1px;background:rgba(0,0,0,.06)"></div></div>
+            <sc-for list="{{ gr.rows }}" as="r" hint-placeholder-count="2">
+              <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;min-height:44px">
+                <span class="mi" onClick="{{ r.onToggle }}" style="font-size:28px;color:{{ r.boxColor }};cursor:pointer">{{ r.boxIcon }}</span>
+                <div style="flex:1;min-width:0;padding-top:3px">
+                  <div style="font-size:16px;font-weight:500;line-height:1.3;text-decoration:{{ r.deco }};color:{{ r.color }}">{{ r.body }}</div>
+                  <sc-if value="{{ r.hasMeta }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,.5);margin-top:2px">{{ r.meta }}</div></sc-if>
+                  <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.onAction }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;margin-top:8px;border-radius:15px;font-size:12px;font-weight:600;background:{{ r.actBg }};color:{{ r.actColor }};border:1px solid {{ r.actBorder }};cursor:{{ r.actCursor }}"><sc-if value="{{ r.actBreathing }}" hint-placeholder-val="{{ false }}"><div style="width:8px;height:8px;border-radius:50%;background:#1976d2;animation:rn-pulse 1s ease-in-out infinite"></div></sc-if><span class="mi" style="font-size:16px">{{ r.actIcon }}</span>{{ r.actLabel }}</div></sc-if>
+                </div>
+                <span class="mi" onClick="{{ r.onMove }}" title="Move to another quadrant" style="font-size:20px;color:rgba(0,0,0,.4);cursor:pointer;width:34px;height:34px;border-radius:50%" style-hover="background:rgba(0,0,0,.05)">open_with</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+              <sc-if value="{{ qd.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 0;text-align:center;font-size:13px;color:rgba(0,0,0,.45)">Nothing here</div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+        </div>
+        </div>
+      </div>
+    </div>
+    <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none">
+      <span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span>
+      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ moveOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeMove }}" style="position:absolute;inset:0;background:rgba(0,0,0,.32);z-index:20"></div></sc-if>
+  <sc-if value="{{ moveOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:480px;max-width:92%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:0 16px 22px;animation:rn-fade .2s ease">
+      <div style="height:10px"></div>
+      <div style="font-size:12px;color:rgba(0,0,0,.54);padding:6px 0 2px">Move</div>
+      <div style="font-size:17px;font-weight:700;line-height:1.3;padding-bottom:12px">{{ moveTitle }}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <sc-for list="{{ moveBtns }}" as="b" hint-placeholder-count="4">
+          <div onClick="{{ b.onClick }}" style="display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:14px;background:{{ b.bg }};box-shadow:inset 0 0 0 {{ b.ringW }} {{ b.color }};cursor:pointer"><div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800;color:{{ b.color }}"><span class="mi" style="font-size:18px">{{ b.icon }}</span>{{ b.label }}<sc-if value="{{ b.isCur }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:600;color:rgba(0,0,0,.45)">· current</span></sc-if></div><div style="font-size:11px;color:rgba(0,0,0,.55)">{{ b.sub }}</div></div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  </div>
+</div>
+</div>
+
+<!-- PD DESKTOP -->
+<div class="dv-opt" id="pd"><div class="dv-olabel"><a class="dv-oid" href="#pd">Desktop</a>1440×900</div>
+<x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1440 }}" height="{{ 900 }}" url="app.routinenotes.com/priority" tabs="{{ browserTabs }}" hint-size="1440px,900px">
+  <div style="height:100%;display:flex;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+    <div style="width:264px;flex-shrink:0;background:#fff;border-right:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:10px;padding:20px 20px 16px"><img src="assets/icon-192.png" alt="Routine Notes" style="width:34px;height:34px;object-fit:contain"><div style="font-size:16px;font-weight:700">Routine Notes</div></div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:0 12px">
+        <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};font-size:14px;font-weight:600" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for><div onClick="{{ toggleNavMore }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;margin-top:6px;border-radius:10px;color:rgba(0,0,0,.6);font-size:14px;font-weight:600;cursor:pointer" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">more_horiz</span><div style="flex:1">More</div><span class="mi" style="font-size:20px;transition:transform .2s;transform:rotate({{ navMoreRot }})">expand_more</span></div><sc-if value="{{ navMoreOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;animation:rn-fade .18s ease"><sc-for list="{{ navMore }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px 0 20px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};text-decoration:none;font-size:14px;font-weight:600;margin-top:{{ n.gap }}" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for></div></sc-if>
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-top:1px solid rgba(0,0,0,.06)"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:36px;height:36px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.5)">{{ points }} points</div></div></div>
+    </div>
+    <div style="max-width:1040px;margin:0 auto;width:100%;box-sizing:border-box;flex:1;min-width:0;display:flex;flex-direction:column;gap:16px;padding:22px 28px 28px">
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:26px;font-weight:700;line-height:1.1">Priority</div><div style="font-size:13px;color:rgba(0,0,0,.54)">Saturday, 12 September · {{ openTotal }} open · {{ inboxCount }} to triage</div></div><div style="display:flex;align-items:center;gap:4px;height:28px;padding:0 12px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div></div>
+      <div style="flex:1;min-height:0;display:flex;gap:20px">
+        <div style="width:330px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;min-height:0">
+          <sc-if value="{{ hasInbox }}" hint-placeholder-val="{{ true }}">
+      <div style="position:relative;margin-bottom:8px">
+        <sc-if value="{{ hasInboxBehind }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;left:12px;right:12px;bottom:-6px;height:30px;border-radius:16px;background:#fff;opacity:.6;box-shadow:0 2px 4px rgba(0,0,0,.06)"></div></sc-if>
+        <div style="position:relative;background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 14px 12px;animation:{{ triageAnim }}">
+          <div style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:18px;color:#288bd5">move_to_inbox</span><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.5)">TRIAGE · {{ inboxCount }} LEFT</div><div onClick="{{ skipTriage }}" style="font-size:12px;font-weight:600;color:rgba(0,0,0,.5);cursor:pointer;padding:4px 6px">Skip</div></div>
+          <div style="font-size:18px;font-weight:700;line-height:1.3;margin:8px 0 2px;text-wrap:pretty">{{ triage.body }}</div>
+          <div style="font-size:12px;color:rgba(0,0,0,.54)">{{ triage.meta }}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px">
+            <sc-for list="{{ triageBtns }}" as="b" hint-placeholder-count="4">
+              <div onClick="{{ b.onClick }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-radius:12px;background:{{ b.bg }};color:{{ b.color }};font-size:13px;font-weight:700;cursor:pointer;transition:transform .1s" style-active="transform:scale(.97)"><span class="mi" style="font-size:18px">{{ b.icon }}</span><div style="min-width:0"><div>{{ b.label }}</div><div style="font-size:10px;font-weight:500;opacity:.8">{{ b.sub }}</div></div></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+          <sc-if value="{{ noInbox }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:18px;display:flex;align-items:center;gap:12px;animation:rn-card0 .3s ease"><div style="width:40px;height:40px;border-radius:50%;background:rgba(76,175,80,.12);color:#2e7d32;display:flex;align-items:center;justify-content:center"><span class="mi">inbox</span></div><div><div style="font-size:15px;font-weight:700">Inbox clear</div><div style="font-size:12px;color:rgba(0,0,0,.54)">New items from chat and AI Search land here</div></div></div></sc-if>
+          <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">TODAY · {{ openTotal }} OPEN</div>
+            <sc-for list="{{ tiles }}" as="q" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px"><div style="width:10px;height:10px;border-radius:3px;background:{{ q.color }}"></div><div style="flex:1;font-size:13px;font-weight:700;color:{{ q.color }}">{{ q.label }}</div><div style="font-size:12px;color:rgba(0,0,0,.6)"><b style="color:rgba(0,0,0,.87)">{{ q.open }}</b> open · {{ q.done }} done</div></div></sc-for>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0;min-height:0;display:grid;grid-template-columns:20px minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) minmax(0,1fr);gap:10px">
+          <div></div><div style="text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">URGENT</div><div style="text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">NOT URGENT</div>
+          <div style="display:flex;align-items:center;justify-content:center"><div style="transform:rotate(-90deg);white-space:nowrap;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">IMPORTANT</div></div>
+          <sc-for list="{{ quadsTop }}" as="qd" hint-placeholder-count="2">
+          <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);display:flex;flex-direction:column;min-height:0;overflow:hidden;animation:{{ qd.anim }}">
+            <div style="height:4px;background:{{ qd.color }};flex-shrink:0"></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px 4px;flex-shrink:0">
+              <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;letter-spacing:.4px;color:{{ qd.color }}">{{ qd.label }}</div><div style="font-size:11px;color:rgba(0,0,0,.5)">{{ qd.sub }} · {{ qd.verb }}</div></div>
+              <div style="text-align:right"><div style="font-size:20px;font-weight:700;line-height:1">{{ qd.open }}</div><div style="font-size:10px;color:rgba(0,0,0,.45)">open</div></div>
+              <div style="position:relative;width:30px;height:30px"><svg viewBox="0 0 48 48" style="width:30px;height:30px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="19" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="6"></circle><circle cx="24" cy="24" r="19" fill="none" stroke="{{ qd.color }}" stroke-width="6" stroke-dasharray="119.4" stroke-dashoffset="{{ qd.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg></div>
+            </div>
+            <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 10px;scrollbar-width:none">
+              <sc-for list="{{ qd.groups }}" as="gr" hint-placeholder-count="3">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 0 2px"><div style="font-size:12px;font-weight:600;color:{{ gr.timeColor }};font-variant-numeric:tabular-nums">{{ gr.time }}</div><div style="font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:rgba(0,0,0,.55)">{{ gr.name }}</div><sc-if value="{{ gr.isNow }}" hint-placeholder-val="{{ false }}"><div style="font-size:9px;font-weight:700;letter-spacing:.4px;padding:1px 6px;border-radius:999px;background:rgba(255,152,0,.14);color:#e68900">NOW</div></sc-if><div style="flex:1;height:1px;background:rgba(0,0,0,.06)"></div></div>
+            <sc-for list="{{ gr.rows }}" as="r" hint-placeholder-count="2">
+              <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;min-height:44px">
+                <span class="mi" onClick="{{ r.onToggle }}" style="font-size:28px;color:{{ r.boxColor }};cursor:pointer">{{ r.boxIcon }}</span>
+                <div style="flex:1;min-width:0;padding-top:3px">
+                  <div style="font-size:16px;font-weight:500;line-height:1.3;text-decoration:{{ r.deco }};color:{{ r.color }}">{{ r.body }}</div>
+                  <sc-if value="{{ r.hasMeta }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,.5);margin-top:2px">{{ r.meta }}</div></sc-if>
+                  <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.onAction }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;margin-top:8px;border-radius:15px;font-size:12px;font-weight:600;background:{{ r.actBg }};color:{{ r.actColor }};border:1px solid {{ r.actBorder }};cursor:{{ r.actCursor }}"><sc-if value="{{ r.actBreathing }}" hint-placeholder-val="{{ false }}"><div style="width:8px;height:8px;border-radius:50%;background:#1976d2;animation:rn-pulse 1s ease-in-out infinite"></div></sc-if><span class="mi" style="font-size:16px">{{ r.actIcon }}</span>{{ r.actLabel }}</div></sc-if>
+                </div>
+                <span class="mi" onClick="{{ r.onMove }}" title="Move to another quadrant" style="font-size:20px;color:rgba(0,0,0,.4);cursor:pointer;width:34px;height:34px;border-radius:50%" style-hover="background:rgba(0,0,0,.05)">open_with</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+              <sc-if value="{{ qd.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 0;text-align:center;font-size:13px;color:rgba(0,0,0,.45)">Nothing here</div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+          <div style="display:flex;align-items:center;justify-content:center"><div style="transform:rotate(-90deg);white-space:nowrap;font-size:10px;font-weight:700;letter-spacing:.6px;color:rgba(0,0,0,.45)">NOT IMPORTANT</div></div>
+          <sc-for list="{{ quadsBottom }}" as="qd" hint-placeholder-count="2">
+          <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);display:flex;flex-direction:column;min-height:0;overflow:hidden;animation:{{ qd.anim }}">
+            <div style="height:4px;background:{{ qd.color }};flex-shrink:0"></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px 4px;flex-shrink:0">
+              <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;letter-spacing:.4px;color:{{ qd.color }}">{{ qd.label }}</div><div style="font-size:11px;color:rgba(0,0,0,.5)">{{ qd.sub }} · {{ qd.verb }}</div></div>
+              <div style="text-align:right"><div style="font-size:20px;font-weight:700;line-height:1">{{ qd.open }}</div><div style="font-size:10px;color:rgba(0,0,0,.45)">open</div></div>
+              <div style="position:relative;width:30px;height:30px"><svg viewBox="0 0 48 48" style="width:30px;height:30px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="19" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="6"></circle><circle cx="24" cy="24" r="19" fill="none" stroke="{{ qd.color }}" stroke-width="6" stroke-dasharray="119.4" stroke-dashoffset="{{ qd.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg></div>
+            </div>
+            <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 10px;scrollbar-width:none">
+              <sc-for list="{{ qd.groups }}" as="gr" hint-placeholder-count="3">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 0 2px"><div style="font-size:12px;font-weight:600;color:{{ gr.timeColor }};font-variant-numeric:tabular-nums">{{ gr.time }}</div><div style="font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:rgba(0,0,0,.55)">{{ gr.name }}</div><sc-if value="{{ gr.isNow }}" hint-placeholder-val="{{ false }}"><div style="font-size:9px;font-weight:700;letter-spacing:.4px;padding:1px 6px;border-radius:999px;background:rgba(255,152,0,.14);color:#e68900">NOW</div></sc-if><div style="flex:1;height:1px;background:rgba(0,0,0,.06)"></div></div>
+            <sc-for list="{{ gr.rows }}" as="r" hint-placeholder-count="2">
+              <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;min-height:44px">
+                <span class="mi" onClick="{{ r.onToggle }}" style="font-size:28px;color:{{ r.boxColor }};cursor:pointer">{{ r.boxIcon }}</span>
+                <div style="flex:1;min-width:0;padding-top:3px">
+                  <div style="font-size:16px;font-weight:500;line-height:1.3;text-decoration:{{ r.deco }};color:{{ r.color }}">{{ r.body }}</div>
+                  <sc-if value="{{ r.hasMeta }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,.5);margin-top:2px">{{ r.meta }}</div></sc-if>
+                  <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.onAction }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;margin-top:8px;border-radius:15px;font-size:12px;font-weight:600;background:{{ r.actBg }};color:{{ r.actColor }};border:1px solid {{ r.actBorder }};cursor:{{ r.actCursor }}"><sc-if value="{{ r.actBreathing }}" hint-placeholder-val="{{ false }}"><div style="width:8px;height:8px;border-radius:50%;background:#1976d2;animation:rn-pulse 1s ease-in-out infinite"></div></sc-if><span class="mi" style="font-size:16px">{{ r.actIcon }}</span>{{ r.actLabel }}</div></sc-if>
+                </div>
+                <span class="mi" onClick="{{ r.onMove }}" title="Move to another quadrant" style="font-size:20px;color:rgba(0,0,0,.4);cursor:pointer;width:34px;height:34px;border-radius:50%" style-hover="background:rgba(0,0,0,.05)">open_with</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+              <sc-if value="{{ qd.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 0;text-align:center;font-size:13px;color:rgba(0,0,0,.45)">Nothing here</div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+        </div>
+      </div>
+    </div>
+    <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none">
+      <span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span>
+      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ moveOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeMove }}" style="position:absolute;inset:0;background:rgba(0,0,0,.32);z-index:20"></div></sc-if>
+  <sc-if value="{{ moveOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:480px;max-width:92%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:0 16px 22px;animation:rn-fade .2s ease">
+      <div style="height:10px"></div>
+      <div style="font-size:12px;color:rgba(0,0,0,.54);padding:6px 0 2px">Move</div>
+      <div style="font-size:17px;font-weight:700;line-height:1.3;padding-bottom:12px">{{ moveTitle }}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <sc-for list="{{ moveBtns }}" as="b" hint-placeholder-count="4">
+          <div onClick="{{ b.onClick }}" style="display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:14px;background:{{ b.bg }};box-shadow:inset 0 0 0 {{ b.ringW }} {{ b.color }};cursor:pointer"><div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800;color:{{ b.color }}"><span class="mi" style="font-size:18px">{{ b.icon }}</span>{{ b.label }}<sc-if value="{{ b.isCur }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:600;color:rgba(0,0,0,.45)">· current</span></sc-if></div><div style="font-size:11px;color:rgba(0,0,0,.55)">{{ b.sub }}</div></div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  </div>
+</x-import>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const R = [
+  { id: 'mp', time: '06:30', name: 'Morning Pages' }, { id: 'wo', time: '07:15', name: 'Workout' }, { id: 'sw', time: '09:00', name: 'Start Work' },
+  { id: 'lw', time: '12:30', name: 'Lunch Walk' }, { id: 'dw', time: '15:00', name: 'Deep Work' }, { id: 'fd', time: '18:00', name: 'Family Dinner' }, { id: 'wd', time: '21:30', name: 'Wind Down' },
+];
+const NOW_R = 'sw';
+const Q = [
+  { key: 'do', label: 'DO', title: 'Do now', sub: 'Important + Urgent', verb: 'Do it today', color: '#F44336', tint: 'rgba(244,67,54,.08)', icon: 'bolt' },
+  { key: 'plan', label: 'PLAN', title: 'Plan', sub: 'Important + Not urgent', verb: 'Schedule a slot', color: '#1976D2', tint: 'rgba(25,118,210,.08)', icon: 'event' },
+  { key: 'delegate', label: 'DELEGATE', title: 'Delegate', sub: 'Not important + Urgent', verb: 'Hand to someone or an agent', color: '#E68900', tint: 'rgba(255,152,0,.1)', icon: 'smart_toy' },
+  { key: 'automate', label: 'AUTOMATE', title: 'Automate', sub: 'Not important + Not urgent', verb: 'Make it a routine', color: '#616161', tint: 'rgba(0,0,0,.05)', icon: 'autorenew' },
+];
+const SEED = [
+  { id: 'i1', q: 'do', r: 'sw', body: 'Ship dashboard PR', parent: 'Ship the dashboard', sub: '2/3 subtasks' },
+  { id: 'i2', q: 'do', r: 'sw', body: 'Reply to Ana about onboarding' },
+  { id: 'i3', q: 'do', r: null, body: 'Pay electricity bill' },
+  { id: 'i4', q: 'do', r: 'wo', body: '5k run', parent: 'Run 20 km', done: true },
+  { id: 'i5', q: 'plan', r: 'dw', body: 'Draft Q4 plan outline', parent: 'Q4 plan drafted' },
+  { id: 'i6', q: 'plan', r: 'dw', body: 'Essay outline: Talking to routines', parent: 'Publish 12 essays' },
+  { id: 'i7', q: 'plan', r: 'wo', body: 'Long run 16 km', parent: 'Run a half marathon' },
+  { id: 'i8', q: 'plan', r: null, body: 'Book dentist appointment' },
+  { id: 'i9', q: 'delegate', r: 'sw', body: 'Summarize beta feedback', agentable: true },
+  { id: 'i10', q: 'delegate', r: 'sw', body: 'Collect app store screenshots', agentable: true },
+  { id: 'i11', q: 'delegate', r: null, body: 'Reschedule team sync' },
+  { id: 'i12', q: 'automate', r: 'fd', body: 'Weekly grocery order', rule: 'every Friday' },
+  { id: 'i13', q: 'automate', r: 'wd', body: 'Back up phone photos', rule: 'every Sunday' },
+  { id: 'i14', q: 'automate', r: 'sw', body: 'Send standup notes', rule: 'every weekday' },
+  { id: 'i15', q: 'automate', r: 'mp', body: 'Water the plants', rule: 'every 3 days', done: true },
+  { id: 'x1', q: null, r: 'sw', body: 'Fix flaky CI test', from: 'Added from chat · Start Work' },
+  { id: 'x2', q: null, r: null, body: 'Renew passport', from: 'Added from AI Search · no routine' },
+  { id: 'x3', q: null, r: 'fd', body: 'Plan anniversary dinner', from: 'Added from AI Search · Family Dinner' },
+  { id: 'x4', q: null, r: 'wo', body: 'Order new running shoes', from: 'Added from chat · Workout' },
+];
+
+const NAV_MORE = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2']];
+const navMoreFor = (active) => NAV_MORE.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' ? '10px' : '0px', bg: label === active ? 'rgba(40,139,213,.12)' : 'transparent', fg: label === active ? '#1f6fab' : 'rgba(0,0,0,.6)' }));
+const DRAWER_ITEMS = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2'], ['logout', 'Log out', '#']];
+const drawerFor = (active) => DRAWER_ITEMS.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' || label === 'Log out' ? '8px' : '0px', color: label === 'Log out' ? '#d32f2f' : (label === active ? '#1f6fab' : 'rgba(0,0,0,.75)'), bg: label === active ? 'rgba(40,139,213,.08)' : 'transparent' }));
+const NAV_HREF = { Home: 'Routine Notes Final.dc.html', Priority: 'Priority.dc.html', Agents: 'Agents.dc.html', Goals: 'Goals.dc.html', Routines: 'Routines.dc.html', Progress: 'Progress.dc.html', Groups: 'Groups.dc.html', Profile: 'Profile and About.dc.html#t1', Settings: 'Profile and About.dc.html#t1', About: 'Profile and About.dc.html#t2' };
+const fixNav = (v) => { ['navItems', 'lgNav', 'drawerNav'].forEach(k => { if (Array.isArray(v[k])) v[k] = v[k].map(n => { const href = n.href && n.href !== '#' ? n.href : NAV_HREF[n.label]; const go = () => { if (href) window.location.href = href; }; return { ...n, href: href || '#', go, onClick: n.onClick || go, onPhone: n.onPhone || go, onTab: n.onTab || go }; }); }); return v; };
+class Component extends DCLogic {
+  timers = [];
+  later(ms, fn) { this.timers.push(setTimeout(fn, ms)); }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); clearTimeout(this.tt); }
+  state = { items: SEED.map(x => ({ ...x })), sel: 'do', move: null, toast: null, tk: 0, lk: 0, bump: null, agent: {}, auto: {} };
+  showToast(t) { clearTimeout(this.tt); this.setState({ toast: { ...t, id: Date.now() } }); this.tt = setTimeout(() => this.setState({ toast: null }), 2800); }
+  setQ(id, q, fromTriage) {
+    const it = this.state.items.find(x => x.id === id), Qd = Q.find(x => x.key === q);
+    this.setState(s => ({ items: s.items.map(x => x.id === id ? { ...x, q } : x), move: null, tk: s.tk + (fromTriage ? 1 : 0), bump: q }));
+    this.later(600, () => this.setState({ bump: null }));
+    this.showToast({ icon: Qd.icon, color: Qd.color === '#616161' ? '#bdbdbd' : Qd.color, title: `${fromTriage ? 'Triaged' : 'Moved'} to ${Qd.label}`, sub: it.body });
+  }
+  toggle(id) { this.setState(s => ({ items: s.items.map(x => x.id === id ? { ...x, done: !x.done } : x) })); }
+  handToAgent(it) {
+    if (this.state.agent[it.id]) { if (this.state.agent[it.id] === 'done') this.showToast({ icon: 'receipt_long', color: '#81c784', title: 'Agent result', sub: `${it.body}: 14 notes grouped into 4 themes` }); return; }
+    this.setState(s => ({ agent: { ...s.agent, [it.id]: 'running' } }));
+    this.showToast({ icon: 'smart_toy', color: '#64b5f6', title: 'Handed to agent', sub: `${it.body} · start event sent` });
+    this.later(3200, () => { this.setState(s => ({ agent: { ...s.agent, [it.id]: 'done' }, items: s.items.map(x => x.id === it.id ? { ...x, done: true } : x) })); this.showToast({ icon: 'check_circle', color: '#81c784', title: 'Agent done', sub: `${it.body} · tap the chip for the result` }); });
+  }
+  automate(it) {
+    if (this.state.auto[it.id]) return;
+    const rn = it.r ? R.find(x => x.id === it.r).name : 'a new routine';
+    this.setState(s => ({ auto: { ...s.auto, [it.id]: true } }));
+    this.showToast({ icon: 'autorenew', color: '#bdbdbd', title: 'Now a routine task', sub: `${it.body} · ${it.rule} in ${rn}` });
+  }
+  renderVals() { return { ...fixNav(this.__rv()), drawerOpen: !!this.state.__dr, openDrawer: () => this.setState({ __dr: true }), closeDrawer: () => this.setState({ __dr: false }), drawerItems: drawerFor(''), navMore: navMoreFor(''), navMoreOpen: this.state.navMore ?? false, toggleNavMore: () => this.setState(st => ({ navMore: !(st.navMore ?? false) })), navMoreRot: (this.state.navMore ?? false) ? '180deg' : '0deg', navMoreIcon: (this.state.navMore ?? false) ? 'expand_less' : 'more_horiz', navMoreBtnBg: (this.state.navMore ?? false) ? 'rgba(0,0,0,.06)' : 'transparent' }; }
+  __rv() {
+    const st = this.state, items = st.items;
+    const inbox = items.filter(x => !x.q), triage = inbox[0];
+    const tile = (q) => { const all = items.filter(x => x.q === q.key), dn = all.filter(x => x.done).length, sel = st.sel === q.key;
+      return { key: q.key, label: q.label, verb: q.verb, color: q.color, open: all.length - dn, done: dn, off: 119.4 * (1 - (all.length ? dn / all.length : 0)), bg: sel ? q.tint : '#fafafa', ringW: sel ? '2px' : '0px', anim: st.bump === q.key ? 'rn-bump .5s ease' : 'none', onClick: () => this.setState(s => ({ sel: q.key, lk: s.lk + 1 })) }; };
+    const tiles = Q.map(tile);
+    const S0 = Q.find(q => q.key === st.sel);
+    const order = [...R, { id: 'none', time: '—', name: 'No routine' }];
+    const rowOf = (x, S) => {
+      const dn = !!x.done, ag = st.agent[x.id], au = st.auto[x.id];
+      let act = null;
+      if (x.q === 'delegate' && x.agentable) act = ag === 'running' ? { icon: 'smart_toy', label: 'Agent running…', bg: 'rgba(25,118,210,.08)', color: '#1976d2', border: 'rgba(25,118,210,.3)', breathing: true, cursor: 'default' } : ag === 'done' ? { icon: 'receipt_long', label: 'Agent done · View result', bg: 'rgba(76,175,80,.1)', color: '#2e7d32', border: 'rgba(76,175,80,.35)', cursor: 'pointer' } : { icon: 'smart_toy', label: 'Hand to agent', bg: '#fff', color: '#E68900', border: 'rgba(255,152,0,.5)', cursor: 'pointer' };
+      if (x.q === 'automate' && !dn) act = au ? { icon: 'check_circle', label: `Routine task · ${x.rule}`, bg: 'rgba(0,0,0,.04)', color: 'rgba(0,0,0,.6)', border: 'rgba(0,0,0,.12)', cursor: 'default' } : { icon: 'autorenew', label: `Make it a routine · ${x.rule}`, bg: '#fff', color: '#424242', border: 'rgba(0,0,0,.2)', cursor: 'pointer' };
+      const meta = [x.parent ? `↑ ${x.parent}` : null, x.sub || null].filter(Boolean).join(' · ');
+      return { key: x.id, body: x.body, boxIcon: dn ? 'check_box' : 'check_box_outline_blank', boxColor: dn ? S.color : 'rgba(0,0,0,.54)', deco: dn ? 'line-through' : 'none', color: dn ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.87)', hasMeta: !!meta, meta,
+        hasAction: !!act, actIcon: act && act.icon, actLabel: act && act.label, actBg: act && act.bg, actColor: act && act.color, actBorder: act && act.border, actBreathing: !!(act && act.breathing), actCursor: act && act.cursor,
+        onAction: () => { if (x.q === 'delegate') this.handToAgent(x); else this.automate(x); }, onToggle: () => this.toggle(x.id), onMove: () => this.setState({ move: x.id }), done: dn };
+    };
+    const groupsFor = (S) => { const list = items.filter(x => x.q === S.key); return order.map(r => { const rs = list.filter(x => (x.r || 'none') === r.id); if (!rs.length) return null; return { key: r.id, time: r.time, name: r.name, isNow: r.id === NOW_R, timeColor: r.id === NOW_R ? '#e68900' : 'rgba(0,0,0,.5)', rows: rs.map(x => rowOf(x, S)) }; }).filter(Boolean); };
+    const S = S0, list = items.filter(x => x.q === S.key), groups = groupsFor(S);
+    const quads = Q.map((q, i) => ({ ...tiles[i], sub: q.sub, groups: groupsFor(q), empty: !items.some(x => x.q === q.key) }));
+    const mv = st.move && items.find(x => x.id === st.move);
+    const t = st.toast;
+    return {
+      openTotal: items.filter(x => x.q && !x.done).length, points: 120 + items.filter(x => x.done).length * 2,
+      hasInbox: !!triage, hasInboxBehind: inbox.length > 1, inboxCount: inbox.length, triage: triage ? { body: triage.body, meta: triage.from } : { body: '', meta: '' },
+      triageAnim: `rn-card${st.tk % 2} .3s cubic-bezier(.3,1.2,.5,1)`,
+      triageBtns: Q.map(q => ({ key: q.key, label: q.label, sub: q.sub, icon: q.icon, bg: q.tint, color: q.color, onClick: () => triage && this.setQ(triage.id, q.key, true) })),
+      skipTriage: () => { if (!triage) return; this.setState(s => { const rest = s.items.filter(x => x.id !== triage.id); return { items: [...rest, triage], tk: s.tk + 1 }; }); },
+      quadsTop: quads.slice(0, 2), quadsBottom: quads.slice(2), noInbox: !triage,
+      tiles, tilesTop: tiles.slice(0, 2), tilesBottom: tiles.slice(2),
+      selTitle: S.title, selSub: `${S.sub} · ${S.verb}`, selColor: S.color, selDone: list.filter(x => x.done).length, selTotal: list.length, groups, listEmpty: !list.length, listAnim: `rn-list${st.lk % 2} .3s ease`,
+      moveOpen: !!mv, closeMove: () => this.setState({ move: null }), moveTitle: mv ? mv.body : '',
+      moveBtns: Q.map(q => ({ key: q.key, label: q.label, sub: q.sub, icon: q.icon, color: q.color, bg: q.tint, isCur: mv && mv.q === q.key, ringW: mv && mv.q === q.key ? '2px' : '0px', onClick: () => mv && (mv.q === q.key ? this.setState({ move: null }) : this.setQ(mv.id, q.key)) })),
+      navItems: [['home', 'Home'], ['dashboard', 'Priority'], ['smart_toy', 'Agents'], ['assignment', 'Goals']].map(([icon, label], i) => ({ key: label, icon, label, color: i === 1 ? '#288bd5' : 'rgba(0,0,0,.54)', bg: i === 1 ? 'rgba(40,139,213,.12)' : 'transparent', fg: i === 1 ? '#1f6fab' : 'rgba(0,0,0,.6)', href: i === 3 ? 'Goals.dc.html' : '#' })),
+      browserTabs: [{ title: 'Routine Notes — Priority' }],
+      hasToast: !!t, toastIcon: t && t.icon, toastColor: t && t.color, toastTitle: t && t.title, toastSub: t && t.sub,
+    };
+  }
+}
+</script>
+</body>
+</html>

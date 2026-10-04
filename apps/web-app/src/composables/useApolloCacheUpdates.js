@@ -102,6 +102,11 @@ function createGoalItemObject(goalItem) {
     id: goalItem.id,
     body: goalItem.body,
     progress: goalItem.progress != null ? goalItem.progress : 0,
+    // DAILY_GOALS_QUERY selects the milestone tally; the server derives it per
+    // read, so a freshly added item has none yet. Omitting the fields made
+    // Apollo warn "Missing field" on every add.
+    milestonesTotal: goalItem.milestonesTotal != null ? goalItem.milestonesTotal : null,
+    milestonesComplete: goalItem.milestonesComplete != null ? goalItem.milestonesComplete : null,
     // Only period goals carry a calendar streak; the server derives it per read,
     // so an optimistically added item has none yet.
     milestoneDays: goalItem.milestoneDays || null,

@@ -108,3 +108,22 @@ describe('OrganismGoalTaskToolbar narrow viewport', () => {
     expect(mountDialog().$el.querySelector('.goal-task-toolbar .toolbar')).not.toBeNull();
   });
 });
+
+// F6-c: a host that mounts the editor before an item is picked (PriorityTime)
+// passed null and the template threw on `localGoalItem.period`.
+describe('OrganismGoalCreation null item mount', () => {
+  it('renders without throwing when newGoalItem is null', () => {
+    document.body.setAttribute('data-app', 'true');
+    const errors = [];
+    const { errorHandler } = Vue.config;
+    Vue.config.errorHandler = (err) => { errors.push(err); };
+    try {
+      const Ctor = Vue.extend(GoalCreation);
+      const vm = new Ctor({ propsData: { newGoalItem: null } }).$mount();
+      expect(vm.$el).toBeTruthy();
+    } finally {
+      Vue.config.errorHandler = errorHandler;
+    }
+    expect(errors).toEqual([]);
+  });
+});
