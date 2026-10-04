@@ -16,30 +16,43 @@ app.set('json spaces', 2);
 
 app.use(require('body-parser').json());
 
-app.use((req, res, next) => {
-  // update to match the domain you will make the request from
-  // res.header('Access-Control-Allow-Origin', '*');
+/**
+ * Decode the bearer token onto the request, when there is a valid one.
+ *
+ * An unverifiable token means UNAUTHENTICATED — it does not mean "refuse the
+ * request". This used to answer 401 for the whole request, which locked users
+ * out of signing back IN: the client attaches the stored token to EVERY
+ * operation (main.js authMiddleware), `authGoogle` included, and tokens last
+ * 60 days (passport.js). Once one expired, every request 401'd — including the
+ * one that would have issued a fresh token — so the only way back in was
+ * clearing site data by hand.
+ *
+ * Nothing is weakened by continuing: `getEmailfromSession` is the actual gate
+ * and throws 401 for every resolver that needs a user. Public operations
+ * (authGoogle) can now run with a stale token in the header, which is exactly
+ * what signing in again requires.
+ */
+const attachDecodedToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
   const { JWT_SECRET } = process.env;
-  if (authHeader) {
-    const bearerToken = authHeader.split(' ');
-    if (bearerToken.length === 2 && bearerToken[0].toLowerCase() === 'bearer') {
-      // eslint-disable-next-line consistent-return
-      jwt.verify(bearerToken[1], JWT_SECRET, (error, decodedToken) => {
-        if (error) {
-          return res.status(401).send('{ "error": "Invalid authorization token" }');
-        }
-        // eslint-disable-next-line no-param-reassign
-        req.decodedToken = decodedToken;
-        next();
-      });
-    } else {
-      next();
-    }
-  } else {
-    next();
+
+  if (!authHeader) return next();
+
+  const bearerToken = authHeader.split(' ');
+  if (bearerToken.length !== 2 || bearerToken[0].toLowerCase() !== 'bearer') {
+    return next();
   }
-});
+
+  return jwt.verify(bearerToken[1], JWT_SECRET, (error, decodedToken) => {
+    if (!error) {
+      // eslint-disable-next-line no-param-reassign
+      req.decodedToken = decodedToken;
+    }
+    next();
+  });
+};
+
+app.use(attachDecodedToken);
 
 const startGraphQL = (req, res) => graphqlHTTP({
   schema,
@@ -78,4 +91,4 @@ const startServerless = (event, context) => {
   return proxy(server, event, context);
 };
 
-module.exports = { startServer, startServerless };
+module.exports = { startServer, startServerless, attachDecodedToken };

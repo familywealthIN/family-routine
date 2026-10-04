@@ -328,6 +328,92 @@ async function autoCheckTaskPeriod({
   return periodGoals;
 }
 
+/**
+ * OWNER RULE: a day goal is ALWAYS linked to the week goal of its routine.
+ *
+ * `autoCheckTaskPeriod` only counts a day goal toward a week goal when
+ * `dayItem.goalRef === weekItem.id`, but most creation paths (Goals quick-add,
+ * Home add-task, Priority, AI, MCP) never send a goalRef — so their day goals
+ * never counted, while the Goals screen predicted progress by routine. The link
+ * is therefore made here, server-side, so every path gets it.
+ *
+ * Week/date math is the server's own: a day's week Goal doc is
+ * `periodGoalDates('week', day)` (the Friday of its Sunday→Saturday week), and a
+ * week doc's day docs are `periodChildDates('week', weekDate)` — exactly the
+ * pair `autoCheckTaskPeriod` reads with, so a link made here is a link counted.
+ *
+ * "The week goal of the routine" is the FIRST week item with the same taskRef
+ * (document order), which is also what the client's `itemForRoutine` picks.
+ */
+async function findRoutineWeekGoalItem(email, dayDate, taskRef) {
+  const weekGoals = await GoalModel.find({
+    email, period: 'week', date: periodGoalDates('week', dayDate),
+  }).exec();
+  let found = null;
+  (weekGoals || []).some((weekGoal) => {
+    found = (weekGoal.goalItems || [])
+      .find((item) => item.taskRef && String(item.taskRef) === String(taskRef)) || null;
+    return !!found;
+  });
+  return found;
+}
+
+/**
+ * Direction 1 — a new day goal. Returns the goalRef/isMilestone to store.
+ * An explicit goalRef always wins; no routine or no week goal → left unlinked.
+ * `isMilestone` comes along because a goalRef without it is refused by the
+ * create mutations and is what the Goals tree nests under the week goal.
+ */
+async function resolveDayGoalLink(email, {
+  period, date, taskRef, goalRef, isMilestone,
+}) {
+  if (period !== 'day' || !taskRef || goalRef) return { goalRef, isMilestone };
+  try {
+    const weekItem = await findRoutineWeekGoalItem(email, date, taskRef);
+    // eslint-disable-next-line no-underscore-dangle
+    const weekItemId = weekItem && (weekItem._id || weekItem.id);
+    if (weekItemId) return { goalRef: String(weekItemId), isMilestone: true };
+  } catch (e) {
+    // The create is the user's action; a failed link must not lose it.
+    console.error('Day goal → week goal link lookup failed:', e && e.message);
+  }
+  return { goalRef, isMilestone };
+}
+
+/**
+ * Direction 2 — a new week goal. Links that week's existing UNLINKED day goals
+ * of the same routine to it. Bounded to this user, this week's seven day docs
+ * and this taskRef; an item that already has a goalRef is never touched. Only
+ * runs when the new item IS the routine's week goal (the first one for that
+ * taskRef), so both directions always agree on which week item a day joins.
+ */
+async function linkDayGoalsToWeekGoal(email, weekGoalDoc, weekItem) {
+  if (!weekGoalDoc || !weekItem || !weekItem.taskRef) return;
+  try {
+    const taskRef = String(weekItem.taskRef);
+    // eslint-disable-next-line no-underscore-dangle
+    const weekItemId = String(weekItem._id || weekItem.id);
+    const first = (weekGoalDoc.goalItems || [])
+      .find((item) => item.taskRef && String(item.taskRef) === taskRef);
+    // eslint-disable-next-line no-underscore-dangle
+    if (!first || String(first._id || first.id) !== weekItemId) return;
+
+    const unlinked = { $in: [null, ''] };
+    await GoalModel.updateMany(
+      {
+        email,
+        period: 'day',
+        date: { $in: periodChildDates('week', weekGoalDoc.date) },
+        goalItems: { $elemMatch: { taskRef, goalRef: unlinked } },
+      },
+      { $set: { 'goalItems.$[dayItem].goalRef': weekItemId, 'goalItems.$[dayItem].isMilestone': true } },
+      { arrayFilters: [{ 'dayItem.taskRef': taskRef, 'dayItem.goalRef': unlinked }] },
+    ).exec();
+  } catch (e) {
+    console.error('Week goal → day goals link failed:', e && e.message);
+  }
+}
+
 function weekOfMonth(d) {
   const addFirstWeek = moment(d, 'DD-MM-YYYY').startOf('month').weekday() < 2 ? 1 : 0;
   return moment(d, 'DD-MM-YYYY').week() - moment(d, 'DD-MM-YYYY').startOf('month').week() + addFirstWeek;
@@ -1013,13 +1099,26 @@ const query = {
       // `toObject()` drops the mongoose `id` virtual, so map `_id` back onto
       // `id` — without it every Goal resolves id:null and Apollo normalizes all
       // of them into a single cached entity.
+      //
+      // The NESTED goalItems need the same treatment, and for a sharper reason:
+      // `toObject()` nulls the virtual all the way down, and the related-goals
+      // timeline dedupes items by id. With every id null the first item claimed
+      // the slot and every later one was discarded as its duplicate, so a week
+      // of logged entries rendered as "Related Goals (1)".
       return goals
         .map((goal) => ({
           ...goal.toObject(),
           // eslint-disable-next-line no-underscore-dangle
           id: goal._id,
+          // Array.from first: mapping a mongoose DocumentArray yields another
+          // DocumentArray, which re-casts each plain object through the schema.
+          goalItems: Array.from(goal.goalItems || []).map((item) => ({
+            ...(item.toObject ? item.toObject() : item),
+            // eslint-disable-next-line no-underscore-dangle
+            id: item._id || item.id,
+          })),
         }))
-        .filter((goal) => (goal.goalItems || []).length > 0);
+        .filter((goal) => goal.goalItems.length > 0);
     },
   },
   // The milestones that deleting `id` would take with it, so the confirmation
@@ -1275,15 +1374,19 @@ const mutation = {
             }
           }
 
+          const link = await resolveDayGoalLink(email, {
+            period, date, taskRef, goalRef, isMilestone,
+          });
+
           const goalItemToAdd = {
             body,
             deadline,
             contribution,
             reward,
             isComplete,
-            isMilestone,
+            isMilestone: link.isMilestone,
             taskRef,
-            goalRef,
+            goalRef: link.goalRef,
             tags: ensurePriorityTag(tags, { period, date, body }),
             status: finalStatus,
             createdAt: new Date(),
@@ -1322,7 +1425,10 @@ const mutation = {
             email,
           }).exec();
 
-          return updatedGoal.goalItems[updatedGoal.goalItems.length - 1];
+          const added = updatedGoal.goalItems[updatedGoal.goalItems.length - 1];
+          if (period === 'week') await linkDayGoalsToWeekGoal(email, updatedGoal, added);
+
+          return added;
         });
 
         const createdGoals = await Promise.all(goalPromises);
@@ -1374,6 +1480,10 @@ const mutation = {
 
       await setUserTag(email, tags);
 
+      const link = await resolveDayGoalLink(email, {
+        period, date, taskRef, goalRef, isMilestone,
+      });
+
       // Determine initial status based on task context
       let status = 'todo'; // default status
 
@@ -1394,9 +1504,9 @@ const mutation = {
         contribution,
         reward,
         isComplete,
-        isMilestone,
+        isMilestone: link.isMilestone,
         taskRef,
-        goalRef,
+        goalRef: link.goalRef,
         // Fallback for non-UI callers: stamp a priority:* tag if none supplied.
         tags: ensurePriorityTag(tags, { period, date, body }),
         status,
@@ -1438,7 +1548,10 @@ const mutation = {
         },
       ).exec();
 
-      return goal.goalItems[goal.goalItems.length - 1];
+      const added = goal.goalItems[goal.goalItems.length - 1];
+      if (period === 'week') await linkDayGoalsToWeekGoal(email, goal, added);
+
+      return added;
     },
   },
   bulkAddGoalItems: {
@@ -1474,6 +1587,10 @@ const mutation = {
 
         await setUserTag(email, tags);
 
+        const link = await resolveDayGoalLink(email, {
+          period, date, taskRef, goalRef, isMilestone,
+        });
+
         const goalToAdd = {
           date,
           email,
@@ -1485,9 +1602,9 @@ const mutation = {
               contribution,
               reward,
               isComplete,
-              isMilestone,
+              isMilestone: link.isMilestone,
               taskRef,
-              goalRef,
+              goalRef: link.goalRef,
               tags: ensurePriorityTag(tags, { period, date, body }),
             },
           ],
@@ -1525,6 +1642,8 @@ const mutation = {
           throw new Error(`Failed to save goal item "${body || 'Unknown'}" for ${period} ${date}`);
         }
 
+        if (period === 'week') await linkDayGoalsToWeekGoal(email, updatedGoal, addedGoalItem);
+
         return addedGoalItem;
       };
 
@@ -1543,15 +1662,22 @@ const mutation = {
       });
 
       const addedGoalItems = [];
-
-      await Promise.all(
-        Array.from(buckets.values()).map((bucket) => bucket.reduce(
+      const writeBuckets = (bucketList) => Promise.all(
+        bucketList.map((bucket) => bucket.reduce(
           (previous, { goalItemData, index }) => previous.then(async () => {
             addedGoalItems[index] = await addOne(goalItemData);
           }),
           Promise.resolve(),
         )),
       );
+
+      // Day goals link to their routine's week goal on create, so a plan that
+      // carries both writes its week (and longer) goals first — written in
+      // parallel, a day item could read the week doc before its goal landed.
+      const isDayBucket = (bucket) => (bucket[0].goalItemData.period || 'day') === 'day';
+      const allBuckets = Array.from(buckets.values());
+      await writeBuckets(allBuckets.filter((bucket) => !isDayBucket(bucket)));
+      await writeBuckets(allBuckets.filter(isDayBucket));
 
       return addedGoalItems;
     },
@@ -1937,14 +2063,25 @@ const mutation = {
 
         if (args.period === 'day') {
           Array.from(gRoutineTasks.values()).forEach(async (gTask) => {
-            const currentDate = await RoutineModel.findOne({ date: gTask.date, email }).exec();
-            const task = currentDate.tasklist.find((t) => t._id.toString() === gTask.taskRef.toString());
-            task.stimuli = updateStimulusEarnedPoint('G', task, gTask.updatePeriod);
-            await RoutineModel.findOneAndUpdate(
-              { date: gTask.date, email, 'tasklist._id': gTask.taskRef },
-              { $set: { 'tasklist.$.stimuli': task.stimuli } },
-              { new: true },
-            ).exec();
+            // Fire-and-forget: an uncaught rejection here takes down the whole
+            // server process, so skip what can't be updated and log the rest.
+            try {
+              const currentDate = await RoutineModel.findOne({ date: gTask.date, email }).exec();
+              const task = currentDate
+                && currentDate.tasklist.find((t) => t._id.toString() === gTask.taskRef.toString());
+              // The goal can point at a routine task that isn't on that day's routine.
+              if (!task || !Array.isArray(task.stimuli) || !task.stimuli.some((st) => st.name === 'G')) {
+                return;
+              }
+              task.stimuli = updateStimulusEarnedPoint('G', task, gTask.updatePeriod);
+              await RoutineModel.findOneAndUpdate(
+                { date: gTask.date, email, 'tasklist._id': gTask.taskRef },
+                { $set: { 'tasklist.$.stimuli': task.stimuli } },
+                { new: true },
+              ).exec();
+            } catch (err) {
+              console.error('[completeGoalItem] G stimulus update failed', gTask.taskRef, err.message);
+            }
           });
         }
       }

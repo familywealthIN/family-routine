@@ -3,7 +3,7 @@ const {
   GraphQLID,
   GraphQLString,
   GraphQLBoolean,
-  //   GraphQLList,
+  GraphQLList,
   GraphQLNonNull,
 } = require('graphql');
 
@@ -107,6 +107,16 @@ const mutation = {
       period: { type: GraphQLNonNull(GraphQLString) },
       body: { type: GraphQLString },
     },
+    /**
+     * Rename one sub-task.
+     *
+     * Previously this wrote `goalItems.$.subTasks.0.body` — a hardcoded index —
+     * so renaming the third sub-task renamed the first, and it returned `null`
+     * for a `SubTaskItem!`-shaped field. It had no callers, which is why nobody
+     * had seen it. Now it rewrites the array through the same read-map-$set
+     * shape `completeSubTaskItem` uses, and returns the renamed sub-task so
+     * Apollo normalizes `SubTaskItem:<id>` and every query holding it updates.
+     */
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
@@ -118,23 +128,126 @@ const mutation = {
         taskId,
       } = args;
 
+      const goalEntry = await GoalModel.findOne(
+        { date, period, email },
+        { goalItems: { $elemMatch: { _id: taskId } } },
+      ).exec();
+
+      const previousGoalItem = goalEntry
+        && goalEntry.goalItems
+        && goalEntry.goalItems
+          .find((goalItem) => goalItem._id.toString() === taskId.toString());
+
+      if (!previousGoalItem
+        || !previousGoalItem.subTasks
+        || !previousGoalItem.subTasks.length) {
+        return null;
+      }
+
+      const target = previousGoalItem.subTasks
+        .find((subTask) => subTask._id.toString() === id.toString());
+
+      if (!target) return null;
+
+      const updatedSubTasks = previousGoalItem.subTasks.map((subTask) => (
+        subTask._id.toString() === id.toString()
+          ? { _id: subTask._id, body, isComplete: subTask.isComplete }
+          : subTask
+      ));
+
       await GoalModel.findOneAndUpdate(
         {
           date,
           period,
           email,
           'goalItems._id': taskId,
-          'goalItems.subTasks._id': id,
         },
-        {
-          $set: {
-            'goalItems.$.subTasks.0.body': body,
-          },
-        },
+        { $set: { 'goalItems.$.subTasks': updatedSubTasks } },
         { new: true },
       ).exec();
 
-      return null;
+      // The decrypt hook hands back plain objects, not mongoose subdocuments, so
+      // there is no `id` virtual to lean on — spell it out or `SubTaskItemType.id`
+      // resolves to null and the client cannot normalize the result.
+      return {
+        id: target._id.toString(), _id: target._id, body, isComplete: target.isComplete,
+      };
+    },
+  },
+  /**
+   * Reorder a goal item's sub-tasks.
+   *
+   * Sub-task order has no field of its own — `SubTaskItemSchema` is just
+   * `{ body, isComplete }` and the order IS the array order. So "move up" is a
+   * rewrite of the parent's array, which means the answer has to be the parent:
+   * a reordered list cannot be expressed as a patch to any one `SubTaskItem`.
+   * Returning the complete `GoalItem` lets Apollo normalize the new order into
+   * `GoalItem:<taskId>.subTasks` for every query at once
+   * (containers/ARCHITECTURE.md §3 principle #2).
+   *
+   * `ids` is the desired order. Ids that are not on the item are ignored and
+   * sub-tasks the caller did not mention keep their relative order at the end,
+   * so a stale client list reorders what it knows about instead of deleting the
+   * rest.
+   */
+  reorderSubTaskItems: {
+    type: GoalItemType,
+    args: {
+      taskId: { type: GraphQLNonNull(GraphQLID) },
+      date: { type: GraphQLNonNull(GraphQLString) },
+      period: { type: GraphQLNonNull(GraphQLString) },
+      ids: { type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLID))) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      const {
+        taskId, date, period, ids,
+      } = args;
+
+      const goalEntry = await GoalModel.findOne(
+        { date, period, email },
+        { goalItems: { $elemMatch: { _id: taskId } } },
+      ).exec();
+
+      const previousGoalItem = goalEntry
+        && goalEntry.goalItems
+        && goalEntry.goalItems
+          .find((goalItem) => goalItem._id.toString() === taskId.toString());
+
+      if (!previousGoalItem
+        || !previousGoalItem.subTasks
+        || !previousGoalItem.subTasks.length) {
+        return previousGoalItem || null;
+      }
+
+      const wanted = ids.map(String);
+      const byId = new Map(
+        previousGoalItem.subTasks.map((subTask) => [subTask._id.toString(), subTask]),
+      );
+      const ordered = wanted
+        .map((id) => byId.get(id))
+        .filter(Boolean);
+      const orderedIds = new Set(ordered.map((subTask) => subTask._id.toString()));
+      const remainder = previousGoalItem.subTasks
+        .filter((subTask) => !orderedIds.has(subTask._id.toString()));
+
+      const updatedGoal = await GoalModel.findOneAndUpdate(
+        {
+          date,
+          period,
+          email,
+          'goalItems._id': taskId,
+        },
+        { $set: { 'goalItems.$.subTasks': [...ordered, ...remainder] } },
+        { new: true },
+      ).exec();
+
+      return (updatedGoal
+        && updatedGoal.goalItems
+        && updatedGoal.goalItems.find(
+          (goalItem) => goalItem._id.toString() === taskId.toString(),
+        )) || null;
     },
   },
   deleteSubTaskItem: {

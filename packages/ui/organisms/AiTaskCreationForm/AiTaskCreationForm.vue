@@ -41,6 +41,7 @@
 <script>
 import { MarkdownEditor } from '@routine-notes/markdown-editor';
 import RelatedTasksTimeline from '../../molecules/RelatedTasksTimeline/RelatedTasksTimeline.vue';
+import { relatedGoalTasks } from '../../utils/relatedGoalTasks';
 import {
   AtomAlert,
   AtomDivider,
@@ -122,37 +123,9 @@ export default {
   },
   computed: {
     relatedTasks() {
-      if (!this.selectedGoalRef || !this.relatedGoalsData || !Array.isArray(this.relatedGoalsData)) {
-        return [];
-      }
-
-      const tasks = [];
-      this.relatedGoalsData.forEach((goal) => {
-        if (goal.goalItems && Array.isArray(goal.goalItems)) {
-          goal.goalItems.forEach((goalItem) => {
-            if (goalItem.goalRef === this.selectedGoalRef) {
-              tasks.push({
-                id: goalItem.id,
-                body: goalItem.body,
-                date: goal.date,
-                period: goal.period,
-                isComplete: goalItem.isComplete,
-                goalRef: goalItem.goalRef,
-                taskRef: goalItem.taskRef,
-                tags: goalItem.tags || [],
-              });
-            }
-          });
-        }
-      });
-
-      return tasks
-        .sort((a, b) => {
-          if (!a.time) return 1;
-          if (!b.time) return -1;
-          return a.time.localeCompare(b.time);
-        })
-        .slice(0, 10);
+      // No `date` here: this form has no viewed date, so it shows every date
+      // for the ref rather than hiding later ones.
+      return relatedGoalTasks(this.relatedGoalsData, { goalRef: this.selectedGoalRef });
     },
     isValid() {
       return !!(this.taskData && this.taskData.title && this.taskData.description);

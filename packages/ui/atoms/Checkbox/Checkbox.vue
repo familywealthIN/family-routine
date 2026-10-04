@@ -22,7 +22,7 @@
     :light="light"
     :class="checkboxClass"
     v-bind="$attrs"
-    @change="$emit('input', $event)"
+    @change="onChange"
     v-on="filteredListeners"
   >
     <template v-if="$slots.label" #label>
@@ -129,9 +129,19 @@ export default {
     },
   },
   computed: {
+    // input/change are re-emitted by onChange (never bound straight onto
+    // v-checkbox) so each fires exactly once per toggle.
     filteredListeners() {
       const { input, change, ...listeners } = this.$listeners;
       return listeners;
+    },
+  },
+  methods: {
+    onChange(value) {
+      // `input` first so v-model has updated before a parent's @change runs
+      // (SubTaskItemList reads the bound field inside its @change handler).
+      this.$emit('input', value);
+      this.$emit('change', value);
     },
   },
 };

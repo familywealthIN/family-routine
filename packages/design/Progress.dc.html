@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Material+Icons&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#288bd5;text-decoration:none}a:hover{color:#1f6fab}
+.mi{font-family:'Material Icons';font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-notes{max-width:640px;font:13px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.7);margin:0 0 24px}
+.dv-notes b{color:#1a1a1a}
+.rn-hscroll::-webkit-scrollbar{display:none}
+@keyframes rn-in0{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes rn-in1{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes rn-fade{from{opacity:0}to{opacity:1}}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">Progress</a><span class="dv-tname">Progress page, transformed: one efficiency story with a trend you can scrub, D/K/G as the app's ring trio, and routines that need attention one tap from a fix</span></div>
+<p class="dv-notes"><b>What changed from ProgressTime.vue:</b> the period dropdown becomes a <b>Day · Week · Month · Year</b> switch. The progress statement and <b>Routine Efficiency</b> merge into one hero with the sparkline under it: tap any point to read that day, and ⓘ shows the formula from getProgressReport. The radar chart becomes the <b>D/K/G ring trio</b> already used in the week selector. <b>Tasks and Activities Completed</b> becomes three progress bars. <b>Great Going</b> and <b>Needs Attention</b> list routines by score; attention rows say what slipped and open the routine. "Goals on Track" stays out until it's real.</p>
+<div style="display:flex;align-items:center;gap:8px;margin:-8px 0 20px;font:12px system-ui,sans-serif;color:rgba(0,0,0,.55)">Jump to <a class="dv-oid" href="#gp">Phone</a><a class="dv-oid" href="#gt">iPad mini</a><a class="dv-oid" href="#gd">Desktop</a></div>
+<div class="dv-opts">
+
+<!-- GP PHONE -->
+<div class="dv-opt" id="gp"><div class="dv-olabel"><a class="dv-oid" href="#gp">Phone</a>Android · 412×892</div>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+<div style="height:100%;display:flex;flex-direction:column;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+  <div style="display:flex;align-items:center;gap:6px;height:64px;padding:0 8px 0 16px;flex-shrink:0">
+    <div style="flex:1;min-width:0"><div style="font-size:24px;font-weight:700;line-height:1.1">Progress</div><div style="font-size:12px;color:rgba(0,0,0,.54)">{{ rangeLabel }}</div></div>
+    <div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;flex-shrink:0"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div>
+    <div onClick="{{ openDrawer }}" title="Menu" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
+  </div>
+  <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 16px;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:12px;align-content:start">
+    <div style="position:relative;display:flex;padding:3px;border-radius:12px;background:rgba(0,0,0,.06);flex-shrink:0">
+      <div style="position:absolute;top:3px;bottom:3px;left:{{ thumbLeft }};width:calc((100% - 6px) / 4);border-radius:9px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:left .28s cubic-bezier(.4,0,.2,1)"></div><sc-for list="{{ periods }}" as="p" hint-placeholder-count="4"><div onClick="{{ p.onClick }}" style="position:relative;flex:1;height:34px;display:flex;align-items:center;justify-content:center;border-radius:9px;font-size:13px;font-weight:600;color:{{ p.fg }};cursor:pointer;transition:color .2s">{{ p.label }}</div></sc-for>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:16px 16px 12px;animation:{{ inAnim }}">
+      <div style="font-size:20px;font-weight:700;line-height:1.25;text-wrap:pretty">{{ statement }}</div>
+      <div style="display:flex;align-items:flex-end;gap:10px;margin-top:12px">
+        <div style="font-size:44px;font-weight:800;line-height:1;letter-spacing:-1px;color:#288bd5">{{ eff }}<span style="font-size:22px">%</span></div>
+        <div style="flex:1;min-width:0;padding-bottom:4px"><div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600">Routine efficiency<span class="mi" onClick="{{ toggleFormula }}" title="How it's calculated" style="font-size:16px;color:rgba(0,0,0,.4);cursor:pointer">info</span></div><div style="font-size:12px;font-weight:600;color:{{ deltaColor }}">{{ deltaLabel }}</div></div>
+      </div>
+      <sc-if value="{{ showFormula }}" hint-placeholder-val="{{ false }}"><div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:#f7f7f7;font-size:12px;line-height:1.45;color:rgba(0,0,0,.65);animation:rn-fade .15s ease">{{ formula }}</div></sc-if>
+      <div style="position:relative;margin-top:12px">
+        <svg viewBox="0 0 320 96" preserveAspectRatio="none" style="width:100%;height:96px;display:block;overflow:visible">
+          <line x1="0" y1="{{ refY }}" x2="320" y2="{{ refY }}" stroke="rgba(0,0,0,.18)" stroke-width="1" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"></line>
+          <path d="{{ areaD }}" fill="rgba(40,139,213,.1)"></path>
+          <path d="{{ lineD }}" fill="none" stroke="#288bd5" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+          <line x1="{{ selX }}" y1="0" x2="{{ selX }}" y2="96" stroke="rgba(40,139,213,.35)" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+          </svg>
+        <sc-for list="{{ dots }}" as="d" hint-placeholder-count="7"><div style="position:absolute;left:{{ d.left }};top:{{ d.top }};width:{{ d.size }};height:{{ d.size }};transform:translate(-50%,-50%);border-radius:50%;box-sizing:border-box;border:2px solid #288bd5;background:{{ d.fill }};pointer-events:none;transition:width .15s,height .15s"></div></sc-for>
+        <sc-for list="{{ dots }}" as="d" hint-placeholder-count="7"><div onClick="{{ d.onPick }}" style="position:absolute;top:0;bottom:0;left:{{ d.hl }};width:{{ d.hwp }};cursor:pointer"></div></sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;font-weight:600;color:rgba(0,0,0,.4)"><sc-for list="{{ xLabels }}" as="x" hint-placeholder-count="4"><span>{{ x.t }}</span></sc-for></div>
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.06);font-size:13px"><div style="width:8px;height:8px;border-radius:50%;background:#288bd5"></div><b style="font-weight:700;white-space:nowrap">{{ selLabel }}</b><span style="color:rgba(0,0,0,.54);white-space:nowrap">{{ selValue }}</span><div style="flex:1"></div><span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(0,0,0,.45);white-space:nowrap"><span style="width:14px;border-top:1.5px dashed rgba(0,0,0,.35)"></span>{{ refLabel }}</span></div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:14px 16px;display:flex;align-items:center;gap:16px">
+      <div style="position:relative;width:128px;height:128px;flex-shrink:0">
+        <svg viewBox="0 0 128 128" style="width:128px;height:128px;transform:rotate(-90deg)">
+          <sc-for list="{{ rings }}" as="r" hint-placeholder-count="3"><circle cx="64" cy="64" r="{{ r.r }}" fill="none" stroke="rgba(0,0,0,.06)" stroke-width="10"></circle><circle cx="64" cy="64" r="{{ r.r }}" fill="none" stroke="{{ r.color }}" stroke-width="10" stroke-linecap="round" stroke-dasharray="{{ r.c }}" stroke-dashoffset="{{ r.off }}" style="transition:stroke-dashoffset .5s"></circle></sc-for>
+        </svg>
+      </div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">BALANCE · AVG PER DAY</div>
+        <sc-for list="{{ rings }}" as="r" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px"><div style="width:22px;height:22px;border-radius:6px;background:{{ r.tint }};color:{{ r.color }};font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ r.k }}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ r.label }}</div><div style="font-size:11px;color:rgba(0,0,0,.5)">{{ r.hint }}</div></div><div style="font-size:15px;font-weight:700">{{ r.v }}%</div></div></sc-for>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">COMPLETED · {{ doneScope }}</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+        <sc-for list="{{ doneRows }}" as="d" hint-placeholder-count="3"><div><div style="display:flex;align-items:baseline;gap:6px"><span class="mi" style="font-size:16px;color:rgba(0,0,0,.5);align-self:center">{{ d.icon }}</span><div style="flex:1;font-size:14px;font-weight:600">{{ d.label }}</div><div style="font-size:14px"><b>{{ d.v }}</b><span style="color:rgba(0,0,0,.45)"> / {{ d.t }}</span></div></div><div style="height:6px;border-radius:3px;background:rgba(0,0,0,.06);margin-top:6px;overflow:hidden"><div style="height:100%;width:{{ d.w }};border-radius:3px;background:#288bd5;transition:width .4s"></div></div></div></sc-for>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:14px 16px 6px">
+      <div style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:18px;color:#4CAF50">trending_up</span><div style="font-size:15px;font-weight:700">Great going</div></div>
+      <sc-for list="{{ good }}" as="g" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:10px;min-height:58px;border-bottom:{{ g.border }}">
+          <div style="width:40px;font-size:12px;font-weight:600;color:rgba(0,0,0,.5);font-variant-numeric:tabular-nums">{{ g.time }}</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ g.name }}</div><div style="display:flex;gap:3px;margin-top:4px"><sc-for list="{{ g.days }}" as="x" hint-placeholder-count="7"><div style="width:8px;height:8px;border-radius:2px;background:{{ x.c }}"></div></sc-for></div></div>
+          <div style="font-size:15px;font-weight:700;color:#2e7d32">{{ g.score }}%</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:14px 16px 6px">
+      <div style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:18px;color:#e68900">trending_down</span><div style="font-size:15px;font-weight:700">Needs attention</div></div>
+      <sc-for list="{{ bad }}" as="g" hint-placeholder-count="3">
+        <a href="Routines.dc.html" style="display:flex;align-items:center;gap:10px;min-height:58px;border-bottom:{{ g.border }};color:inherit;margin:0 -8px;padding:0 8px;border-radius:10px" style-hover="background:#fafafa">
+          <div style="width:40px;font-size:12px;font-weight:600;color:rgba(0,0,0,.5);font-variant-numeric:tabular-nums">{{ g.time }}</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ g.name }}</div><div style="font-size:12px;color:rgba(0,0,0,.55);margin-top:2px">{{ g.why }}</div></div>
+          <div style="font-size:15px;font-weight:700;color:#e68900">{{ g.score }}%</div>
+          <span class="mi" style="font-size:20px;color:rgba(0,0,0,.3)">chevron_right</span>
+        </a>
+      </sc-for>
+    </div>
+    <a href="#" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 12px 0 16px;border-radius:16px;background:#fff;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);color:inherit"><span class="mi" style="font-size:20px;color:#288bd5">history</span><div style="flex:1;font-size:14px;font-weight:600">View your routine history</div><span class="mi" style="font-size:20px;color:rgba(0,0,0,.3)">chevron_right</span></a>
+  </div>
+  <div style="height:64px;box-sizing:border-box;background:#fff;box-shadow:0 -1px 3px rgba(0,0,0,.08);display:flex;padding-bottom:4px;flex-shrink:0;z-index:5">
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+      <div onClick="{{ n.go }}" style="cursor:pointer;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ n.color }};font-size:12px;font-weight:500"><span class="mi">{{ n.icon }}</span><span>{{ n.label }}</span></div>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:-4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-fade .2s ease">
+      <div style="display:flex;align-items:center;gap:12px;padding:28px 16px 16px 20px"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div><span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px">close</span></div>
+      <div style="display:flex;gap:6px;padding:0 20px 14px"><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:#288bd5;color:#fff;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">diamond</span>128 points</div><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:rgba(255,152,0,.12);color:#b26a00;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">local_fire_department</span>6-day streak</div></div>
+      <div style="height:1px;background:rgba(0,0,0,.08);margin:0 0 6px"></div>
+      <sc-for list="{{ drawerItems }}" as="n" hint-placeholder-count="6"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:16px;height:48px;padding:0 20px;margin-top:{{ n.gap }};color:{{ n.color }};background:{{ n.bg }};font-size:14px;font-weight:600;text-decoration:none"><span class="mi" style="font-size:22px">{{ n.icon }}</span>{{ n.label }}</a></sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-import>
+</div>
+
+<!-- GT TABLET -->
+<div class="dv-opt" id="gt"><div class="dv-olabel"><a class="dv-oid" href="#gt">iPad mini</a>Landscape · 1133×744</div>
+<div style="width:1165px;height:776px;border-radius:40px;background:#121212;padding:16px;box-sizing:border-box;box-shadow:0 30px 60px -24px rgba(0,0,0,.4)">
+  <div style="width:100%;height:100%;border-radius:24px;overflow:hidden;position:relative;background:#f4f4f4;display:flex;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87)">
+    <div class="rn-hscroll" style="width:76px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 0 14px;overflow-y:auto;scrollbar-width:none;border-right:1px solid rgba(0,0,0,.06)">
+      <img src="assets/icon-192.png" alt="Routine Notes" style="width:38px;height:38px;object-fit:contain;margin-bottom:6px">
+      <sc-for list="{{ sideNav }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;color:inherit"><div style="width:56px;height:32px;border-radius:16px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi">{{ n.icon }}</span></div><div style="font-size:11px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for><div onClick="{{ toggleNavMore }}" title="More pages" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer"><div style="width:52px;height:30px;border-radius:15px;background:{{ navMoreBtnBg }};color:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;transition:background .2s"><span class="mi" style="font-size:21px">{{ navMoreIcon }}</span></div><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.6)">More</div></div><sc-if value="{{ navMoreOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0;border-radius:16px;background:#f7f7f7;animation:rn-fade .18s ease"><sc-for list="{{ navMore }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:inherit;text-decoration:none;margin-top:{{ n.gap }}"><div style="width:52px;height:30px;border-radius:15px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:21px">{{ n.icon }}</span></div><div style="font-size:10px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for></div></sc-if>
+      <div style="flex:1"></div>
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:40px;height:40px;border-radius:50%;object-fit:cover" alt="Profile picture">
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex-shrink:0"><span>9:30</span><span style="display:flex;gap:6px;align-items:center"><span class="mi" style="font-size:16px">wifi</span><span class="mi" style="font-size:16px">battery_full</span></span></div>
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;padding:4px 20px 20px">
+        <div style="display:flex;align-items:center;gap:16px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700">Progress</div><div style="font-size:13px;color:rgba(0,0,0,.54)">{{ rangeLabel }}</div></div><div style="position:relative;display:flex;padding:3px;border-radius:12px;background:rgba(0,0,0,.06);flex-shrink:0;width:340px">
+      <div style="position:absolute;top:3px;bottom:3px;left:{{ thumbLeft }};width:calc((100% - 6px) / 4);border-radius:9px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:left .28s cubic-bezier(.4,0,.2,1)"></div><sc-for list="{{ periods }}" as="p" hint-placeholder-count="4"><div onClick="{{ p.onClick }}" style="position:relative;flex:1;height:34px;display:flex;align-items:center;justify-content:center;border-radius:9px;font-size:13px;font-weight:600;color:{{ p.fg }};cursor:pointer;transition:color .2s">{{ p.label }}</div></sc-for>
+    </div><div style="display:flex;align-items:center;gap:4px;height:28px;padding:0 12px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;flex-shrink:0"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div></div>
+        <div class="rn-hscroll" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px;align-content:start">
+          <div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:16px 16px 12px;animation:{{ inAnim }}">
+      <div style="font-size:20px;font-weight:700;line-height:1.25;text-wrap:pretty">{{ statement }}</div>
+      <div style="display:flex;align-items:flex-end;gap:10px;margin-top:12px">
+        <div style="font-size:44px;font-weight:800;line-height:1;letter-spacing:-1px;color:#288bd5">{{ eff }}<span style="font-size:22px">%</span></div>
+        <div style="flex:1;min-width:0;padding-bottom:4px"><div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600">Routine efficiency<span class="mi" onClick="{{ toggleFormula }}" title="How it's calculated" style="font-size:16px;color:rgba(0,0,0,.4);cursor:pointer">info</span></div><div style="font-size:12px;font-weight:600;color:{{ deltaColor }}">{{ deltaLabel }}</div></div>
+      </div>
+      <sc-if value="{{ showFormula }}" hint-placeholder-val="{{ false }}"><div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:#f7f7f7;font-size:12px;line-height:1.45;color:rgba(0,0,0,.65);animation:rn-fade .15s ease">{{ formula }}</div></sc-if>
+      <div style="position:relative;margin-top:12px">
+        <svg viewBox="0 0 320 96" preserveAspectRatio="none" style="width:100%;height:96px;display:block;overflow:visible">
+          <line x1="0" y1="{{ refY }}" x2="320" y2="{{ refY }}" stroke="rgba(0,0,0,.18)" stroke-width="1" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"></line>
+          <path d="{{ areaD }}" fill="rgba(40,139,213,.1)"></path>
+          <path d="{{ lineD }}" fill="none" stroke="#288bd5" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+          <line x1="{{ selX }}" y1="0" x2="{{ selX }}" y2="96" stroke="rgba(40,139,213,.35)" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+          </svg>
+        <sc-for list="{{ dots }}" as="d" hint-placeholder-count="7"><div style="position:absolute;left:{{ d.left }};top:{{ d.top }};width:{{ d.size }};height:{{ d.size }};transform:translate(-50%,-50%);border-radius:50%;box-sizing:border-box;border:2px solid #288bd5;background:{{ d.fill }};pointer-events:none;transition:width .15s,height .15s"></div></sc-for>
+        <sc-for list="{{ dots }}" as="d" hint-placeholder-count="7"><div onClick="{{ d.onPick }}" style="position:absolute;top:0;bottom:0;left:{{ d.hl }};width:{{ d.hwp }};cursor:pointer"></div></sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;font-weight:600;color:rgba(0,0,0,.4)"><sc-for list="{{ xLabels }}" as="x" hint-placeholder-count="4"><span>{{ x.t }}</span></sc-for></div>
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.06);font-size:13px"><div style="width:8px;height:8px;border-radius:50%;background:#288bd5"></div><b style="font-weight:700;white-space:nowrap">{{ selLabel }}</b><span style="color:rgba(0,0,0,.54);white-space:nowrap">{{ selValue }}</span><div style="flex:1"></div><span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(0,0,0,.45);white-space:nowrap"><span style="width:14px;border-top:1.5px dashed rgba(0,0,0,.35)"></span>{{ refLabel }}</span></div>
+    </div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:stretch">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px 6px">
+      <div style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:18px;color:#4CAF50">trending_up</span><div style="font-size:15px;font-weight:700">Great going</div></div>
+      <sc-for list="{{ good }}" as="g" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:10px;min-height:58px;border-bottom:{{ g.border }}">
+          <div style="width:40px;font-size:12px;font-weight:600;color:rgba(0,0,0,.5);font-variant-numeric:tabular-nums">{{ g.time }}</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ g.name }}</div><div style="display:flex;gap:3px;margin-top:4px"><sc-for list="{{ g.days }}" as="x" hint-placeholder-count="7"><div style="width:8px;height:8px;border-radius:2px;background:{{ x.c }}"></div></sc-for></div></div>
+          <div style="font-size:15px;font-weight:700;color:#2e7d32">{{ g.score }}%</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px 6px">
+      <div style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:18px;color:#e68900">trending_down</span><div style="font-size:15px;font-weight:700">Needs attention</div></div>
+      <sc-for list="{{ bad }}" as="g" hint-placeholder-count="3">
+        <a href="Routines.dc.html" style="display:flex;align-items:center;gap:10px;min-height:58px;border-bottom:{{ g.border }};color:inherit;margin:0 -8px;padding:0 8px;border-radius:10px" style-hover="background:#fafafa">
+          <div style="width:40px;font-size:12px;font-weight:600;color:rgba(0,0,0,.5);font-variant-numeric:tabular-nums">{{ g.time }}</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ g.name }}</div><div style="font-size:12px;color:rgba(0,0,0,.55);margin-top:2px">{{ g.why }}</div></div>
+          <div style="font-size:15px;font-weight:700;color:#e68900">{{ g.score }}%</div>
+          <span class="mi" style="font-size:20px;color:rgba(0,0,0,.3)">chevron_right</span>
+        </a>
+      </sc-for>
+    </div>
+</div></div>
+          <div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px;display:flex;align-items:center;gap:16px">
+      <div style="position:relative;width:128px;height:128px;flex-shrink:0">
+        <svg viewBox="0 0 128 128" style="width:128px;height:128px;transform:rotate(-90deg)">
+          <sc-for list="{{ rings }}" as="r" hint-placeholder-count="3"><circle cx="64" cy="64" r="{{ r.r }}" fill="none" stroke="rgba(0,0,0,.06)" stroke-width="10"></circle><circle cx="64" cy="64" r="{{ r.r }}" fill="none" stroke="{{ r.color }}" stroke-width="10" stroke-linecap="round" stroke-dasharray="{{ r.c }}" stroke-dashoffset="{{ r.off }}" style="transition:stroke-dashoffset .5s"></circle></sc-for>
+        </svg>
+      </div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">BALANCE · AVG PER DAY</div>
+        <sc-for list="{{ rings }}" as="r" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px"><div style="width:22px;height:22px;border-radius:6px;background:{{ r.tint }};color:{{ r.color }};font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ r.k }}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ r.label }}</div><div style="font-size:11px;color:rgba(0,0,0,.5)">{{ r.hint }}</div></div><div style="font-size:15px;font-weight:700">{{ r.v }}%</div></div></sc-for>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">COMPLETED · {{ doneScope }}</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+        <sc-for list="{{ doneRows }}" as="d" hint-placeholder-count="3"><div><div style="display:flex;align-items:baseline;gap:6px"><span class="mi" style="font-size:16px;color:rgba(0,0,0,.5);align-self:center">{{ d.icon }}</span><div style="flex:1;font-size:14px;font-weight:600">{{ d.label }}</div><div style="font-size:14px"><b>{{ d.v }}</b><span style="color:rgba(0,0,0,.45)"> / {{ d.t }}</span></div></div><div style="height:6px;border-radius:3px;background:rgba(0,0,0,.06);margin-top:6px;overflow:hidden"><div style="height:100%;width:{{ d.w }};border-radius:3px;background:#288bd5;transition:width .4s"></div></div></div></sc-for>
+      </div>
+    </div>
+    <a href="#" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 12px 0 16px;border-radius:16px;background:#fff;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);color:inherit"><span class="mi" style="font-size:20px;color:#288bd5">history</span><div style="flex:1;font-size:14px;font-weight:600">View your routine history</div><span class="mi" style="font-size:20px;color:rgba(0,0,0,.3)">chevron_right</span></a>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- GD DESKTOP -->
+<div class="dv-opt" id="gd"><div class="dv-olabel"><a class="dv-oid" href="#gd">Desktop</a>1440×900 · same layout and type sizes as iPad mini, capped at 1040px</div>
+<x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1440 }}" height="{{ 900 }}" url="app.routinenotes.com/progress/week" tabs="{{ browserTabs }}" hint-size="1440px,900px">
+  <div style="height:100%;display:flex;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+    <div style="width:264px;flex-shrink:0;background:#fff;border-right:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:10px;padding:20px 20px 16px"><img src="assets/icon-192.png" alt="Routine Notes" style="width:34px;height:34px;object-fit:contain"><div style="font-size:16px;font-weight:700">Routine Notes</div></div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:0 12px">
+        <sc-for list="{{ sideNav }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};font-size:14px;font-weight:600" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for><div onClick="{{ toggleNavMore }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;margin-top:6px;border-radius:10px;color:rgba(0,0,0,.6);font-size:14px;font-weight:600;cursor:pointer" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">more_horiz</span><div style="flex:1">More</div><span class="mi" style="font-size:20px;transition:transform .2s;transform:rotate({{ navMoreRot }})">expand_more</span></div><sc-if value="{{ navMoreOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;animation:rn-fade .18s ease"><sc-for list="{{ navMore }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px 0 20px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};text-decoration:none;font-size:14px;font-weight:600;margin-top:{{ n.gap }}" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for></div></sc-if>
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-top:1px solid rgba(0,0,0,.06)"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:36px;height:36px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.5)">{{ points }} points</div></div></div>
+    </div>
+    <div style="max-width:1040px;margin:0 auto;width:100%;box-sizing:border-box;flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px">
+      <div style="display:flex;align-items:center;gap:16px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700">Progress</div><div style="font-size:13px;color:rgba(0,0,0,.54)">{{ rangeLabel }}</div></div><div style="position:relative;display:flex;padding:3px;border-radius:12px;background:rgba(0,0,0,.06);flex-shrink:0;width:340px">
+      <div style="position:absolute;top:3px;bottom:3px;left:{{ thumbLeft }};width:calc((100% - 6px) / 4);border-radius:9px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:left .28s cubic-bezier(.4,0,.2,1)"></div><sc-for list="{{ periods }}" as="p" hint-placeholder-count="4"><div onClick="{{ p.onClick }}" style="position:relative;flex:1;height:34px;display:flex;align-items:center;justify-content:center;border-radius:9px;font-size:13px;font-weight:600;color:{{ p.fg }};cursor:pointer;transition:color .2s">{{ p.label }}</div></sc-for>
+    </div><div style="display:flex;align-items:center;gap:4px;height:28px;padding:0 12px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;flex-shrink:0"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div></div>
+      <div class="rn-hscroll" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px;align-content:start">
+          <div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:16px 16px 12px;animation:{{ inAnim }}">
+      <div style="font-size:20px;font-weight:700;line-height:1.25;text-wrap:pretty">{{ statement }}</div>
+      <div style="display:flex;align-items:flex-end;gap:10px;margin-top:12px">
+        <div style="font-size:44px;font-weight:800;line-height:1;letter-spacing:-1px;color:#288bd5">{{ eff }}<span style="font-size:22px">%</span></div>
+        <div style="flex:1;min-width:0;padding-bottom:4px"><div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600">Routine efficiency<span class="mi" onClick="{{ toggleFormula }}" title="How it's calculated" style="font-size:16px;color:rgba(0,0,0,.4);cursor:pointer">info</span></div><div style="font-size:12px;font-weight:600;color:{{ deltaColor }}">{{ deltaLabel }}</div></div>
+      </div>
+      <sc-if value="{{ showFormula }}" hint-placeholder-val="{{ false }}"><div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:#f7f7f7;font-size:12px;line-height:1.45;color:rgba(0,0,0,.65);animation:rn-fade .15s ease">{{ formula }}</div></sc-if>
+      <div style="position:relative;margin-top:12px">
+        <svg viewBox="0 0 320 96" preserveAspectRatio="none" style="width:100%;height:96px;display:block;overflow:visible">
+          <line x1="0" y1="{{ refY }}" x2="320" y2="{{ refY }}" stroke="rgba(0,0,0,.18)" stroke-width="1" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"></line>
+          <path d="{{ areaD }}" fill="rgba(40,139,213,.1)"></path>
+          <path d="{{ lineD }}" fill="none" stroke="#288bd5" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+          <line x1="{{ selX }}" y1="0" x2="{{ selX }}" y2="96" stroke="rgba(40,139,213,.35)" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+          </svg>
+        <sc-for list="{{ dots }}" as="d" hint-placeholder-count="7"><div style="position:absolute;left:{{ d.left }};top:{{ d.top }};width:{{ d.size }};height:{{ d.size }};transform:translate(-50%,-50%);border-radius:50%;box-sizing:border-box;border:2px solid #288bd5;background:{{ d.fill }};pointer-events:none;transition:width .15s,height .15s"></div></sc-for>
+        <sc-for list="{{ dots }}" as="d" hint-placeholder-count="7"><div onClick="{{ d.onPick }}" style="position:absolute;top:0;bottom:0;left:{{ d.hl }};width:{{ d.hwp }};cursor:pointer"></div></sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;font-weight:600;color:rgba(0,0,0,.4)"><sc-for list="{{ xLabels }}" as="x" hint-placeholder-count="4"><span>{{ x.t }}</span></sc-for></div>
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.06);font-size:13px"><div style="width:8px;height:8px;border-radius:50%;background:#288bd5"></div><b style="font-weight:700;white-space:nowrap">{{ selLabel }}</b><span style="color:rgba(0,0,0,.54);white-space:nowrap">{{ selValue }}</span><div style="flex:1"></div><span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(0,0,0,.45);white-space:nowrap"><span style="width:14px;border-top:1.5px dashed rgba(0,0,0,.35)"></span>{{ refLabel }}</span></div>
+    </div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:stretch">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px 6px">
+      <div style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:18px;color:#4CAF50">trending_up</span><div style="font-size:15px;font-weight:700">Great going</div></div>
+      <sc-for list="{{ good }}" as="g" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:10px;min-height:58px;border-bottom:{{ g.border }}">
+          <div style="width:40px;font-size:12px;font-weight:600;color:rgba(0,0,0,.5);font-variant-numeric:tabular-nums">{{ g.time }}</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ g.name }}</div><div style="display:flex;gap:3px;margin-top:4px"><sc-for list="{{ g.days }}" as="x" hint-placeholder-count="7"><div style="width:8px;height:8px;border-radius:2px;background:{{ x.c }}"></div></sc-for></div></div>
+          <div style="font-size:15px;font-weight:700;color:#2e7d32">{{ g.score }}%</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px 6px">
+      <div style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:18px;color:#e68900">trending_down</span><div style="font-size:15px;font-weight:700">Needs attention</div></div>
+      <sc-for list="{{ bad }}" as="g" hint-placeholder-count="3">
+        <a href="Routines.dc.html" style="display:flex;align-items:center;gap:10px;min-height:58px;border-bottom:{{ g.border }};color:inherit;margin:0 -8px;padding:0 8px;border-radius:10px" style-hover="background:#fafafa">
+          <div style="width:40px;font-size:12px;font-weight:600;color:rgba(0,0,0,.5);font-variant-numeric:tabular-nums">{{ g.time }}</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ g.name }}</div><div style="font-size:12px;color:rgba(0,0,0,.55);margin-top:2px">{{ g.why }}</div></div>
+          <div style="font-size:15px;font-weight:700;color:#e68900">{{ g.score }}%</div>
+          <span class="mi" style="font-size:20px;color:rgba(0,0,0,.3)">chevron_right</span>
+        </a>
+      </sc-for>
+    </div>
+</div></div>
+          <div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px;display:flex;align-items:center;gap:16px">
+      <div style="position:relative;width:128px;height:128px;flex-shrink:0">
+        <svg viewBox="0 0 128 128" style="width:128px;height:128px;transform:rotate(-90deg)">
+          <sc-for list="{{ rings }}" as="r" hint-placeholder-count="3"><circle cx="64" cy="64" r="{{ r.r }}" fill="none" stroke="rgba(0,0,0,.06)" stroke-width="10"></circle><circle cx="64" cy="64" r="{{ r.r }}" fill="none" stroke="{{ r.color }}" stroke-width="10" stroke-linecap="round" stroke-dasharray="{{ r.c }}" stroke-dashoffset="{{ r.off }}" style="transition:stroke-dashoffset .5s"></circle></sc-for>
+        </svg>
+      </div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">BALANCE · AVG PER DAY</div>
+        <sc-for list="{{ rings }}" as="r" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px"><div style="width:22px;height:22px;border-radius:6px;background:{{ r.tint }};color:{{ r.color }};font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ r.k }}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ r.label }}</div><div style="font-size:11px;color:rgba(0,0,0,.5)">{{ r.hint }}</div></div><div style="font-size:15px;font-weight:700">{{ r.v }}%</div></div></sc-for>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">COMPLETED · {{ doneScope }}</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+        <sc-for list="{{ doneRows }}" as="d" hint-placeholder-count="3"><div><div style="display:flex;align-items:baseline;gap:6px"><span class="mi" style="font-size:16px;color:rgba(0,0,0,.5);align-self:center">{{ d.icon }}</span><div style="flex:1;font-size:14px;font-weight:600">{{ d.label }}</div><div style="font-size:14px"><b>{{ d.v }}</b><span style="color:rgba(0,0,0,.45)"> / {{ d.t }}</span></div></div><div style="height:6px;border-radius:3px;background:rgba(0,0,0,.06);margin-top:6px;overflow:hidden"><div style="height:100%;width:{{ d.w }};border-radius:3px;background:#288bd5;transition:width .4s"></div></div></div></sc-for>
+      </div>
+    </div>
+    <a href="#" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 12px 0 16px;border-radius:16px;background:#fff;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);color:inherit"><span class="mi" style="font-size:20px;color:#288bd5">history</span><div style="flex:1;font-size:14px;font-weight:600">View your routine history</div><span class="mi" style="font-size:20px;color:rgba(0,0,0,.3)">chevron_right</span></a>
+</div>
+        </div>
+    </div>
+  </div>
+</x-import>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const R = { mp: ['06:30', 'Morning Pages'], wo: ['07:15', 'Workout'], sw: ['09:00', 'Start Work'], lw: ['12:30', 'Lunch Walk'], dw: ['15:00', 'Deep Work'], fd: ['18:00', 'Family Dinner'], wd: ['21:30', 'Wind Down'] };
+const STIM = [{ k: 'D', label: 'Discipline', hint: 'showing up on time', color: '#4CAF50', tint: 'rgba(76,175,80,.12)', r: 56 }, { k: 'K', label: 'Kinetics', hint: 'movement and energy', color: '#E53935', tint: 'rgba(229,57,53,.12)', r: 42 }, { k: 'G', label: 'Geniuses', hint: 'focused output', color: '#2196F3', tint: 'rgba(33,150,243,.12)', r: 28 }];
+const P = {
+  day: { label: 'Day', range: 'Saturday, 12 September', statement: 'Live your potential. You got this.', eff: 58, prev: 64, prevName: 'yesterday', ref: 'yesterday', unit: 'routine',
+    series: [100, 100, 60, null, null, null, null], labels: ['06:30', '07:15', '09:00', '12:30', '15:00', '18:00', '21:30'], names: ['Morning Pages', 'Workout', 'Start Work', 'Lunch Walk', 'Deep Work', 'Family Dinner', 'Wind Down'],
+    dkg: [70, 45, 52], done: [[2, 7], [6, 11], [0, 1]], scope: 'TODAY' },
+  week: { label: 'Week', range: 'Week of 6 – 12 September', statement: 'Great going! Six strong days in a row.', eff: 72, prev: 66, prevName: 'last week', ref: 'last week', unit: 'day',
+    series: [70, 90, 60, 100, 80, 70, 58], labels: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], names: ['Sun 6', 'Mon 7', 'Tue 8', 'Wed 9', 'Thu 10', 'Fri 11', 'Today'],
+    dkg: [80, 46, 64], done: [[5, 7], [8, 11], [1, 2]], scope: 'AVG PER DAY' },
+  month: { label: 'Month', range: 'September 2026 · 12 days in', statement: 'Live your potential. You got this.', eff: 68, prev: 61, prevName: 'August', ref: 'August', unit: 'day',
+    series: [66, 72, 58, 40, 77, 70, 90, 60, 100, 80, 70, 58], labels: ['1', '4', '8', '12'], names: Array.from({ length: 12 }, (_, i) => `${i + 1} Sep`),
+    dkg: [76, 41, 62], done: [[5, 7], [7, 11], [4, 6]], scope: 'AVG PER DAY' },
+  year: { label: 'Year', range: '2026 · January – September', statement: 'Great going! Your best year so far.', eff: 64, prev: 52, prevName: '2025', ref: '2025', unit: 'month',
+    series: [52, 58, 61, 55, 63, 66, 60, 70, 68], labels: ['Jan', 'Mar', 'May', 'Jul', 'Sep'], names: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September'],
+    dkg: [72, 44, 60], done: [[5, 7], [7, 11], [31, 48]], scope: 'AVG PER DAY · MILESTONES THIS YEAR' },
+};
+const RANK = {
+  day: { good: [['mp', 100], ['wo', 100], ['sw', 60]], bad: [['lw', 0, 'Starts 12:30 · nothing ticked yet'], ['dw', 0, 'Starts 15:00'], ['wd', 0, 'Starts 21:30']] },
+  week: { good: [['fd', 96], ['mp', 90], ['sw', 84]], bad: [['lw', 31, 'Missed 4 of 7 · last on Thu'], ['dw', 44, 'Ticked late 3 times'], ['wd', 52, 'Lights out after 23:00 twice']] },
+  month: { good: [['fd', 92], ['mp', 88], ['wo', 80]], bad: [['lw', 38, 'Missed 7 of 12 days'], ['dw', 47, 'No essay block on 5 days'], ['wd', 55, 'Late 4 times']] },
+  year: { good: [['fd', 90], ['mp', 85], ['sw', 79]], bad: [['lw', 41, 'Weakest since June'], ['dw', 49, 'Dipped in July – August'], ['wd', 58, 'Steady, but below target']] },
+};
+const PAT = { fd: '1111101', mp: '1110111', sw: '1101111', wo: '1011011', lw: '0100110', dw: '1010010', wd: '1100101' };
+const W = 320, H = 96;
+const NAV_MORE = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2']];
+const navMoreFor = (active) => NAV_MORE.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' ? '10px' : '0px', bg: label === active ? 'rgba(40,139,213,.12)' : 'transparent', fg: label === active ? '#1f6fab' : 'rgba(0,0,0,.6)' }));
+const DRAWER_ITEMS = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2'], ['logout', 'Log out', '#']];
+const drawerFor = (active) => DRAWER_ITEMS.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' || label === 'Log out' ? '8px' : '0px', color: label === 'Log out' ? '#d32f2f' : (label === active ? '#1f6fab' : 'rgba(0,0,0,.75)'), bg: label === active ? 'rgba(40,139,213,.08)' : 'transparent' }));
+const NAV_HREF = { Home: 'Routine Notes Final.dc.html', Priority: 'Priority.dc.html', Agents: 'Agents.dc.html', Goals: 'Goals.dc.html', Routines: 'Routines.dc.html', Progress: 'Progress.dc.html', Groups: 'Groups.dc.html', Profile: 'Profile and About.dc.html#t1', Settings: 'Profile and About.dc.html#t1', About: 'Profile and About.dc.html#t2' };
+const fixNav = (v) => { ['navItems', 'lgNav', 'drawerNav'].forEach(k => { if (Array.isArray(v[k])) v[k] = v[k].map(n => { const href = n.href && n.href !== '#' ? n.href : NAV_HREF[n.label]; const go = () => { if (href) window.location.href = href; }; return { ...n, href: href || '#', go, onClick: n.onClick || go, onPhone: n.onPhone || go, onTab: n.onTab || go }; }); }); return v; };
+class Component extends DCLogic {
+  state = { period: 'week', sel: null, formula: false, k: 0 };
+  renderVals() { return { ...fixNav(this.__rv()), drawerOpen: !!this.state.__dr, openDrawer: () => this.setState({ __dr: true }), closeDrawer: () => this.setState({ __dr: false }), drawerItems: drawerFor('Progress'), navMore: navMoreFor('Progress'), navMoreOpen: this.state.navMore ?? true, toggleNavMore: () => this.setState(st => ({ navMore: !(st.navMore ?? true) })), navMoreRot: (this.state.navMore ?? true) ? '180deg' : '0deg', navMoreIcon: (this.state.navMore ?? true) ? 'expand_less' : 'more_horiz', navMoreBtnBg: (this.state.navMore ?? true) ? 'rgba(0,0,0,.06)' : 'transparent' }; }
+  __rv() {
+    const st = this.state, p = P[st.period], s = p.series, n = s.length;
+    const X = (i) => n === 1 ? W / 2 : (i * W) / (n - 1), Y = (v) => H - 6 - (v / 100) * (H - 14);
+    const pts = s.map((v, i) => v == null ? null : [X(i), Y(v)]);
+    const real = pts.map((q, i) => q ? { q, i } : null).filter(Boolean);
+    const lineD = real.map((o, j) => (j ? 'L' : 'M') + o.q[0].toFixed(1) + ' ' + o.q[1].toFixed(1)).join(' ');
+    const areaD = real.length ? lineD + ` L${real[real.length - 1].q[0].toFixed(1)} ${H} L${real[0].q[0].toFixed(1)} ${H} Z` : '';
+    const sel = st.sel != null && s[st.sel] != null ? st.sel : real[real.length - 1].i;
+    const hw = n === 1 ? W : W / (n - 1);
+    const dots = s.map((v, i) => ({ key: i, x: X(i).toFixed(1), y: (v == null ? Y(0) : Y(v)).toFixed(1), r: v == null ? 0 : (i === sel ? 5 : 3), fill: i === sel ? '#288bd5' : '#fff', hx: Math.max(0, X(i) - hw / 2).toFixed(1), hw: hw.toFixed(1), onPick: () => v != null && this.setState({ sel: i }), left: (X(i) / W * 100).toFixed(2) + '%', top: (v == null ? Y(0) : Y(v)).toFixed(1) + 'px', size: v == null ? '0px' : (i === sel ? '12px' : '8px'), hl: (Math.max(0, X(i) - hw / 2) / W * 100).toFixed(2) + '%', hwp: (hw / W * 100).toFixed(2) + '%' }));
+    const delta = p.eff - p.prev;
+    const tot = (o) => o.reduce((a, [id]) => a, 0);
+    const rk = RANK[st.period];
+    const days = (id) => PAT[id].split('').map((c, i) => ({ key: i, c: c === '1' ? '#4CAF50' : 'rgba(0,0,0,.12)' }));
+    return {
+      periods: Object.keys(P).map(k => ({ key: k, label: P[k].label, bg: st.period === k ? '#fff' : 'transparent', fg: st.period === k ? 'rgba(0,0,0,.87)' : 'rgba(0,0,0,.55)', shadow: st.period === k ? '0 1px 3px rgba(0,0,0,.12)' : 'none', onClick: () => this.setState(x => ({ period: k, sel: null, k: x.k + 1 })) })),
+      thumbLeft: `calc(3px + ${Object.keys(P).indexOf(st.period)} * (100% - 6px) / 4)`,
+      rangeLabel: p.range, statement: p.statement, eff: p.eff, points: 128, inAnim: `rn-in${st.k % 2} .3s ease`,
+      deltaLabel: `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)} pts vs ${p.prevName}`, deltaColor: delta >= 0 ? '#2e7d32' : '#d32f2f',
+      showFormula: st.formula, toggleFormula: () => this.setState(x => ({ formula: !x.formula })),
+      formula: `Routine points earned ÷ routine points available, across this ${st.period}'s ${p.unit === 'routine' ? 'routines' : 'days'}. Skipped days do not count.`,
+      lineD, areaD, refY: Y(p.prev).toFixed(1), refLabel: p.ref, selX: X(sel).toFixed(1), dots,
+      xLabels: p.labels.map((t, i) => ({ key: i + t, t })), selLabel: p.names[sel], selValue: `${s[sel]}%`,
+      rings: STIM.map((x, i) => { const c = 2 * Math.PI * x.r; return { ...x, key: x.k, v: p.dkg[i], c: c.toFixed(1), off: (c * (1 - p.dkg[i] / 100)).toFixed(1) }; }),
+      doneScope: p.scope, doneRows: [['Routine items', 'history'], ['Tasks', 'task_alt'], ['Milestones', 'flag']].map(([label, icon], i) => ({ key: label, label, icon, v: p.done[i][0], t: p.done[i][1], w: Math.round(p.done[i][0] / p.done[i][1] * 100) + '%' })),
+      good: rk.good.map(([id, sc], i) => ({ key: id, time: R[id][0], name: R[id][1], score: sc, days: days(id), border: i < 2 ? '1px solid rgba(0,0,0,.06)' : '0' })),
+      bad: rk.bad.map(([id, sc, why], i) => ({ key: id, time: R[id][0], name: R[id][1], score: sc, why, border: i < 2 ? '1px solid rgba(0,0,0,.06)' : '0' })),
+      navItems: [['home', 'Home'], ['dashboard', 'Priority'], ['smart_toy', 'Agents'], ['assignment', 'Goals']].map(([icon, label]) => ({ key: label, icon, label, color: 'rgba(0,0,0,.54)', href: label === 'Goals' ? 'Goals.dc.html' : (label === 'Priority' ? 'Priority.dc.html' : (label === 'Home' ? 'Routine Notes Final.dc.html' : '#')) })),
+      sideNav: [['home', 'Home', 'Routine Notes Final.dc.html'], ['dashboard', 'Priority', 'Priority.dc.html'], ['smart_toy', 'Agents', 'Agents.dc.html'], ['assignment', 'Goals', 'Goals.dc.html']].map(([icon, label, href]) => ({ key: label, icon, label, href, bg: label === 'Progress' ? 'rgba(40,139,213,.12)' : 'transparent', fg: label === 'Progress' ? '#1f6fab' : 'rgba(0,0,0,.6)' })),
+      browserTabs: [{ title: 'Routine Notes — Progress' }],
+    };
+  }
+}
+</script>
+</body>
+</html>

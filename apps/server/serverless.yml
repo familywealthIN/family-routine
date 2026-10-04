@@ -45,6 +45,11 @@ provider:
     ENCRYPTION_KEY: ${self:custom.secrets.ENCRYPTION_KEY}
     GEMINI_API_KEY: ${self:custom.secrets.GEMINI_API_KEY}
     OPENROUTER_API_KEY: ${self:custom.secrets.OPENROUTER_API_KEY}
+    # Routine chat runs on OpenRouter's FREE tier only. Comma-separated, every
+    # id must carry the `:free` suffix (ids without it are dropped at runtime).
+    # Omit to use the built-in roster in src/utils/chatApi.js.
+    OPENROUTER_FREE_MODELS: ${self:custom.secrets.OPENROUTER_FREE_MODELS, ''}
+    WEB_APP_URL: ${self:custom.secrets.WEB_APP_URL, ''}
     MCP_BASE_URL: ${self:custom.secrets.MCP_BASE_URL}
 
 functions:

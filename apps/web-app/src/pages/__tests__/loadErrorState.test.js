@@ -15,54 +15,85 @@
 jest.mock('vue-radar', () => ({ __esModule: true, default: {} }));
 jest.mock('vue-easymde', () => ({ __esModule: true, default: {} }));
 
-const GoalsTime = require('../GoalsTime.vue').default;
+const { agentTotals } = require('@routine-notes/ui/constants/agents');
+
+// /goals was rebuilt (design: Goals.dc.html): the page is now a composition of
+// containers, so the error-vs-empty decision lives in the two read containers and
+// the em-dashed ladder tallies in `utils/goalCascade`.
+const GoalsCascadeContainer = require('../../containers/GoalsCascadeContainer.vue').default;
+const GoalCalendarContainer = require('../../containers/GoalCalendarContainer.vue').default;
+const { buildCascade } = require('../../utils/goalCascade');
+
 const MilestonesTime = require('../MilestonesTime.vue').default;
-const Agents = require('../../views/Agents.vue').default;
+// /agents was rebuilt (design: Agents.dc.html): the page is now a composition
+// of containers, so the error-vs-empty decision lives in AgentsListContainer and
+// the unknown-vs-zero totals in the AgentList organism.
+const AgentsListContainer = require('../../containers/AgentsListContainer.vue').default;
 
-describe('GoalsTime load error', () => {
-  const ctx = () => ({ firstLoadDone: false, isNavigating: true, loadError: false });
+describe('Goals load error', () => {
+  const cascade = (overrides = {}) => ({ readFailed: false, goals: [], ...overrides });
+  const calendar = (overrides = {}) => ({ readFailed: false, monthGoals: [], ...overrides });
 
-  it('flags the failure and stops the page spinning', () => {
-    const vm = ctx();
-    GoalsTime.apollo.goals.error.call(vm, new Error('Failed to fetch'));
-    expect(vm.loadError).toBe(true);
-    expect(vm.firstLoadDone).toBe(true);
-    expect(vm.isNavigating).toBe(false);
+  it('flags a failed cascade read', () => {
+    const vm = cascade();
+    GoalsCascadeContainer.apollo.goals.error.call(vm, new Error('Failed to fetch'));
+    expect(vm.readFailed).toBe(true);
+    expect(GoalsCascadeContainer.computed.loadError.call(vm)).toBe(true);
   });
 
-  it('flags a failure of the past-goals query too', () => {
-    const vm = ctx();
-    GoalsTime.apollo.pastGoals.error.call(vm, new Error('Failed to fetch'));
-    expect(vm.loadError).toBe(true);
+  it('flags a failed month read too, so the calendar does not claim an empty month', () => {
+    const vm = calendar();
+    GoalCalendarContainer.apollo.monthGoals.error.call(vm, new Error('Failed to fetch'));
+    expect(GoalCalendarContainer.computed.loadError.call(vm)).toBe(true);
   });
 
   it('clears the failure once a result arrives', () => {
-    const vm = { ...ctx(), loadError: true };
-    GoalsTime.apollo.goals.result.call(vm, { data: { goalsOptimized: [] } });
-    expect(vm.loadError).toBe(false);
-    expect(vm.firstLoadDone).toBe(true);
+    const vm = cascade({ readFailed: true });
+    GoalsCascadeContainer.apollo.goals.result.call(vm, { data: { agendaGoals: [] } });
+    expect(vm.readFailed).toBe(false);
   });
 
   it('keeps the failure when a result carries no data', () => {
-    const vm = { ...ctx(), loadError: true };
-    GoalsTime.apollo.goals.result.call(vm, { data: undefined });
-    expect(vm.loadError).toBe(true);
+    const vm = cascade({ readFailed: true });
+    GoalsCascadeContainer.apollo.goals.result.call(vm, { data: undefined });
+    expect(vm.readFailed).toBe(true);
   });
 
-  describe('statCount', () => {
+  it('keeps showing the goals we already have when a REFETCH fails', () => {
+    const withData = cascade({ readFailed: true, goals: [{ id: 'g1', period: 'day', goalItems: [] }] });
+    expect(GoalsCascadeContainer.computed.loadError.call(withData)).toBe(false);
+    expect(GoalCalendarContainer.computed.loadError.call(calendar({ readFailed: true, monthGoals: [{ id: 'g1' }] }))).toBe(false);
+  });
+
+  it('never lets the retry spinner stand in for a loading flag on the goals', () => {
+    const loading = { loadError: true, $apollo: { queries: { goals: { loading: true } } } };
+    expect(GoalsCascadeContainer.computed.retrying.call(loading)).toBe(true);
+    const healthy = { loadError: false, $apollo: { queries: { goals: { loading: true } } } };
+    expect(GoalsCascadeContainer.computed.retrying.call(healthy)).toBe(false);
+  });
+
+  describe('the ladder tallies', () => {
+    const built = (loadError) => buildCascade({
+      tab: 'day',
+      goals: [],
+      routines: [],
+      selectedDate: '12-09-2026',
+      today: '12-09-2026',
+      loadError,
+    });
+
     it('shows a dash instead of asserting zero after a failed load', () => {
-      expect(GoalsTime.methods.statCount.call({ loadError: true, allGoals: [] }, 0))
-        .toBe('—');
+      expect(built(true).ladder.map((step) => step.num)).toEqual(['—', '—', '—', '—', '—']);
     });
 
-    it('shows the real total when the load succeeded', () => {
-      expect(GoalsTime.methods.statCount.call({ loadError: false, allGoals: [] }, 0))
-        .toBe(0);
+    it('shows the real tallies when the load succeeded', () => {
+      expect(built(false).ladder.map((step) => step.num)).toEqual(['0/0', '0/0', '0/0', '0%', '0/0']);
     });
 
-    it('shows cached totals when a refetch fails', () => {
-      expect(GoalsTime.methods.statCount.call({ loadError: true, allGoals: [{ id: 'g1' }] }, 3))
-        .toBe(3);
+    it('shows the error screen instead of the empty one', () => {
+      expect(built(true).loadError).toBe(true);
+      expect(built(true).empty).toBe(false);
+      expect(built(false).empty).toBe(true);
     });
   });
 });
@@ -85,24 +116,28 @@ describe('Agents load error', () => {
   const ctx = (error, agents = []) => ({ $agent: { error, agents }, agents });
 
   it('reports a failed fetch as an error, not an empty list', () => {
-    expect(Agents.computed.loadError.call(ctx(new Error('Failed to fetch')))).toBe(true);
+    expect(AgentsListContainer.computed.loadError.call(ctx(new Error('Failed to fetch')))).toBe(true);
   });
 
   it('reports a genuinely empty list as empty', () => {
-    expect(Agents.computed.loadError.call(ctx(null))).toBe(false);
+    expect(AgentsListContainer.computed.loadError.call(ctx(null))).toBe(false);
   });
 
   it('keeps showing agents we already have when a refetch fails', () => {
-    expect(Agents.computed.loadError.call(ctx(new Error('boom'), [{ id: 'a1' }]))).toBe(false);
+    expect(AgentsListContainer.computed.loadError.call(ctx(new Error('boom'), [{ id: 'a1' }]))).toBe(false);
   });
 
-  describe('statCount', () => {
-    it('shows a dash instead of asserting zero after a failed load', () => {
-      expect(Agents.methods.statCount.call({ loadError: true }, 0)).toBe('—');
+  describe('stat tiles', () => {
+    // The dash itself is asserted on the rendered organism (AgentList.test.js and
+    // views/__tests__/agentsLoadErrorState.test.js). What belongs here is that the
+    // totals the tiles read are a real sum and never invented.
+    it('sums the runs it actually has', () => {
+      expect(agentTotals([{ successCount: 3, failureCount: 1 }]).runs).toBe(4);
     });
 
-    it('shows the real total when the load succeeded', () => {
-      expect(Agents.methods.statCount.call({ loadError: false }, 2)).toBe(2);
+    it('reports nothing as nothing, so the error branch is the only source of a dash', () => {
+      expect(agentTotals([]).runs).toBe(0);
+      expect(agentTotals([]).rate).toBe(0);
     });
   });
 });

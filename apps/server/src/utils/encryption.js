@@ -235,6 +235,7 @@ const ENCRYPTION_FIELDS = {
   motto: ['text'], // Encrypt motto text
   agent: ['name', 'lastResultBody', 'lastError'],
   agentEvent: ['value'],
+  routineChat: ['text'], // Encrypt chat bodies — same content class as goal items
 };
 
 module.exports = {

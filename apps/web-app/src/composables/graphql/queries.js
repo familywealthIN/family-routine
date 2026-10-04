@@ -280,37 +280,6 @@ export const GOALS_BY_GOAL_REF_QUERY = gql`
   }
 `;
 
-/**
- * Get optimized goals for calendar view
- * Used in: GoalsTime.vue
- */
-export const GOALS_OPTIMIZED_QUERY = gql`
-  query goalsOptimized($currentMonth: String) {
-    goalsOptimized(currentMonth: $currentMonth) {
-      id
-      date
-      period
-      goalItems {
-        id
-        body
-        progress
-        isComplete
-        isMilestone
-        tags
-        status
-        completedAt
-        taskRef
-        goalRef
-        subTasks {
-          id
-          body
-          isComplete
-        }
-      }
-    }
-  }
-`;
-
 // ============================================================================
 // USER/GROUP QUERIES
 // ============================================================================

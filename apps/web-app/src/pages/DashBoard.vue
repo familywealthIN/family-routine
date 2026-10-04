@@ -439,7 +439,7 @@ import {
   AtomToolbar,
   AtomToolbarTitle,
 } from '@routine-notes/ui/atoms';
-import { TIMES_UP_TIME, PROACTIVE_START_TIME, ONBOARDING_COMPLETE } from '../constants/settings';
+import { ONBOARDING_COMPLETE } from '../constants/settings';
 import { defaultGoalItem } from '../constants/goals';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import { MeasurementMixin } from '../utils/measurementMixins';
@@ -470,10 +470,9 @@ import GoalCreation from '../containers/GoalCreationContainer.vue';
 import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue';
 import MissedDayRecoveryContainer from '../containers/MissedDayRecoveryContainer.vue';
 import intelligentRefreshMixin from '../mixins/intelligentRefreshMixin';
+import { routinePassWaitMixin } from '../mixins/routinePassWaitMixin';
+import { dashboardContextMixin } from '../mixins/dashboardContextMixin';
 import { TimeFormatMixin } from '../utils/timeFormat';
-import { initDashboardCaching } from '../composables/useDashboardCaching';
-import { filterAreaProjectTags } from '../utils/dashboardCache';
-import { readAiSearchSettings } from '../utils/aiSearchSettings';
 
 function weekOfMonth(d) {
   const addFirstWeek = moment(d, 'DD-MM-YYYY')
@@ -492,7 +491,13 @@ function weekOfMonth(d) {
 
 export default {
   name: 'DashBoard',
-  mixins: [MeasurementMixin, intelligentRefreshMixin, TimeFormatMixin],
+  mixins: [
+    MeasurementMixin,
+    intelligentRefreshMixin,
+    TimeFormatMixin,
+    routinePassWaitMixin,
+    dashboardContextMixin,
+  ],
   components: {
     GoalList,
     VueMarkdown,
@@ -890,46 +895,6 @@ export default {
     }
   },
   methods: {
-    // Collect area/project tags for routines where the user has opted in
-    // to AI Search in either task mode (aiEnhancedTask) or goal mode
-    // (associateParentGoal). We only build context for those routines.
-    getAiEnabledRoutineTags() {
-      const routines = Array.isArray(this.$currentTaskList) && this.$currentTaskList.length
-        ? this.$currentTaskList
-        : this.tasklist;
-
-      if (!Array.isArray(routines) || routines.length === 0) {
-        return [];
-      }
-
-      const tags = routines.reduce((acc, routine) => {
-        const routineId = routine && routine.id;
-        const settings = readAiSearchSettings(routineId);
-        if (!settings.aiEnhancedTask && !settings.associateParentGoal) {
-          return acc;
-        }
-
-        const routineTags = Array.isArray(routine.tags) ? routine.tags : [];
-        if (routineTags.length > 0) {
-          acc.push(...routineTags);
-        }
-        return acc;
-      }, []);
-
-      return [...new Set(filterAreaProjectTags(tags))];
-    },
-
-    // Start dashboard caching for area/project tags drawn from
-    // AI-enabled routines only (task mode or goal mode).
-    startDashboardCaching() {
-      if (!this.$root.$data.email) return;
-
-      const tags = this.getAiEnabledRoutineTags();
-      if (tags.length === 0) return;
-
-      initDashboardCaching(this, { tags });
-    },
-
     // Handle dashboard caching progress updates
     handleDashboardCachingStatus({
       isCaching, progress, total, completed, currentTag,
@@ -2440,138 +2405,6 @@ export default {
             duration: 3000,
           });
         });
-    },
-    passedTime(item) {
-      // Guards, in order:
-      //  - `did`: without the routine document id the mutation 500s.
-      //  - pendingMutations: a tick for this task may be in flight. Reading
-      //    `item.ticked` while it is would mark a task the user completed ON
-      //    TIME as passed — permanently, server-side — which is the reported
-      //    "routine shows missed even though I ticked in time".
-      //  - `passedInFlight`: this runs from the `routineDate.tasklist` watcher,
-      //    and passRoutineItem's own `update()` writes the cache, which re-fires
-      //    that watcher. Unguarded, one app-open fired ~20 pass/wait mutations.
-      if (!this.did) return;
-      if (pendingMutations.has(`routine:${item.id}`)) return;
-      if (!this.passedInFlight) this.passedInFlight = {};
-      if (this.passedInFlight[item.id]) return;
-
-      if (!item.ticked) {
-        const timestamp = moment(item.time, 'HH:mm');
-        const exp = timestamp.diff(moment());
-        if (moment.duration(exp).asMinutes() < -TIMES_UP_TIME && !item.passed) {
-          // NOTE: no `item.passed = true` here. `item` is Apollo's normalized
-          // RoutineItem result object — assigning to it edits the cache's own
-          // memoized copy behind Apollo's back, so the store and what
-          // components read drift apart. The optimistic/real response below is
-          // the only thing allowed to change it.
-          this.passedInFlight[item.id] = true;
-          this.$apollo
-            .mutate({
-              mutation: gql`
-                mutation passRoutineItem(
-                  $id: ID!
-                  $taskId: String!
-                  $ticked: Boolean!
-                  $passed: Boolean!
-                ) {
-                  passRoutineItem(id: $id, taskId: $taskId, ticked: $ticked, passed: $passed) {
-                    id
-                    tasklist {
-                      id
-                      name
-                      ticked
-                      passed
-                      redeemed
-                      passedPoints
-                    }
-                  }
-                }
-              `,
-              variables: {
-                id: this.did,
-                taskId: item.id,
-                ticked: item.ticked,
-                passed: true,
-              },
-              // No `update` callback. The mutation returns RoutineItem entities
-              // by id, so Apollo normalizes `passed`/`ticked` into every query
-              // that holds them. The old callback both assigned to `item` (an
-              // Apollo result object) and ran query-level cache surgery on top
-              // — two extra writers for a fact the response already carries.
-            })
-            .catch(() => {
-              this.$notify({
-                title: 'Error',
-                text: 'An unexpected error occured',
-                group: 'notify',
-                type: 'error',
-                duration: 3000,
-              });
-            })
-            .finally(() => {
-              delete this.passedInFlight[item.id];
-            });
-        }
-      }
-    },
-    waitTime(item) {
-      // Same guards as passedTime — see the note there.
-      if (!this.did) return;
-      if (pendingMutations.has(`routine:${item.id}`)) return;
-      if (!this.waitInFlight) this.waitInFlight = {};
-      if (this.waitInFlight[item.id]) return;
-
-      if (!item.ticked) {
-        const timestamp = moment(item.time, 'HH:mm');
-        const exp = timestamp.diff(moment());
-        if (moment.duration(exp).asMinutes() < PROACTIVE_START_TIME && item.wait) {
-          this.waitInFlight[item.id] = true;
-          this.$apollo
-            .mutate({
-              mutation: gql`
-                mutation waitRoutineItem($id: ID!, $taskId: String!, $wait: Boolean!) {
-                  waitRoutineItem(id: $id, taskId: $taskId, wait: $wait) {
-                    id
-                    tasklist {
-                      id
-                      name
-                      wait
-                    }
-                  }
-                }
-              `,
-              variables: {
-                id: this.did,
-                taskId: item.id,
-                wait: false,
-              },
-              // The selection set now includes `id` on each task, so Apollo can
-              // normalize the response into RoutineItem:<id> instead of storing
-              // an unidentifiable list. That is what makes the manual cache
-              // write unnecessary — and its absence is why `wait` used to
-              // oscillate true/false/true across a burst of these mutations.
-            })
-            .catch(() => {
-              this.$notify({
-                title: 'Error',
-                text: 'An unexpected error occured',
-                group: 'notify',
-                type: 'error',
-                duration: 3000,
-              });
-            })
-            .finally(() => {
-              delete this.waitInFlight[item.id];
-            });
-        }
-      }
-    },
-    setPassedWait() {
-      Array.prototype.forEach.call(this.tasklist, (task) => {
-        this.passedTime(task);
-        this.waitTime(task);
-      });
     },
     countTotal(stimulus = 'D') {
       const tasklist = this.tasklist || [];

@@ -1,264 +1,139 @@
 <template>
-    <container-box transparent="true" :isLoading="isLoading" >
-      <atom-container fluid grid-list-lg>
-        <atom-layout row wrap class="mb-4">
-          <atom-flex d-flex xs7>
-            <h1>{{ progress && progress.progressStatement }}</h1>
-          </atom-flex>
-          <atom-flex d-flex xs5>
-            <div class="text-xs-right">
-              <atom-menu right offset-y>
-                <template v-slot:activator="{ on }">
-                  <atom-button small round color="primary" v-on="on" dark>{{ period }}</atom-button>
-                </template>
-                <atom-list>
-                  <atom-list-tile
-                    v-for="(item, index) in items"
-                    :key="index"
-                    @click="() => $router.push(`/progress/${item.title}`)"
-                  >
-                    <atom-list-tile-title>{{ item.title }}</atom-list-tile-title>
-                  </atom-list-tile>
-                </atom-list>
-              </atom-menu>
-            </div>
-          </atom-flex>
-        </atom-layout>
-         <atom-sheet class="transparent">
-            <atom-sparkline
-              :key="String(avg)"
-              :smooth="16"
-              :gradient="['#f72047', '#ffd200', '#1feaea']"
-              :line-width="3"
-              :value="graphArray || []"
-              auto-draw
-              stroke-linecap="round"
-            ></atom-sparkline>
-          </atom-sheet>
-        <atom-layout row wrap>
-          <atom-flex d-flex xs7>
-            <radar-card
-              :title="getCard('radar-chart').name"
-              :details="getCard('radar-chart').values"
-            ></radar-card>
-          </atom-flex>
-          <atom-flex d-flex xs5>
-            <atom-layout row wrap>
-              <atom-flex xs12 d-flex>
-                <numeric-card :details="getCard('efficiency')" ></numeric-card>
-              </atom-flex>
-              <atom-flex xs12 d-flex>
-                <numeric-card :details="getCard('on-track')"></numeric-card>
-              </atom-flex>
-            </atom-layout>
-          </atom-flex>
-          <atom-flex d-flex xs12>
-            <tasks-completed-card :details="getCard('task-activities')"></tasks-completed-card>
-          </atom-flex>
-          <atom-flex d-flex xs12 sm6>
-            <table-card :details="getCard('good')"></table-card>
-          </atom-flex>
-          <atom-flex d-flex xs12 sm6>
-            <table-card :details="getCard('bad')"></table-card>
-          </atom-flex>
-          <atom-flex d-flex xs12>
-            <atom-card>
-              <atom-list>
-                <atom-list-tile
-                  avatar
-                  @click="$router.push('/history')"
-                >
-                  <atom-list-tile-content>
-                    <atom-list-tile-title>
-                      View your routine history
-                    </atom-list-tile-title>
-                  </atom-list-tile-content>
+  <AppShellContainer
+    active="progress"
+    title="Progress"
+    :subtitle="rangeLabel"
+    @navigate="onNavigate"
+    @sign-out="onSignOut"
+  >
+    <!--
+      Tablet and desktop put the Day · Week · Month · Year switch in the header
+      beside the title, at a fixed 340px (Progress.dc.html § GT/GD). That row is
+      the shell's, so it is filled through the shell's slot; on the phone the
+      switch is the first card in the body and ProgressReport draws it there.
+    -->
+    <template v-if="shell !== 'phone'" v-slot:header-actions>
+      <SlidingSwitch
+        class="progress-page__switch"
+        :segments="periods"
+        :value="safePeriod"
+        @change="goPeriod"
+      />
+    </template>
 
-                  <atom-list-tile-action>
-                    <atom-icon>chevron_right</atom-icon>
-                  </atom-list-tile-action>
-                </atom-list-tile>
-              </atom-list>
-            </atom-card>
-          </atom-flex>
-        </atom-layout>
-      </atom-container>
-    </container-box>
+    <ProgressReportContainer
+      :period="period"
+      :shell="shell"
+      :route-for="routineHref"
+      @change-period="goPeriod"
+      @open-routine="openRoutine"
+      @open-history="goTo(HISTORY_ROUTE)"
+    />
+  </AppShellContainer>
 </template>
-<script>
-import moment from 'moment';
-import gql from 'graphql-tag';
 
-import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
-import NumericCard from '@routine-notes/ui/atoms/NumericCard/NumericCard.vue';
-import RadarCard from '@routine-notes/ui/atoms/RadarCard/RadarCard.vue';
-import TableCard from '@routine-notes/ui/molecules/TableCard/TableCard.vue';
-import TasksCompletedCard from '@routine-notes/ui/atoms/TasksCompletedCard/TasksCompletedCard.vue';
+<script>
+/**
+ * /progress and /progress/:period, rebuilt to packages/design/Progress.dc.html.
+ *
+ * The page composes two containers and owns nothing else: the route (which
+ * period is showing), the shell breakpoint, and where a row navigates to.
+ *
+ * Why the attention rows deep-link here and not in the organism: the mock sends
+ * every "Needs attention" row to the generic Routines page, but the routine's id
+ * is already in the card's data (docs/redesign/chassis.md § "Things the mocks
+ * get wrong on purpose"). `/agenda/tree/:selectedTaskRef` is the route that
+ * exists today for opening ONE routine item - it lands on that routine with its
+ * goals and timeline. The redesigned Routines editor has no per-routine route
+ * yet; when it gets one, `routineHref` is the single line to change.
+ */
+import moment from 'moment';
+import SlidingSwitch from '@routine-notes/ui/molecules/SlidingSwitch/SlidingSwitch.vue';
+import { resolveShell } from '@routine-notes/ui/constants/navigation';
+import { PROGRESS_PERIODS } from '@routine-notes/ui/constants/progress';
+import AppShellContainer from '../containers/AppShellContainer.vue';
+import ProgressReportContainer from '../containers/ProgressReportContainer.vue';
+import { signOut } from '../utils/signOut';
 import {
-  AtomButton,
-  AtomCard,
-  AtomContainer,
-  AtomFlex,
-  AtomIcon,
-  AtomLayout,
-  AtomList,
-  AtomListTile,
-  AtomListTileAction,
-  AtomListTileContent,
-  AtomListTileTitle,
-  AtomMenu,
-  AtomSheet,
-  AtomSparkline,
-} from '@routine-notes/ui/atoms';
+  DATE_FORMAT, normalisePeriod, periodWindow, rangeLabel,
+} from '../utils/progressReport';
+
+/** Where a routine row opens. One place, so one line changes when /settings grows one. */
+export const ROUTINE_ROUTE = '/agenda/tree';
+export const HISTORY_ROUTE = '/history';
+export const LOGOUT_KEY = 'logout';
 
 export default {
-  components: {
-    ContainerBox,
-    RadarCard,
-    NumericCard,
-    TasksCompletedCard,
-    TableCard,
-    AtomButton,
-    AtomCard,
-    AtomContainer,
-    AtomFlex,
-    AtomIcon,
-    AtomLayout,
-    AtomList,
-    AtomListTile,
-    AtomListTileAction,
-    AtomListTileContent,
-    AtomListTileTitle,
-    AtomMenu,
-    AtomSheet,
-    AtomSparkline,
+  name: 'ProgressTime',
+
+  components: { AppShellContainer, ProgressReportContainer, SlidingSwitch },
+
+  props: {
+    /** From the route: `/progress/:period`, defaulted to week by views/Progress.vue. */
+    period: { type: String, default: 'week' },
   },
-  props: ['period'],
-  apollo: {
-    routineSevenDays: {
-      query: gql`
-        query routineSevenDays {
-          routineSevenDays {
-            id
-            date
-            tasklist {
-              name
-              time
-              points
-              ticked
-              passed
-            }
-          }
-        }
-      `,
-    },
-    progress: {
-      query: gql`
-        query getProgress($period: String!, $startDate: String!, $endDate: String!) {
-          getProgress(period: $period, startDate: $startDate, endDate: $endDate) {
-            progressStatement
-            period
-            startDate
-            endDate
-            cards {
-              id
-              name
-              value
-              description
-              values {
-                name
-                value
-                total
-              }
-            }
-          }
-        }
-      `,
-      update(data) {
-        this.isLoading = false;
-        return data.getProgress;
-      },
-      variables() {
-        return {
-          period: this.period,
-          startDate: this.getStartOf(this.period),
-          endDate: this.date,
-        };
-      },
-    },
-  },
+
   data() {
     return {
-      isLoading: true,
-      show: true,
-      buttonLoading: false,
-      date: moment().format('DD-MM-YYYY'),
-      items: [
-        { title: 'day' },
-        { title: 'week' },
-        { title: 'month' },
-        { title: 'year' },
-      ],
-      graphArray: [],
-      routineSevenDays: [],
+      periods: PROGRESS_PERIODS,
+      HISTORY_ROUTE,
+      today: moment().format(DATE_FORMAT),
     };
   },
-  methods: {
-    getCard(cardId) {
-      if (!this.progress || !this.progress.cards) {
-        return {
-          id: cardId,
-          name: 'Loading...',
-          value: 0,
-        };
-      }
 
-      const foundCard = this.progress.cards.find((card) => card && card.id === cardId);
-      return foundCard || {
-        id: cardId,
-        name: 'No Data',
-        value: 0,
-      };
-    },
-    capitalize(str) {
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    },
-    getStartOf(p) {
-      return moment(this.date, 'DD-MM-YYYY').startOf(p).format('DD-MM-YYYY');
-    },
-    countTotal(tasklist) {
-      return tasklist.reduce((total, num) => {
-        if (num.ticked) {
-          return total + num.points;
-        }
-        return total;
-      }, 0);
-    },
-  },
-  watch: {
-    period() {
-      this.isLoading = true;
-    },
-  },
   computed: {
-    avg() {
-      const sum = this.routineSevenDays.reduce(
-        (acc, cur) => acc + this.countTotal(cur.tasklist), 0,
-      );
-      // eslint-disable-next-line vue/no-side-effects-in-computed-properties
-      this.graphArray = this.routineSevenDays.map((routine) => this.countTotal(routine.tasklist));
-      const { length } = this.routineSevenDays;
+    /** The one breakpoint rule — `constants/navigation.resolveShell`. */
+    shell() {
+      return resolveShell(this.$vuetify && this.$vuetify.breakpoint);
+    },
+    safePeriod() {
+      return normalisePeriod(this.period);
+    },
+    /** The shell's subtitle: "Week of 6 – 12 September". */
+    rangeLabel() {
+      const { startDate, endDate } = periodWindow(this.safePeriod, this.today);
+      return rangeLabel(this.safePeriod, startDate, endDate);
+    },
+  },
 
-      if (!sum && !length) return 0;
-
-      return Math.ceil(sum / length);
+  methods: {
+    goTo(route) {
+      if (!route || this.$route.path === route) return;
+      this.$router.push(route).catch(() => {});
+    },
+    goPeriod(key) {
+      this.goTo(`/progress/${normalisePeriod(key)}`);
+    },
+    /** The href the attention anchor carries, so a middle-click still works. */
+    routineHref(row) {
+      if (!row || !row.id) return '';
+      return `${ROUTINE_ROUTE}/${row.id}`;
+    },
+    openRoutine(id) {
+      const route = this.routineHref({ id });
+      if (route) this.goTo(route);
+    },
+    onNavigate(key, item) {
+      if (key === LOGOUT_KEY) {
+        this.onSignOut();
+        return;
+      }
+      this.goTo(item && item.route);
+    },
+    onSignOut() {
+      // The same path the legacy drawer takes — see utils/signOut.js.
+      signOut(this);
     },
   },
 };
 </script>
 
-<style scoped>
-.v-list__tile__title {
-  text-transform: capitalize;
+<style>
+/* Root-class prefixed: this page renders its own shell, so nothing here may
+   leak into the legacy toolbar layouts (see MEMORY: web-app CSS lives inline in
+   organisms). */
+.progress-page__switch {
+  width: 340px;
+  flex-shrink: 0;
 }
 </style>

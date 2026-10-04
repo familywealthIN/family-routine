@@ -42,20 +42,50 @@ const AgentSchema = new mongoose.Schema({
 AgentSchema.index({ email: 1, taskRef: 1 }, { unique: true });
 AgentSchema.index({ email: 1, executionStatus: 1 });
 
+// Both helpers tolerate mixed at-rest states: `encryptOnce` leaves a value
+// that already decrypts with our key alone (so a re-save never stacks a second
+// layer), and `decryptFully` returns plaintext (e.g. lastResultBody written by
+// an older findOneAndUpdate path) untouched.
+const MAX_LAYERS = 3;
+
+const encryptOnce = (value) => {
+  if (!value || typeof value !== 'string') return value;
+  return encryption.decrypt(value) !== value ? value : encryption.encrypt(value);
+};
+
+const decryptFully = (value) => {
+  let current = value;
+  for (let i = 0; i < MAX_LAYERS; i += 1) {
+    const next = encryption.decrypt(current);
+    if (next === current) break;
+    current = next;
+  }
+  return current;
+};
+
+const mapFields = (obj, fields, fn) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  const out = { ...obj };
+  fields.forEach((field) => {
+    if (out[field]) out[field] = fn(out[field]);
+  });
+  return out;
+};
+
+const toPlain = (doc) => (doc && doc.toObject ? doc.toObject() : doc);
+
 const encryptEventConfig = (event) => {
   if (!event) return event;
-  const plain = event.toObject ? event.toObject() : event;
-  return encryption.encryptObject(plain, ENCRYPTION_FIELDS.agentEvent);
+  return mapFields(toPlain(event), ENCRYPTION_FIELDS.agentEvent, encryptOnce);
 };
 
 const decryptEventConfig = (event) => {
   if (!event) return event;
-  const plain = event.toObject ? event.toObject() : event;
-  return encryption.decryptObject(plain, ENCRYPTION_FIELDS.agentEvent);
+  return mapFields(toPlain(event), ENCRYPTION_FIELDS.agentEvent, decryptFully);
 };
 
-AgentSchema.pre('save', function encryptAgent(next) {
-  const encrypted = encryption.encryptObject(this.toObject(), ENCRYPTION_FIELDS.agent);
+const encryptAgent = function encryptAgent(next) {
+  const encrypted = mapFields(this.toObject(), ENCRYPTION_FIELDS.agent, encryptOnce);
   Object.assign(this, encrypted);
   if (this.startEvent) {
     this.startEvent = encryptEventConfig(this.startEvent);
@@ -64,12 +94,39 @@ AgentSchema.pre('save', function encryptAgent(next) {
     this.endEvent = encryptEventConfig(this.endEvent);
   }
   next();
-});
+};
+
+AgentSchema.pre('save', encryptAgent);
+
+// findOneAndUpdate (recordAgentExecution) skips save hooks, so lastResultBody /
+// lastError used to be written in plaintext. Covers bare and $set updates,
+// whole event objects and dotted `startEvent.value` paths.
+const encryptUpdate = (update) => {
+  if (!update || typeof update !== 'object') return;
+  ENCRYPTION_FIELDS.agent.forEach((field) => {
+    if (update[field]) update[field] = encryptOnce(update[field]);
+  });
+  ['startEvent', 'endEvent'].forEach((event) => {
+    if (update[event]) update[event] = encryptEventConfig(update[event]);
+    ENCRYPTION_FIELDS.agentEvent.forEach((field) => {
+      const path = `${event}.${field}`;
+      if (update[path]) update[path] = encryptOnce(update[path]);
+    });
+  });
+};
+
+const encryptAgentUpdate = function encryptAgentUpdate(next) {
+  const update = this.getUpdate();
+  encryptUpdate(update);
+  if (update) encryptUpdate(update.$set);
+  next();
+};
+
+AgentSchema.pre('findOneAndUpdate', encryptAgentUpdate);
 
 const decryptAgentDoc = (doc) => {
   if (!doc) return doc;
-  const plain = doc.toObject ? doc.toObject() : doc;
-  const decrypted = encryption.decryptObject(plain, ENCRYPTION_FIELDS.agent);
+  const decrypted = mapFields(toPlain(doc), ENCRYPTION_FIELDS.agent, decryptFully);
   if (decrypted.startEvent) {
     decrypted.startEvent = decryptEventConfig(decrypted.startEvent);
   }
@@ -80,14 +137,19 @@ const decryptAgentDoc = (doc) => {
   return doc;
 };
 
-AgentSchema.post(['find', 'findOne', 'findOneAndUpdate'], (docs) => {
+const decryptAgentDocs = (docs) => {
   if (!docs) return;
   if (Array.isArray(docs)) {
     docs.forEach(decryptAgentDoc);
   } else {
     decryptAgentDoc(docs);
   }
-});
+};
+
+AgentSchema.post(['find', 'findOne', 'findOneAndUpdate', 'findOneAndRemove', 'findOneAndDelete'], decryptAgentDocs);
+// save() leaves the in-memory doc encrypted; decrypt it so addAgent /
+// updateAgent return plaintext instead of ciphertext.
+AgentSchema.post('save', decryptAgentDocs);
 
 const AgentEventConfigType = new GraphQLObjectType({
   name: 'AgentEventConfig',
@@ -134,6 +196,9 @@ module.exports = {
   AgentType,
   AgentEventConfigType,
   AgentEventConfigInput,
+  encryptAgent,
+  encryptAgentUpdate,
+  decryptAgentDocs,
   EVENT_KINDS,
   STATUSES,
   RESULT_TYPES,

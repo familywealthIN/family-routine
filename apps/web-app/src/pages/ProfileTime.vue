@@ -1,1077 +1,346 @@
-<script>
-/* eslint-disable max-len */
-</script>
 <template>
-  <container-box>
-    <atom-card-text class="px-0">
-    <atom-alert
-      :value="true"
-      type="warning"
-    >
-      Most settings here are READ ONLY. You can change your Time Zone and Time Format to match your scheduling.
-    </atom-alert>
-    <atom-list
-        subheader
-        three-line
-    >
-        <atom-subheader>Time</atom-subheader>
-        <atom-list-tile>
-        <atom-list-tile-content>
-            <atom-list-tile-title>Start of the week</atom-list-tile-title>
-            <atom-list-tile-sub-title>
-                Select the day to start week
-            </atom-list-tile-sub-title>
-        </atom-list-tile-content>
-        <atom-list-tile-action>
-            <atom-btn-toggle disabled v-model="startOfWeek">
-              <atom-button
-                v-for="option in weekStartOptions"
-                :key="option.value"
-                flat
-                :value="option.value"
-              >
-                {{ option.label }}
-              </atom-button>
-            </atom-btn-toggle>
-        </atom-list-tile-action>
-        </atom-list-tile>
-        <atom-list-tile>
-        <atom-list-tile-content>
-            <atom-list-tile-title>Time zone</atom-list-tile-title>
-            <atom-list-tile-sub-title>
-                Current time zone for app.
-            </atom-list-tile-sub-title>
-        </atom-list-tile-content>
-        <atom-list-tile-action>
-            <select
-              name="timezone_offset"
-              id="timezone-offset"
-              :disabled="savingTimezone"
-              style="max-width: 260px; border: 1px solid #000; padding: 5px 10px; border-radius:3px;"
-              :value="userTimezone"
-              @change="onTimezoneChange($event.target.value)"
-            >
-              <option
-                v-for="timezone in timezoneOptions"
-                :key="timezone.value"
-                :value="timezone.value"
-                :selected="timezone.value === userTimezone"
-              >
-                {{ timezone.label }}
-              </option>
-            </select>
-        </atom-list-tile-action>
-        </atom-list-tile>
-        <atom-list-tile>
-        <atom-list-tile-content>
-            <atom-list-tile-title>Time Format</atom-list-tile-title>
-            <atom-list-tile-sub-title>
-                Choose between 12-hour (AM/PM) or 24-hour time format for dashboard display.
-            </atom-list-tile-sub-title>
-        </atom-list-tile-content>
-        <atom-list-tile-action>
-            <atom-btn-toggle v-model="timeFormat" @change="saveTimeFormat">
-              <atom-button
-                flat
-                value="12"
-              >
-                12
-              </atom-button>
-              <atom-button
-                flat
-                value="24"
-              >
-                24
-              </atom-button>
-            </atom-btn-toggle>
-        </atom-list-tile-action>
-        </atom-list-tile>
-    </atom-list>
-    <atom-divider></atom-divider>
-    <atom-list
-        subheader
-        three-line
-    >
-        <atom-subheader>Rate</atom-subheader>
-        <atom-list-tile>
-            <atom-list-tile-content>
-                <atom-list-tile-title>Routine Discipline</atom-list-tile-title>
-                <atom-list-tile-sub-title>
-                    Maximum time of a routine item.
-                </atom-list-tile-sub-title>
-            </atom-list-tile-content>
-            <atom-list-tile-action>
-                <atom-text-field
-                    label="Outline"
-                    single-line
-                    outline
-                    readonly
-                    :value="profileSettings.routineDiscipline"
-                ></atom-text-field>
-            </atom-list-tile-action>
-        </atom-list-tile>
-        <atom-list-tile>
-            <atom-list-tile-content>
-                <atom-list-tile-title>Task Kinetics</atom-list-tile-title>
-                <atom-list-tile-sub-title>
-                    The rate at which task can be performed. The unit is in hours.
-                </atom-list-tile-sub-title>
-            </atom-list-tile-content>
-            <atom-list-tile-action>
-                <atom-text-field
-                    label="Outline"
-                    single-line
-                    outline
-                    readonly
-                    :value="profileSettings.taskKinetics"
-                ></atom-text-field>
-            </atom-list-tile-action>
-        </atom-list-tile>
-        <atom-list-tile>
-            <atom-list-tile-content>
-                <atom-list-tile-title>Goal Geniuses</atom-list-tile-title>
-                <atom-list-tile-sub-title>
-                    Percent allocation of a period to award points.
-                </atom-list-tile-sub-title>
-            </atom-list-tile-content>
-            <atom-list-tile-action>
-                <atom-text-field
-                    label="Outline"
-                    single-line
-                    outline
-                    readonly
-                    :value="profileSettings.goalGeniuses"
-                ></atom-text-field>
-            </atom-list-tile-action>
-        </atom-list-tile>
-    </atom-list>
-    <atom-divider></atom-divider>
-    <atom-list
-        subheader
-        three-line
-    >
-        <atom-subheader>Goal Auto Check Threshold</atom-subheader>
-        <atom-list-tile>
-            <atom-list-tile-content>
-                <atom-list-tile-title>Month</atom-list-tile-title>
-                <atom-list-tile-sub-title>
-                    Number of months to be completed to auto check year goal.
-                </atom-list-tile-sub-title>
-            </atom-list-tile-content>
-            <atom-list-tile-action>
-                <atom-text-field
-                    label="Outline"
-                    single-line
-                    outline
-                    readonly
-                    :value="profileSettings.autoCheckThreshold.month"
-                ></atom-text-field>
-            </atom-list-tile-action>
-        </atom-list-tile>
-        <atom-list-tile>
-            <atom-list-tile-content>
-                <atom-list-tile-title>Week</atom-list-tile-title>
-                <atom-list-tile-sub-title>
-                    Number of weeks to be completed to auto check month goal.
-                </atom-list-tile-sub-title>
-            </atom-list-tile-content>
-            <atom-list-tile-action>
-                <atom-text-field
-                    label="Outline"
-                    single-line
-                    outline
-                    readonly
-                    :value="profileSettings.autoCheckThreshold.week"
-                ></atom-text-field>
-            </atom-list-tile-action>
-        </atom-list-tile>
-        <atom-list-tile>
-            <atom-list-tile-content>
-                <atom-list-tile-title>Day</atom-list-tile-title>
-                <atom-list-tile-sub-title>
-                    Number of days to be completed to auto check week goal.
-                </atom-list-tile-sub-title>
-            </atom-list-tile-content>
-            <atom-list-tile-action>
-                <atom-text-field
-                    label="Outline"
-                    single-line
-                    outline
-                    readonly
-                    :value="profileSettings.autoCheckThreshold.day"
-                ></atom-text-field>
-            </atom-list-tile-action>
-        </atom-list-tile>
-    </atom-list>
+  <app-shell-container
+    active="profile"
+    title="Profile"
+    :subtitle="subLabel"
+    @navigate="onNavigate"
+    @sign-out="onSignOut"
+  >
+    <!-- The one read every card below derives from. Renderless. -->
+    <user-profile-container
+      ref="profile"
+      @profile="onProfile"
+      @failed="onProfileFailed"
+    />
 
-    <!-- API Integration Section -->
-    <atom-divider class="my-4"></atom-divider>
+    <div class="rn-profile" :class="`rn-profile--${shell}`" data-testid="profile-page">
+      <!--
+        Identity is the FIRST card on the phone and the top of the right-hand
+        column on tablet / desktop (`Profile and About.dc.html` § PP vs PT/PD).
+        Two mutually exclusive placements of one component, because the two
+        orderings are genuinely different — a CSS `order` trick would have to
+        reorder the two columns as a unit, which is not what the design does.
+      -->
+      <profile-identity-card
+        v-if="isPhone"
+        class="rn-profile__card"
+        v-bind="identity"
+        @sign-out="onSignOut"
+      />
 
-    <atom-alert
-      :value="true"
-      type="info"
-      class="my-4"
-    >
-      <strong>API Integration</strong> - Use these credentials to access the Routine Notes API via MCP
-    </atom-alert>
+      <div class="rn-profile__main">
+        <profile-time-container
+          class="rn-profile__card"
+          :timezone="profile.timezone"
+          :loaded="profile.loaded"
+          :failed="profileFailed"
+          @saved="onTimezoneSaved"
+          @failed="onSaveFailed"
+          @format-changed="onFormatChanged"
+          @changed="refreshProfile"
+        />
 
-    <!-- OAuth Credentials Section -->
-    <atom-list
-        subheader
-        three-line
-    >
-        <atom-subheader>
-          OAuth Credentials
-          <atom-chip v-if="oauthConnected" color="success" text-color="white" small class="ml-2">
-            <atom-icon left small>check_circle</atom-icon>
-            Connected
-          </atom-chip>
-        </atom-subheader>
+        <profile-rates-card class="rn-profile__card" />
+      </div>
 
-        <atom-list-tile>
-          <atom-list-tile-content>
-              <atom-list-tile-title>Server URL</atom-list-tile-title>
-              <atom-list-tile-sub-title>
-                  Use this URL with any MCP client to access the Routine Notes API
-              </atom-list-tile-sub-title>
-          </atom-list-tile-content>
-          <atom-list-tile-action class="oauth-field-action">
-              <atom-text-field
-                  label="Server URL"
-                  readonly
-                  :value="mcpServerUrl"
-                  append-icon="content_copy"
-                  @click:append="copyToClipboard(mcpServerUrl)"
-              ></atom-text-field>
-          </atom-list-tile-action>
-        </atom-list-tile>
+      <div class="rn-profile__side">
+        <profile-identity-card
+          v-if="!isPhone"
+          class="rn-profile__card"
+          v-bind="identity"
+          @sign-out="onSignOut"
+        />
 
-        <atom-list-tile>
-          <atom-list-tile-content>
-              <atom-list-tile-title>OAuth Client ID</atom-list-tile-title>
-              <atom-list-tile-sub-title>
-                  Use this Client ID for all platform integrations
-              </atom-list-tile-sub-title>
-          </atom-list-tile-content>
-          <atom-list-tile-action class="oauth-field-action">
-              <atom-text-field
-                  label="Client ID"
-                  readonly
-                  value="routine-notes-mcp"
-                  append-icon="content_copy"
-                  @click:append="copyToClipboard('routine-notes-mcp')"
-              ></atom-text-field>
-          </atom-list-tile-action>
-        </atom-list-tile>
+        <connect-ai-container
+          class="rn-profile__card"
+          :connected="profile.oauthConnected"
+          @copied="onCopied"
+          @copy-failed="onCopyFailed"
+        />
 
-        <atom-list-tile>
-          <atom-list-tile-content>
-              <atom-list-tile-title>OAuth Client Secret</atom-list-tile-title>
-              <atom-list-tile-sub-title>
-                  Keep this secret secure. You'll need it to configure integrations.
-              </atom-list-tile-sub-title>
-          </atom-list-tile-content>
-          <atom-list-tile-action class="oauth-field-action">
-              <atom-text-field
-                  label="Client Secret"
-                  readonly
-                  :value="oauthClientSecret"
-                  :type="showOAuthSecret ? 'text' : 'password'"
-              >
-                <template v-slot:append>
-                  <atom-button
-                    icon
-                    @click="showOAuthSecret = !showOAuthSecret"
-                    title="Toggle visibility"
-                    class="mr-1"
-                  >
-                    <atom-icon>{{ showOAuthSecret ? 'visibility_off' : 'visibility' }}</atom-icon>
-                  </atom-button>
-                  <atom-button
-                    icon
-                    @click="copyToClipboard(oauthClientSecret)"
-                    title="Copy to clipboard"
-                  >
-                    <atom-icon>content_copy</atom-icon>
-                  </atom-button>
-                </template>
-              </atom-text-field>
-          </atom-list-tile-action>
-        </atom-list-tile>
-    </atom-list>
+        <api-key-container
+          class="rn-profile__card"
+          :api-key="profile.apiKey"
+          @generated="onKeyGenerated"
+          @failed="onKeyFailed"
+          @copied="onCopied"
+          @copy-failed="onCopyFailed"
+          @changed="refreshProfile"
+        />
 
-    <atom-divider></atom-divider>
+        <account-delete-container
+          :open="deleteOpen"
+          :shell="shell"
+          @open="deleteOpen = true"
+          @close="deleteOpen = false"
+          @deleted="onAccountDeleted"
+          @failed="onDeleteFailed"
+        />
+      </div>
+    </div>
 
-    <!-- Platform Setup Guides Tabs -->
-    <atom-list
-        subheader
-        three-line
-    >
-        <atom-subheader>Platform Integration Guides</atom-subheader>
-    </atom-list>
-
-    <!-- Tabs Section (outside list for proper rendering) -->
-    <atom-card flat class="platform-tabs-card no-shadow">
-      <atom-tabs v-model="oauthPlatformTab">
-        <atom-tab>
-          <atom-icon left>chat</atom-icon>
-          ChatGPT
-        </atom-tab>
-        <atom-tab>
-          <atom-icon left>settings_input_component</atom-icon>
-          n8n
-        </atom-tab>
-        <atom-tab>
-          <atom-icon left>stars</atom-icon>
-          Gemini
-        </atom-tab>
-        <atom-tab>
-          <atom-icon left>search</atom-icon>
-          Perplexity
-        </atom-tab>
-      </atom-tabs>
-
-                <atom-tabs-items v-model="oauthPlatformTab">
-                  <!-- ChatGPT Tab -->
-                  <atom-tab-item>
-                    <atom-card flat class="no-shadow">
-                      <atom-card-text class="no-shadow">
-                        <atom-alert type="info" outlined dense class="mb-3">
-                          <strong>ChatGPT MCP Integration</strong>
-                        </atom-alert>
-
-                        <div class="mb-3">
-                          <strong>Prerequisites:</strong>
-                          <ul style="margin-left: 20px;">
-                            <li>ChatGPT Plus or Team subscription</li>
-                            <li>Access to Beta features</li>
-                          </ul>
-                        </div>
-
-                        <div>
-                          <strong>Setup Steps:</strong>
-                          <ol style="margin-left: 20px; margin-top: 8px;">
-                            <li>Open <strong>ChatGPT</strong></li>
-                            <li>Click your profile → <strong>Settings</strong></li>
-                            <li>Navigate to <strong>Beta Features</strong></li>
-                            <li>Find <strong>MCP Servers</strong> section</li>
-                            <li>Click <strong>Add MCP Server</strong></li>
-                            <li>Enter the <strong>Server URL</strong> from above</li>
-                            <li>Enter <strong>Client ID</strong>: <code>routine-notes-mcp</code></li>
-                            <li>Enter <strong>Client Secret</strong> from above</li>
-                            <li>Click <strong>Authorize</strong></li>
-                            <li>You'll be redirected to this app - click <strong>Authorize</strong> again</li>
-                            <li>✅ Connection complete!</li>
-                          </ol>
-                        </div>
-
-                        <atom-divider class="my-3"></atom-divider>
-
-                        <div class="caption grey--text">
-                          <atom-icon small left>info</atom-icon>
-                          After setup, you can ask ChatGPT to access your routines, goals, and tasks.
-                        </div>
-                      </atom-card-text>
-                    </atom-card>
-                  </atom-tab-item>
-
-                  <!-- n8n Tab -->
-                  <atom-tab-item>
-                    <atom-card flat class="no-shadow">
-                      <atom-card-text>
-                        <atom-alert type="info" outlined dense class="mb-3">
-                          <strong>n8n Workflow Automation</strong>
-                        </atom-alert>
-
-                        <div class="mb-3">
-                          <strong>Prerequisites:</strong>
-                          <ul style="margin-left: 20px;">
-                            <li>n8n instance (cloud or self-hosted)</li>
-                            <li>OAuth2 credentials node support</li>
-                          </ul>
-                        </div>
-
-                        <div>
-                          <strong>Setup Steps:</strong>
-                          <ol style="margin-left: 20px; margin-top: 8px;">
-                            <li>Open your <strong>n8n</strong> instance</li>
-                            <li>Go to <strong>Credentials</strong> section</li>
-                            <li>Click <strong>New Credential</strong></li>
-                            <li>Select <strong>OAuth2 API</strong></li>
-                            <li>Configure the credential:
-                              <ul style="margin-left: 20px; margin-top: 4px;">
-                                <li><strong>Grant Type:</strong> Authorization Code</li>
-                                <li><strong>Authorization URL:</strong> <code>{{ mcpServerUrl }}/oauth/authorize</code></li>
-                                <li><strong>Access Token URL:</strong> <code>{{ mcpServerUrl }}/oauth/token</code></li>
-                                <li><strong>Client ID:</strong> <code>routine-notes-mcp</code></li>
-                                <li><strong>Client Secret:</strong> (paste from above)</li>
-                                <li><strong>Scope:</strong> <code>read write</code></li>
-                              </ul>
-                            </li>
-                            <li>Click <strong>Connect my account</strong></li>
-                            <li>Authorize when redirected to this app</li>
-                            <li>Use <strong>HTTP Request</strong> node with this credential</li>
-                            <li>Make requests to: <code>{{ mcpServerUrl }}/call</code></li>
-                          </ol>
-                        </div>
-
-                        <atom-divider class="my-3"></atom-divider>
-
-                        <div class="caption grey--text">
-                          <atom-icon small left>info</atom-icon>
-                          Use the HTTP Request node to query your routines via GraphQL or call MCP tools.
-                        </div>
-                      </atom-card-text>
-                    </atom-card>
-                  </atom-tab-item>
-
-                  <!-- Gemini Tab -->
-                  <atom-tab-item>
-                    <atom-card flat class="no-shadow">
-                      <atom-card-text>
-                        <atom-alert type="info" outlined dense class="mb-3">
-                          <strong>Google Gemini Integration</strong>
-                        </atom-alert>
-
-                        <div class="mb-3">
-                          <strong>Prerequisites:</strong>
-                          <ul style="margin-left: 20px;">
-                            <li>Google Gemini account</li>
-                            <li>Access to Extensions/Integrations (when available)</li>
-                          </ul>
-                        </div>
-
-                        <div>
-                          <strong>Setup Steps:</strong>
-                          <ol style="margin-left: 20px; margin-top: 8px;">
-                            <li>Open <strong>Google Gemini</strong></li>
-                            <li>Navigate to <strong>Settings</strong></li>
-                            <li>Find <strong>Extensions</strong> or <strong>Connected Apps</strong></li>
-                            <li>Click <strong>Add Extension</strong> or <strong>Connect App</strong></li>
-                            <li>Select <strong>Custom OAuth App</strong> or <strong>MCP Server</strong></li>
-                            <li>Enter configuration:
-                              <ul style="margin-left: 20px; margin-top: 4px;">
-                                <li><strong>Server URL:</strong> (paste from above)</li>
-                                <li><strong>Client ID:</strong> <code>routine-notes-mcp</code></li>
-                                <li><strong>Client Secret:</strong> (paste from above)</li>
-                              </ul>
-                            </li>
-                            <li>Click <strong>Connect</strong></li>
-                            <li>Authorize when prompted</li>
-                            <li>✅ Integration active!</li>
-                          </ol>
-                        </div>
-
-                        <atom-divider class="my-3"></atom-divider>
-
-                        <div class="caption grey--text">
-                          <atom-icon small left>info</atom-icon>
-                          Note: Gemini's MCP support may vary. Check Google's documentation for latest features.
-                        </div>
-                      </atom-card-text>
-                    </atom-card>
-                  </atom-tab-item>
-
-                  <!-- Perplexity Tab -->
-                  <atom-tab-item>
-                    <atom-card flat class="no-shadow">
-                      <atom-card-text>
-                        <atom-alert type="info" outlined dense class="mb-3">
-                          <strong>Perplexity AI Integration</strong>
-                        </atom-alert>
-
-                        <div class="mb-3">
-                          <strong>Prerequisites:</strong>
-                          <ul style="margin-left: 20px;">
-                            <li>Perplexity Pro subscription</li>
-                            <li>Access to API or MCP features</li>
-                          </ul>
-                        </div>
-
-                        <div>
-                          <strong>Setup Steps:</strong>
-                          <ol style="margin-left: 20px; margin-top: 8px;">
-                            <li>Open <strong>Perplexity</strong></li>
-                            <li>Go to <strong>Settings</strong> → <strong>Integrations</strong></li>
-                            <li>Look for <strong>Custom Integrations</strong> or <strong>API Connections</strong></li>
-                            <li>Click <strong>Add Integration</strong></li>
-                            <li>Choose <strong>OAuth 2.0</strong> authentication</li>
-                            <li>Enter credentials:
-                              <ul style="margin-left: 20px; margin-top: 4px;">
-                                <li><strong>Name:</strong> Routine Notes</li>
-                                <li><strong>Server URL:</strong> (paste from above)</li>
-                                <li><strong>Client ID:</strong> <code>routine-notes-mcp</code></li>
-                                <li><strong>Client Secret:</strong> (paste from above)</li>
-                              </ul>
-                            </li>
-                            <li>Click <strong>Connect</strong></li>
-                            <li>Complete OAuth authorization flow</li>
-                            <li>✅ Ready to use!</li>
-                          </ol>
-                        </div>
-
-                        <atom-divider class="my-3"></atom-divider>
-
-                        <div class="caption grey--text">
-                          <atom-icon small left>info</atom-icon>
-                          Ask Perplexity to access your routine data for personalized insights and planning.
-                        </div>
-                      </atom-card-text>
-                    </atom-card>
-                  </atom-tab-item>
-                </atom-tabs-items>
-    </atom-card>
-
-    <atom-divider></atom-divider>
-
-    <!-- Legacy API Key Section -->
-    <atom-divider class="my-4"></atom-divider>
-    <atom-list
-        subheader
-        three-line
-    >
-        <atom-subheader>Legacy API Key (Optional)</atom-subheader>
-        <atom-list-tile>
-          <atom-list-tile-content>
-              <atom-list-tile-title>API Key</atom-list-tile-title>
-              <atom-list-tile-sub-title>
-                  For backward compatibility. OAuth is recommended for new integrations.
-              </atom-list-tile-sub-title>
-          </atom-list-tile-content>
-          <atom-list-tile-action class="oauth-field-action">
-              <atom-text-field
-                  label="API Key"
-                  readonly
-                  :value="userApiKey || 'No API key generated'"
-                  :type="showApiKey ? 'text' : 'password'"
-              >
-                <template v-slot:append>
-                  <atom-button
-                    icon
-                    @click="showApiKey = !showApiKey"
-                    title="Toggle visibility"
-                    class="mr-1"
-                  >
-                    <atom-icon>{{ showApiKey ? 'visibility_off' : 'visibility' }}</atom-icon>
-                  </atom-button>
-                  <atom-button
-                    icon
-                    @click="copyToClipboard(userApiKey)"
-                    title="Copy to clipboard"
-                    :disabled="!userApiKey"
-                  >
-                    <atom-icon>content_copy</atom-icon>
-                  </atom-button>
-                </template>
-              </atom-text-field>
-          </atom-list-tile-action>
-        </atom-list-tile>
-
-        <atom-list-tile>
-          <atom-list-tile-content>
-              <atom-list-tile-title>API Key Actions</atom-list-tile-title>
-          </atom-list-tile-content>
-          <atom-list-tile-action class="api-actions-buttons">
-              <div class="d-flex align-center">
-                <atom-button
-                  color="primary"
-                  :loading="generatingApiKey"
-                  @click="generateApiKey"
-                  class="mr-2"
-                  small
-                >
-                  {{ userApiKey ? 'Regenerate' : 'Generate' }}
-                </atom-button>
-                <atom-button
-                  color="secondary"
-                  :disabled="!userApiKey"
-                  @click="copyToClipboard(userApiKey)"
-                  small
-                >
-                  Copy
-                </atom-button>
-              </div>
-          </atom-list-tile-action>
-        </atom-list-tile>
-    </atom-list>
-
-    <!-- Account Deletion Section -->
-    <atom-divider></atom-divider>
-    <atom-alert
-      :value="true"
-      type="error"
-      style="margin-top: 20px;"
-    >
-      Danger Zone - Account Deletion
-    </atom-alert>
-
-    <atom-list
-        subheader
-        three-line
-    >
-        <atom-subheader>Delete Account</atom-subheader>
-        <atom-list-tile>
-          <atom-list-tile-content>
-              <atom-list-tile-title>Permanently Delete Your Account</atom-list-tile-title>
-              <atom-list-tile-sub-title>
-                  Warning: This action cannot be undone. All your data including routines, goals, progress, and settings will be permanently deleted.
-              </atom-list-tile-sub-title>
-          </atom-list-tile-content>
-          <atom-list-tile-action class="delete-account-action">
-              <atom-button
-                color="error"
-                @click="showDeleteConfirmation = true"
-                outlined
-              >
-                Delete Account
-              </atom-button>
-          </atom-list-tile-action>
-        </atom-list-tile>
-    </atom-list>
-
-    <!-- Delete Confirmation Dialog -->
-    <atom-dialog v-model="showDeleteConfirmation" max-width="500">
-      <atom-card>
-        <atom-card-title class="headline error white--text">
-          Confirm Account Deletion
-        </atom-card-title>
-        <atom-card-text class="pt-4">
-          <p class="mb-3">
-            <strong>Are you absolutely sure you want to delete your account?</strong>
-          </p>
-          <p class="mb-3">
-            This action will permanently delete:
-          </p>
-          <ul class="mb-3">
-            <li>All your routines and tasks</li>
-            <li>All your goals and milestones</li>
-            <li>All your progress and history</li>
-            <li>Your profile and settings</li>
-            <li>Any API keys and integrations</li>
-          </ul>
-          <p class="mb-3">
-            <strong>This action cannot be undone.</strong>
-          </p>
-          <atom-text-field
-            v-model="deleteConfirmationText"
-            label="Type DELETE to confirm"
-            outlined
-            :error="deleteConfirmationError"
-            :error-messages="deleteConfirmationError ? 'Please type DELETE to confirm' : ''"
-          ></atom-text-field>
-        </atom-card-text>
-        <atom-card-actions>
-          <atom-spacer></atom-spacer>
-          <atom-button
-            text
-            @click="cancelDeleteAccount"
-          >
-            Cancel
-          </atom-button>
-          <atom-button
-            color="error"
-            :loading="deletingAccount"
-            :disabled="deleteConfirmationText !== 'DELETE'"
-            @click="deleteAccount"
-          >
-            Delete My Account
-          </atom-button>
-        </atom-card-actions>
-      </atom-card>
-    </atom-dialog>
-    </atom-card-text>
-  </container-box>
+    <app-toast
+      :shell="shell"
+      :title="toast.title"
+      :sub="toast.sub"
+      :icon="toast.icon"
+      :icon-color="toast.color"
+      :seq="toast.seq"
+    />
+  </app-shell-container>
 </template>
 
 <script>
-import gql from 'graphql-tag';
-import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
-import { PROFILE_SETTINGS, WEEK_START_OPTIONS, TIMEZONE_OPTIONS } from '../constants/settings';
-import {
-  AtomAlert,
-  AtomBtnToggle,
-  AtomButton,
-  AtomCard,
-  AtomCardActions,
-  AtomCardText,
-  AtomCardTitle,
-  AtomChip,
-  AtomDialog,
-  AtomDivider,
-  AtomIcon,
-  AtomList,
-  AtomListTile,
-  AtomListTileAction,
-  AtomListTileContent,
-  AtomListTileSubTitle,
-  AtomListTileTitle,
-  AtomSpacer,
-  AtomSubheader,
-  AtomTab,
-  AtomTabItem,
-  AtomTabs,
-  AtomTabsItems,
-  AtomTextField,
-} from '@routine-notes/ui/atoms';
+/**
+ * /settings/profile, rebuilt to `packages/design/Profile and About.dc.html` § t1.
+ *
+ * ## What changed from the old page
+ *
+ * The yellow "most settings here are READ ONLY" banner is gone — it sat above six
+ * cards, two of which *were* editable. A `lock` glyph now sits on each read-only
+ * row and section header instead. The three "Rate" text fields became the D/K/G
+ * tinted cards, the three auto-check thresholds became the roll-up chain, and the
+ * four nested platform guides became chips over numbered steps.
+ *
+ * ## Where the mock is wrong, and what renders instead
+ *
+ * All six are settled in `docs/redesign/chassis.md` § "Conflicts between design
+ * files — decided":
+ *
+ * | Mock | Here |
+ * |---|---|
+ * | "9 months tick the year" | **6** — read from `PROFILE_SETTINGS.autoCheckThreshold.month` |
+ * | D "3 h", K "1 h" | bound to `profileSettings` (24 h / 2 h / 25%) |
+ * | 5 hand-written time zones | the real `TIMEZONE_OPTIONS` |
+ * | always "Connected", `rn_sec_…` | both states; `frt_secret_` prefix; disconnected drawn for the first time |
+ * | API key generated locally | the `generateApiKey` mutation, and a toast instead of `alert()` |
+ * | delete = "Prototype only" | the real `deleteAccount`, cache cleared, back to `/` |
+ *
+ * ## No GraphQL lives here
+ *
+ * The page owns layout, the shell breakpoint, the open overlay and the toast
+ * (ARCHITECTURE.md § 1). Every read and write is a container:
+ * `AppShellContainer` (chassis shell + the header's points read),
+ * `UserProfileContainer` (the one `getUserTags` read), `ProfileTimeContainer`
+ * (`updateUserTimezone`), `ApiKeyContainer` (`generateApiKey`),
+ * `AccountDeleteContainer` (`deleteAccount`) and `ConnectAiContainer` (the
+ * clipboard and the MCP endpoint — no query).
+ *
+ * What the page orchestrates across containers (§ 6) is the re-read: a saved
+ * timezone and a new API key both change `getUserTags`, and neither mutation can
+ * patch the cache by id because `UserItem` has no id — so the page asks the read
+ * container to refresh.
+ */
+import AppToast from '@routine-notes/ui/molecules/AppToast/AppToast.vue';
+import ProfileIdentityCard from '@routine-notes/ui/molecules/ProfileIdentityCard/ProfileIdentityCard.vue';
+import ProfileRatesCard from '@routine-notes/ui/molecules/ProfileRatesCard/ProfileRatesCard.vue';
+import { resolveShell } from '@routine-notes/ui/constants/navigation';
+import AppShellContainer from '../containers/AppShellContainer.vue';
+import UserProfileContainer from '../containers/UserProfileContainer.vue';
+import ProfileTimeContainer from '../containers/ProfileTimeContainer.vue';
+import ConnectAiContainer from '../containers/ConnectAiContainer.vue';
+import ApiKeyContainer from '../containers/ApiKeyContainer.vue';
+import AccountDeleteContainer from '../containers/AccountDeleteContainer.vue';
+import { signOut } from '../utils/signOut';
+
+export const LOGOUT_KEY = 'logout';
+/** How long the "Account deleted" toast is readable before the hard reload. */
+export const DELETE_REDIRECT_MS = 2000;
+
+const noToast = () => ({
+  title: '', sub: '', icon: 'check_circle', color: '#81c784', seq: 0,
+});
+
+const emptyProfile = () => ({
+  name: '', email: '', picture: '', apiKey: '', oauthConnected: false, timezone: '', loaded: false,
+});
 
 export default {
+  name: 'ProfileTime',
+
   components: {
-    ContainerBox,
-    AtomAlert,
-    AtomBtnToggle,
-    AtomButton,
-    AtomCard,
-    AtomCardActions,
-    AtomCardText,
-    AtomCardTitle,
-    AtomChip,
-    AtomDialog,
-    AtomDivider,
-    AtomIcon,
-    AtomList,
-    AtomListTile,
-    AtomListTileAction,
-    AtomListTileContent,
-    AtomListTileSubTitle,
-    AtomListTileTitle,
-    AtomSpacer,
-    AtomSubheader,
-    AtomTab,
-    AtomTabItem,
-    AtomTabs,
-    AtomTabsItems,
-    AtomTextField,
+    AppShellContainer,
+    AppToast,
+    UserProfileContainer,
+    ProfileIdentityCard,
+    ProfileRatesCard,
+    ProfileTimeContainer,
+    ConnectAiContainer,
+    ApiKeyContainer,
+    AccountDeleteContainer,
   },
+
   data() {
     return {
-      startOfWeek: PROFILE_SETTINGS.startOfWeek,
-      profileSettings: PROFILE_SETTINGS,
-      weekStartOptions: WEEK_START_OPTIONS,
-      timezoneOptions: TIMEZONE_OPTIONS,
-      userApiKey: null,
-      showApiKey: false,
-      generatingApiKey: false,
-      oauthConnected: false,
-      showOAuthSecret: false,
-      oauthPlatformTab: 0,
-      oauthClientSecret: 'frt_secret_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
-      userTimezone: PROFILE_SETTINGS.defaultTimezone,
-      savingTimezone: false,
-      timeFormat: localStorage.getItem('timeFormat') || '24', // Default to 24-hour format
-      mcpServerUrl: process.env.NODE_ENV === 'production'
-        ? 'https://your-api-domain.com/dev/mcp'
-        : 'http://localhost:4000/mcp',
-      showDeleteConfirmation: false,
-      deleteConfirmationText: '',
-      deleteConfirmationError: false,
-      deletingAccount: false,
+      profile: emptyProfile(),
+      profileFailed: false,
+      deleteOpen: false,
+      toast: noToast(),
     };
   },
-  apollo: {
-    userTags: {
-      query: gql`
-        query getUserTags {
-          getUserTags {
-            name
-            email
-            apiKey
-            oauthConnected
-            timezone
-          }
-        }
-      `,
-      result({ data }) {
-        if (data && data.getUserTags) {
-          if (data.getUserTags.apiKey) {
-            this.userApiKey = data.getUserTags.apiKey;
-          }
-          this.oauthConnected = data.getUserTags.oauthConnected || false;
-          if (data.getUserTags.timezone) {
-            this.userTimezone = data.getUserTags.timezone;
-          }
-        }
-      },
-      error(error) {
-        console.error('Error fetching user data:', error);
-      },
+
+  computed: {
+    /** The ONE breakpoint rule — `resolveShell`, never a second scheme. */
+    shell() {
+      return resolveShell(this.$vuetify && this.$vuetify.breakpoint);
+    },
+    isPhone() {
+      return this.shell === 'phone';
+    },
+    /**
+     * The phone header is just "Profile" in the design; tablet and desktop carry
+     * the strap line. A failed read says so rather than looking normal.
+     */
+    subLabel() {
+      if (this.profileFailed && !this.profile.loaded) return "Couldn't load your account";
+      if (this.isPhone) return '';
+      return 'Settings, connections and your account';
+    },
+    /**
+     * The profile read is the authority, but until it lands (or when it fails)
+     * the signed-in session already knows who this is - the same name / email /
+     * picture the shell header shows. Never an invented placeholder name.
+     */
+    identity() {
+      const source = this.profile.loaded ? this.profile : this.sessionIdentity;
+      const { name = '', email = '', picture = '' } = source || {};
+      return { name: name || '', email: email || '', picture: picture || '' };
+    },
+    sessionIdentity() {
+      const root = (this.$root && this.$root.$data) || {};
+      return { name: root.name, email: root.email, picture: root.picture };
     },
   },
+
+  beforeDestroy() {
+    clearTimeout(this.redirectTimer);
+  },
+
   methods: {
-    async generateApiKey() {
-      this.generatingApiKey = true;
-      try {
-        const result = await this.$apollo.mutate({
-          mutation: gql`
-            mutation generateApiKey {
-              generateApiKey {
-                apiKey
-              }
-            }
-          `,
-        });
-
-        if (result.data && result.data.generateApiKey && result.data.generateApiKey.apiKey) {
-          this.userApiKey = result.data.generateApiKey.apiKey;
-          // Show success message
-          console.log('API Key generated successfully!');
-          alert('API Key generated successfully!');
-        }
-      } catch (error) {
-        console.error('Error generating API key:', error);
-        alert('Failed to generate API key. Please try again.');
-      } finally {
-        this.generatingApiKey = false;
-      }
+    onProfile(profile) {
+      this.profile = profile;
+      if (profile.loaded) this.profileFailed = false;
+    },
+    onProfileFailed() {
+      this.profileFailed = true;
+    },
+    refreshProfile() {
+      const container = this.$refs.profile;
+      if (container && typeof container.refresh === 'function') container.refresh();
     },
 
-    async copyToClipboard(text) {
-      if (!text) {
-        alert('Nothing to copy');
+    /** Toast copy is always title + sub, the sub carrying the consequence. */
+    notify(title, sub, icon, color) {
+      this.toast = {
+        title, sub, icon, color, seq: this.toast.seq + 1,
+      };
+    },
+
+    onFormatChanged(format, consequence) {
+      this.notify('Time format updated', consequence, 'schedule', '#64b5f6');
+    },
+    onTimezoneSaved(label) {
+      this.notify('Time zone updated', label, 'public', '#64b5f6');
+    },
+    onSaveFailed(consequence) {
+      this.notify("Couldn't save that", consequence, 'error_outline', '#ef9a9a');
+    },
+
+    onCopied(label) {
+      this.notify(`${label} copied`, 'Paste it into your MCP client', 'content_copy', '#64b5f6');
+    },
+    onCopyFailed(label) {
+      this.notify(`Couldn't copy ${label}`, 'Select the text and copy it by hand', 'error_outline', '#ef9a9a');
+    },
+
+    /** Replaces the old page's `alert('API Key generated successfully!')`. */
+    onKeyGenerated(key, replacing) {
+      this.notify(
+        replacing ? 'API key regenerated' : 'API key generated',
+        replacing ? 'The old key stopped working' : 'Copy it now and store it safely',
+        'vpn_key',
+        '#81c784',
+      );
+    },
+    onKeyFailed(consequence) {
+      this.notify("Couldn't generate a key", consequence, 'error_outline', '#ef9a9a');
+    },
+
+    onAccountDeleted(message) {
+      this.deleteOpen = false;
+      this.notify('Account deleted', message, 'delete_forever', '#ef9a9a');
+      // The container already cleared localStorage and the Apollo store; the
+      // session teardown is the page's (ARCHITECTURE.md § 6). A full reload, not
+      // a router push: every module-level cache in the app has to go too.
+      clearTimeout(this.redirectTimer);
+      this.redirectTimer = setTimeout(this.leaveApp, DELETE_REDIRECT_MS);
+    },
+    onDeleteFailed(message) {
+      this.deleteOpen = false;
+      this.notify("Couldn't delete your account", message, 'error_outline', '#ef9a9a');
+    },
+    leaveApp() {
+      window.location.href = '/';
+    },
+
+    onNavigate(key, item) {
+      if (key === LOGOUT_KEY) {
+        this.onSignOut();
         return;
       }
-
-      try {
-        await navigator.clipboard.writeText(text);
-        alert('Copied to clipboard!');
-      } catch (error) {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        alert('Copied to clipboard!');
-      }
+      this.goTo(item && item.route);
     },
-
-    async onTimezoneChange(newTimezone) {
-      if (!newTimezone || newTimezone === this.userTimezone) return;
-      const previousTimezone = this.userTimezone;
-      this.userTimezone = newTimezone;
-      this.savingTimezone = true;
-      try {
-        await this.$apollo.mutate({
-          mutation: gql`
-            mutation updateUserTimezone($timezone: String!) {
-              updateUserTimezone(timezone: $timezone) {
-                email
-                timezone
-              }
-            }
-          `,
-          variables: { timezone: newTimezone },
-        });
-        this.$notify({
-          title: 'Timezone Updated',
-          text: 'Your timezone preference has been saved.',
-          group: 'notify',
-          type: 'success',
-          duration: 3000,
-        });
-      } catch (error) {
-        this.userTimezone = previousTimezone;
-        console.error('Error updating timezone:', error);
-        this.$notify({
-          title: 'Update Failed',
-          text: 'Unable to save timezone. Please try again.',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
-      } finally {
-        this.savingTimezone = false;
-      }
+    goTo(route) {
+      if (!route || this.$route.path === route) return;
+      this.$router.push(route).catch(() => {});
     },
-
-    saveTimeFormat() {
-      // Save time format preference to localStorage
-      localStorage.setItem('timeFormat', this.timeFormat);
-
-      // Notify user of the change
-      this.$notify({
-        title: 'Time Format Updated',
-        text: `Time format set to ${this.timeFormat}-hour format`,
-        group: 'notify',
-        type: 'success',
-        duration: 3000,
-      });
-
-      // Trigger a global event to update time display across the app
-      this.$root.$emit('timeFormatChanged', this.timeFormat);
-    },
-
-    cancelDeleteAccount() {
-      this.showDeleteConfirmation = false;
-      this.deleteConfirmationText = '';
-      this.deleteConfirmationError = false;
-    },
-
-    async deleteAccount() {
-      if (this.deleteConfirmationText !== 'DELETE') {
-        this.deleteConfirmationError = true;
-        return;
-      }
-
-      this.deletingAccount = true;
-
-      try {
-        const result = await this.$apollo.mutate({
-          mutation: gql`
-            mutation deleteAccount {
-              deleteAccount {
-                success
-                message
-              }
-            }
-          `,
-        });
-
-        if (result.data && result.data.deleteAccount && result.data.deleteAccount.success === 'true') {
-          // Show success message
-          this.$notify({
-            title: 'Account Deleted',
-            text: result.data.deleteAccount.message,
-            group: 'notify',
-            type: 'success',
-            duration: 5000,
-          });
-
-          // Clear local storage
-          localStorage.clear();
-
-          // Sign out and redirect to login/home page
-          // Wait a bit for the notification to show
-          setTimeout(() => {
-            // Clear Apollo cache
-            this.$apollo.provider.defaultClient.clearStore();
-
-            // Redirect to home/login page
-            window.location.href = '/';
-          }, 2000);
-        }
-      } catch (error) {
-        console.error('Error deleting account:', error);
-        this.$notify({
-          title: 'Error',
-          text: 'Failed to delete account. Please try again or contact support.',
-          group: 'notify',
-          type: 'error',
-          duration: 5000,
-        });
-      } finally {
-        this.deletingAccount = false;
-        this.showDeleteConfirmation = false;
-        this.deleteConfirmationText = '';
-        this.deleteConfirmationError = false;
-      }
+    onSignOut() {
+      // The same path the legacy drawer takes — see utils/signOut.js.
+      signOut(this);
     },
   },
 };
 </script>
 
-<style scoped>
->>> .elevation-1 {
-  width: 100%;
-}
-/* .profile .v-input {
-    width: 30px;
-} */
-.profile >>> .v-input__slot {
-    margin-bottom: 0;
-}
-.profile >>> .v-text-field__details {
-    display: none;
+<!-- Unscoped but root-class prefixed: this page renders its own shell, and the
+     card chrome has to reach the organisms it wraps (see MEMORY: web-app CSS
+     lives inline in organisms, prefixed so nothing leaks). -->
+<style>
+.rn-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
-/* Fix button alignment in list tiles */
-
-.api-actions-buttons {
-  min-width: 400px;
+.rn-profile__main,
+.rn-profile__side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
 }
 
-.api-actions-buttons .d-flex {
-  gap: 8px;
+/* The card chrome every block on this page shares, declared once here rather
+   than copied into six organisms. */
+.rn-profile__card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .1), 0 2px 4px -1px rgba(0, 0, 0, .06);
 }
 
-/* Ensure buttons don't wrap and have proper padding */
-.api-actions-buttons >>> .v-list__tile__action .v-btn {
-  margin: 4px 0;
-  padding: 0 16px !important;
+/* --- tablet + desktop: the 3fr / 2fr split ------------------------------ */
+
+.rn-profile--tablet,
+.rn-profile--desktop {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  align-items: start;
 }
 
-/* Mobile responsive button widths */
-@media (max-width: 768px) {
-  /* Single button in row - full width */
-  .delete-account-action {
-    width: 100%;
-  }
-
-  .delete-account-action >>> .v-btn {
-    width: 100%;
-  }
-
-  /* Two buttons in row - 50% each */
-  .api-actions-buttons .d-flex {
-    width: 100%;
-    flex-wrap: nowrap;
-  }
-
-  .api-actions-buttons .d-flex >>> .v-btn {
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-  }
-
-  .api-actions-buttons .d-flex >>> .v-btn:first-child {
-    margin-right: 8px;
-  }
-
-  .api-actions-buttons {
-    min-width: 100%;
-    width: 100%;
-  }
-}
-
-/* Platform tabs styling - remove border radius and box shadow */
-.platform-tabs-card {
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-
-/* OAuth credentials and API key field responsiveness */
-.oauth-field-action {
-  width: 350px;
-}
-
-@media (max-width: 768px) {
-  .oauth-field-action {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  /* Make OAuth and API key list tiles stack vertically on mobile */
-  >>> .v-list__tile:has(.oauth-field-action) {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    height: auto !important;
-    padding-bottom: 16px !important;
-  }
-
-  >>> .v-list__tile:has(.oauth-field-action) .v-list__tile__content {
-    width: 100% !important;
-    margin-bottom: 8px;
-  }
-
-  >>> .v-list__tile:has(.oauth-field-action) .v-list__tile__action {
-    width: 100% !important;
-    align-self: stretch !important;
-    margin-bottom: 8px;
-  }
-
-  /* Add spacing after last input field before next section */
-  >>> .v-list__tile:has(.oauth-field-action):last-child {
-    padding-bottom: 24px !important;
-  }
+.rn-profile--tablet .rn-profile__card,
+.rn-profile--desktop .rn-profile__card {
+  border-radius: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .08), 0 2px 4px -1px rgba(0, 0, 0, .05);
 }
 </style>

@@ -70,6 +70,8 @@ export const ADD_GOAL_ITEM_MUTATION = gql`
       id
       body
       progress
+      milestonesTotal
+      milestonesComplete
       isComplete
       isMilestone
       contribution
@@ -404,6 +406,9 @@ export function useGoalMutations(apolloClient, options = {}) {
       id: tempId,
       body: goalItemData.body || '',
       progress: 0,
+      // Derived per read on the server; a new item has no tally yet.
+      milestonesTotal: null,
+      milestonesComplete: null,
       isComplete: goalItemData.isComplete || false,
       isMilestone: goalItemData.isMilestone || false,
       contribution: goalItemData.contribution || '',

@@ -1,5 +1,7 @@
 require('./src/utils/suppressMongooseWarnings')();
-require('dotenv').config();
+// The repo keeps a single .env at the monorepo root, so resolve it from __dirname
+// rather than cwd — otherwise `nodemon ./server.js` run from apps/server loads nothing.
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
 const connectDatabase = require('./src/db');
 const { startServer } = require('./src/graphql');
 

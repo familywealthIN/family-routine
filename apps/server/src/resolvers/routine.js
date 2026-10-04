@@ -17,6 +17,7 @@ const { UserModel } = require('../schema/UserSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
 const sortTimes = require('../utils/sortTimes');
+const { hasTaskStarted } = require('../utils/timezone');
 const { updateStimulusEarnedPoint } = require('../utils/stimulusPoints');
 
 async function findTodayandSort(args, email) {
@@ -505,6 +506,18 @@ const mutation = {
       const taskToUpdate = routine.tasklist.find((task) => task.id === args.taskId);
       if (args.ticked || (taskToUpdate && taskToUpdate.ticked)) {
         return routine;
+      }
+
+      // Only a task whose start has actually arrived can be marked passed. The
+      // client decides "passed" from the time of day alone, so a client holding
+      // another day's document id (a stale `did` around a day switch or
+      // midnight) used to stamp a FUTURE day's tasks passed — they then showed
+      // "Missed" all morning and could only be redeemed with points.
+      if (args.passed && taskToUpdate) {
+        const user = await UserModel.findOne({ email }, { timezone: 1 }).exec();
+        if (!hasTaskStarted(routine.date, taskToUpdate.time, user && user.timezone)) {
+          return routine;
+        }
       }
 
       // Freeze the redemption price at the moment the task passes so later

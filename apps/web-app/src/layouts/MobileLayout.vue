@@ -82,10 +82,6 @@
               <v-list-tile-title>{{ item.title }}</v-list-tile-title>
             </v-list-tile-content>
           </v-list-tile>
-          <template v-if="drawerItem.header === 'App'">
-            <area-sidebar :areaTags="areaTags" />
-            <project-sidebar :projectTags="projectTags" />
-          </template>
         </v-list>
       </template>
 
@@ -172,14 +168,9 @@
 </template>
 
 <script>
-import localforage from 'localforage';
 import moment from 'moment';
-import gql from 'graphql-tag';
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
 import TaskTimingBar from '@routine-notes/ui/atoms/TaskTimingBar/TaskTimingBar.vue';
-import AreaSidebar from '@routine-notes/ui/molecules/AreaSidebar/AreaSidebar.vue';
-import ProjectSidebar from '@routine-notes/ui/molecules/ProjectSidebar/ProjectSidebar.vue';
 import PointsChip from '@routine-notes/ui/molecules/PointsChip/PointsChip.vue';
 import PendingList from '../containers/PendingListContainer.vue';
 import { taskTimingMixin } from '../mixins/taskTimingMixin';
@@ -187,17 +178,15 @@ import eventBus, { EVENTS } from '../utils/eventBus';
 import { threshold } from '../utils/getDates';
 import { AGENDA_GOALS_QUERY, ROUTINE_DATE_QUERY, XP_BALANCE_QUERY } from '../composables/graphql/queries';
 import {
-  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
+  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL,
 } from '../constants/settings';
-import { clearData, getSessionItem } from '../token';
-import { gauthOption } from '../blob/config';
+import { getSessionItem } from '../token';
+import { signOut } from '../utils/signOut';
 
 export default {
   components: {
     PendingList,
     TaskTimingBar,
-    AreaSidebar,
-    ProjectSidebar,
     PointsChip,
   },
   mixins: [taskTimingMixin],
@@ -213,18 +202,6 @@ export default {
     },
   },
   apollo: {
-    areaTags: {
-      query: gql`query areaTags { areaTags }`,
-      skip() {
-        return !this.$root.$data.email;
-      },
-    },
-    projectTags: {
-      query: gql`query projectTags { projectTags }`,
-      skip() {
-        return !this.$root.$data.email;
-      },
-    },
     timingGoals: {
       query: AGENDA_GOALS_QUERY,
       variables() {
@@ -273,8 +250,6 @@ export default {
       drawer: null,
       pendingDialog: false,
       xpBalanceError: false,
-      areaTags: [],
-      projectTags: [],
       drawerItems: [
         {
           header: 'App',
@@ -385,40 +360,12 @@ export default {
       eventBus.$emit(EVENTS.OPEN_AI_SEARCH, { mode: 'search' });
     },
     async handleClickSignOut() {
-      try {
-        if (Capacitor.isNativePlatform()) {
-          // Initialize before signOut to prevent nil error
-          const platform = Capacitor.getPlatform();
-          const clientId = platform === 'ios'
-            ? gauthOption.iosClientId
-            : gauthOption.androidClientId;
-
-          await GoogleAuth.initialize({
-            clientId,
-            scopes: ['profile', 'email'],
-          });
-
-          await GoogleAuth.signOut();
-        } else {
-          await this.$gAuth.signOut();
-        }
-
-        this.drawer = false;
-        await clearData();
-        await localforage.clear();
-        localStorage.removeItem(USER_TAGS);
-        this.$root.$data.userName = getSessionItem(GC_USER_NAME);
-        this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
-        this.$root.$data.picture = getSessionItem(GC_PICTURE);
-        this.$router.push('/').catch(() => { });
-      } catch (error) {
-        console.log(error);
-        // Just clear local data and redirect on error
-        await clearData();
-        await localforage.clear();
-        localStorage.removeItem(USER_TAGS);
-        this.$router.push('/').catch(() => { });
-      }
+      this.drawer = false;
+      // Shared with the Routine Focus user drawer — see utils/signOut.js.
+      await signOut(this);
+      this.$root.$data.userName = getSessionItem(GC_USER_NAME);
+      this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
+      this.$root.$data.picture = getSessionItem(GC_PICTURE);
     },
   },
   mounted() {

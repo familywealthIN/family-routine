@@ -731,6 +731,14 @@ export default {
       default: 'add',
     },
     /**
+     * Routine to preselect on open — the one the opener is showing (e.g. the
+     * focused Routine Focus card). Empty falls back to the clock-current one.
+     */
+    preselectTaskRef: {
+      type: String,
+      default: '',
+    },
+    /**
      * Override components for the task / goal forms so the consumer (e.g. web-app)
      * can inject a data-connected container while the UI package keeps the bare
      * presentational defaults.
@@ -1232,8 +1240,10 @@ export default {
       this.toolbarDate = this.todayFormatted;
       this.toolbarPeriod = 'day';
 
-      // Auto-select current routine if available
-      if (this.$currentTaskData && this.$currentTaskData.id) {
+      // Preselect the routine the opener is showing, else the current one
+      if (this.preselectTaskRef) {
+        this.toolbarTaskRef = this.preselectTaskRef;
+      } else if (this.$currentTaskData && this.$currentTaskData.id) {
         this.toolbarTaskRef = this.$currentTaskData.id;
       }
 

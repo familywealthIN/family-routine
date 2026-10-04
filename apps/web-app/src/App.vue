@@ -1,6 +1,12 @@
 <template>
   <v-app>
-    <template v-if="isMobile">
+    <!-- Redesigned pages are their own shell: header, nav and user drawer all
+         live inside the page (via AppShell), so they render OUTSIDE the mobile /
+         desktop layouts rather than inside their toolbar + bottom-nav frame. -->
+    <template v-if="rendersOwnShell">
+      <router-view />
+    </template>
+    <template v-else-if="isMobile">
       <mobile-layout />
     </template>
     <template v-else>
@@ -10,7 +16,7 @@
     <!-- <v-footer app></v-footer> -->
 
     <!-- Global AI Search Modal -->
-    <ai-search-modal v-model="aiSearchModal" :open-mode="aiSearchOpenMode" />
+    <ai-search-modal v-model="aiSearchModal" :open-mode="aiSearchOpenMode" :task-ref="aiSearchTaskRef" />
 
     <!-- Agent HTML response viewer -->
     <agent-result-modal
@@ -57,6 +63,7 @@ export default {
       mottoDialog: false,
       aiSearchModal: false,
       aiSearchOpenMode: 'add',
+      aiSearchTaskRef: '',
       lastActiveTime: Date.now(),
     };
   },
@@ -76,6 +83,19 @@ export default {
     },
     isMobile() {
       return this.$vuetify.breakpoint.name === 'xs';
+    },
+    /**
+     * A route that brings its own chrome — `AppShell` supplies the header, the
+     * nav (phone bottom bar / tablet rail / desktop sidebar) and the drawer, so
+     * wrapping it in MobileLayout/DesktopLayout would render two of each.
+     *
+     * `focusHome` is the original key, kept because `/home` and its deep link
+     * still carry it; `appShell` is the same idea named for every other
+     * redesigned page. Either one skips the legacy layouts.
+     */
+    rendersOwnShell() {
+      const meta = this.$route.meta || {};
+      return !!(meta.appShell || meta.focusHome);
     },
     activeAgentResultRoutineId() {
       return this.$agent.state.resultModalRoutineId;
@@ -100,6 +120,9 @@ export default {
     eventBus.$on(EVENTS.OPEN_AI_SEARCH, (payload) => {
       this.aiSearchModal = true;
       this.aiSearchOpenMode = (payload && payload.mode) || 'add';
+      // The routine the opener is showing (e.g. the focused Routine Focus
+      // card); empty falls back to the clock-current routine.
+      this.aiSearchTaskRef = (payload && payload.taskRef) || '';
     });
 
     // Refresh app if inactive for more than 15 minutes
