@@ -389,6 +389,7 @@
 <script>
 import { AtomMenu, AtomTextField, AtomDatePicker } from '../../atoms';
 import { blurActiveElement } from '../../utils/blurActiveElement';
+import { getWeekDates, getWeekOfDate, getWeeksInYear } from '../../utils/getDates';
 import MobileSubDrawer from '../MobileSubDrawer/MobileSubDrawer.vue';
 
 /**
@@ -646,13 +647,10 @@ export default {
      */
     internalWeekValue() {
       if (!this.internalValue || this.internalPeriod !== 'week') return '';
-      const [day, month, year] = this.internalValue.split('-');
-      if (!day || !month || !year) return '';
-      const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
-      const weekNum = this.getISOWeekNumber(date);
       // The week year may differ from the calendar year for dates near year boundaries
-      const isoYear = this.getISOWeekYear(date);
-      return `${isoYear}-W${String(weekNum).padStart(2, '0')}`;
+      const { week, year } = getWeekOfDate(this.internalValue);
+      if (!week || !year) return '';
+      return `${year}-W${String(week).padStart(2, '0')}`;
     },
 
     /**
@@ -678,7 +676,7 @@ export default {
      * Week options for the current display year
      */
     weekOptions() {
-      const weeks = this.getWeeksOfYearISO(this.displayYear);
+      const weeks = this.getWeeksForYear(this.displayYear);
       const currentWeekValue = this.getCurrentWeekValue();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -697,20 +695,10 @@ export default {
           // If minDate is set, filter out past weeks
           if (!this.minDate) return true;
 
-          // Calculate the end date of the week (Sunday) directly
-          const jan4 = new Date(this.displayYear, 0, 4);
-          const jan4Day = jan4.getDay() || 7;
-          const week1Monday = new Date(jan4);
-          week1Monday.setDate(jan4.getDate() - jan4Day + 1);
-
-          const firstDay = new Date(week1Monday);
-          firstDay.setDate(week1Monday.getDate() + (week.weekNum - 1) * 7);
-
-          const lastDay = new Date(firstDay);
-          lastDay.setDate(firstDay.getDate() + 6);
+          // Only show weeks where the end date (Saturday) is today or later
+          const lastDay = this.toDate(getWeekDates(this.displayYear, week.weekNum).end);
           lastDay.setHours(23, 59, 59, 999);
 
-          // Only show weeks where the end date is today or later
           return lastDay >= today;
         });
     },
@@ -906,21 +894,12 @@ export default {
     },
 
     /**
-     * Get all ISO weeks for a given year
+     * Get all weeks for a given week-numbering year, per the shared week
+     * definition in utils/getDates
      */
-    getWeeksOfYearISO(year) {
+    getWeeksForYear(year) {
       const weeks = [];
-
-      // Calculate number of weeks in the year (ISO)
-      // A year has 53 weeks if Jan 1 is Thursday or leap year and Jan 1 is Wednesday
-      const jan1 = new Date(year, 0, 1);
-      const jan1Day = jan1.getDay();
-      const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-
-      let numWeeks = 52;
-      if (jan1Day === 4 || (isLeapYear && jan1Day === 3)) {
-        numWeeks = 53;
-      }
+      const numWeeks = getWeeksInYear(year);
 
       // Generate all weeks
       for (let weekNum = 1; weekNum <= numWeeks; weekNum += 1) {
@@ -984,23 +963,8 @@ export default {
       const year = parseInt(match[1], 10);
       const weekNum = parseInt(match[2], 10);
 
-      // Calculate Friday of the given ISO week
-      const jan4 = new Date(year, 0, 4);
-      const jan4Day = jan4.getDay() || 7;
-      const week1Monday = new Date(jan4);
-      week1Monday.setDate(jan4.getDate() - jan4Day + 1);
-
-      const weekMonday = new Date(week1Monday);
-      weekMonday.setDate(week1Monday.getDate() + (weekNum - 1) * 7);
-
-      const friday = new Date(weekMonday);
-      friday.setDate(weekMonday.getDate() + 4);
-
-      // Format as DD-MM-YYYY
-      const day = String(friday.getDate()).padStart(2, '0');
-      const month = String(friday.getMonth() + 1).padStart(2, '0');
-      const fridayYear = friday.getFullYear();
-      const formattedDate = `${day}-${month}-${fridayYear}`;
+      // Friday of the week, per the shared week definition in utils/getDates
+      const formattedDate = getWeekDates(year, weekNum).date;
 
       // CRITICAL: Store DD-MM-YYYY format (not YYYY-WNN)
       this.internalValue = formattedDate;
@@ -1101,34 +1065,12 @@ export default {
     },
 
     /**
-     * Get current week as DD-MM-YYYY format (Friday of current ISO week)
+     * Get current week as DD-MM-YYYY format (Friday of the current week)
      * CRITICAL: Returns DD-MM-YYYY format for consistency
-     * Uses same ISO week calculation as handleWeekSelect for consistency
      */
     getCurrentWeek() {
-      // Use getCurrentWeekValue() to get YYYY-WNN, then calculate Friday
-      // This ensures consistency with handleWeekSelect's Friday calculation
-      const now = new Date();
-      const weekNum = this.getISOWeekNumber(now);
-      const isoYear = this.getISOWeekYear(now);
-
-      // Calculate Friday of the ISO week (same algorithm as handleWeekSelect)
-      const jan4 = new Date(isoYear, 0, 4);
-      const jan4Day = jan4.getDay() || 7;
-      const week1Monday = new Date(jan4);
-      week1Monday.setDate(jan4.getDate() - jan4Day + 1);
-
-      const weekMonday = new Date(week1Monday);
-      weekMonday.setDate(week1Monday.getDate() + (weekNum - 1) * 7);
-
-      const friday = new Date(weekMonday);
-      friday.setDate(weekMonday.getDate() + 4);
-
-      const day = String(friday.getDate()).padStart(2, '0');
-      const month = String(friday.getMonth() + 1).padStart(2, '0');
-      const year = friday.getFullYear();
-
-      return `${day}-${month}-${year}`;
+      const { week, year } = getWeekOfDate(this.todayValue());
+      return getWeekDates(year, week).date;
     },
 
     /**
@@ -1153,10 +1095,8 @@ export default {
      * Get current week in YYYY-WNN format (for comparing with weekOptions values)
      */
     getCurrentWeekValue() {
-      const now = new Date();
-      const weekNum = this.getISOWeekNumber(now);
-      const isoYear = this.getISOWeekYear(now);
-      return `${isoYear}-W${String(weekNum).padStart(2, '0')}`;
+      const { week, year } = getWeekOfDate(this.todayValue());
+      return `${year}-W${String(week).padStart(2, '0')}`;
     },
 
     /**
@@ -1170,16 +1110,24 @@ export default {
     },
 
     /**
-     * Get ISO week year for a date
-     * The ISO week year may differ from the calendar year for dates near year boundaries
-     * @param {Date} date - JavaScript Date object
-     * @returns {number} - ISO week year
+     * Parse a DD-MM-YYYY value into a local-midnight Date
+     * @param {string} value - Date in DD-MM-YYYY format
+     * @returns {Date} - JavaScript Date object
      */
-    getISOWeekYear(date) {
-      const target = new Date(date.valueOf());
-      const dayNum = (date.getDay() + 6) % 7;
-      target.setDate(target.getDate() - dayNum + 3); // Nearest Thursday
-      return target.getFullYear();
+    toDate(value) {
+      const [day, month, year] = value.split('-');
+      return new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+    },
+
+    /**
+     * Today in DD-MM-YYYY format, which is what the week helpers take
+     * @returns {string} - Today in DD-MM-YYYY format
+     */
+    todayValue() {
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      return `${day}-${month}-${now.getFullYear()}`;
     },
 
     /**
@@ -1236,13 +1184,10 @@ export default {
     formatWeekDisplay(value) {
       // CRITICAL: value is DD-MM-YYYY format
       // Convert to week number for display
-      const [day, month, year] = value.split('-');
-      if (!day || !month || !year) return value;
+      const { week, year } = getWeekOfDate(value);
+      if (!week || !year) return value;
 
-      const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
-      const weekNum = this.getISOWeekNumber(date);
-
-      return `Week ${weekNum}, ${year}`;
+      return `Week ${week}, ${year}`;
     },
 
     /**
@@ -1314,62 +1259,13 @@ export default {
     },
 
     /**
-     * Get ISO week number from a date
-     * @param {Date} date - JavaScript Date object
-     * @returns {number} - ISO week number (1-53)
-     */
-    getISOWeekNumber(date) {
-      // Copy date so we don't modify original
-      const target = new Date(date.valueOf());
-      const dayNum = (date.getDay() + 6) % 7; // Monday = 0, Sunday = 6
-      target.setDate(target.getDate() - dayNum + 3); // Nearest Thursday
-
-      // Get first Thursday of year
-      const firstThursday = new Date(target.getFullYear(), 0, 4);
-      const jan1 = new Date(target.getFullYear(), 0, 1);
-      const jan1Day = (jan1.getDay() + 6) % 7;
-
-      // Adjust to get first Thursday
-      if (jan1Day <= 3) {
-        firstThursday.setDate(1 + (3 - jan1Day));
-      } else {
-        firstThursday.setDate(1 + (10 - jan1Day));
-      }
-
-      // Calculate week number
-      // CRITICAL: compare the two Thursdays as UTC midnights. Subtracting local
-      // timestamps spanning a DST change is short by an hour, and both dates are
-      // whole days apart, so the division floors into the previous week.
-      const targetUTC = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate());
-      const firstThursdayUTC = Date.UTC(
-        firstThursday.getFullYear(),
-        firstThursday.getMonth(),
-        firstThursday.getDate(),
-      );
-      const weekNum = Math.round((targetUTC - firstThursdayUTC) / 86400000 / 7) + 1;
-      return weekNum;
-    },
-
-    /**
-     * Get date range string for a week (ISO week calculation)
+     * Get date range string for a week, per the shared week definition in
+     * utils/getDates — Sunday to Saturday, the same span Home's week strip draws
      */
     getWeekDateRange(year, weekNum) {
-      // ISO week date calculation
-      // Week 1 is the week with the first Thursday of the year
-      const jan4 = new Date(year, 0, 4); // January 4th is always in week 1
-      const jan4Day = jan4.getDay() || 7; // Sunday = 7 in ISO
-
-      // Find Monday of week 1
-      const week1Monday = new Date(jan4);
-      week1Monday.setDate(jan4.getDate() - jan4Day + 1);
-
-      // Calculate the Monday of the target week
-      const firstDay = new Date(week1Monday);
-      firstDay.setDate(week1Monday.getDate() + (weekNum - 1) * 7);
-
-      // Calculate Sunday of the target week
-      const lastDay = new Date(firstDay);
-      lastDay.setDate(firstDay.getDate() + 6);
+      const dates = getWeekDates(year, weekNum);
+      const firstDay = this.toDate(dates.start);
+      const lastDay = this.toDate(dates.end);
 
       const formatDate = (d) => {
         if (isNaN(d.getTime())) return 'Invalid';

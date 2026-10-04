@@ -17,8 +17,8 @@ const DateSelector = require('./DateSelector.vue').default;
 
 Vue.use(Vuetify);
 
-// Thursday 20 Aug 2026, the day of the beta repro. ISO week 34 runs
-// Mon 17 Aug - Sun 23 Aug, so "this week" is 2026-W34.
+// Thursday 20 Aug 2026, the day of the beta repro. Week 34 runs
+// Sun 16 Aug - Sat 22 Aug, so "this week" is 2026-W34.
 const BETA_DAY = new Date('2026-08-20T12:00:00+01:00');
 
 // Mounts the molecule the way GoalTaskToolbar wires it in the AI builder:
@@ -70,7 +70,7 @@ describe('MoleculeDateSelector week selection', () => {
     const current = vm.weekOptions.find((week) => week.isCurrent);
 
     expect(current.weekNum).toBe(34);
-    expect(current.range).toBe('Aug 17 - Aug 23');
+    expect(current.range).toBe('Aug 16 - Aug 22');
   });
 
   it('highlights the row matching the selected value', () => {
