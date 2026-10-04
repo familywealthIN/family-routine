@@ -37,17 +37,9 @@
       "gid": "1219160483828415",
       "name": "Beta Test fixes — 4-10 Oct 2026",
       "permalink": "https://app.asana.com/0/1207860307324832/1219160483828415",
-      "openCount": 17,
+      "openCount": 16,
       "totalCount": 17,
       "tickets": [
-        {
-          "gid": "1219160488302551",
-          "ref": "D-17",
-          "severity": "Major",
-          "title": "The Add-task sheet silently flips its own Task/Goal mode to Goal while the user is typing",
-          "name": "D-17 [Major] The Add-task sheet silently flips its own Task/Goal mode to Goal while the user is typing",
-          "notes": "Area: AiSearchModal (opened from add-task-row / composer +) · Found: day 1 · Priority: P2\n\nREPRO\nPreconditions: Phone shell, /home, any focused routine. Found incidentally during the 4 Oct verification pass.\n1. Tap `add-task-row` ('Add task') on the focus card - the sheet opens with the 'Task' pill active.\n2. Type 'buy milk' into the prompt field: the mode stays on Task.\n3. Clear it and type 'ZZVERIFY focus routine binding check'.\n4. Re-read which mode pill carries `v-btn--active`.\n\nEXPECTED\nThe Task/Goal mode is the user's choice. If the app wants to suggest a different mode it should prompt, not switch; and a sheet opened from 'Add task' should never end up in Goal mode without a deliberate tap.\n\nACTUAL\nThe active pill flips from Task to Goal on its own as the text is typed, with no prompt and no toast. Reproduced twice, with the sheet opened from `add-task-row`. 'buy milk' does not trigger it, so the switch is text-driven. If the user does not notice the pill change, pressing send builds a whole multi-milestone goal plan (parent goal + 7 dated milestones) instead of adding one checklist item - an expensive mis-write to undo, and one that also drags in the title-rewrite defect above.\n\nEVIDENCE\nMode pills before typing: [{\"t\":\"task_alt Task\",\"active\":true},{\"t\":\"timeline Goal\",\"active\":false}]; after typing the same string: [{\"t\":\"task_alt Task\",\"active\":false},{\"t\":\"timeline Goal\",\"active\":true}]. The placeholder also changes from 'e.g. \"Call dentist tomorrow at 2pm\"' to 'e.g. \"Learn Python this week\"'. The tester first dismissed this as an automation artifact, then disproved that with a plain programmatic input event on the real textarea and promoted it to a finding.\nScreenshot: .beta-runs/4-10-Oct-2026/verify-shots/newA-mode-autoflip.png\n\nDONE WHEN\nTyping any text into the Add-task sheet leaves the Task/Goal mode exactly as the user set it. If an auto-classifier is wanted, it surfaces as an explicit, dismissible suggestion ('Looks like a goal - switch?') that requires a tap, and a sheet opened from `add-task-row` can never reach Goal mode without one.\n\n---\nFound in the seven-day beta simulation, 4-10 Oct 2026 (account grvpanchalus@gmail.com, live Atlas)."
-        },
         {
           "gid": "1219159640544615",
           "ref": "D-16",

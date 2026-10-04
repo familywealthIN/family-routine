@@ -176,7 +176,11 @@ is genuinely wrong, say so in `uxFindings`, not in `findings`.
    routine's time gap (`D.splitRate`/`K.splitRate`, see D-20). A header reading "1 of 1 done"
    while a listening agent has not fired is **not** necessarily a defect — check the slot
    counter before you file.
-7. **`countTotal('G')` legitimately exceeds 100%** early in a week/month/year; the drawer's
+7. **The Add-task sheet's Task/Goal mode responds to what you type.** Typing text that reads
+   like a goal switches the mode to Goal on its own. That is intended — the sheet classifies
+   the intent from the text rather than holding the user to the pill they opened with. Filed
+   once as a defect (D-17, 4-10 Oct) and closed by the owner as by design.
+8. **`countTotal('G')` legitimately exceeds 100%** early in a week/month/year; the drawer's
    donuts clamp at 100%.
 
 ## Chat is a free-tier model — judge it accordingly
