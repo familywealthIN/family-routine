@@ -99,6 +99,9 @@ jobs:
           # serverless.yml interpolates ${self:custom.secrets.KEY} for each
           # Lambda env var. A key missing from the JSON surfaces later as an
           # opaque variable-resolution error, so check them here by name.
+          # A reference with a fallback (${self:custom.secrets.KEY, ''}) is
+          # optional by design — serverless resolves it without the key — so
+          # only the ones with no fallback are required.
           node -e "
             const fs = require('fs');
             let secrets;
@@ -109,9 +112,9 @@ jobs:
               process.exit(1);
             }
             const required = [...new Set(
-              fs.readFileSync('serverless.yml', 'utf8')
-                .match(/self:custom\.secrets\.[A-Z_]+/g)
-                .map((m) => m.split('.').pop()),
+              [...fs.readFileSync('serverless.yml', 'utf8')
+                .matchAll(/self:custom\.secrets\.([A-Z_]+)(?![A-Z_]|\s*,)/g)]
+                .map((m) => m[1]),
             )];
             const missing = required.filter((k) => secrets[k] === undefined || secrets[k] === '');
             if (missing.length) {
