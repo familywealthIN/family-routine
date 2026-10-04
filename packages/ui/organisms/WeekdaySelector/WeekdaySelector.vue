@@ -56,6 +56,7 @@
 
 <script>
 import moment from 'moment';
+import { getWeekDates, getWeekOfDate } from '../../utils/getDates';
 
 export default {
   name: 'OrganismWeekdaySelector',
@@ -104,12 +105,12 @@ export default {
           this.weekDays = this.buildWeekdays();
           return;
         }
-        const newMoment = moment(newDate, 'DD-MM-YYYY');
-        const oldMoment = moment(oldDate, 'DD-MM-YYYY');
+        const newWeek = getWeekOfDate(newDate);
+        const oldWeek = getWeekOfDate(oldDate);
 
-        if (newMoment.isoWeek() === oldMoment.isoWeek() && newMoment.year() === oldMoment.year()) {
+        if (newWeek.week === oldWeek.week && newWeek.year === oldWeek.year) {
           // Same week — only toggle active flag (optimistic, no rebuild)
-          const selectedWeekday = newMoment.weekday();
+          const selectedWeekday = moment(newDate, 'DD-MM-YYYY').weekday();
           this.weekDays = this.weekDays.map((day, i) => ({
             ...day,
             isActive: selectedWeekday === i,
@@ -128,7 +129,8 @@ export default {
       const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const currentDate = moment(this.selectedDate, 'DD-MM-YYYY');
       const selectedWeekday = currentDate.weekday();
-      const weekStart = currentDate.clone().startOf('week');
+      const { week, year } = getWeekOfDate(this.selectedDate);
+      const weekStart = moment(getWeekDates(year, week).start, 'DD-MM-YYYY');
 
       dayLabels.forEach((day, i) => {
         const dayMoment = moment(weekStart).add(i, 'days');

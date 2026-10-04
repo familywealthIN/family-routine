@@ -72,6 +72,72 @@ export function getWeeksOfYear() {
   return weeks;
 }
 
+/**
+ * THE WEEK DEFINITION
+ * =====================================================
+ * One definition of "a week" is used across the app: moment's locale week,
+ * which runs Sunday to Saturday, with the Friday standing in for the week
+ * itself (the week level of the hierarchy above). The server resolvers, the
+ * cron settlement and every derivation in this file already count weeks that
+ * way, so any surface that names, ranges or picks a week reads the three
+ * helpers below instead of rolling its own arithmetic — that is what stops
+ * Home's week strip and the week goal picker from drifting apart.
+ */
+
+/**
+ * Sunday of week `week` in week-numbering year `year`.
+ *
+ * Anchoring in mid-June keeps `.week()` inside the intended week-numbering
+ * year, so weeks 1 and 52/53 land on the right side of the year boundary.
+ *
+ * @param {number} year - Week-numbering year
+ * @param {number} week - Week number (1-53)
+ * @returns {Object} moment positioned on the Sunday that starts the week
+ */
+function weekAnchor(year, week) {
+  return moment([year, 5, 15]).week(week).weekday(0);
+}
+
+/**
+ * Which week a date belongs to
+ *
+ * @param {string} date - Date in DD-MM-YYYY format
+ * @returns {Object} { week: number, year: number } - week number and its
+ *   week-numbering year, which near a year boundary is not the calendar year
+ */
+export function getWeekOfDate(date) {
+  const momentDate = moment(date, 'DD-MM-YYYY');
+  return { week: momentDate.week(), year: momentDate.weekYear() };
+}
+
+/**
+ * Number of weeks in a week-numbering year (52 or 53)
+ *
+ * @param {number} year - Week-numbering year
+ * @returns {number} Last week number of that year
+ */
+export function getWeeksInYear(year) {
+  return moment([year, 5, 15]).weeksInYear();
+}
+
+/**
+ * The three dates that describe a week
+ *
+ * @param {number} year - Week-numbering year
+ * @param {number} week - Week number (1-53)
+ * @returns {Object} { start, date, end } in DD-MM-YYYY format - the Sunday it
+ *   starts on, the Friday a week goal is stored under, and the Saturday it
+ *   ends on
+ */
+export function getWeekDates(year, week) {
+  const start = weekAnchor(year, week);
+  return {
+    start: start.format('DD-MM-YYYY'),
+    date: start.clone().weekday(5).format('DD-MM-YYYY'),
+    end: start.clone().weekday(6).format('DD-MM-YYYY'),
+  };
+}
+
 export function getMonthsOfYear() {
   const currentMonth = moment().month();
   const currentYear = moment().year();

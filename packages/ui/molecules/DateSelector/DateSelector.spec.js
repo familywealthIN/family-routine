@@ -194,7 +194,7 @@ describe('MoleculeDateSelector', () => {
 
     it('generates correct number of weeks for standard year', () => {
       const wrapper = createWrapper();
-      const weeks2025 = wrapper.vm.getWeeksOfYearISO(2025);
+      const weeks2025 = wrapper.vm.getWeeksForYear(2025);
 
       expect(weeks2025.length).toBeGreaterThanOrEqual(52);
       expect(weeks2025.length).toBeLessThanOrEqual(53);
@@ -202,7 +202,7 @@ describe('MoleculeDateSelector', () => {
 
     it('generates correct week numbers', () => {
       const wrapper = createWrapper();
-      const weeks = wrapper.vm.getWeeksOfYearISO(2026);
+      const weeks = wrapper.vm.getWeeksForYear(2026);
 
       expect(weeks[0].weekNum).toBe(1);
       expect(weeks[0].value).toBe('2026-W01');
@@ -227,7 +227,7 @@ describe('MoleculeDateSelector', () => {
 
     it('handles last week of year correctly', () => {
       const wrapper = createWrapper();
-      const weeks = wrapper.vm.getWeeksOfYearISO(2026);
+      const weeks = wrapper.vm.getWeeksForYear(2026);
       const lastWeek = weeks[weeks.length - 1];
       const range = wrapper.vm.getWeekDateRange(2026, lastWeek.weekNum);
 
@@ -466,7 +466,7 @@ describe('MoleculeDateSelector', () => {
     it('handles year boundary for weeks (week 53)', () => {
       const wrapper = createWrapper();
       // Test a year that has 53 weeks
-      const weeks2020 = wrapper.vm.getWeeksOfYearISO(2020);
+      const weeks2020 = wrapper.vm.getWeeksForYear(2020);
 
       expect(weeks2020.length).toBeGreaterThanOrEqual(52);
     });
