@@ -201,6 +201,37 @@ export const Interactive = () => ({
 });
 
 /**
+ * A missed day beside days that have not happened yet
+ */
+export const WithMissedDay = () => ({
+  components: { WeekdaySelector },
+  template: `
+    <div>
+      <weekday-selector
+        :selectedDate="selectedDate"
+        :missedDates="missedDates"
+        :weekStimuliMap="weekStimuliMap"
+      />
+      <p style="margin-top: 16px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
+        Wednesday got away; Friday and Saturday have not happened yet.
+      </p>
+    </div>
+  `,
+  data() {
+    return {
+      selectedDate: '20-08-2026',
+      missedDates: ['19-08-2026'],
+      weekStimuliMap: {
+        '16-08-2026': { D: 80, K: 60, G: 40 },
+        '17-08-2026': { D: 70, K: 50, G: 30 },
+        '18-08-2026': { D: 55, K: 45, G: 25 },
+        '20-08-2026': { D: 30, K: 20, G: 10 },
+      },
+    };
+  },
+});
+
+/**
  * Mobile layout example
  */
 export const MobileLayout = () => ({

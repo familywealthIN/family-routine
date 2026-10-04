@@ -5,7 +5,7 @@
 // worse: nudging on a deliberate Skip Day, and nudging a brand-new user about
 // days they were never there for.
 
-import { findMissedDay } from '../missedDay';
+import { findMissedDay, findMissedDays } from '../missedDay';
 
 // A Sunday-start week: 13-09-2026 .. 19-09-2026. Today is Wednesday the 16th.
 const TODAY = '16-09-2026';
@@ -69,5 +69,40 @@ describe('findMissedDay', () => {
     expect(findMissedDay([], TODAY)).toBeNull();
     expect(findMissedDay(undefined, TODAY)).toBeNull();
     expect(findMissedDay(week({ '13-09-2026': { D: 40 } }), '')).toBeNull();
+  });
+});
+
+// D-24: the week strip needs every missed day, not just the one the recovery
+// card speaks about, and it must grade them by exactly the same rule.
+describe('findMissedDays', () => {
+  it('returns every missed day in calendar order', () => {
+    const days = week({ '13-09-2026': { D: 40 } });
+
+    expect(findMissedDays(days, TODAY)).toEqual([
+      { date: '14-09-2026', weekday: 'Monday' },
+      { date: '15-09-2026', weekday: 'Tuesday' },
+    ]);
+  });
+
+  it('leaves out a Skip Day, a day still to come and today', () => {
+    const days = week({
+      '13-09-2026': { D: 40 },
+      '14-09-2026': { skipped: true },
+    });
+
+    expect(findMissedDays(days, TODAY)).toEqual([{ date: '15-09-2026', weekday: 'Tuesday' }]);
+  });
+
+  it('returns an empty list for an empty or missing week', () => {
+    expect(findMissedDays([], TODAY)).toEqual([]);
+    expect(findMissedDays(undefined, TODAY)).toEqual([]);
+    expect(findMissedDays(week({ '13-09-2026': { D: 40 } }), '')).toEqual([]);
+  });
+
+  it('agrees with findMissedDay on which day is the most recent', () => {
+    const days = week({ '13-09-2026': { D: 40 } });
+    const missed = findMissedDays(days, TODAY);
+
+    expect(missed[missed.length - 1]).toEqual(findMissedDay(days, TODAY));
   });
 });

@@ -4,6 +4,7 @@
     :weekStimuliMap="weekStimuliMap"
     :loadingDay="loadingDay"
     :isLoading="isLoading"
+    :missedDates="missedDates"
     @date-selected="$emit('date-selected', $event)"
   />
 </template>
@@ -12,6 +13,7 @@
 import moment from 'moment';
 import WeekdaySelector from '@routine-notes/ui/organisms/WeekdaySelector/WeekdaySelector.vue';
 import { WEEK_STIMULI_QUERY } from '../composables/graphql/queries';
+import { findMissedDays } from '../utils/missedDay';
 import eventBus, { EVENTS } from '../utils/eventBus';
 
 export default {
@@ -55,6 +57,15 @@ export default {
         map[day.date] = { D: day.D, K: day.K, G: day.G };
       });
       return map;
+    },
+    missedDates() {
+      // The same rule — and the same read — the recovery card grades the week
+      // by (utils/missedDay), so the strip and the card can never disagree.
+      // Referenced against today rather than the selected date: the strip's job
+      // is to tell a day that got away from a day still to come, and only the
+      // real calendar decides which a day is.
+      return findMissedDays(this.weekStimuli, moment().format('DD-MM-YYYY'))
+        .map((day) => day.date);
     },
   },
 

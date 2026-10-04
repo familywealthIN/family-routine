@@ -43,6 +43,7 @@ export default {
 | Prop | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
 | selectedDate | String | No | Current date | The currently selected date in 'DD-MM-YYYY' format |
+| missedDates | Array | No | `[]` | 'DD-MM-YYYY' dates of the week's missed days. Those columns draw dashed amber rings instead of the plain empty rings a day that has not happened yet gets. The caller derives them (`apps/web-app/src/utils/missedDay.js`). |
 
 ## Events
 
@@ -54,6 +55,7 @@ export default {
 
 * **Automatic Week Calculation**: Displays the week containing the selected date
 * **Visual Active State**: Highlights the currently selected day
+* **Missed Days**: Marks a day that got away so it cannot be read as a day still to come
 * **Responsive**: Works on mobile and desktop layouts
 * **Reactive Updates**: Automatically rebuilds week when selectedDate prop changes
 
