@@ -13,6 +13,7 @@
     :streak-days="streakDays"
     :streak-hint="streakHint"
     :status-bar="statusBar"
+    :more-initially-open="moreInitiallyOpen"
     v-on="$listeners"
   >
     <!--
@@ -28,6 +29,12 @@
          `header-actions`: forwarded unconditionally, never behind a `v-if`. -->
     <template v-slot:sidebar>
       <slot name="sidebar"></slot>
+    </template>
+    <!-- Tablet/desktop main column (Home's own header and panes). Forwarded
+         unconditionally too: an empty slot normalizes to undefined, so the
+         shell's own head/body fallback still renders for every other page. -->
+    <template v-slot:main>
+      <slot name="main"></slot>
     </template>
     <slot></slot>
   </AppShell>
@@ -85,6 +92,8 @@ export default {
      * already paints one above a real WebView - so it is off by default here.
      */
     statusBar: { type: Boolean, default: false },
+    /** Whether the shell's More list starts expanded (the design default). */
+    moreInitiallyOpen: { type: Boolean, default: true },
   },
 
   data() {

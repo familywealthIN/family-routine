@@ -435,6 +435,69 @@ describe('OrganismRoutineFocusCard — status row and tick hint', () => {
       .toBe('· 09:00 – 12:30');
   });
 
+  it('switching tabs scrolls the card content back to the top', async () => {
+    const host = new Vue({
+      data: () => ({ period: 'day' }),
+      render(h) {
+        return h(RoutineFocusCard, {
+          props: {
+            routine: ROUTINE, items: ITEMS, period: this.period, variant: 'desktop',
+          },
+        });
+      },
+    }).$mount();
+    const card = host.$children[0];
+    card.$refs.scroller.scrollTop = 240;
+    host.period = 'week';
+    await Vue.nextTick();
+    await Vue.nextTick();
+    expect(card.$refs.scroller.scrollTop).toBe(0);
+  });
+
+  it('a refetch of the same items does not drag a switched tab to the bottom', async () => {
+    jest.useFakeTimers();
+    const host = new Vue({
+      data: () => ({ period: 'day', items: ITEMS }),
+      render(h) {
+        return h(RoutineFocusCard, {
+          props: {
+            routine: ROUTINE, items: this.items, period: this.period, variant: 'desktop',
+          },
+        });
+      },
+    }).$mount();
+    const card = host.$children[0];
+    const scrolled = jest.spyOn(card, 'scrollToBottom');
+    host.period = 'week';
+    host.items = ITEMS.map((item) => ({ ...item }));
+    await Vue.nextTick();
+    jest.runAllTimers();
+    expect(scrolled).not.toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+
+  it('counts the subtasks actually ticked, even under a completed item', () => {
+    const { el } = render({
+      items: [{
+        id: 'g1', body: 'Some Task', isComplete: true, subDone: 2, subTotal: 3,
+      }],
+    });
+    expect(el.querySelector('[data-testid="checklist-subtasks"]').textContent.trim())
+      .toBe('2/3 subtasks');
+  });
+
+  it('offers Back to now beside the time left only when asked, and emits it', () => {
+    expect(render().el.querySelector('[data-testid="focus-card-back-to-now"]')).toBeNull();
+    const { vm, el } = render({ variant: 'desktop', showBackToNow: true });
+    const back = el.querySelector('[data-testid="focus-card-back-to-now"]');
+    expect(back.textContent.trim()).toBe('Back to now');
+    expect(back.parentNode.querySelector('.rn-focus-card__status-left').textContent).toBe('3h 00m left');
+    let fired = 0;
+    vm.$children[0].$on('back-to-now', () => { fired += 1; });
+    back.click();
+    expect(fired).toBe(1);
+  });
+
   it('says Redeem for a redeemable routine (today\'s redeem flow)', () => {
     const { el } = render({
       routine: {

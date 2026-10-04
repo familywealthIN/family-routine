@@ -494,12 +494,14 @@ export default {
           });
         });
     },
-    onCreated({ period, body }) {
+    onCreated({
+      period, body, goalRef, tags,
+    }) {
       this.trackBusinessEvent('goal_created', {
         period,
-        is_milestone: false,
+        is_milestone: !!goalRef,
         has_deadline: false,
-        tags_count: 0,
+        tags_count: (tags || []).length,
         goal_length: (body || '').length,
       });
       this.tab = normaliseTab(period);

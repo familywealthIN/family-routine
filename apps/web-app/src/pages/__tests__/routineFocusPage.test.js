@@ -991,6 +991,8 @@ describe('RoutineFocus capture', () => {
     // No capture sheet of its own — the modal is opened through the event bus.
     expect(RoutineFocus.components.AiSearchModal).toBeUndefined();
     expect(RoutineFocus.components.CaptureSheet).toBeUndefined();
+    // Home keeps the modal; Goals and Year Goals use the goal-item create sheet.
+    expect(RoutineFocus.components.GoalItemCreateContainer).toBeUndefined();
     // Both affordances that add a task on this screen go through one method.
     expect(call('cardHandlers', {
       onRingAction: 1,
@@ -1002,6 +1004,19 @@ describe('RoutineFocus capture', () => {
       openAgentResult: 1,
       openTranscript: 1,
     })['add-task']).toBe(methods.openAiSearch);
+  });
+
+  it('preselects the routine being VIEWED in the modal, not the current one', () => {
+    /* eslint-disable global-require */
+    const eventBus = require('../../utils/eventBus').default;
+    const { EVENTS } = require('../../utils/eventBus');
+    /* eslint-enable global-require */
+    const seen = [];
+    const listener = (payload) => seen.push(payload);
+    eventBus.$on(EVENTS.OPEN_AI_SEARCH, listener);
+    methods.openAiSearch.call({ resolvedFocusId: 'evening' });
+    eventBus.$off(EVENTS.OPEN_AI_SEARCH, listener);
+    expect(seen).toEqual([{ mode: 'add', taskRef: 'evening' }]);
   });
 
   it('the Inbox quick-add is the only other way in, and it needs no routine', () => {
@@ -1121,11 +1136,18 @@ describe('RoutineFocus shell geometry', () => {
     // 1056px main, 1016 inner, and the design's own 602.4 / 401.6.
     expect(split(1056, '.rn-home--tablet .rn-home__content', 'tablet'))
       .toEqual([602.4, 401.6]);
-    // This box is border-box, so the rail must be 77px for the page's main to be
-    // the design's 1056 — at 76px it would swallow the 1px rule and hand the
-    // panes an extra pixel, leaving a 0.6px residue against the figures above.
-    expect(px('.rn-home__side', 'width')).toBe(77);
-    const inner = 1133 - px('.rn-home__side', 'width');
+    // The rail is AppShell's now. It is border-box, so it must be 77px for the
+    // page's main to be the design's 1056 — at 76px it would swallow the 1px
+    // rule and hand the panes an extra pixel, leaving a 0.6px residue.
+    const shellSource = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', '..', '..', 'packages', 'ui', 'organisms', 'AppShell', 'AppShell.vue'),
+      'utf8',
+    );
+    const shellCss = shellSource.slice(shellSource.lastIndexOf('<style>'));
+    const railRule = shellCss.slice(shellCss.indexOf('.rn-shell__rail {'));
+    const railWidth = parseFloat(railRule.match(/width:\s*([\d.]+)px/)[1]);
+    expect(railWidth).toBe(77);
+    const inner = 1133 - railWidth;
     expect(inner).toBe(1056);
     expect(split(inner, '.rn-home--tablet .rn-home__content', 'tablet'))
       .toEqual([602.4, 401.6]);

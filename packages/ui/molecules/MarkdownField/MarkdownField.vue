@@ -12,9 +12,14 @@
     in for a real editor, not a spec to re-implement — see
     docs/redesign/chassis.md § "Things the mocks get wrong on purpose".
 
-    Pure presentational: `input` fires per keystroke for a live preview, `commit`
-    fires once when edit mode is left, so a container can save on `commit` and
-    not mutate on every character.
+    Pure presentational: `input` fires per keystroke for a live preview; `commit`
+    is the save signal. It fires once typing pauses (autosave), when edit mode
+    is left, and on `flush()` — and only when the text actually changed — so a
+    container can save on `commit` without a mutation per character.
+
+    The field owns the text being typed (`draft`). It used to commit `value`,
+    the prop — which only moves if the parent writes every keystroke back, and
+    no parent did, so every commit carried the old text and nothing ever saved.
   -->
   <div class="rn-mdf">
     <div class="rn-mdf__head">
@@ -33,10 +38,10 @@
     <div v-if="editing" class="rn-mdf__editor" data-testid="markdown-editor">
       <markdown-editor
         ref="editor"
-        :value="value"
+        :value="draft"
         variant="default"
         :editor-key="editorKey"
-        @input="$emit('input', $event)"
+        @input="onInput"
       />
       <div class="rn-mdf__stats">
         <span>Markdown · GFM · line breaks kept</span>
@@ -58,7 +63,7 @@
         stored-XSS vector. Agent output is different — it is arbitrary webhook
         HTML and goes through the sandboxed iframe in AgentResultModal instead.
       -->
-      <vue-markdown v-if="hasValue" :source="value" :html="false" />
+      <vue-markdown v-if="hasValue" :source="draft" :html="false" />
       <span v-else>{{ placeholder }}</span>
     </div>
   </div>
@@ -67,6 +72,9 @@
 <script>
 import VueMarkdown from 'vue-markdown';
 import { MarkdownEditor } from '@routine-notes/markdown-editor';
+
+/** How long typing must pause before the draft autosaves. */
+export const AUTOSAVE_MS = 1000;
 
 export default {
   name: 'MoleculeMarkdownField',
@@ -83,25 +91,69 @@ export default {
     editorKey: { type: [String, Number], default: 0 },
   },
   data() {
-    return { editing: false };
+    return {
+      editing: false,
+      /** The text as typed. The editor and the preview both read this. */
+      draft: this.value || '',
+      /** The last text known saved — the prop's, or our own last commit. */
+      saved: this.value || '',
+      autosaveTimer: null,
+    };
   },
   computed: {
     hasValue() {
-      return !!(this.value && this.value.trim());
+      return !!(this.draft && this.draft.trim());
     },
     stats() {
-      const text = this.value || '';
+      const text = this.draft || '';
       const words = text.trim() ? text.trim().split(/\s+/).length : 0;
       return `${text.split('\n').length} lines · ${words} words`;
     },
   },
   watch: {
-    /** A different item means a different field; never open it mid-swap. */
+    /**
+     * A save lands back here as a new prop. Mid-edit it must NOT reach the
+     * draft: the editor reseeds itself on any outside value, which would jump
+     * the cursor and drop whatever was typed while the save was in flight.
+     */
+    value(next) {
+      this.saved = next || '';
+      if (!this.editing) this.draft = this.saved;
+    },
+    /**
+     * A different item means a different field; never open it mid-swap. A
+     * pending autosave is dropped, not fired: by now the parent's item is the
+     * NEW one, so committing would write this text onto the wrong item.
+     */
     editorKey() {
+      this.cancelAutosave();
       this.editing = false;
+      this.draft = this.value || '';
+      this.saved = this.draft;
     },
   },
+  beforeDestroy() {
+    // Leaving the page within the autosave delay still saves.
+    this.commit();
+  },
   methods: {
+    onInput(text) {
+      this.draft = text;
+      this.$emit('input', text);
+      this.cancelAutosave();
+      this.autosaveTimer = setTimeout(this.commit, AUTOSAVE_MS);
+    },
+    cancelAutosave() {
+      if (this.autosaveTimer) clearTimeout(this.autosaveTimer);
+      this.autosaveTimer = null;
+    },
+    /** Emit the draft once, if it differs from what is already saved. */
+    commit() {
+      this.cancelAutosave();
+      if (this.draft === this.saved) return;
+      this.saved = this.draft;
+      this.$emit('commit', this.draft);
+    },
     toggle() {
       this.setEditing(!this.editing);
     },
@@ -114,12 +166,13 @@ export default {
     setEditing(next) {
       if (next === this.editing) return;
       this.editing = next;
-      if (!next) this.$emit('commit', this.value);
+      if (!next) this.commit();
       this.$emit('editing', next);
     },
     /** Called by the parent when the sheet closes, so an open edit still saves. */
     flush() {
       if (this.editing) this.setEditing(false);
+      else this.commit();
     },
   },
 };

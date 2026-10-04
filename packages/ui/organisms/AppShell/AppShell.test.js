@@ -12,7 +12,7 @@ const Vue = require('vue');
 
 const AppShell = require('./AppShell.vue').default;
 const {
-  MORE_NAV, PRIMARY_NAV, LOGOUT_ITEM, navKey,
+  MORE_NAV, PRIMARY_NAV, navKey,
 } = require('../../constants/navigation');
 
 Vue.config.productionTip = false;
@@ -161,15 +161,11 @@ describe('OrganismAppShell — navigation is an emit', () => {
     expect(testid(el, 'shell-more-routines').style.background).toBe('');
   });
 
-  it('sends Log out out through sign-out, never through navigate', () => {
-    const { shell, el } = render({ shell: 'desktop' });
-    const navigated = [];
-    let signedOut = 0;
-    shell.$on('navigate', (key) => navigated.push(key));
-    shell.$on('sign-out', () => { signedOut += 1; });
-    testid(el, 'shell-more-logout').click();
-    expect(signedOut).toBe(1);
-    expect(navigated).toEqual([]);
+  it('has no Log out — signing out lives on the Profile page', () => {
+    const { el } = render({ shell: 'desktop' });
+    expect(testid(el, 'shell-more-logout')).toBeNull();
+    expect(MORE_NAV.map(navKey)).not.toContain('logout');
+    expect(testid(el, 'shell-more-profile')).not.toBeNull();
   });
 });
 
@@ -265,12 +261,6 @@ describe('OrganismAppShell — desktop sidebar', () => {
       expect(testid(el, 'shell-more-list')).toBeNull();
     });
   });
-
-  it('paints Log out red from the item, not from a shell special case', () => {
-    expect(testid(desktop().el, 'shell-more-logout').style.color)
-      .toBe('rgb(211, 47, 47)');
-    expect(LOGOUT_ITEM.color).toBe('#d32f2f');
-  });
 });
 
 describe('OrganismAppShell — the avatar drawer', () => {
@@ -286,7 +276,7 @@ describe('OrganismAppShell — the avatar drawer', () => {
     });
   });
 
-  it('fills the drawer with the whole More list, Log out included', () => {
+  it('fills the drawer with the whole More list', () => {
     const { el, shell } = render();
     shell.openDrawer();
     return Vue.nextTick().then(() => {
@@ -367,6 +357,54 @@ describe('OrganismAppShell — the desktop sidebar slot', () => {
   it('is desktop-only — the phone and the rail have no room for a list', () => {
     expect(testid(render({ shell: 'phone' }, sidebar).el, 'page-sidebar')).toBeNull();
     expect(testid(render({ shell: 'tablet' }, sidebar).el, 'page-sidebar')).toBeNull();
+  });
+});
+
+/**
+ * The page-owned main column. Home's date header and checklist/chat split do not
+ * fit the generic head/body, and Home used to draw a whole second sidebar to get
+ * around that — which drifted (no hover, no More, no profile row). With `main`
+ * it keeps its column and shares this nav.
+ */
+describe('OrganismAppShell — the main-column slot', () => {
+  const main = (h) => [h('div', { slot: 'main', attrs: { 'data-testid': 'page-main' } }, 'Home')];
+
+  ['tablet', 'desktop'].forEach((shell) => {
+    it(`replaces the ${shell} head and body but keeps the shell's nav`, () => {
+      const { el } = render({ shell }, main);
+      expect(testid(el, 'page-main')).not.toBeNull();
+      expect(testid(el, 'shell-head')).toBeNull();
+      expect(testid(el, 'shell-body')).toBeNull();
+      expect(testid(el, shell === 'tablet' ? 'shell-rail' : 'shell-sidebar')).not.toBeNull();
+    });
+
+    it(`renders the ${shell} head and body when no page supplies it`, () => {
+      const { el } = render({ shell });
+      expect(testid(el, 'shell-head')).not.toBeNull();
+      expect(testid(el, 'shell-body')).not.toBeNull();
+    });
+  });
+
+  it('starts More collapsed when the page asks (Home), expanded by default', () => {
+    expect(testid(render({ shell: 'desktop' }).el, 'shell-more-list')).not.toBeNull();
+    const { el } = render({ shell: 'desktop', moreInitiallyOpen: false });
+    expect(testid(el, 'shell-more-list')).toBeNull();
+    expect(testid(el, 'shell-more-toggle')).not.toBeNull();
+  });
+
+  it('keeps the tablet title level with the rail logo when the status strip is off', () => {
+    expect(render({ shell: 'tablet', statusBar: false }).el.classList.contains('rn-shell--no-status')).toBe(true);
+    expect(render({ shell: 'tablet', statusBar: true }).el.classList.contains('rn-shell--no-status')).toBe(false);
+    const css = fs.readFileSync(path.join(__dirname, 'AppShell.vue'), 'utf8');
+    const rule = css.slice(css.indexOf('.rn-shell--tablet.rn-shell--no-status .rn-shell__head {'));
+    // The design's 4px head padding + the 24px strip it sits under, +1 to centre.
+    expect(rule.match(/padding-top:\s*(\d+)px/)[1]).toBe('29');
+  });
+
+  it('runs the tablet rail at 77px so the main column is the design 1056', () => {
+    const css = fs.readFileSync(path.join(__dirname, 'AppShell.vue'), 'utf8');
+    const rule = css.slice(css.indexOf('.rn-shell__rail {'));
+    expect(rule.match(/width:\s*([\d.]+)px/)[1]).toBe('77');
   });
 });
 

@@ -7,9 +7,11 @@
  * file is about WHEN each one is mounted and what leaves the component, not about
  * EasyMDE or marked.
  *
- * `commit` firing exactly once, on the way OUT of edit mode, is the contract the
- * container depends on — it saves on commit, so a commit per keystroke would be a
- * mutation per keystroke.
+ * `commit` is the save signal the container depends on. It must carry the
+ * TYPED text, fire once typing pauses (autosave) or edit mode is left, and never
+ * fire for unchanged text — a commit per keystroke would be a mutation per
+ * keystroke. Every old test here committed without typing, which is how a field
+ * that always committed the stale prop (and so never saved) passed them all.
  */
 jest.mock('@routine-notes/markdown-editor', () => ({
   __esModule: true,
@@ -39,7 +41,7 @@ jest.mock('vue-markdown', () => ({
 
 const Vue = require('vue');
 
-const MarkdownField = require('./MarkdownField.vue').default;
+const { default: MarkdownField, AUTOSAVE_MS } = require('./MarkdownField.vue');
 
 Vue.config.productionTip = false;
 Vue.config.devtools = false;
@@ -115,57 +117,135 @@ describe('MarkdownField — entering edit mode', () => {
 });
 
 describe('MarkdownField — typing and committing', () => {
-  it('input fires per keystroke, commit does not', async () => {
-    const { el, events } = render();
+  afterEach(() => jest.useRealTimers());
+
+  const openAndType = async (el, text) => {
     q(el, 'markdown-preview').click();
     await Vue.nextTick();
-
     const editor = q(el, 'stub-editor');
-    editor.value = 'Closes the blocker. Now with tests.';
+    editor.value = text;
     editor.dispatchEvent(new Event('input'));
+  };
+
+  it('input fires per keystroke, commit does not', async () => {
+    const { el, events } = render();
+    await openAndType(el, 'Closes the blocker. Now with tests.');
     expect(events.input).toEqual(['Closes the blocker. Now with tests.']);
     expect(events.commit).toEqual([]);
   });
 
-  it('leaving edit mode commits once', async () => {
+  it('autosaves the typed text once typing pauses', async () => {
+    jest.useFakeTimers();
+    const { el, field, events } = render();
+    await openAndType(el, 'First draft');
+    jest.advanceTimersByTime(AUTOSAVE_MS - 1);
+    expect(events.commit).toEqual([]);
+    jest.advanceTimersByTime(1);
+    expect(events.commit).toEqual(['First draft']);
+    // Still editing — an autosave does not close the editor.
+    expect(field.editing).toBe(true);
+  });
+
+  it('restarts the autosave on every keystroke, then commits the latest text', async () => {
+    jest.useFakeTimers();
+    const { el, events } = render();
+    await openAndType(el, 'One');
+    jest.advanceTimersByTime(AUTOSAVE_MS - 100);
+    const editor = q(el, 'stub-editor');
+    editor.value = 'One two';
+    editor.dispatchEvent(new Event('input'));
+    jest.advanceTimersByTime(AUTOSAVE_MS - 100);
+    expect(events.commit).toEqual([]);
+    jest.advanceTimersByTime(100);
+    expect(events.commit).toEqual(['One two']);
+  });
+
+  it('leaving edit mode commits the TYPED text, not the old prop', async () => {
+    const { el, events } = render();
+    await openAndType(el, 'Closes the blocker. Now with tests.');
+    q(el, 'markdown-toggle').dispatchEvent(new MouseEvent('mousedown'));
+    await Vue.nextTick();
+    expect(events.commit).toEqual(['Closes the blocker. Now with tests.']);
+    expect(q(el, 'stub-rendered').textContent).toBe('Closes the blocker. Now with tests.');
+  });
+
+  it('commits nothing when the text did not change', async () => {
     const { el, events } = render();
     q(el, 'markdown-preview').click();
     await Vue.nextTick();
     q(el, 'markdown-toggle').dispatchEvent(new MouseEvent('mousedown'));
     await Vue.nextTick();
-    expect(events.commit).toEqual(['Closes the **blocker**.']);
-    expect(q(el, 'markdown-preview')).toBeTruthy();
+    expect(events.commit).toEqual([]);
   });
 
-  it('flush() commits an open editor, and is a no-op when closed', async () => {
-    const { field, events } = render();
+  it('does not commit the same text twice (autosave, then leaving)', async () => {
+    jest.useFakeTimers();
+    const { el, field, events } = render();
+    await openAndType(el, 'Saved once');
+    jest.advanceTimersByTime(AUTOSAVE_MS);
+    field.setEditing(false);
+    expect(events.commit).toEqual(['Saved once']);
+  });
+
+  it('flush() commits an open edit, and is a no-op with nothing typed', async () => {
+    const { el, field, events } = render();
     field.flush();
     expect(events.commit).toEqual([]);
 
-    field.setEditing(true);
-    await Vue.nextTick();
+    await openAndType(el, 'Typed then closed');
     field.flush();
-    expect(events.commit).toEqual(['Closes the **blocker**.']);
+    expect(events.commit).toEqual(['Typed then closed']);
+    expect(field.editing).toBe(false);
   });
 
-  it('a different item closes the editor rather than carrying it over', async () => {
-    // The parent owns editorKey, so swapping it is a real prop change — the
-    // guard exists because a sheet reused for the next goal item would otherwise
-    // open on that item mid-edit.
+  it('a save landing mid-edit does not reseed the editor', async () => {
     const host = new Vue({
-      data: () => ({ editorKey: 'g1' }),
+      data: () => ({ value: 'old' }),
       render(h) {
-        return h(MarkdownField, { props: { value: 'text', editorKey: this.editorKey } });
+        return h(MarkdownField, { props: { value: this.value } });
       },
     }).$mount();
     const field = host.$children[0];
     field.setEditing(true);
     await Vue.nextTick();
-    expect(field.editing).toBe(true);
+    field.onInput('old plus more typed');
+    host.value = 'old plus';
+    await Vue.nextTick();
+    expect(field.draft).toBe('old plus more typed');
+  });
+
+  it('a different item closes the editor and drops its pending autosave', async () => {
+    jest.useFakeTimers();
+    // The parent owns editorKey, so swapping it is a real prop change — the
+    // guard exists because a sheet reused for the next goal item would otherwise
+    // open on that item mid-edit, or save the old text onto it.
+    const host = new Vue({
+      data: () => ({ editorKey: 'g1', value: 'text' }),
+      render(h) {
+        return h(MarkdownField, { props: { value: this.value, editorKey: this.editorKey } });
+      },
+    }).$mount();
+    const field = host.$children[0];
+    const commits = [];
+    field.$on('commit', (text) => commits.push(text));
+    field.setEditing(true);
+    await Vue.nextTick();
+    field.onInput('typed for g1');
 
     host.editorKey = 'g2';
+    host.value = 'g2 text';
     await Vue.nextTick();
+    jest.advanceTimersByTime(AUTOSAVE_MS);
     expect(field.editing).toBe(false);
+    expect(commits).toEqual([]);
+    expect(field.draft).toBe('g2 text');
+  });
+
+  it('commits a pending draft when it is destroyed', async () => {
+    const { el, vm, events } = render();
+    await openAndType(el, 'Typed then navigated away');
+    vm.$destroy();
+    expect(events.commit).toEqual(['Typed then navigated away']);
   });
 });
 

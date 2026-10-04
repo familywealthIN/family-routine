@@ -32,6 +32,25 @@ jest.mock(
   }),
 );
 
+/*
+ * The Linked to / date pickers are the AI search toolbar's Vuetify molecules,
+ * tested where they live. Stubs that expose their value and re-emit `input`
+ * (and the date one's `update:period`) are all this sheet needs of them.
+ */
+const pickerStub = (name, testid) => ({
+  __esModule: true,
+  default: {
+    name,
+    props: ['value', 'items', 'period', 'taskMode', 'label'],
+    render(h) {
+      return h('div', { attrs: { 'data-testid': testid, 'data-value': this.value || '' } });
+    },
+  },
+});
+jest.mock('../../molecules/DateSelector/DateSelector.vue', () => pickerStub('MoleculeDateSelector', 'goal-sheet-date-picker'));
+jest.mock('../../molecules/GoalTaskSelector/GoalTaskSelector.vue', () => pickerStub('GoalTaskSelector', 'goal-sheet-routine-picker'));
+jest.mock('../../molecules/GoalRefSelector/GoalRefSelector.vue', () => pickerStub('GoalRefSelector', 'goal-sheet-goal-ref-picker'));
+
 const Vue = require('vue');
 
 const GoalItemSheet = require('./GoalItemSheet.vue').default;
@@ -88,6 +107,17 @@ const render = (props = {}) => {
 };
 
 const q = (el, testid) => el.querySelector(`[data-testid="${testid}"]`);
+
+/** A descendant component by name — the pickers sit inside ResponsiveSheet's slot. */
+const findByName = (vm, name) => {
+  const stack = [...vm.$children];
+  while (stack.length) {
+    const next = stack.shift();
+    if (next.$options.name === name) return next;
+    stack.push(...next.$children);
+  }
+  return null;
+};
 
 describe('GoalItemSheet — the three status labels', () => {
   it('Open for an item nothing is waiting on', () => {
@@ -176,24 +206,198 @@ describe('GoalItemSheet — Date row', () => {
   });
 });
 
-describe('GoalItemSheet — Linked to', () => {
+describe('GoalItemSheet — Linked to, locked', () => {
   it('renders the routine then the parent goal', () => {
-    const { el } = render();
+    const { el } = render({ linkLocked: true });
     expect(q(el, 'goal-sheet-routine').textContent).toContain('Start Work · 09:00');
     expect(q(el, 'goal-sheet-goal-ref').textContent).toContain('Ship the dashboard');
     expect(q(el, 'goal-sheet-no-goal-ref')).toBeNull();
+    expect(q(el, 'goal-sheet-routine-picker')).toBeNull();
   });
 
   it('says so when it rolls up into nothing', () => {
-    const { el } = render({ goalRefLabel: '' });
+    const { el } = render({ linkLocked: true, goalRefLabel: '' });
     expect(q(el, 'goal-sheet-no-goal-ref').textContent.trim())
       .toBe('Not linked to a week goal');
     expect(q(el, 'goal-sheet-goal-ref')).toBeNull();
   });
 
   it('an item with no routine is labelled Inbox', () => {
-    const { el } = render({ routineLabel: 'Inbox' });
+    const { el } = render({ linkLocked: true, routineLabel: 'Inbox' });
     expect(q(el, 'goal-sheet-routine').textContent).toContain('Inbox');
+  });
+
+  it('drops the routine chip when there is no routine label (Year Goals)', () => {
+    const { el } = render({ linkLocked: true, routineLabel: '' });
+    expect(q(el, 'goal-sheet-routine')).toBeNull();
+    expect(q(el, 'goal-sheet-goal-ref').textContent).toContain('Ship the dashboard');
+  });
+});
+
+describe('GoalItemSheet — Linked to, editable', () => {
+  const pickers = (sheet) => ({
+    routine: findByName(sheet, 'GoalTaskSelector'),
+    goalRef: findByName(sheet, 'GoalRefSelector'),
+  });
+
+  it("shows the routine and parent-goal pickers on the item's current link", () => {
+    const { el } = render();
+    expect(q(el, 'goal-sheet-routine-picker').getAttribute('data-value')).toBe('sw');
+    expect(q(el, 'goal-sheet-goal-ref-picker').getAttribute('data-value')).toBe('wg1');
+    expect(q(el, 'goal-sheet-routine')).toBeNull();
+  });
+
+  it('writes a new parent goal through update-link', () => {
+    const { sheet } = render();
+    const links = [];
+    sheet.$on('update-link', (payload) => links.push(payload));
+    pickers(sheet).goalRef.$emit('input', 'wg2');
+    expect(links).toEqual([{ item: ITEM, goalRef: 'wg2' }]);
+  });
+
+  it('writes a new routine, and clearing one sends an empty ref', () => {
+    const { sheet } = render();
+    const links = [];
+    sheet.$on('update-link', (payload) => links.push(payload));
+    pickers(sheet).routine.$emit('input', 'eve');
+    pickers(sheet).goalRef.$emit('input', null);
+    expect(links).toEqual([{ item: ITEM, taskRef: 'eve' }, { item: ITEM, goalRef: '' }]);
+  });
+
+  it('does not write a pick that changes nothing', () => {
+    const { sheet } = render();
+    const links = [];
+    sheet.$on('update-link', (payload) => links.push(payload));
+    pickers(sheet).goalRef.$emit('input', 'wg1');
+    expect(links).toEqual([]);
+  });
+
+  it('labels the parent picker one period up', () => {
+    const { sheet } = render({ period: 'week' });
+    expect(pickers(sheet).goalRef.label).toBe('Rolls up into a month goal');
+  });
+});
+
+describe('GoalItemSheet — create mode', () => {
+  const SEED = {
+    period: 'day', date: '12-09-2026', taskRef: 'sw', goalRef: '',
+  };
+  const create = (props = {}) => {
+    const out = render({
+      mode: 'create', item: null, seed: SEED, periodLabel: 'New task', ...props,
+    });
+    out.created = [];
+    out.contexts = [];
+    out.sheet.$on('create', (payload) => out.created.push(payload));
+    out.sheet.$on('link-context', (payload) => out.contexts.push(payload));
+    return out;
+  };
+  const type = (el, text) => {
+    const title = q(el, 'goal-sheet-title');
+    title.value = text;
+    title.dispatchEvent(new Event('input'));
+  };
+  const child = findByName;
+
+  it('swaps the status pill and delete for an Add button', () => {
+    const { el } = create();
+    expect(q(el, 'goal-sheet-create')).not.toBeNull();
+    expect(q(el, 'goal-sheet-status')).toBeNull();
+    expect(q(el, 'goal-sheet-delete')).toBeNull();
+    expect(q(el, 'goal-sheet-date-picker')).not.toBeNull();
+  });
+
+  it('cannot add without a title', () => {
+    const { el } = create();
+    expect(q(el, 'goal-sheet-create').disabled).toBe(true);
+  });
+
+  it('emits one create with the whole draft', async () => {
+    const { el, sheet, created } = create();
+    type(el, '  Write the release notes  ');
+    child(sheet, 'GoalRefSelector').$emit('input', 'wg1');
+    sheet.onTagsInput(['project:beta']);
+    sheet.onContributionInput('Unblocks the launch.');
+    await Vue.nextTick();
+    q(el, 'goal-sheet-create').click();
+    expect(created).toEqual([{
+      body: 'Write the release notes',
+      contribution: 'Unblocks the launch.',
+      tags: ['project:beta'],
+      period: 'day',
+      date: '12-09-2026',
+      taskRef: 'sw',
+      goalRef: 'wg1',
+    }]);
+  });
+
+  it('Enter in the title adds', () => {
+    const { el, created } = create();
+    type(el, 'Quick one');
+    q(el, 'goal-sheet-title').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(created.map((d) => d.body)).toEqual(['Quick one']);
+  });
+
+  it("a new period drops the date and the parent, and asks for that period's parents", () => {
+    const { el, sheet, contexts } = create({ seed: { ...SEED, goalRef: 'wg1' } });
+    child(sheet, 'MoleculeDateSelector').$emit('update:period', 'week');
+    expect(sheet.form).toMatchObject({ period: 'week', date: '', goalRef: '' });
+    expect(contexts[contexts.length - 1]).toEqual({ period: 'week', date: '' });
+    type(el, 'Plan the week');
+    expect(sheet.canCreate).toBe(false);
+  });
+
+  it('a lifetime goal gets the one lifetime date', () => {
+    const { sheet } = create();
+    child(sheet, 'MoleculeDateSelector').$emit('update:period', 'lifetime');
+    expect(sheet.form.date).toBe('01-01-1970');
+  });
+
+  it('a new date asks for the parents of that date', () => {
+    const { sheet, contexts } = create();
+    child(sheet, 'MoleculeDateSelector').$emit('input', '13-09-2026');
+    expect(contexts[contexts.length - 1]).toEqual({ period: 'day', date: '13-09-2026' });
+  });
+
+  it('locked (Year Goals): read-only date and link, and still adds', async () => {
+    const { el, created } = create({
+      seed: { ...SEED, goalRef: 'wg1' },
+      dateLocked: true,
+      linkLocked: true,
+      dateLabel: 'Week 37',
+      routineLabel: '',
+      goalRefLabel: 'Ship the dashboard',
+    });
+    expect(q(el, 'goal-sheet-date-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-routine-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-date').textContent).toContain('Week 37');
+    type(el, 'Day goal');
+    await Vue.nextTick();
+    q(el, 'goal-sheet-create').click();
+    expect(created[0]).toMatchObject({ goalRef: 'wg1', date: '12-09-2026', period: 'day' });
+  });
+
+  it('never sends a contribution commit or a title write while drafting', () => {
+    const { sheet, events } = create();
+    sheet.onCommitContribution('draft text');
+    expect(events['commit-contribution']).toEqual([]);
+    expect(events['update-title']).toEqual([]);
+  });
+
+  it('starts blank on every open', async () => {
+    const host = new Vue({
+      data: () => ({ open: true }),
+      render(h) {
+        return h(GoalItemSheet, { props: { open: this.open, mode: 'create', seed: SEED } });
+      },
+    }).$mount();
+    const sheet = host.$children[0];
+    sheet.form.body = 'left over';
+    host.open = false;
+    await Vue.nextTick();
+    host.open = true;
+    await Vue.nextTick();
+    expect(sheet.form.body).toBe('');
   });
 });
 

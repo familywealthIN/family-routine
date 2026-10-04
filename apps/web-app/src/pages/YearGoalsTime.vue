@@ -98,9 +98,34 @@
       @close="closeSwitcher"
     />
 
-    <!-- Create / rename. 480px on tablet and desktop (chassis.md § per-page). -->
+    <!--
+      Create: the goal-item sheet every page adds goals with (Home, Goals). The
+      plan fixes what a new goal rolls up into, so period, date and Linked to
+      are locked to the draft and shown read-only.
+    -->
+    <goal-item-create-container
+      :open="sheet === 'create' && !!draft && !draft.edit"
+      :shell="shell"
+      locked
+      :period="createDraftFor.period"
+      :date="createDraftFor.date"
+      :task-ref="createDraftFor.taskRef || ''"
+      :goal-ref="createDraftFor.goalRef || ''"
+      :heading="createDraftFor.title || ''"
+      :placeholder="createDraftFor.placeholder || ''"
+      :locked-date-label="createDraftFor.periodLabel || ''"
+      locked-routine-label=""
+      :locked-goal-ref-label="createDraftFor.parentLabel || ''"
+      :selected-date="createDraftFor.date || today"
+      :today="today"
+      @close="closeSheet"
+      @created="onDraftCreated"
+      @failed="onDraftFailed"
+    />
+
+    <!-- Rename. 480px on tablet and desktop (chassis.md § per-page). -->
     <responsive-sheet
-      :open="sheet === 'create'"
+      :open="sheet === 'create' && !!draft && !!draft.edit"
       :shell="shell"
       :width="SHEET_WIDTH"
       :title="draft ? draft.title : ''"
@@ -232,6 +257,7 @@ import YearGoalChatContainer from '../containers/YearGoalChatContainer.vue';
 import GoalEditDialogContainer from '../containers/GoalEditDialogContainer.vue';
 import GoalPeriodTickContainer from '../containers/GoalPeriodTickContainer.vue';
 import GoalPeriodCreateContainer from '../containers/GoalPeriodCreateContainer.vue';
+import GoalItemCreateContainer from '../containers/GoalItemCreateContainer.vue';
 import GoalPeriodUpdateContainer from '../containers/GoalPeriodUpdateContainer.vue';
 import GoalPeriodDeleteContainer from '../containers/GoalPeriodDeleteContainer.vue';
 import { signOut } from '../utils/signOut';
@@ -261,6 +287,7 @@ export default {
     GoalEditDialogContainer,
     GoalPeriodTickContainer,
     GoalPeriodCreateContainer,
+    GoalItemCreateContainer,
     GoalPeriodUpdateContainer,
     GoalPeriodDeleteContainer,
     RoutineComposer,
@@ -350,6 +377,10 @@ export default {
     },
     hasNext() {
       return this.goalIndex > -1 && this.goalIndex < this.goalIds.length - 1;
+    },
+    /** The open create draft, or an empty one so the sheet's props stay defined. */
+    createDraftFor() {
+      return (this.draft && !this.draft.edit) ? this.draft : { period: 'day', date: '' };
     },
     /** Re-key the form so a new draft resets the field and re-focuses it. */
     draftKey() {
@@ -727,33 +758,36 @@ export default {
       return week ? `Week ${week.week} · ${week.rangeLabel}` : item.date;
     },
 
+    /** The rename form. Creates go through the goal-item create sheet. */
     async submitDraft() {
       const body = String(this.draftText || '').trim();
-      if (!body || !this.draft) return;
+      if (!body || !this.draft || !this.draft.edit) return;
       const { draft } = this;
-
-      if (draft.edit) {
-        await this.$refs.update.rename(draft.item, body).catch(() => null);
-        this.closeSheet();
-        this.showToast({
-          icon: 'edit', color: '#90caf9', title: 'Saved', sub: body,
-        });
-        this.refetchTree();
-        return;
-      }
-
-      const created = await this.$refs.create.create({ ...draft, body }).catch(() => null);
+      await this.$refs.update.rename(draft.item, body).catch(() => null);
       this.closeSheet();
-      if (!created) {
-        this.showToast({
-          icon: 'error_outline',
-          color: '#ef9a9a',
-          title: "That goal didn't save",
-          sub: 'Check your connection and try again.',
-        });
-        return;
-      }
+      this.showToast({
+        icon: 'edit', color: '#90caf9', title: 'Saved', sub: body,
+      });
+      this.refetchTree();
+    },
 
+    /** The create sheet saved. It reports before closing, so `draft` is still set. */
+    async onDraftCreated({ body }) {
+      const { draft } = this;
+      if (!draft) return;
+      await this.afterCreate(draft, body);
+    },
+
+    onDraftFailed() {
+      this.showToast({
+        icon: 'error_outline',
+        color: '#ef9a9a',
+        title: "That goal didn't save",
+        sub: 'Check your connection and try again.',
+      });
+    },
+
+    async afterCreate(draft, body) {
       // A day goal was added to a week, so show that week's rows straight away.
       if (draft.kind === 'day') this.openWeekId = draft.goalRef;
 

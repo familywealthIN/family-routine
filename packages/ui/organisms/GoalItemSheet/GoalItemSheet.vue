@@ -20,7 +20,25 @@
     @close="close"
   >
     <template #header>
-      <div class="rn-gis__head">
+      <div v-if="creating" class="rn-gis__head">
+        <div class="rn-gis__period" data-testid="goal-sheet-period">{{ periodLabel }}</div>
+        <div class="rn-gis__head-actions">
+          <button
+            type="button"
+            class="rn-gis__add"
+            :disabled="!canCreate || saving"
+            data-testid="goal-sheet-create"
+            @click="submitCreate"
+          >{{ saving ? 'Adding…' : 'Add' }}</button>
+          <i
+            class="rn-mi rn-gis__icon-btn"
+            title="Close"
+            data-testid="goal-sheet-close"
+            @click="close"
+          >close</i>
+        </div>
+      </div>
+      <div v-else class="rn-gis__head">
         <div class="rn-gis__period" data-testid="goal-sheet-period">{{ periodLabel }}</div>
         <div class="rn-gis__head-actions">
           <!--
@@ -54,24 +72,25 @@
       </div>
     </template>
 
-    <div v-if="item" class="rn-gis">
+    <div v-if="current" class="rn-gis">
       <textarea
         ref="title"
         class="rn-gis__title"
         rows="1"
-        placeholder="Untitled"
-        :value="item.body"
+        :placeholder="creating ? titlePlaceholder : 'Untitled'"
+        :value="current.body"
         data-testid="goal-sheet-title"
-        @input="autoGrow"
+        @input="onTitleInput"
         @change="onTitleChange"
+        @keydown.enter.exact="onTitleEnter"
       ></textarea>
 
       <markdown-field
         ref="contribution"
-        :value="item.contribution || ''"
-        :editor-key="item.id"
-        @input="$emit('input-contribution', { item, contribution: $event })"
-        @commit="$emit('commit-contribution', { item, contribution: $event })"
+        :value="current.contribution || ''"
+        :editor-key="creating ? `new-${createKey}` : current.id"
+        @input="onContributionInput"
+        @commit="onCommitContribution"
       />
 
       <!-- AGENT RESULT — only when the end event actually saved a transcript. -->
@@ -119,12 +138,50 @@
         <div class="rn-gis__field-label">
           <i class="rn-mi rn-gis__field-icon">account_tree</i>Linked to
         </div>
-        <div class="rn-gis__field-value">
-          <div class="rn-gis__chip" data-testid="goal-sheet-routine">
+        <!--
+          Editable: the routine and the parent goal it rolls up into, with the
+          same two pickers the AI search toolbar uses. Locked (Year Goals,
+          where the plan fixes the parent): the read-only chips.
+        -->
+        <div v-if="!linkLocked" class="rn-gis__field-value rn-gis__field-value--grow rn-gis__link-pickers">
+          <goal-task-selector
+            class="rn-gis__picker"
+            :items="routines"
+            :value="current.taskRef || null"
+            item-value="id"
+            label="Routine"
+            prepend-icon=""
+            prepend-inner-icon="history"
+            hide-details
+            solo
+            flat
+            :mobile="isPhone"
+            data-testid="goal-sheet-routine-picker"
+            @input="setLink({ taskRef: $event || '' })"
+          />
+          <goal-ref-selector
+            class="rn-gis__picker"
+            :items="goalRefOptions"
+            :tasklist="routines"
+            :task-ref="current.taskRef || null"
+            :value="current.goalRef || null"
+            :label="goalRefPlaceholder"
+            prepend-icon=""
+            prepend-inner-icon="timeline"
+            hide-details
+            solo
+            flat
+            :mobile="isPhone"
+            data-testid="goal-sheet-goal-ref-picker"
+            @input="setLink({ goalRef: $event || '' })"
+          />
+        </div>
+        <div v-else class="rn-gis__field-value">
+          <div v-if="routineLabel" class="rn-gis__chip" data-testid="goal-sheet-routine">
             <i class="rn-mi rn-gis__chip-icon">history</i>{{ routineLabel }}
           </div>
           <template v-if="goalRefLabel">
-            <i class="rn-mi rn-gis__arrow">arrow_forward</i>
+            <i v-if="routineLabel" class="rn-mi rn-gis__arrow">arrow_forward</i>
             <div class="rn-gis__chip rn-gis__chip--goal" data-testid="goal-sheet-goal-ref">
               <i class="rn-mi">timeline</i>
               <span class="rn-gis__chip-text">{{ goalRefLabel }}</span>
@@ -141,7 +198,34 @@
         <div class="rn-gis__field-label">
           <i class="rn-mi rn-gis__field-icon">event</i>Date
         </div>
-        <div class="rn-gis__field-value">
+        <!--
+          Adding: the AI search modal's date selector — period toggle and all,
+          unless `dateTaskMode` pins it to a day. Locked by the caller (Year
+          Goals) it is just the label.
+        -->
+        <div v-if="creating" class="rn-gis__field-value rn-gis__field-value--grow">
+          <div v-if="dateLocked" class="rn-gis__date" data-testid="goal-sheet-date">{{ dateLabel }}</div>
+          <molecule-date-selector
+            v-else
+            class="rn-gis__picker"
+            :value="form.date"
+            :period="form.period"
+            :task-mode="dateTaskMode"
+            :min-date="minDate"
+            :mobile="isPhone"
+            label=""
+            :placeholder="dateTaskMode ? 'Select date' : 'Select period'"
+            prepend-icon=""
+            prepend-inner-icon="event"
+            hide-details
+            solo
+            flat
+            data-testid="goal-sheet-date-picker"
+            @input="setDate"
+            @update:period="setPeriod"
+          />
+        </div>
+        <div v-else class="rn-gis__field-value">
           <div class="rn-gis__date" data-testid="goal-sheet-date">{{ dateLabel }}</div>
           <!--
             A past day is read-only on purpose: `updateGoalItem`'s move path
@@ -172,16 +256,18 @@
         </div>
         <div class="rn-gis__field-value rn-gis__field-value--grow">
           <hierarchical-tag-input
-            :value="item.tags || []"
+            :value="current.tags || []"
             :universe="tagUniverse"
             :usage="tagUsage"
             usage-noun="goal"
-            @input="$emit('update-tags', { item, tags: $event })"
+            @input="onTagsInput"
           />
         </div>
       </div>
 
+      <!-- Subtasks belong to a saved item; a new one gets them once it exists. -->
       <subtask-editor
+        v-if="!creating"
         :subtasks="item.subTasks || []"
         @add="$emit('add-subtask', { item, body: $event })"
         @toggle="$emit('toggle-subtask', { item, subtask: $event })"
@@ -198,7 +284,28 @@ import ResponsiveSheet from '../../molecules/ResponsiveSheet/ResponsiveSheet.vue
 import MarkdownField from '../../molecules/MarkdownField/MarkdownField.vue';
 import SubtaskEditor from '../../molecules/SubtaskEditor/SubtaskEditor.vue';
 import HierarchicalTagInput from '../../molecules/HierarchicalTagInput/HierarchicalTagInput.vue';
+import MoleculeDateSelector from '../../molecules/DateSelector/DateSelector.vue';
+import GoalTaskSelector from '../../molecules/GoalTaskSelector/GoalTaskSelector.vue';
+import GoalRefSelector from '../../molecules/GoalRefSelector/GoalRefSelector.vue';
 import { htmlToText } from '../../utils/htmlPreview';
+
+/** A lifetime goal has no calendar date; the server files it under this one. */
+const LIFETIME_DATE = '01-01-1970';
+
+/** The parent a new goal of each period rolls up into — the picker's label. */
+const PARENT_NOUN = {
+  day: 'week goal', week: 'month goal', month: 'year goal', year: 'lifetime goal',
+};
+
+const emptyForm = (seed = {}) => ({
+  body: '',
+  contribution: '',
+  tags: [],
+  period: seed.period || 'day',
+  date: seed.date || '',
+  taskRef: seed.taskRef || '',
+  goalRef: seed.goalRef || '',
+});
 
 /** The three states the design names, with their palette tokens. */
 const STATUS = {
@@ -214,12 +321,41 @@ export default {
     MarkdownField,
     SubtaskEditor,
     HierarchicalTagInput,
+    MoleculeDateSelector,
+    GoalTaskSelector,
+    GoalRefSelector,
   },
   props: {
     open: { type: Boolean, default: false },
     shell: { type: String, default: 'phone' },
+    /**
+     * 'edit' — `item` is a saved GoalItem and every change leaves as its own
+     * event. 'create' — the sheet holds a draft seeded from `seed` and emits
+     * one `create` with all of it. Same sheet for adding and editing, on every
+     * page that adds a goal.
+     */
+    mode: { type: String, default: 'edit' },
+    /** Edit only: the item's period (GoalItem does not carry its own). */
+    period: { type: String, default: 'day' },
+    /** Create only: `{ period, date, taskRef, goalRef }` to start the draft from. */
+    seed: { type: Object, default: () => ({}) },
+    /** Create only: a save is in flight — the Add button waits for it. */
+    saving: { type: Boolean, default: false },
+    /** Create only: the date selector offers days only, no period toggle. */
+    dateTaskMode: { type: Boolean, default: false },
+    minDate: { type: String, default: '' },
+    titlePlaceholder: { type: String, default: 'What do you want to get done?' },
     /** The GoalItem, decorated with `ready` (an assigned agent's target). */
     item: { type: Object, default: null },
+    /** `[{ id, name, time }]` — the routine picker's choices. */
+    routines: { type: Array, default: () => [] },
+    /** Goal items one period up — the parent-goal picker's choices. */
+    goalRefOptions: { type: Array, default: () => [] },
+    /**
+     * Show Linked to as read-only chips instead of the pickers. Year Goals
+     * sets it: there the plan decides what a new goal rolls up into.
+     */
+    linkLocked: { type: Boolean, default: false },
     /** "Day goal · 12 Sep 2026". */
     periodLabel: { type: String, default: '' },
     /** "Start Work · 09:00", or "Inbox" for an item with no routine. */
@@ -238,9 +374,32 @@ export default {
     rewardNew: { type: Boolean, default: false },
   },
   data() {
-    return { rewardOpen: false };
+    return {
+      rewardOpen: false,
+      /** Create mode's draft. Unused when editing. */
+      form: emptyForm(this.seed),
+      /** Bumped per open so the contribution editor starts blank each time. */
+      createKey: 0,
+    };
   },
   computed: {
+    creating() {
+      return this.mode === 'create';
+    },
+    /** What the fields read: the draft when adding, the item when editing. */
+    current() {
+      return this.creating ? this.form : this.item;
+    },
+    canCreate() {
+      return !!(this.form.body.trim() && this.form.date);
+    },
+    isPhone() {
+      return this.shell === 'phone';
+    },
+    goalRefPlaceholder() {
+      const period = this.creating ? this.form.period : this.period;
+      return `Rolls up into a ${PARENT_NOUN[period] || 'goal'}`;
+    },
     statusKey() {
       if (!this.item) return 'open';
       if (this.item.isComplete) return 'complete';
@@ -273,8 +432,13 @@ export default {
       immediate: true,
     },
     open(isOpen) {
+      if (isOpen && this.creating) this.resetForm();
       if (isOpen) this.$nextTick(this.sizeTitle);
     },
+  },
+  created() {
+    // The parent goals depend on the draft's period/date; ask for them.
+    if (this.creating) this.emitLinkContext();
   },
   methods: {
     close() {
@@ -283,13 +447,91 @@ export default {
       if (this.$refs.contribution) this.$refs.contribution.flush();
       this.$emit('close');
     },
+    resetForm() {
+      this.form = emptyForm(this.seed);
+      this.createKey += 1;
+      this.emitLinkContext();
+    },
+    /** Tells the container which period's goals the parent picker needs. */
+    emitLinkContext() {
+      this.$emit('link-context', { period: this.form.period, date: this.form.date });
+    },
+    submitCreate() {
+      if (!this.canCreate || this.saving) return;
+      this.$emit('create', {
+        ...this.form,
+        body: this.form.body.trim(),
+        tags: (this.form.tags || []).slice(),
+      });
+    },
+    onTitleInput(event) {
+      if (this.creating) this.form.body = event.target.value || '';
+      this.grow(event.target);
+    },
+    /** Enter adds when creating; when editing it stays a newline-free title. */
+    onTitleEnter(event) {
+      if (!this.creating) return;
+      event.preventDefault();
+      this.submitCreate();
+    },
+    onContributionInput(contribution) {
+      if (this.creating) {
+        this.form.contribution = contribution;
+        return;
+      }
+      this.$emit('input-contribution', { item: this.item, contribution });
+    },
+    onTagsInput(tags) {
+      if (this.creating) {
+        this.form.tags = tags || [];
+        return;
+      }
+      this.$emit('update-tags', { item: this.item, tags });
+    },
+    /** Routine and/or parent goal. Editing writes through; adding drafts it. */
+    setLink(changes) {
+      if (this.creating) {
+        Object.assign(this.form, changes);
+        return;
+      }
+      if (!this.item) return;
+      const unchanged = Object.keys(changes)
+        .every((key) => (this.item[key] || '') === (changes[key] || ''));
+      if (unchanged) return;
+      this.$emit('update-link', { item: this.item, ...changes });
+    },
+    setDate(date) {
+      this.form.date = date || '';
+      // The parent goals live one period up from THIS date.
+      this.form.goalRef = '';
+      this.emitLinkContext();
+    },
+    /**
+     * A date is only meaningful for the period it was picked under — a week is
+     * filed under its Friday, a month under its last day — so a new period
+     * starts without one (lifetime has exactly one).
+     */
+    setPeriod(period) {
+      if (!period || period === this.form.period) return;
+      this.form.period = period;
+      this.form.date = period === 'lifetime' ? LIFETIME_DATE : '';
+      this.form.goalRef = '';
+      this.emitLinkContext();
+    },
+    /**
+     * The field autosaves, and its last save can fire as it is torn down —
+     * after the page has already cleared `item`. With no item there is nothing
+     * to save it onto. A draft has nothing to save yet either.
+     */
+    onCommitContribution(contribution) {
+      if (this.creating || !this.item) return;
+      this.$emit('commit-contribution', { item: this.item, contribution });
+    },
     onTitleChange(event) {
+      if (this.creating) return;
       const body = (event.target.value || '').trim();
       if (!body || !this.item || body === String(this.item.body || '').trim()) return;
       this.$emit('update-title', { item: this.item, body });
-    },
-    autoGrow(event) {
-      this.grow(event.target);
     },
     sizeTitle() {
       this.grow(this.$refs.title);
@@ -630,5 +872,45 @@ export default {
   background: rgba(40, 139, 213, .12);
   color: #1f6fab;
   border-color: rgba(40, 139, 213, .45);
+}
+
+/* ---- create mode / pickers ---- */
+.rn-gis__add {
+  height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #288bd5;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rn-gis__add:disabled {
+  background: rgba(0, 0, 0, .12);
+  color: rgba(0, 0, 0, .38);
+  cursor: default;
+}
+
+/* Routine and parent goal side by side; stacked once the sheet is narrow. */
+.rn-gis__link-pickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rn-gis__link-pickers > .rn-gis__picker {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* The toolbar's Vuetify pickers, tuned to sit on the sheet's field rows. */
+.rn-gis__picker .v-input__slot {
+  min-height: 34px !important;
+  background: rgba(0, 0, 0, .04) !important;
+  border-radius: 10px !important;
+  font-size: 13px;
 }
 </style>

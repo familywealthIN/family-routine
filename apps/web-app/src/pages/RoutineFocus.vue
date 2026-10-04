@@ -92,31 +92,26 @@
     </template>
 
     <!-- ================= TABLET / DESKTOP ================= -->
-    <template v-else>
-      <!-- Nav rail (tablet) / sidebar (desktop) -->
-      <aside class="rn-home__side">
-        <div class="rn-home__brand">
-          <img class="rn-home__logo" src="/img/icons/android-chrome-192x192.png" alt="Routine Notes" />
-          <div v-if="shell === 'desktop'" class="rn-home__brand-name">Routine Notes</div>
-        </div>
-        <div class="rn-home__side-nav">
-          <div
-            v-for="item in navItems"
-            :key="item.route"
-            class="rn-home__side-nav-item"
-            :style="{
-              background: item.active ? 'rgba(40,139,213,.12)' : 'transparent',
-              color: item.active ? '#1f6fab' : 'rgba(0,0,0,.6)',
-            }"
-            @click="goTo(item.route)"
-          >
-            <i class="rn-mi rn-home__side-nav-icon">{{ item.icon }}</i>
-            <span class="rn-home__side-nav-label">{{ item.label }}</span>
-          </div>
-        </div>
-
+    <!--
+      The rail (tablet) and sidebar (desktop) are the chassis' — the same
+      AppShell every other page renders — so nav, hover, More and the profile
+      row cannot drift from the rest of the app again. Home keeps its own main
+      column through the `main` slot: its date header and 3:2 checklist/chat
+      split are measured to the design and the generic head/body cannot hold them.
+    -->
+    <app-shell-container
+      v-else
+      class="rn-home__shell"
+      active="home"
+      :more-initially-open="false"
+      :scores="stimulusTotals"
+      :streak-days="streakDays"
+      :streak-hint="streakHint"
+      @navigate="onShellNavigate"
+    >
+      <!-- Desktop only: the shell renders `sidebar` under the nav. -->
+      <template v-slot:sidebar>
         <routine-rail
-          v-if="shell === 'desktop'"
           class="rn-home__rail"
           layout="rows"
           :routines="rows"
@@ -124,115 +119,103 @@
           :day-label="railDayLabel"
           @focus-routine="setFocus"
         />
-        <div v-else class="rn-home__side-spacer"></div>
+      </template>
 
-        <div class="rn-home__profile" data-testid="side-profile" @click="drawerOpen = true">
-          <img
-            class="rn-home__profile-avatar"
-            :src="profileImage"
-            :alt="`Profile picture of ${userName || 'User'}`"
-            @error="$event.target.src = '/img/default-user.png'"
+      <template v-slot:main>
+        <div class="rn-home__main">
+          <header class="rn-home__header">
+            <div class="rn-home__header-text">
+              <div class="rn-home__date">{{ longDate }}</div>
+              <div class="rn-home__header-sub">
+                {{ routinesLeft }} routines left · {{ dayDoneCount }}/{{ dayTotalCount }} tasks
+              </div>
+            </div>
+            <div class="rn-home__header-week">
+              <!--
+                Both large shells draw the header strip at the same size: the
+                design's iPad (6a) and desktop (6b) frames each put a 28px ring in
+                a 38px cell. Desktop used to ask for 36 — the phone ring — which
+                made the whole strip read a size too big.
+              -->
+              <weekday-selector-container
+                :selectedDate="date"
+                :ring-size="headerRingSize"
+                :skipped-dates="skippedDates"
+                :today-date="todayDate"
+                @date-selected="handleDateSelected"
+                @long-press="onDayLongPress"
+              />
+            </div>
+            <div
+              class="rn-home__inbox"
+              title="Inbox"
+              data-testid="header-inbox"
+              @click="inboxOpen = true"
+            >
+              <i class="rn-mi">inbox</i>
+              <span
+                v-if="inboxCount"
+                class="rn-home__inbox-badge"
+                data-testid="header-inbox-badge"
+              >{{ inboxCount }}</span>
+            </div>
+            <focus-points-chip
+              :available="(xpBalance && xpBalance.available) || 0"
+              :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
+              :entitled="!!(xpBalance && xpBalance.entitled)"
+              :loading="$apollo.queries.xpBalance.loading && !xpBalance"
+              :error="xpBalanceError && !xpBalance"
+              :size="28"
+              @click="goTo('/progress')"
+            />
+          </header>
+
+          <routine-rail
+            v-if="shell === 'tablet'"
+            layout="chips"
+            :routines="rows"
+            :ticked-count="tickedCount"
+            @focus-routine="setFocus"
           />
-          <div v-if="shell === 'desktop'" class="rn-home__profile-text">
-            <div class="rn-home__profile-name">{{ userName || 'Routine Notes' }}</div>
-            <div class="rn-home__profile-sub">{{ streakDays }}-day streak · D/K/G</div>
+
+          <div class="rn-home__content">
+            <routine-focus-card v-if="focusRow" ref="card" v-bind="cardProps" v-on="cardHandlers" />
+            <div v-else class="rn-home__empty rn-home__empty--pane">
+              <p>{{ emptyMessage }}</p>
+              <button type="button" class="rn-home__empty-btn" @click="goTo('/settings')">
+                Open Routine Settings
+              </button>
+            </div>
+
+            <section v-if="focusRow" class="rn-home__chat-pane">
+              <header class="rn-home__chat-head">
+                <div
+                  class="rn-home__chat-avatar"
+                  :style="{ background: focusRow.stimulusTint, color: focusRow.stimulusColor }"
+                >
+                  <i class="rn-mi">forum</i>
+                </div>
+                <div class="rn-home__chat-head-text">
+                  <div class="rn-home__chat-name">{{ focusRow.name }}</div>
+                  <div class="rn-home__chat-sub">{{ chatSubline }}</div>
+                </div>
+              </header>
+              <div class="rn-home__chat-body rn-hidescroll">
+                <routine-chat-container v-bind="chatProps" ref="chat" v-on="chatHandlers" />
+              </div>
+              <routine-composer
+                v-model="chatText"
+                :variant="shell"
+                :placeholder="composerPlaceholder"
+                @send="sendChat"
+                @focus="onComposerFocus(false)"
+                @add-task="openAiSearch"
+              />
+            </section>
           </div>
         </div>
-      </aside>
-
-      <div class="rn-home__main">
-        <header class="rn-home__header">
-          <div class="rn-home__header-text">
-            <div class="rn-home__date">{{ longDate }}</div>
-            <div class="rn-home__header-sub">
-              {{ routinesLeft }} routines left · {{ dayDoneCount }}/{{ dayTotalCount }} tasks
-            </div>
-          </div>
-          <div class="rn-home__header-week">
-            <!--
-              Both large shells draw the header strip at the same size: the
-              design's iPad (6a) and desktop (6b) frames each put a 28px ring in
-              a 38px cell. Desktop used to ask for 36 — the phone ring — which
-              made the whole strip read a size too big.
-            -->
-            <weekday-selector-container
-              :selectedDate="date"
-              :ring-size="headerRingSize"
-              :skipped-dates="skippedDates"
-              :today-date="todayDate"
-              @date-selected="handleDateSelected"
-              @long-press="onDayLongPress"
-            />
-          </div>
-          <div
-            class="rn-home__inbox"
-            title="Inbox"
-            data-testid="header-inbox"
-            @click="inboxOpen = true"
-          >
-            <i class="rn-mi">inbox</i>
-            <span
-              v-if="inboxCount"
-              class="rn-home__inbox-badge"
-              data-testid="header-inbox-badge"
-            >{{ inboxCount }}</span>
-          </div>
-          <focus-points-chip
-            :available="(xpBalance && xpBalance.available) || 0"
-            :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
-            :entitled="!!(xpBalance && xpBalance.entitled)"
-            :loading="$apollo.queries.xpBalance.loading && !xpBalance"
-            :error="xpBalanceError && !xpBalance"
-            :size="28"
-            @click="goTo('/progress')"
-          />
-        </header>
-
-        <routine-rail
-          v-if="shell === 'tablet'"
-          layout="chips"
-          :routines="rows"
-          :ticked-count="tickedCount"
-          @focus-routine="setFocus"
-        />
-
-        <div class="rn-home__content">
-          <routine-focus-card v-if="focusRow" ref="card" v-bind="cardProps" v-on="cardHandlers" />
-          <div v-else class="rn-home__empty rn-home__empty--pane">
-            <p>{{ emptyMessage }}</p>
-            <button type="button" class="rn-home__empty-btn" @click="goTo('/settings')">
-              Open Routine Settings
-            </button>
-          </div>
-
-          <section v-if="focusRow" class="rn-home__chat-pane">
-            <header class="rn-home__chat-head">
-              <div
-                class="rn-home__chat-avatar"
-                :style="{ background: focusRow.stimulusTint, color: focusRow.stimulusColor }"
-              >
-                <i class="rn-mi">forum</i>
-              </div>
-              <div class="rn-home__chat-head-text">
-                <div class="rn-home__chat-name">{{ focusRow.name }}</div>
-                <div class="rn-home__chat-sub">{{ chatSubline }}</div>
-              </div>
-            </header>
-            <div class="rn-home__chat-body rn-hidescroll">
-              <routine-chat-container v-bind="chatProps" ref="chat" v-on="chatHandlers" />
-            </div>
-            <routine-composer
-              v-model="chatText"
-              :variant="shell"
-              :placeholder="composerPlaceholder"
-              @send="sendChat"
-              @focus="onComposerFocus(false)"
-              @add-task="openAiSearch"
-            />
-          </section>
-        </div>
-      </div>
-    </template>
+      </template>
+    </app-shell-container>
 
     <!-- ================= SHARED OVERLAYS ================= -->
     <user-drawer
@@ -317,6 +300,7 @@
       :tag-usage="tagUsage"
       :reward-meta="goalSheetRewardMeta"
       :reward-new="goalSheetRewardNew"
+      :routines="tasklist"
       @close="closeGoalItem"
       @toggle-item="toggleOpenGoalItem"
       @open-transcript="openTranscript"
@@ -405,6 +389,7 @@ import GoalItemSheetContainer from '../containers/GoalItemSheetContainer.vue';
 import InboxSheetContainer from '../containers/InboxSheetContainer.vue';
 import SkipDayContainer from '../containers/SkipDayContainer.vue';
 import AgentFormContainer from '../containers/AgentFormContainer.vue';
+import AppShellContainer from '../containers/AppShellContainer.vue';
 import {
   ROUTINE_DATE_QUERY,
   DAILY_GOALS_QUERY,
@@ -429,7 +414,6 @@ import { startAgentWhenReady } from '../utils/agentStart';
 import { runNewDayReset } from '../utils/newDay';
 import { describeRedeemFailure, describeRedeemReceipt } from '../utils/routineTaskDisplay';
 import { scopeGoalsToRef } from '../utils/goalRefScope';
-import { signOut } from '../utils/signOut';
 import { threshold } from '../utils/getDates';
 import {
   buildRoutineRows, findCurrentRoutine, focusWindow, buildCascade, pickCascadeItem,
@@ -479,6 +463,7 @@ export default {
     InboxSheetContainer,
     SkipDayContainer,
     AgentFormContainer,
+    AppShellContainer,
   },
   mixins: [
     MeasurementMixin,
@@ -1040,6 +1025,8 @@ export default {
         statusLabel: this.focusWindowInfo.statusLabel,
         statusColor: this.focusWindowInfo.statusColor,
         leftLabel: this.focusWindowInfo.leftLabel,
+        // The phone shows it in the deck header instead.
+        showBackToNow: this.shell !== 'phone' && this.showBackToNow,
         elapsedPct: this.focusWindowInfo.elapsedPct,
         items: this.focusItems,
         doneCount: this.focusRow ? this.focusRow.doneCount : 0,
@@ -1063,6 +1050,7 @@ export default {
         'add-task': this.openAiSearch,
         'set-period': this.setPeriod,
         'toggle-checklist': this.toggleChecklist,
+        'back-to-now': this.backToNow,
         'open-result': this.openAgentResult,
         'open-transcript': this.openTranscript,
       };
@@ -1131,7 +1119,8 @@ export default {
       return [
         ...this.navItems,
         { icon: 'settings', label: 'Settings', route: '/settings' },
-        { icon: 'logout', label: 'Log out', route: 'logout' },
+        // No Log out: signing out lives on Profile, as on every other shell.
+        { icon: 'person', label: 'Profile', route: '/settings/profile' },
       ];
     },
 
@@ -1265,12 +1254,11 @@ export default {
     },
     onDrawerNavigate(item) {
       this.drawerOpen = false;
-      if (item.route === 'logout') {
-        // Same path as the legacy drawer's Log out — see utils/signOut.js.
-        signOut(this);
-        return;
-      }
       this.goTo(item.route);
+    },
+    /** The tablet/desktop shell's nav, More list and drawer all emit here. */
+    onShellNavigate(key, item) {
+      this.goTo(item && item.route);
     },
     handleDateSelected(newDate) {
       this.date = newDate;
@@ -1305,6 +1293,11 @@ export default {
     backToNow() {
       this.focusRoutineId = this.currentRoutineId;
     },
+    /**
+     * "Add task" opens the AI search modal (App.vue mounts it; the event bus
+     * reaches it). Goals and Year Goals add with the goal-item create sheet;
+     * Home keeps the modal for its AI-enhanced task creation.
+     */
     openAiSearch() {
       // Preselect the routine being VIEWED, not the one the clock says is
       // current — otherwise a task added from another routine's card is
@@ -2388,144 +2381,20 @@ export default {
 }
 
 /* ---- tablet / desktop ---- */
-/* 77px, not 76. The iPad frame draws a 76px content-box rail PLUS a 1px rule, so
-   the main column starts at 1057 - 1 = 1056px. This box is border-box, so 76px
-   here would swallow the rule into the rail and hand the panes an extra pixel —
-   enough to leave a 0.6px residue against the design's 602.4/401.6 split. */
-.rn-home__side {
-  flex-shrink: 0;
-  width: 77px;
-  background: #fff;
-  border-right: 1px solid rgba(0, 0, 0, .06);
-  display: flex;
-  flex-direction: column;
-}
-
-.rn-home--desktop .rn-home__side {
-  width: 264px;
-}
-
-.rn-home__brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 20px 20px 16px;
-}
-
-.rn-home--tablet .rn-home__brand {
-  justify-content: center;
-  padding: 16px 0;
-}
-
-.rn-home__logo {
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
-}
-
-.rn-home--tablet .rn-home__logo {
-  width: 38px;
-  height: 38px;
-}
-
-.rn-home__brand-name {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.rn-home__side-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0 12px;
-}
-
-.rn-home--tablet .rn-home__side-nav {
-  padding: 0 10px;
-}
-
-.rn-home__side-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 40px;
-  padding: 0 12px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.rn-home--tablet .rn-home__side-nav-item {
-  flex-direction: column;
-  justify-content: center;
-  gap: 0;
-  height: auto;
-  padding: 6px 0;
-  width: 56px;
-}
-
-.rn-home__side-nav-icon {
-  font-size: 20px;
-}
-
-.rn-home--tablet .rn-home__side-nav-label {
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.rn-home__rail {
+/* The rail/sidebar is AppShell's (77px rail, 264px sidebar); Home supplies only
+   the main column, so the shell just has to fill the row .rn-home lays out. */
+.rn-home__shell {
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.rn-home__side-spacer {
-  flex: 1;
-}
-
-.rn-home__profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  border-top: 1px solid rgba(0, 0, 0, .06);
-  cursor: pointer;
-}
-
-.rn-home--tablet .rn-home__profile {
-  justify-content: center;
-  padding: 14px 0;
-}
-
-.rn-home__profile-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.rn-home--tablet .rn-home__profile-avatar {
-  width: 40px;
-  height: 40px;
-}
-
-.rn-home__profile-text {
   min-width: 0;
 }
 
-.rn-home__profile-name {
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rn-home__profile-sub {
-  font-size: 12px;
-  color: rgba(0, 0, 0, .5);
+/* The shell's sidebar slot insets its content 12px, but RoutineRail already
+   insets its own rows (6px margin + 12px padding) — cancel the slot's so the
+   rail sits where it did when Home drew its own sidebar. */
+.rn-home__rail {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -12px;
 }
 
 .rn-home__main {
@@ -2554,8 +2423,10 @@ export default {
   flex-shrink: 0;
 }
 
+/* 25px on top centres the date on the rail's logo (centred 41px down), the line
+   every other tablet page's title sits on too (AppShell's no-status head). */
 .rn-home--tablet .rn-home__header {
-  padding: 14px 20px 8px;
+  padding: 25px 20px 8px;
 }
 
 .rn-home__header-text {

@@ -322,23 +322,34 @@ describe('YearGoalsTime — the create sheet locks the parent', () => {
     expect(vm.toast.title).toBe('September is fully planned');
   });
 
-  it('creates through the write container and unfolds the week a day landed in', async () => {
+  it('opens the shared create sheet locked to the draft — period, date and parent', () => {
     const vm = page();
     vm.onAddDay({ id: 'wB' });
-    vm.draftText = 'Write release notes';
-    await vm.submitDraft();
+    expect(vm.sheet).toBe('create');
+    expect(vm.createDraftFor).toBe(vm.draft);
+    expect(vm.createDraftFor).toMatchObject({ period: 'day', goalRef: 'wB' });
+    expect(YearGoalsTime.components.GoalItemCreateContainer).toBeTruthy();
+  });
+
+  it('a created day goal unfolds its week, toasts and refetches', async () => {
+    const vm = page();
+    vm.onAddDay({ id: 'wB' });
+    // The create container reports `created` BEFORE it closes the sheet.
+    await vm.onDraftCreated({ body: 'Write release notes' });
+    vm.closeSheet();
     expect(vm.openWeekId).toBe('wB');
     expect(vm.sheet).toBeNull();
     expect(vm.toast.title).toBe('Day goal added');
     expect(vm.spies.refetched).toHaveLength(1);
   });
 
-  it('refuses to submit an empty body', async () => {
+  it('the rename form never creates — a create draft belongs to the sheet', async () => {
     const vm = page();
     vm.openCreate('month');
-    vm.draftText = '   ';
+    vm.draftText = 'Retention push';
     await vm.submitDraft();
     expect(vm.sheet).toBe('create');
+    expect(vm.spies.refetched).toHaveLength(0);
   });
 });
 

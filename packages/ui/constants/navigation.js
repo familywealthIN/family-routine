@@ -27,21 +27,12 @@ export function navKey(item) {
 }
 
 /**
- * Log out is not navigation — the shell emits `sign-out` for it, so it carries no
- * route. The red and the 8px breather above it come from `drawerFor()`.
- */
-export const LOGOUT_ITEM = {
-  key: 'logout', icon: 'logout', label: 'Log out', route: '', color: '#d32f2f', gap: '8px',
-};
-
-/**
  * "More" — the flyout on tablet/desktop, the avatar drawer's list on phone.
  * Routines is `/settings` because that is where routine editing lives today.
  * `gap` reproduces `navMoreFor()`'s 10px breather above Profile.
  *
- * The design files keep Log out out of the rail/sidebar flyout and only put it in
- * the phone drawer — which leaves tablet and desktop with no way to sign out at
- * all. It is included here for every shell.
+ * No Log out here, on any shell: signing out lives on the Profile page's
+ * identity card, one tap away through Profile.
  */
 export const MORE_NAV = [
   { key: 'routines', icon: 'history', label: 'Routines', route: '/settings' },
@@ -51,7 +42,6 @@ export const MORE_NAV = [
     key: 'profile', icon: 'person', label: 'Profile', route: '/settings/profile', gap: '10px',
   },
   { key: 'about', icon: 'info', label: 'About', route: '/about' },
-  LOGOUT_ITEM,
 ];
 
 /** Active/idle tokens for a nav row — `rgba(40,139,213,.12)` / `#1f6fab`. */
@@ -124,7 +114,6 @@ export function shellChrome(name) {
 export default {
   PRIMARY_NAV: FOCUS_NAV,
   MORE_NAV,
-  LOGOUT_ITEM,
   NAV_STYLE,
   NAV_RING,
   navKey,

@@ -29,7 +29,8 @@ import {
   deleteGoalItemFromCache,
   deleteSubTaskFromCache,
 } from './useApolloCacheUpdates';
-import { readEntity } from './useEntityCache';
+import { readEntity, appendSubTaskItem } from './useEntityCache';
+import { tempSubTaskId } from '../utils/tempIds';
 
 // ============================================================================
 // MUTATION DEFINITIONS
@@ -948,11 +949,28 @@ export function useGoalMutations(apolloClient, options = {}) {
   }, mutationOptions = {}) => {
     const { onSuccess, onError } = mutationOptions;
 
+    // Optimistic, like addGoalItem: the row appears on Enter, under a temp id
+    // the server's real one replaces when the result lands. The append is an
+    // entity-level write on the parent (useEntityCache.appendSubTaskItem).
+    const tempId = tempSubTaskId();
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: ADD_SUB_TASK_ITEM_MUTATION,
         variables: {
           taskId, body, period, date, isComplete,
+        },
+        optimisticResponse: {
+          __typename: 'Mutation',
+          addSubTaskItem: {
+            __typename: 'SubTaskItem',
+            id: tempId,
+            body,
+            isComplete: !!isComplete,
+          },
+        },
+        update: (cache, { data: result }) => {
+          appendSubTaskItem(cache, taskId, result && result.addSubTaskItem);
         },
       });
 

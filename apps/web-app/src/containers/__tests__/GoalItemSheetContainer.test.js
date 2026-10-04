@@ -159,6 +159,44 @@ describe('GoalItemSheetContainer — writeItem sends the whole field set', () =>
   });
 });
 
+describe('GoalItemSheetContainer — Linked to is editable', () => {
+  it('a new parent goal is written, and makes the item its milestone', () => {
+    const vm = ctx();
+    call('onUpdateLink', vm, { item: ITEM, goalRef: 'wg2' });
+    expect(varsOf(vm)).toMatchObject({
+      goalRef: 'wg2', isMilestone: true, taskRef: 'sw', body: 'Ship dashboard PR',
+    });
+    expect(guardFields).toHaveBeenCalledWith('GoalItem', 'g1', ['goalRef', 'isMilestone']);
+  });
+
+  it('unlinking clears the parent and the milestone flag', () => {
+    const vm = ctx({ item: { ...ITEM, isMilestone: true } });
+    call('onUpdateLink', vm, { item: { ...ITEM, isMilestone: true }, goalRef: '' });
+    expect(varsOf(vm)).toMatchObject({ goalRef: '', isMilestone: false });
+  });
+
+  it('a new routine is written without touching the parent', () => {
+    const vm = ctx();
+    call('onUpdateLink', vm, { item: ITEM, taskRef: 'evening' });
+    expect(varsOf(vm)).toMatchObject({ taskRef: 'evening', goalRef: 'wg1', isMilestone: false });
+  });
+
+  it('loads the parent choices one period up from the item', async () => {
+    const fetchGoalDatePeriod = jest.fn(() => Promise.resolve({ goalItems: [{ id: 'wg1' }] }));
+    const vm = {
+      parentKey: 'day|12-09-2026',
+      period: 'day',
+      date: '12-09-2026',
+      parentSeq: 0,
+      goalRefOptions: [],
+      $goals: { fetchGoalDatePeriod },
+    };
+    await call('loadParentGoals', vm);
+    expect(fetchGoalDatePeriod).toHaveBeenCalledWith('week', expect.any(String), { useCache: false });
+    expect(vm.goalRefOptions).toEqual([{ id: 'wg1' }]);
+  });
+});
+
 describe('GoalItemSheetContainer — a date pick is a move', () => {
   it('sends the TARGET date, closes the sheet and reports a list change', async () => {
     const vm = ctx();
@@ -283,5 +321,26 @@ describe('GoalItemSheetContainer — subtasks', () => {
     expect(vm.$goals.deleteSubTaskItem).toHaveBeenCalledWith({
       id: 's1', taskId: 'g1', period: 'day', date: '12-09-2026',
     });
+  });
+});
+
+describe('GoalItemSheetContainer — an optimistic subtask is not written against', () => {
+  const TEMP = { id: 'temp-subtask-1', body: 'new', isComplete: false };
+  const withTemp = { ...ITEM, subTasks: [...ITEM.subTasks, TEMP] };
+
+  it('ignores toggle, rename and remove on a row the server has not confirmed', () => {
+    const vm = ctx();
+    call('onToggleSubtask', vm, { item: withTemp, subtask: TEMP });
+    call('onRenameSubtask', vm, { item: withTemp, subtask: TEMP, body: 'renamed' });
+    call('onRemoveSubtask', vm, { item: withTemp, subtask: TEMP });
+    expect(vm.$goals.completeSubTaskItem).not.toHaveBeenCalled();
+    expect(vm.$goals.deleteSubTaskItem).not.toHaveBeenCalled();
+    expect(vm.$apollo.mutate).not.toHaveBeenCalled();
+  });
+
+  it('holds a reorder while any row is still optimistic', () => {
+    const vm = ctx();
+    call('onMoveSubtaskUp', vm, { item: withTemp, subtask: ITEM.subTasks[1] });
+    expect(vm.$apollo.mutate).not.toHaveBeenCalled();
   });
 });

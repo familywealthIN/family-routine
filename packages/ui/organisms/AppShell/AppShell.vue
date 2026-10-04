@@ -106,36 +106,44 @@
         />
       </aside>
 
-      <div class="rn-shell__main">
-        <!--
-          The designs draw a 24px status strip inside the tablet bezel. In a real
-          browser/WebView the OS already paints one above us, so this is frame
-          chrome — `statusBar` turns it off.
-        -->
-        <div v-if="statusBar" class="rn-shell__status" data-testid="shell-status">
-          <span>{{ clockLabel }}</span>
-          <span class="rn-shell__status-icons">
-            <i class="rn-mi rn-shell__status-icon">wifi</i>
-            <i class="rn-mi rn-shell__status-icon">battery_full</i>
-          </span>
-        </div>
-        <header class="rn-shell__head" data-testid="shell-head">
-          <div class="rn-shell__head-text">
-            <div class="rn-shell__title" :style="titleStyle">{{ title }}</div>
-            <div v-if="subtitle" class="rn-shell__subtitle" :style="subtitleStyle">{{ subtitle }}</div>
+      <!--
+        `main` replaces the whole column — header and body — for a page whose
+        layout the generic head/body cannot express (Home's date header and its
+        checklist/chat split). The nav, drawer and profile stay the shell's, so
+        every page shares one rail/sidebar. Unsupplied, the fallback renders.
+      -->
+      <slot name="main">
+        <div class="rn-shell__main">
+          <!--
+            The designs draw a 24px status strip inside the tablet bezel. In a real
+            browser/WebView the OS already paints one above us, so this is frame
+            chrome — `statusBar` turns it off.
+          -->
+          <div v-if="statusBar" class="rn-shell__status" data-testid="shell-status">
+            <span>{{ clockLabel }}</span>
+            <span class="rn-shell__status-icons">
+              <i class="rn-mi rn-shell__status-icon">wifi</i>
+              <i class="rn-mi rn-shell__status-icon">battery_full</i>
+            </span>
           </div>
-          <slot name="header-actions"></slot>
-          <focus-points-chip
-            :available="points"
-            :entitled="pointsEntitled"
-            :loading="pointsLoading"
-            :error="pointsError"
-            :size="chrome.pointsSize"
-            @click="$emit('open-points')"
-          />
-        </header>
-        <main class="rn-shell__body rn-hidescroll" data-testid="shell-body"><slot></slot></main>
-      </div>
+          <header class="rn-shell__head" data-testid="shell-head">
+            <div class="rn-shell__head-text">
+              <div class="rn-shell__title" :style="titleStyle">{{ title }}</div>
+              <div v-if="subtitle" class="rn-shell__subtitle" :style="subtitleStyle">{{ subtitle }}</div>
+            </div>
+            <slot name="header-actions"></slot>
+            <focus-points-chip
+              :available="points"
+              :entitled="pointsEntitled"
+              :loading="pointsLoading"
+              :error="pointsError"
+              :size="chrome.pointsSize"
+              @click="$emit('open-points')"
+            />
+          </header>
+          <main class="rn-shell__body rn-hidescroll" data-testid="shell-body"><slot></slot></main>
+        </div>
+      </slot>
     </template>
 
     <!-- ================= DESKTOP ================= -->
@@ -210,24 +218,27 @@
         </div>
       </aside>
 
-      <div class="rn-shell__main">
-        <header class="rn-shell__head" data-testid="shell-head">
-          <div class="rn-shell__head-text">
-            <div class="rn-shell__title" :style="titleStyle">{{ title }}</div>
-            <div v-if="subtitle" class="rn-shell__subtitle" :style="subtitleStyle">{{ subtitle }}</div>
-          </div>
-          <slot name="header-actions"></slot>
-          <focus-points-chip
-            :available="points"
-            :entitled="pointsEntitled"
-            :loading="pointsLoading"
-            :error="pointsError"
-            :size="chrome.pointsSize"
-            @click="$emit('open-points')"
-          />
-        </header>
-        <main class="rn-shell__body rn-hidescroll" data-testid="shell-body"><slot></slot></main>
-      </div>
+      <!-- Same `main` override as the tablet shell. -->
+      <slot name="main">
+        <div class="rn-shell__main">
+          <header class="rn-shell__head" data-testid="shell-head">
+            <div class="rn-shell__head-text">
+              <div class="rn-shell__title" :style="titleStyle">{{ title }}</div>
+              <div v-if="subtitle" class="rn-shell__subtitle" :style="subtitleStyle">{{ subtitle }}</div>
+            </div>
+            <slot name="header-actions"></slot>
+            <focus-points-chip
+              :available="points"
+              :entitled="pointsEntitled"
+              :loading="pointsLoading"
+              :error="pointsError"
+              :size="chrome.pointsSize"
+              @click="$emit('open-points')"
+            />
+          </header>
+          <main class="rn-shell__body rn-hidescroll" data-testid="shell-body"><slot></slot></main>
+        </div>
+      </slot>
     </template>
 
     <!-- The avatar drawer. Open state is the shell's — the designs keep it local
@@ -254,7 +265,6 @@ import UserDrawer from '../UserDrawer/UserDrawer.vue';
 import {
   PRIMARY_NAV,
   MORE_NAV,
-  LOGOUT_ITEM,
   NAV_STYLE,
   NAV_RING,
   SHELLS,
@@ -355,14 +365,21 @@ export default {
     logo: { type: String, default: '/img/icons/android-chrome-192x192.png' },
     /** The designs' 24px tablet status strip. Off hides it. */
     statusBar: { type: Boolean, default: true },
+    /**
+     * Whether the More list starts expanded. Home starts it collapsed: its
+     * desktop sidebar also holds the routine list, which an open More pushes
+     * below the fold.
+     */
+    moreInitiallyOpen: { type: Boolean, default: true },
     /** Status-strip clock. Empty reads the local time once, at mount. */
     clock: { type: String, default: '' },
   },
   data() {
     return {
       drawerOpen: false,
-      // `navMore ?? true` in the designs — the More list starts expanded.
-      moreOpen: true,
+      // `navMore ?? true` in the designs — the More list starts expanded unless
+      // the page says otherwise.
+      moreOpen: this.moreInitiallyOpen,
       localClock: '',
       NAV_STYLE,
     };
@@ -384,6 +401,7 @@ export default {
       return [`rn-shell--${this.shellName}`, {
         'rn-shell--no-balance': !this.scores,
         'rn-shell--no-streak': this.streakDays == null,
+        'rn-shell--no-status': !this.statusBar,
       }];
     },
     primaryItems() {
@@ -450,14 +468,9 @@ export default {
     toggleMore() {
       this.moreOpen = !this.moreOpen;
     },
-    /** Log out is not a route — it leaves through `sign-out`. */
     go(item) {
       this.closeDrawer();
       if (!item) return;
-      if (item.key === LOGOUT_ITEM.key) {
-        this.$emit('sign-out');
-        return;
-      }
       this.$emit('navigate', item.key, item);
     },
     pillStyle(item) {
@@ -639,8 +652,11 @@ export default {
 
 /* ---------------- tablet rail ---------------- */
 
+/* 77px, not 76. The iPad frame draws a 76px content-box rail PLUS a 1px rule,
+   so the main column starts at 1133 - 77 = 1056px. Under Vuetify's border-box,
+   76px here would swallow the rule and hand the page an extra pixel. */
 .rn-shell__rail {
-  width: 76px;
+  width: 77px;
   flex-shrink: 0;
   background: #fff;
   display: flex;
@@ -780,6 +796,14 @@ export default {
 
 .rn-shell--tablet .rn-shell__head {
   padding: 4px 20px 0;
+}
+
+/* The design's 4px head padding sits under its 24px status strip, which is
+   what puts the title level with the rail's logo (22px down, 38 tall, centred
+   at 41). With the strip off — every real app — the head keeps those 24px (plus 1 to centre the 24px title line exactly), or
+   the title rides up to the top edge, 25px above the logo it should line up with. */
+.rn-shell--tablet.rn-shell--no-status .rn-shell__head {
+  padding-top: 29px;
 }
 
 .rn-shell--tablet .rn-shell__body {

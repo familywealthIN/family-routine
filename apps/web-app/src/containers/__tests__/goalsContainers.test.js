@@ -370,92 +370,123 @@ describe('GoalRoutineIndexContainer', () => {
 });
 
 describe('GoalItemCreateContainer', () => {
-  it('derives the date from the period instead of asking for one', () => {
-    const added = [];
-    const emitted = [];
-    const context = {
-      selectedDate: TODAY,
-      today: TODAY,
-      $goals: { addGoalItem: (payload) => { added.push(payload); return Promise.resolve({}); } },
-      $emit: (name, payload) => emitted.push([name, payload]),
-    };
-    return GoalItemCreateContainer.methods.onSubmit.call(context, { period: 'week', body: 'Ship it', taskRef: 'sw' }).then(() => {
-      expect(added[0]).toMatchObject({
-        body: 'Ship it', period: 'week', date: '11-09-2026', taskRef: 'sw', isComplete: false,
-      });
-      expect(emitted.map(([name]) => name)).toContain('close');
+  const DRAFT = {
+    body: 'Ship it',
+    contribution: 'Unblocks beta',
+    tags: ['project:beta'],
+    period: 'week',
+    date: '11-09-2026',
+    taskRef: 'sw',
+    goalRef: 'm1',
+  };
+  const ctx = (addGoalItem, emitted = []) => ({
+    selectedDate: TODAY,
+    today: TODAY,
+    saving: false,
+    $goals: { addGoalItem },
+    $emit: (name, payload) => emitted.push([name, payload]),
+  });
+
+  it('seeds the sheet with the date the period implies on the day in view', () => {
+    const seed = GoalItemCreateContainer.computed.seed.call({
+      period: 'week', date: '', selectedDate: TODAY, taskRef: 'sw', goalRef: '',
+    });
+    expect(seed).toEqual({
+      period: 'week', date: '11-09-2026', taskRef: 'sw', goalRef: '',
     });
   });
 
-  it('files a lifetime goal under the no-date date', () => {
-    const added = [];
-    const context = {
-      selectedDate: TODAY,
-      today: TODAY,
-      $goals: { addGoalItem: (payload) => { added.push(payload); return Promise.resolve({}); } },
-      $emit: () => {},
-    };
-    GoalItemCreateContainer.methods.onSubmit.call(context, { period: 'lifetime', body: 'Run a marathon', taskRef: '' });
-    expect(added[0].date).toBe('01-01-1970');
+  it('seeds a lifetime goal with the no-date date, and honours an explicit date', () => {
+    const seed = (over) => GoalItemCreateContainer.computed.seed.call({
+      period: 'day', date: '', selectedDate: TODAY, taskRef: '', goalRef: '', ...over,
+    });
+    expect(seed({ period: 'lifetime' }).date).toBe('01-01-1970');
+    expect(seed({ date: '15-09-2026' }).date).toBe('15-09-2026');
   });
 
-  it('reports a create so the page can refetch the reads it owns', async () => {
+  it('saves the whole draft, and a parent goal makes it a milestone', async () => {
+    const added = [];
+    await GoalItemCreateContainer.methods.onCreate.call(
+      ctx((payload) => { added.push(payload); return Promise.resolve({}); }),
+      DRAFT,
+    );
+    expect(added[0]).toMatchObject({
+      body: 'Ship it',
+      contribution: 'Unblocks beta',
+      tags: ['project:beta'],
+      period: 'week',
+      date: '11-09-2026',
+      taskRef: 'sw',
+      goalRef: 'm1',
+      isMilestone: true,
+      isComplete: false,
+    });
+  });
+
+  it('a goal with no parent is not a milestone', async () => {
+    const added = [];
+    await GoalItemCreateContainer.methods.onCreate.call(
+      ctx((payload) => { added.push(payload); return Promise.resolve({}); }),
+      { ...DRAFT, goalRef: '' },
+    );
+    expect(added[0].isMilestone).toBe(false);
+    expect(added[0].goalRef).toBeUndefined();
+  });
+
+  it('reports the create before closing, so a page can still read its own draft', async () => {
     const emitted = [];
-    const context = {
-      selectedDate: TODAY,
-      today: TODAY,
-      $goals: { addGoalItem: () => Promise.resolve({}) },
-      $emit: (name, payload) => emitted.push([name, payload]),
-    };
-    await GoalItemCreateContainer.methods.onSubmit.call(context, { period: 'day', body: 'Ship it', taskRef: 'sw' });
-    expect(emitted.map(([name]) => name)).toEqual(['close', 'created']);
+    await GoalItemCreateContainer.methods.onCreate.call(ctx(() => Promise.resolve({}), emitted), DRAFT);
+    expect(emitted.map(([name]) => name)).toEqual(['created', 'close']);
+    expect(emitted[0][1]).toMatchObject({ period: 'week', body: 'Ship it' });
   });
 
   it('keeps the sheet open on a failed save so the typed text survives', async () => {
     const emitted = [];
-    const context = {
-      selectedDate: TODAY,
-      today: TODAY,
-      $goals: { addGoalItem: () => Promise.reject(new Error('offline')) },
-      $emit: (name, payload) => emitted.push([name, payload]),
-    };
-    await GoalItemCreateContainer.methods.onSubmit.call(context, { period: 'day', body: 'Ship it', taskRef: 'sw' });
+    const context = ctx(() => Promise.reject(new Error('offline')), emitted);
+    await GoalItemCreateContainer.methods.onCreate.call(context, DRAFT);
     expect(emitted.map(([name]) => name)).toEqual(['failed']);
     expect(context.saving).toBe(false);
   });
 
   it('does not close before the save has landed', () => {
     const emitted = [];
-    const context = {
-      selectedDate: TODAY,
-      today: TODAY,
-      $goals: { addGoalItem: () => new Promise(() => {}) },
-      $emit: (name, payload) => emitted.push([name, payload]),
-    };
-    GoalItemCreateContainer.methods.onSubmit.call(context, { period: 'day', body: 'Ship it', taskRef: 'sw' });
+    GoalItemCreateContainer.methods.onCreate.call(ctx(() => new Promise(() => {}), emitted), DRAFT);
     expect(emitted).toEqual([]);
   });
 
   it('ignores a second submit while the first is in flight', () => {
     let calls = 0;
-    const context = {
-      selectedDate: TODAY,
-      today: TODAY,
-      $goals: { addGoalItem: () => { calls += 1; return new Promise(() => {}); } },
-      $emit: () => {},
-    };
-    GoalItemCreateContainer.methods.onSubmit.call(context, { period: 'day', body: 'Ship it', taskRef: 'sw' });
-    GoalItemCreateContainer.methods.onSubmit.call(context, { period: 'day', body: 'Ship it', taskRef: 'sw' });
+    const context = ctx(() => { calls += 1; return new Promise(() => {}); });
+    GoalItemCreateContainer.methods.onCreate.call(context, DRAFT);
+    GoalItemCreateContainer.methods.onCreate.call(context, DRAFT);
     expect(calls).toBe(1);
   });
 
-  it('describes the period chip the user picked, not the step the sheet opened from', () => {
-    const hint = (draftPeriod) => GoalItemCreateContainer.computed.hint.call({
-      period: 'day', draftPeriod, selectedDate: TODAY, today: TODAY,
-    });
-    expect(hint('week')).not.toBe(hint(null));
-    expect(hint(null)).toBe(GoalItemCreateContainer.computed.hint.call({
-      period: 'day', draftPeriod: null, selectedDate: TODAY, today: TODAY,
-    }));
+  it('lets only the newest parent-goal read land', async () => {
+    let resolveOld;
+    const reads = [
+      new Promise((resolve) => { resolveOld = resolve; }),
+      Promise.resolve({ goalItems: [{ id: 'new' }] }),
+    ];
+    const context = {
+      locked: false,
+      parentSeq: 0,
+      goalRefOptions: [],
+      $goals: { fetchGoalDatePeriod: () => reads.shift() },
+    };
+    const older = GoalItemCreateContainer.methods.loadParentGoals.call(context, { period: 'day', date: '11-09-2026' });
+    await GoalItemCreateContainer.methods.loadParentGoals.call(context, { period: 'day', date: '12-09-2026' });
+    resolveOld({ goalItems: [{ id: 'old' }] });
+    await older;
+    expect(context.goalRefOptions).toEqual([{ id: 'new' }]);
+  });
+
+  it('does not read parent goals when the caller locked the link', async () => {
+    let reads = 0;
+    const context = {
+      locked: true, parentSeq: 0, goalRefOptions: [], $goals: { fetchGoalDatePeriod: () => { reads += 1; } },
+    };
+    await GoalItemCreateContainer.methods.loadParentGoals.call(context, { period: 'day', date: '12-09-2026' });
+    expect(reads).toBe(0);
   });
 });

@@ -40,7 +40,18 @@
           <span class="rn-focus-card__status-text">{{ statusLabel }}</span>
           <span class="rn-focus-card__status-time">· {{ routine.time }} – {{ endTime }}</span>
         </div>
-        <div class="rn-focus-card__status-left">{{ leftLabel }}</div>
+        <div class="rn-focus-card__status-right">
+          <!-- The phone's "Back to now" lives in the deck header; the large shells
+               have no deck, so the card carries it beside the time left. -->
+          <button
+            v-if="showBackToNow"
+            type="button"
+            class="rn-focus-card__back"
+            data-testid="focus-card-back-to-now"
+            @click.stop="$emit('back-to-now')"
+          >Back to now</button>
+          <div class="rn-focus-card__status-left">{{ leftLabel }}</div>
+        </div>
       </div>
       <div class="rn-focus-card__elapsed">
         <div
@@ -168,8 +179,11 @@
                 title="Open agent transcript"
                 @click.stop="$emit('open-transcript', item)"
               >receipt_long</i>
-              <span v-if="item.subTotal" class="rn-focus-card__subs">
-                {{ item.isComplete ? item.subTotal : item.subDone }}/{{ item.subTotal }} subtasks
+              <!-- The real count, ticked parent or not: completing an item does
+                   not tick its subtasks, and the goal sheet shows them as they
+                   are — the row used to claim "3/3" over a sheet showing 2/3. -->
+              <span v-if="item.subTotal" class="rn-focus-card__subs" data-testid="checklist-subtasks">
+                {{ item.subDone }}/{{ item.subTotal }} subtasks
               </span>
             </div>
             <div class="rn-focus-card__add" data-testid="add-task-row" @click="$emit('add-task')">
@@ -232,6 +246,8 @@ export default {
     statusLabel: { type: String, default: '' },
     statusColor: { type: String, default: 'rgba(0,0,0,.45)' },
     leftLabel: { type: String, default: '' },
+    /** The viewed routine is not the one the clock says is current. */
+    showBackToNow: { type: Boolean, default: false },
     elapsedPct: { type: Number, default: 0 },
     /** Day goal items under this routine: { id, body, isComplete, ready, hasReward, subDone, subTotal } */
     items: { type: Array, default: () => [] },
@@ -393,15 +409,31 @@ export default {
     tabs() {
       return PERIOD_TABS;
     },
+    /** The checklist's membership — what the scroll-to-bottom watcher follows. */
+    itemsKey() {
+      return (this.items || []).map((item) => item && item.id).join('|');
+    },
   },
   watch: {
     // A new message (or a switched routine) must land at the bottom of the
-    // thread, which shares this scroller with the checklist.
-    items() {
-      this.scrollToBottomSoon();
+    // thread, which shares this scroller with the checklist. Keyed on the item
+    // ids, not the array: a refetch hands over a new array with the same items,
+    // and that used to drag a just-switched tab from its top to the bottom.
+    // Today only — the other tabs show no checklist.
+    itemsKey() {
+      if (this.isDayTab) this.scrollToBottomSoon();
+    },
+    // A new tab is new content: start it at its top, not wherever the last tab
+    // was left scrolled. After the render, so it is the new tab's height.
+    period() {
+      this.$nextTick(this.scrollToTop);
     },
   },
   methods: {
+    scrollToTop() {
+      const el = this.$refs.scroller;
+      if (el) el.scrollTop = 0;
+    },
     /** Exposed so the page can measure the fly animation's source rect. */
     ringRect() {
       const el = this.$refs.ring;
@@ -519,10 +551,30 @@ export default {
   animation: rn-pulse 1.4s ease-in-out infinite;
 }
 
+.rn-focus-card__status-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .rn-focus-card__status-left {
   font-size: 12px;
   color: rgba(0, 0, 0, .54);
   white-space: nowrap;
+}
+
+/* Same orange text link as the phone deck's `.rn-deck__back`. */
+.rn-focus-card__back {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #FF9800;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .rn-focus-card__elapsed {

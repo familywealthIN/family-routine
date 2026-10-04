@@ -146,7 +146,7 @@ export default {
     clamp(value) {
       return Math.min(Math.max(value, 0), 100);
     },
-    // `item.color` lets the list carry its own emphasis — Log out is red.
+    // `item.color` lets the list carry its own emphasis.
     rowStyle(item) {
       return {
         marginTop: item.gap || '0px',
