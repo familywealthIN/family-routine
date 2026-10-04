@@ -33,10 +33,10 @@ describe('NumericCard', () => {
   });
 
   it('leaves the card unchanged when the card has no formula to offer', () => {
-    const vm = mountCard({ id: 'on-track', name: 'Goals on Track (Coming Soon)', value: '?' });
+    const vm = mountCard({ id: 'efficiency', name: 'Routine Efficiency', value: '75%' });
 
     expect(vm.$el.querySelector('.v-icon')).toBeNull();
-    expect(vm.$el.textContent).toContain('Goals on Track (Coming Soon)');
+    expect(vm.$el.textContent).toContain('Routine Efficiency');
   });
 
   it('still falls back to the loading placeholder with no details at all', () => {

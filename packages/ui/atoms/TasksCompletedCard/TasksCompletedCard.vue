@@ -2,6 +2,12 @@
   <v-card class="pb-3">
     <v-card-title>
       <h3 class="headline">{{ details && details.name || 'Tasks' }}</h3>
+      <v-tooltip v-if="details && details.description" bottom>
+        <template #activator="{ on }">
+          <v-icon small class="ml-2" v-on="on">info_outline</v-icon>
+        </template>
+        <span>{{ details.description }}</span>
+      </v-tooltip>
     </v-card-title>
     <v-card-text class="pt-2">
       <div class="task-highlight">

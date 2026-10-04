@@ -25,6 +25,9 @@
           </atom-flex>
         </atom-layout>
          <atom-sheet class="transparent">
+            <div class="caption grey--text text-uppercase">
+              Routine points earned, last seven days
+            </div>
             <atom-sparkline
               :key="String(avg)"
               :smooth="16"
@@ -39,18 +42,12 @@
           <atom-flex d-flex xs7>
             <radar-card
               :title="getCard('radar-chart').name"
+              :description="getCard('radar-chart').description"
               :details="getCard('radar-chart').values"
             ></radar-card>
           </atom-flex>
           <atom-flex d-flex xs5>
-            <atom-layout row wrap>
-              <atom-flex xs12 d-flex>
-                <numeric-card :details="getCard('efficiency')" ></numeric-card>
-              </atom-flex>
-              <atom-flex xs12 d-flex>
-                <numeric-card :details="getCard('on-track')"></numeric-card>
-              </atom-flex>
-            </atom-layout>
+            <numeric-card :details="getCard('efficiency')" ></numeric-card>
           </atom-flex>
           <atom-flex d-flex xs12>
             <tasks-completed-card :details="getCard('task-activities')"></tasks-completed-card>
@@ -169,6 +166,7 @@ export default {
                 name
                 value
                 total
+                description
               }
             }
           }
@@ -241,12 +239,18 @@ export default {
     },
   },
   computed: {
+    sevenDaysByDate() {
+      // routineSevenDays comes back newest-first ($natural: -1, limit 7), so
+      // plotting it in query order ran the curve backwards through the week.
+      return [...this.routineSevenDays]
+        .sort((a, b) => moment(a.date, 'DD-MM-YYYY').diff(moment(b.date, 'DD-MM-YYYY')));
+    },
     avg() {
-      const sum = this.routineSevenDays.reduce(
+      const sum = this.sevenDaysByDate.reduce(
         (acc, cur) => acc + this.countTotal(cur.tasklist), 0,
       );
       // eslint-disable-next-line vue/no-side-effects-in-computed-properties
-      this.graphArray = this.routineSevenDays.map((routine) => this.countTotal(routine.tasklist));
+      this.graphArray = this.sevenDaysByDate.map((routine) => this.countTotal(routine.tasklist));
       const { length } = this.routineSevenDays;
 
       if (!sum && !length) return 0;

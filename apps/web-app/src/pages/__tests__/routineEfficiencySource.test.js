@@ -54,7 +54,7 @@ describe('CheckHistory Routine Efficiency', () => {
   it('shows nothing rather than a made-up zero before the card arrives', () => {
     expect(efficiency(null).value).toBeUndefined();
     expect(efficiency({ cards: [] }).value).toBeUndefined();
-    expect(efficiency({ cards: [null, card({ id: 'on-track', value: '?' })] }).value).toBeUndefined();
+    expect(efficiency({ cards: [null, card({ id: 'radar-chart' })] }).value).toBeUndefined();
   });
 
   it('asks getProgress for the window /progress opens on, so the two agree', () => {
