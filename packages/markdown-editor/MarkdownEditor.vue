@@ -6,6 +6,7 @@
       :key="editorKey"
       ref="editor"
       @update:modelValue="onInput"
+      @initialized="onEditorInitialized"
     />
   </div>
 </template>
@@ -14,6 +15,7 @@
 import VueEasymde from 'vue-easymde';
 import defaultConfig from './configs/default';
 import compactConfig from './configs/compact';
+import registerListContinuationGuard from './listContinuation';
 import 'easymde/dist/easymde.min.css';
 import './styles/easymde-preview.css';
 
@@ -81,6 +83,15 @@ export default {
   methods: {
     onInput(value) {
       this.$emit('input', value);
+    },
+    /**
+     * EasyMDE auto-continues markdown lists on Enter, so a marker the user
+     * then types doubles up. Guard the editor as soon as it exists.
+     */
+    onEditorInitialized(easymde) {
+      if (easymde && easymde.codemirror) {
+        registerListContinuationGuard(easymde.codemirror);
+      }
     },
     /**
      * Escape hatch for callers that need the raw EasyMDE instance
