@@ -228,17 +228,23 @@ function getEfficiency({ periodRoutines, period }) {
 }
 
 function getStimuli({ periodRoutines }) {
+  // vue-radar prints an axis label as `name.slice(0, 2)`, so the axes can only
+  // ever be the initials — the spelt-out stimulus travels alongside as the
+  // card's legend, which is what a D / K / G triangle was missing.
   const initialData = [
     {
       name: 'D',
+      description: 'Discipline',
       value: 0,
     },
     {
       name: 'K',
+      description: 'Kinetics',
       value: 0,
     },
     {
       name: 'G',
+      description: 'Geniuses',
       value: 0,
     },
   ];
@@ -263,16 +269,8 @@ function getStimuli({ periodRoutines }) {
   return {
     id: 'radar-chart',
     name: 'Radar Chart',
+    description: 'Points earned per day on average, out of the 100 a day each stimulus allows.',
     values: stimuliPercentage,
-  };
-}
-
-function getOnTrack({
-  routines, goals, period, startDate, endDate, periodRoutines, periodGoals,
-}) {
-  // By date understand which tasks can be accomplished
-  return {
-    routines, goals, period, startDate, endDate, periodRoutines, periodGoals,
   };
 }
 
@@ -323,20 +321,23 @@ function getTaskActivities({
 
   if (!stimuliTotal && !length) return initialData;
 
-  const stimuliPercentage = [...stimuliTotal];
+  // Routine items and tasks accrue per day, so the period's figure is the sum
+  // over its days. Milestones do not: getMilestonesTotal answers for the whole
+  // period and was counted once per routine day, so that one is divided back
+  // down. Dividing all three — what this did before — turned a week into a
+  // per-day figure indistinguishable from today's count beside a WEEK toggle.
+  const periodTotals = [...stimuliTotal];
 
-  stimuliPercentage[0].value = Math.ceil(stimuliTotal[0].value / length);
-  stimuliPercentage[0].total = Math.ceil(stimuliTotal[0].total / length);
-  stimuliPercentage[1].value = Math.ceil(stimuliTotal[1].value / length);
-  stimuliPercentage[1].total = Math.ceil(stimuliTotal[1].total / length);
-  stimuliPercentage[2].value = Math.ceil(stimuliTotal[2].value / length);
-  stimuliPercentage[2].total = Math.ceil(stimuliTotal[2].total / length);
+  if (length) {
+    periodTotals[2].value = Math.round(periodTotals[2].value / length);
+    periodTotals[2].total = Math.round(periodTotals[2].total / length);
+  }
 
-  // get average of each stimuli value
   return {
     id: 'task-activities',
     name: 'Task and Activities Completed',
-    values: stimuliPercentage,
+    description: `Completed out of available over this ${period} so far. Milestones count once for the whole ${period}.`,
+    values: periodTotals,
   };
 }
 
@@ -397,7 +398,15 @@ function getBestRoutineSorted({
 
   fullTasklistScore.sort((a, b) => b.value - a.value);
 
-  const slicedList = cardId === 'good' ? fullTasklistScore.slice(0, 3) : fullTasklistScore.slice(Math.max(fullTasklistScore.length - 3, 0));
+  // Cutting one sorted list at both ends put unscored items in both cards: an
+  // item scoring 0 took a "Great Going!" slot whenever fewer than three items
+  // scored, and with six or fewer items the two slices overlapped outright.
+  // "Great Going!" praises only items that actually scored; "Needs Attention!"
+  // takes the lowest of whatever that leaves behind.
+  const praisedCount = Math.min(fullTasklistScore.filter((task) => task.value > 0).length, 3);
+  const remaining = fullTasklistScore.slice(praisedCount);
+
+  const slicedList = cardId === 'good' ? fullTasklistScore.slice(0, praisedCount) : remaining.slice(Math.max(remaining.length - 3, 0));
 
   // get average of each stimuli value
   return {
@@ -501,11 +510,6 @@ function getProgressReport({
         value: '78%',
       },
       {
-        id: 'on-track',
-        name: 'Goals on Track (Coming Soon)',
-        value: '?',
-      },
-      {
         id: 'task-activities',
         name: 'Task and Activities Completed',
         values: [
@@ -599,13 +603,6 @@ function getProgressReport({
         return getStimuli({ periodRoutines: currentPeriodRoutines });
       }
 
-      // if (card.id === 'on-track') {
-      //   return getOnTrack({
-      //     periodRoutines: currentPeriodRoutines,
-      //     periodGoals: currentPeriodGoals,
-      //   });
-      // }
-
       if (card.id === 'task-activities') {
         return getTaskActivities({
           periodRoutines: currentPeriodRoutines,
@@ -647,7 +644,6 @@ module.exports = {
   efficiencyFormula,
   getEfficiency,
   getStimuli,
-  getOnTrack,
   getTaskActivities,
   getProgressStatement,
   getPeriodData,
