@@ -1,13 +1,13 @@
 <template>
   <AtomCard class="pl-3 mb-3 sub-task-list">
-    <AtomCardTitle class="headline pb-0 pt-3 pl-0">SUB TASKS</AtomCardTitle>
+    <AtomCardTitle class="headline pb-0 pt-3 pl-0">SUBTASKS</AtomCardTitle>
     <div class="formGoal mb-1">
       <AtomTextField
         clearable
         v-model="newSubTaskItemBody"
         id="newSubTaskItemBody"
         name="newSubTaskItemBody"
-        label="Type your sub task"
+        label="Type your subtask"
         class="inputGoal"
         ref="subTaskInput"
         @keyup.enter="addSubTaskItem"
@@ -29,11 +29,11 @@
       </AtomButton>
     </div>
     <AtomList dense subheader>
-      <AtomSubheader class="subheading" v-if="subTasks && subTasks.length == 0">
-        You have 0 sub tasks
+      <AtomSubheader class="subheading" v-if="!subTasks || subTasks.length === 0">
+        You have 0 subtasks
       </AtomSubheader>
       <AtomSubheader class="subheading" v-else>
-        {{ subTasks && subTasks.length }} sub tasks
+        {{ subTasks.length }} subtask{{ subTasks.length !== 1 ? 's' : '' }}
       </AtomSubheader>
       <template v-for="(subTaskItem, i) in subTasks">
         <AtomListTile v-bind:key="subTaskItem.id">

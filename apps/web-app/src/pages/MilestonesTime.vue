@@ -16,7 +16,7 @@
               <template v-slot:activator>
                 <atom-list-tile>
                   <atom-list-tile-content>
-                    <atom-list-tile-title>{{ period.name }} Goals</atom-list-tile-title>
+                    <atom-list-tile-title>{{ period.name | capitalize }} Goals</atom-list-tile-title>
                   </atom-list-tile-content>
                 </atom-list-tile>
               </template>
@@ -335,6 +335,13 @@ export default {
       }
 
       return goal;
+    },
+  },
+  filters: {
+    capitalize(value) {
+      if (!value) return '';
+      const str = value.toString();
+      return str.charAt(0).toUpperCase() + str.slice(1);
     },
   },
 };

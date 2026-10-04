@@ -107,9 +107,14 @@ export default {
     },
     getPeriodDate: (period, date) => {
       const periodDate = getPeriodDate(period, date, '');
+      // getPeriodDate returns '' for a date it cannot parse; appending a year to
+      // that would only put moment's "Invalid date" back on the row.
+      if (!periodDate && period !== 'lifetime') {
+        return '';
+      }
       switch (period) {
         case 'day':
-          return `${periodDate} ${moment(date, 'DD-MM-YYYY').format('MMMM YYYY')}`;
+          return `${periodDate} ${moment(date, 'DD-MM-YYYY').format('YYYY')}`;
         case 'week':
           return `${periodDate} ${moment(date, 'DD-MM-YYYY').format('YYYY')}`;
         case 'month':

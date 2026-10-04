@@ -54,7 +54,9 @@
     <div class="mb-4">
       <div class="mb-3 pl-2">
         <AtomIcon class="mr-1">timeline</AtomIcon>
-        Generated {{ periodDisplayName }} Plan ({{ localMilestoneData.entries.length }} items)
+        <!-- The label is its own element so the newline after the icon is not
+             compiled into a leading space on the heading text. -->
+        <span>Generated {{ periodDisplayName }} Plan ({{ localMilestoneData.entries.length }} items)</span>
       </div>
       <AtomTimeline dense>
         <TimelineEntryEditor
