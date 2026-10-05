@@ -42,8 +42,10 @@ const WEEK_TARGET = {
 
 describe('GoalDeleteConfirmContainer', () => {
   describe('contract', () => {
-    it('wraps exactly one organism (the shared confirm dialog)', () => {
-      expect(Object.keys(Container.components)).toEqual(['OrganismSimpleDialog']);
+    it('wraps exactly one organism (the chassis delete sheet)', () => {
+      // Was OrganismSimpleDialog, the pre-redesign Vuetify dialog. Every other
+      // destructive confirm is a ResponsiveSheet, so this one is too.
+      expect(Object.keys(Container.components)).toEqual(['GoalDeleteSheet']);
     });
   });
 

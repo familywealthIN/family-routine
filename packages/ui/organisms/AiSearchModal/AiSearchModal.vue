@@ -29,24 +29,11 @@
 
             <!-- Center: Mode Toggle -->
             <div class="header-section header-section--center">
-              <v-btn-toggle
+              <sliding-switch
                 v-model="toggleMode"
-                mandatory
+                :segments="modeSegments"
                 class="mode-toggle"
-              >
-                <v-btn v-if="!searchOnlyMode" value="task" class="mode-btn mode-btn--task">
-                  <AtomIcon left small>task_alt</AtomIcon>
-                  <span>Task</span>
-                </v-btn>
-                <v-btn v-if="!searchOnlyMode" value="goal" class="mode-btn mode-btn--goal">
-                  <AtomIcon left small>timeline</AtomIcon>
-                  <span>Goal</span>
-                </v-btn>
-                <v-btn v-if="showSearchTab" value="search" class="mode-btn mode-btn--search">
-                  <AtomIcon left small>search</AtomIcon>
-                  <span>Search</span>
-                </v-btn>
-              </v-btn-toggle>
+              />
             </div>
 
             <!-- Right: Close Button -->
@@ -302,24 +289,11 @@
 
             <!-- Center: Mode Toggle -->
             <div class="header-section header-section--center">
-              <v-btn-toggle
+              <sliding-switch
                 v-model="toggleMode"
-                mandatory
+                :segments="modeSegments"
                 class="mode-toggle"
-              >
-                <v-btn v-if="!searchOnlyMode" value="task" class="mode-btn mode-btn--task">
-                  <AtomIcon left small>task_alt</AtomIcon>
-                  <span>Task</span>
-                </v-btn>
-                <v-btn v-if="!searchOnlyMode" value="goal" class="mode-btn mode-btn--goal">
-                  <AtomIcon left small>timeline</AtomIcon>
-                  <span>Goal</span>
-                </v-btn>
-                <v-btn v-if="showSearchTab" value="search" class="mode-btn mode-btn--search">
-                  <AtomIcon left small>search</AtomIcon>
-                  <span>Search</span>
-                </v-btn>
-              </v-btn-toggle>
+              />
             </div>
 
             <!-- Right: Close Button -->
@@ -666,6 +640,7 @@ import eventBus, { EVENTS } from '../../utils/eventBus';
 import { handleTagInputKeydown } from '../../utils/tagKeydown';
 import GoalTaskToolbar from '../GoalTaskToolbar/GoalTaskToolbar.vue';
 import MobileSubDrawer from '../../molecules/MobileSubDrawer/MobileSubDrawer.vue';
+import SlidingSwitch from '../../molecules/SlidingSwitch/SlidingSwitch.vue';
 import { stepupMilestonePeriodDate } from '../../utils/getDates';
 import AiTaskCreationForm from '../AiTaskCreationForm/AiTaskCreationForm.vue';
 import AiGoalPlanForm from '../AiGoalPlanForm/AiGoalPlanForm.vue';
@@ -678,6 +653,7 @@ export default {
     AiGoalPlanForm,
     GoalTaskToolbar,
     MobileSubDrawer,
+    SlidingSwitch,
     AtomAlert,
     AtomBottomSheet,
     AtomButton,
@@ -871,6 +847,20 @@ export default {
      * Whether to show the Search tab.
      * Visible when opened from search bar (openMode === 'search') or on non-dashboard pages.
      */
+    /**
+     * The mode switch, as SlidingSwitch segments. Which ones exist is the same
+     * condition the old v-btn-toggle put in `v-if` on each button.
+     */
+    modeSegments() {
+      const segs = [];
+      if (!this.searchOnlyMode) {
+        segs.push({ key: 'task', label: 'Task', icon: 'task_alt' });
+        segs.push({ key: 'goal', label: 'Goal', icon: 'timeline' });
+      }
+      if (this.showSearchTab) segs.push({ key: 'search', label: 'Search', icon: 'search' });
+      return segs;
+    },
+
     showSearchTab() {
       const isDashboard = this.$route && this.$route.name === 'home';
       return this.openMode === 'search' || !isDashboard;
@@ -2334,91 +2324,48 @@ export default {
   gap: 8px;
 }
 
+/* The spacers are sized to the close button, not to a third of the header.
+   At `flex: 1` each, the three columns split evenly and the switch got 185px,
+   which cut "Search" off mid-word — and it cannot simply shrink-to-fit instead,
+   because SlidingSwitch's segments are `flex: 1 1 0` (the sliding thumb's
+   geometry assumes equal segments), so its intrinsic width collapses. Both
+   spacers stay the same width, so the switch is still centred. */
 .header-section {
-  flex: 1;
+  flex: 0 0 48px;
   display: flex;
   align-items: center;
 }
 
 .header-section--center {
+  flex: 1 1 auto;
+  min-width: 0;
   justify-content: center;
+}
+
+/* Fill the middle column. The switch is a flex item with `width: auto`, so it
+   shrink-to-fits — and because its own segments are `flex: 1 1 0` that
+   collapses to a width where the longest label ("Search") no longer fits.
+   Capped so it stays a pill on a wide dialog rather than stretching. */
+.mode-toggle {
+  width: 100%;
+  max-width: 320px;
 }
 
 .header-section--right {
   justify-content: flex-end;
 }
 
-/* Mode Toggle Styling */
-.mode-toggle {
-  border-radius: 24px !important;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
 
-.mode-btn {
-  text-transform: none !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.5px !important;
-  padding: 4px 20px !important;
-  min-height: 36px !important;
-  transition: all 0.3s ease !important;
-}
 
-.mode-btn span {
-  font-size: 14px;
-}
+
 
 /* Task Button - Blue when selected */
-.mode-btn--task.v-btn--active {
-  background-color: #288bd5 !important;
-  color: white !important;
-}
 
-.mode-btn--task.v-btn--active .v-icon {
-  color: white !important;
-}
 
-.mode-btn--task:not(.v-btn--active) {
-  color: #757575 !important;
-}
 
-.mode-btn--task:not(.v-btn--active) .v-icon {
-  color: #757575 !important;
-}
-
-/* Goal Button - Orange/Amber when selected */
-.mode-btn--goal.v-btn--active {
-  background-color: #FF9800 !important;
-  color: white !important;
-}
-
-.mode-btn--goal.v-btn--active .v-icon {
-  color: white !important;
-}
-
-.mode-btn--goal:not(.v-btn--active) {
-  color: #757575 !important;
-}
-
-.mode-btn--goal:not(.v-btn--active) .v-icon {
-  color: #757575 !important;
-}
 
 /* Responsive sizing for mobile */
 @media (max-width: 600px) {
-  .mode-btn {
-    padding: 6px 16px !important;
-    min-height: 36px !important;
-  }
-
-  .mode-btn span {
-    font-size: 13px;
-  }
-
-  .mode-btn .v-icon {
-    font-size: 18px !important;
-  }
-
   .prompt-box {
     border-radius: 16px;
     padding: 10px 12px 10px 12px;
@@ -2473,20 +2420,7 @@ export default {
 }
 
 /* Search Button - Teal when selected */
-.mode-btn--search.v-btn--active {
-  background-color: #009688 !important;
-  color: white !important;
-}
 
-.mode-btn--search.v-btn--active .v-icon {
-  color: white !important;
-}
 
-.mode-btn--search:not(.v-btn--active) {
-  color: #757575 !important;
-}
 
-.mode-btn--search:not(.v-btn--active) .v-icon {
-  color: #757575 !important;
-}
 </style>

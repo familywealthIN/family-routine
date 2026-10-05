@@ -51,7 +51,7 @@
       @move-subtask-up="onMoveSubtaskUp"
       @remove-subtask="onRemoveSubtask"
     />
-    <goal-delete-confirm-container ref="deleteConfirm" @confirm="onDeleteConfirmed" />
+    <goal-delete-confirm-container ref="deleteConfirm" :shell="shell" @confirm="onDeleteConfirmed" />
   </div>
 </template>
 
