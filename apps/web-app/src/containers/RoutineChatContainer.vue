@@ -166,6 +166,14 @@ export default {
     doneCount() {
       return this.goalItems.filter((item) => item && item.isComplete).length;
     },
+    /**
+     * The card's "x of y": y is the routine's slot count (the server's D/K
+     * equation), so an empty routine reads "0 of 1", never "0 of 0".
+     */
+    totalCount() {
+      const slots = this.routine && this.routine.totalCount;
+      return Math.max(this.goalItems.length, slots || 0);
+    },
     openItems() {
       return this.goalItems.filter((item) => item && !item.isComplete);
     },
@@ -182,7 +190,7 @@ export default {
         from: 'routine',
         kind: 'text',
         text: `${this.routineName} · ${this.routine.time} – ${this.endTime}. `
-          + `${this.doneCount} of ${this.goalItems.length} done${this.leftLabel ? ` — ${this.leftLabel}` : ''}.${tail}`,
+          + `${this.doneCount} of ${this.totalCount} done${this.leftLabel ? ` — ${this.leftLabel}` : ''}.${tail}`,
         items: [],
         proposals: [],
       };
