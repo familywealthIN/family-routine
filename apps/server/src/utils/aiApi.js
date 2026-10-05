@@ -26,13 +26,26 @@ function cleanJsonResponse(text) {
   return cleaned;
 }
 
-async function fetchFromAi(prompt, isJsonMode = false) {
+/**
+ * @param {string} prompt
+ * @param {boolean} [isJsonMode]
+ * @param {{maxTokens?: ?number}} [options] `maxTokens` caps the answer. Pass it
+ *   wherever the caller's UI has a fixed shape to fill: unbounded, a model
+ *   answers a one-sentence ask with a page of prose, and this path is the paid
+ *   one, so it pays for every token of that page.
+ */
+async function fetchFromAi(prompt, isJsonMode = false, { maxTokens = null } = {}) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const openRouterApiKey = process.env.OPENROUTER_API_KEY;
 
   const fullPrompt = isJsonMode
     ? `${prompt}\n\nRespond ONLY with a valid JSON object.`
     : prompt;
+
+  const generationConfig = {
+    ...(isJsonMode && { response_mime_type: 'application/json' }),
+    ...(maxTokens && { maxOutputTokens: maxTokens }),
+  };
 
   if (geminiApiKey) {
     try {
@@ -44,7 +57,7 @@ async function fetchFromAi(prompt, isJsonMode = false) {
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: fullPrompt }] }],
-          ...(isJsonMode && { generationConfig: { response_mime_type: 'application/json' } }),
+          ...(Object.keys(generationConfig).length && { generationConfig }),
         }),
       });
 
@@ -77,6 +90,7 @@ async function fetchFromAi(prompt, isJsonMode = false) {
         body: JSON.stringify({
           model: OPENROUTER_MODEL,
           messages: [{ role: 'user', content: fullPrompt }],
+          ...(maxTokens && { max_tokens: maxTokens }),
           ...(isJsonMode && { response_format: { type: 'json_object' } }),
         }),
       });
@@ -132,38 +146,246 @@ Please respond with ONLY a JSON object in this exact format:
   }
 }
 
+/*
+ * The area/project description and next steps below feed the chat's "Before
+ * you start" card (chassis.md -> "Areas and projects live in chat"), which has
+ * a hard shape: a description of 8-18 words, and at most three verb-first
+ * fragments of 2-6 words. Each fragment is appended to the user's checklist
+ * VERBATIM when they tap Add, so a paragraph where a fragment belongs does not
+ * merely look wrong - it puts a paragraph on the checklist.
+ *
+ * Models drift back to prose and numbered lists given the slightest slack, so
+ * the shape is enforced below, after the fact, rather than asked for in the
+ * prompt and trusted.
+ */
+
+// Not 40: these models spend output tokens on reasoning before the answer, and
+// a budget too tight returns nothing and burns the paid fallback on a retry.
+// The cap only has to stop a runaway essay; the shape is enforced in code.
+const CARD_MAX_TOKENS = 400;
+// The design asks 8-18 words. Past 24 it has stopped being a commitment and
+// started being prose.
+const MAX_DESC_WORDS = 24;
+// The design's own descriptions are two clipped clauses ("Product +
+// engineering. Mornings for the hardest thing."), so a strict first-sentence
+// cut would mangle the register. The word budget is the real guard.
+const MAX_DESC_SENTENCES = 2;
+const MAX_NEXT_STEPS = 3;
+// The design asks 2-6 words; one word of slack keeps a near miss rather than
+// throwing it away, and is still nowhere near a sentence.
+const MAX_STEP_WORDS = 7;
+// The Add pill renders the fragment on one line.
+const MAX_STEP_CHARS = 60;
+
+const SUMMARY_FALLBACK = 'Unable to generate summary at this time. Please try again later.';
+const NEXT_STEPS_FALLBACK = 'Unable to generate next steps at this time. Please try again later.';
+
+const LIST_MARKER = /^(?:[-*>•–—#]+|\(?\d+[.)])\s*/;
+
+/**
+ * One line of model output as the card would have to show it: no list marker,
+ * no markdown emphasis, no wrapping quotes, single-spaced.
+ */
+function stripMarkers(line) {
+  return String(line || '')
+    .trim()
+    .replace(LIST_MARKER, '')
+    // "Step 1: clear the inbox" - the label is the model talking about the
+    // answer, not part of the task.
+    .replace(/^(?:step\s*\d*|description|summary|commitment|next steps?)\s*:\s*/i, '')
+    // A model likes to bold the verb or quote the whole fragment. Both would
+    // land on the checklist as literal punctuation.
+    .replace(/[*`]/g, '')
+    .replace(/^["“‘]+/, '')
+    .replace(/["”]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function wordCount(text) {
+  return String(text || '').split(' ').filter(Boolean).length;
+}
+
+/** The lines of a response that could stand on their own in the card. */
+function contentLines(raw) {
+  return String(raw || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    // "Next steps:" / "Here are three actions:" - a model loves to announce
+    // its answer, and that announcement is not a task.
+    .filter((line) => line && !line.endsWith(':'))
+    .map(stripMarkers)
+    .filter(Boolean);
+}
+
+/**
+ * The standing commitment as one short line, or '' when the model answered
+ * with nothing the card can show.
+ */
+function normaliseDescription(raw) {
+  const first = contentLines(raw)[0];
+  if (!first) return '';
+
+  const sentences = first.match(/[^.!?]+[.!?]*/g) || [first];
+  let kept = '';
+  for (let i = 0; i < sentences.length && i < MAX_DESC_SENTENCES; i += 1) {
+    const candidate = kept + sentences[i];
+    // The first clause is always kept; a second one only if it stays in budget.
+    if (i > 0 && wordCount(candidate.trim()) > MAX_DESC_WORDS) break;
+    kept = candidate;
+  }
+
+  const text = kept.trim();
+  const words = text.split(' ').filter(Boolean);
+  if (words.length <= MAX_DESC_WORDS) return text;
+
+  // A single sentence can be a paragraph by itself. Clip it rather than drop
+  // it: a blank card is worse than a clipped commitment, and unlike a next
+  // step this string is never appended to anything.
+  return `${words.slice(0, MAX_DESC_WORDS).join(' ').replace(/[,;:.]+$/, '')}...`;
+}
+
+/**
+ * At most three checklist-ready fragments. Accepts either the newline list the
+ * prompt asks for or an array, since a model given a list shape sometimes
+ * answers in JSON anyway.
+ *
+ * @returns {string[]} Possibly empty - the caller decides what a blank card says.
+ */
+function normaliseNextSteps(raw) {
+  const lines = Array.isArray(raw)
+    ? raw
+      .map((entry) => stripMarkers(typeof entry === 'string' ? entry : entry && entry.body))
+      .filter(Boolean)
+    : contentLines(raw);
+
+  const seen = new Set();
+
+  return lines
+    // Trailing punctuation reads as a sentence; the pill has to read as a task.
+    // One pass over the whole trailing run, because a model closes a quoted
+    // step after the full stop (`"Log shoe mileage";`).
+    .map((line) => line.replace(/[\s.,;:!"”]+$/, ''))
+    .filter((line) => {
+      if (!/[a-z0-9]/i.test(line)) return false;
+      // A sentence cannot be shortened into a fragment safely here, and
+      // appending one to the checklist is exactly the failure this guard
+      // exists to prevent - so drop it rather than pass it through.
+      if (wordCount(line) > MAX_STEP_WORDS || line.length > MAX_STEP_CHARS) return false;
+      // A repeated suggestion would become two identical checklist items.
+      const key = line.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, MAX_NEXT_STEPS);
+}
+
 async function getSummaryFromGoalItems(goalItems) {
-  const prompt = `Summarize these goal items in a concise paragraph:
-    ${JSON.stringify(goalItems)}
-    
-    Provide a clear, actionable summary that highlights the main objectives and themes.`;
+  const prompt = `You write the description line of an area or project in Routine Notes.
+
+These are its goal items:
+${JSON.stringify(goalItems)}
+
+Write the standing commitment this area or project represents - what it always means, not what happened this week.
+Rules:
+- 8 to 18 words in total, at most two short clauses
+- plain language, no markdown, no list, no quotes, no preamble, no heading
+Examples of the exact register:
+Product + engineering. Mornings for the hardest thing.
+Race on 15 Nov. Build to 16 km long runs by end of October.
+
+Reply with that one line and nothing else.`;
 
   try {
-    return await fetchFromAi(prompt);
+    const raw = await fetchFromAi(prompt, false, { maxTokens: CARD_MAX_TOKENS });
+    return normaliseDescription(raw) || SUMMARY_FALLBACK;
   } catch (error) {
     console.error('Error in getSummaryFromGoalItems:', error);
-    return 'Unable to generate summary at this time. Please try again later.';
+    return SUMMARY_FALLBACK;
+  }
+}
+
+/**
+ * The next steps as the card consumes them: up to three fragments, each ready
+ * to be appended to the checklist verbatim.
+ *
+ * @returns {Promise<string[]>} Empty when the model is unavailable or answered
+ *   with prose - deliberately empty rather than apologetic copy, because
+ *   anything returned here can end up on a checklist.
+ */
+async function getNextStepsListFromGoalItems(goalItems) {
+  const prompt = `You write the NEXT STEPS of an area or project in Routine Notes.
+
+These are its goal items:
+${JSON.stringify(goalItems)}
+
+Give at most 3 next steps, one per line.
+Rules for every step:
+- verb first, 2 to 6 words, a fragment and never a sentence
+- no numbering, no bullets, no markdown, no trailing full stop
+- it is appended to the user's checklist exactly as written, so it must read as a task on its own
+Examples of the exact register:
+Clear inbox to zero
+Log shoe mileage
+Outline sections 2-3
+
+Reply with those lines and nothing else.`;
+
+  try {
+    const raw = await fetchFromAi(prompt, false, { maxTokens: CARD_MAX_TOKENS });
+    return normaliseNextSteps(raw);
+  } catch (error) {
+    console.error('Error in getNextStepsFromGoalItems:', error);
+    return [];
   }
 }
 
 async function getNextStepsFromGoalItems(goalItems) {
-  const prompt = `Based on these goal items, suggest 3-5 specific next action steps to achieve these goals:
-    ${JSON.stringify(goalItems)}
-    
-    Format your response as a numbered list with clear, actionable steps.
-    Focus on practical actions the user can take immediately.`;
+  const steps = await getNextStepsListFromGoalItems(goalItems);
+  if (!steps.length) return NEXT_STEPS_FALLBACK;
+  // Blank-line separated, not newline: the dashboard renders this string as
+  // markdown, which collapses a single newline and would run the three
+  // fragments together into one line.
+  return steps.join('\n\n');
+}
 
-  try {
-    return await fetchFromAi(prompt);
-  } catch (error) {
-    console.error('Error in getNextStepsFromGoalItems:', error);
-    return 'Unable to generate next steps at this time. Please try again later.';
+/**
+ * Week anchors (Fridays) that fall inside the month `monthDate` belongs to,
+ * from `from` onwards. A month plan is made of the weeks the month actually
+ * contains — 3 to 5 of them — so its milestones are week goals that sit
+ * inside the parent month goal, instead of 7-day hops that walk straight out
+ * of the month. Friday is the week-goal anchor used everywhere else
+ * (getTimelineEntryDate, getWeeksOfYear).
+ *
+ * @param {Date} monthDate Any date inside the target month.
+ * @param {Date} from Earliest anchor to keep (start of today, or the 1st for
+ *   a "next month" plan).
+ * @returns {Date[]}
+ */
+function monthWeekAnchors(monthDate, from) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const anchors = [];
+
+  for (let day = 1; day <= lastDay; day += 1) {
+    const date = new Date(year, month, day);
+    if (date.getDay() === 5) {
+      anchors.push(date);
+    }
   }
+
+  const upcoming = anchors.filter((date) => date >= from);
+  // Late in the month nothing is left — keep the plan well formed by
+  // falling back to the month's final week rather than returning no entries.
+  return upcoming.length ? upcoming : anchors.slice(-1);
 }
 
 function generateEntriesTemplate(timeframe, userQuery = '') {
   const entriesTemplate = [];
   const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   // The frontend (modifyQueryPeriod in AiGoalPlanFormContainer) rewrites
   // bare period words into explicit counts (e.g. "this year" → "8 months"
@@ -199,25 +421,29 @@ function generateEntriesTemplate(timeframe, userQuery = '') {
     })()
     : new Date(today);
 
+  // A month plan steps down to the weeks the month contains, never past its
+  // end. `explicitWeeks` (the client rewrites "this month" into "N weeks")
+  // only ever trims the tail — the calendar decides where the weeks land.
+  const monthAnchors = monthWeekAnchors(monthBase, isNextMonth ? monthBase : todayStart);
+
   const periodInfo = {
     week: {
       period: 'day',
       range: explicitDays || 7,
       getDelta: (i) => {
         const targetDate = new Date(weekBase);
-        // For an explicit count or "next week", start at i=0.
-        // Otherwise keep the legacy "starts tomorrow" behaviour so
-        // the next 7 days excluding today are templated.
-        const offset = (explicitDays || isNextWeek) ? i : i + 1;
-        targetDate.setDate(weekBase.getDate() + offset);
+        // Day one is the day the user asks, not the day after — a plan set
+        // up today has to leave something to execute today. "next week"
+        // already starts at its own base (the upcoming Sunday).
+        targetDate.setDate(weekBase.getDate() + i);
         return targetDate;
       },
       formatPeriodName: (date) => date.toLocaleDateString('en-US', { weekday: 'long' }),
     },
     month: {
       period: 'week',
-      range: explicitWeeks || 4,
-      getDelta: (i) => new Date(monthBase.getTime() + (i * 7 * 24 * 60 * 60 * 1000)),
+      range: Math.min(monthAnchors.length, explicitWeeks || monthAnchors.length),
+      getDelta: (i) => monthAnchors[i],
       formatPeriodName: (date, i) => `Week ${i + 1}`,
     },
     year: {
@@ -252,13 +478,48 @@ function generateEntriesTemplate(timeframe, userQuery = '') {
   return entriesTemplate;
 }
 
-function generateFallbackPlan(userQuery, timeframe) {
-  const entriesTemplate = generateEntriesTemplate(timeframe, userQuery);
-  const mappedEntries = entriesTemplate.map((entry, index) => ({
+// Periods the milestone planner knows how to step down from. Anything else
+// (day, lifetime) falls back to inferring the timeframe from the query text.
+const PLAN_TIMEFRAMES = ['week', 'month', 'year'];
+
+function fallbackEntry(entry, index) {
+  return {
     ...entry,
     title: `Goal Plan - ${entry.periodName}`,
     description: `Continue working towards your goals. Step ${index + 1} of your plan.`,
-  }));
+  };
+}
+
+/**
+ * Pin the model's entries onto the template grid.
+ *
+ * Rule 2 of the prompt asks the model to keep every period / periodName /
+ * date exactly as templated, and it regularly ignores that — a month plan
+ * comes back as seven day-dated entries. The save path derives the milestone
+ * period and date from these values, so a drifting entry lands the milestone
+ * on the wrong period (or on none at all). Keep the model's prose, keep our
+ * grid.
+ */
+function alignEntriesToTemplate(entries, entriesTemplate) {
+  const generated = Array.isArray(entries) ? entries : [];
+
+  return entriesTemplate.map((templateEntry, index) => {
+    const entry = generated[index];
+    if (!entry || !entry.title) {
+      return fallbackEntry(templateEntry, index);
+    }
+
+    return {
+      ...templateEntry,
+      title: entry.title,
+      description: entry.description || fallbackEntry(templateEntry, index).description,
+    };
+  });
+}
+
+function generateFallbackPlan(userQuery, timeframe) {
+  const entriesTemplate = generateEntriesTemplate(timeframe, userQuery);
+  const mappedEntries = entriesTemplate.map(fallbackEntry);
   return {
     period: timeframe,
     title: 'Goal Plan',
@@ -267,10 +528,16 @@ function generateFallbackPlan(userQuery, timeframe) {
   };
 }
 
-async function generateMilestonePlan(userQuery, systemPrompt = null) {
+async function generateMilestonePlan(userQuery, systemPrompt = null, period = null) {
   let timeframe = 'week';
 
-  if (/\d+\s*days?\b/i.test(userQuery) || /next\s*week/i.test(userQuery)) {
+  if (PLAN_TIMEFRAMES.includes(period)) {
+    // The period the user picked in the toolbar is authoritative. The query
+    // text alone can't tell a month plan from a week plan, so a "This Month"
+    // plan whose objective never says "month" used to fall through to the
+    // week default and come back as seven day entries under a month goal.
+    timeframe = period;
+  } else if (/\d+\s*days?\b/i.test(userQuery) || /next\s*week/i.test(userQuery)) {
     timeframe = 'week';
   } else if (/\d+\s*weeks?\b/i.test(userQuery) || /next\s*month/i.test(userQuery)) {
     timeframe = 'month';
@@ -311,6 +578,11 @@ async function generateMilestonePlan(userQuery, systemPrompt = null) {
     if (!parsedJson.period || !parsedJson.title || !parsedJson.entries) {
       throw new Error('Invalid JSON structure from AI');
     }
+
+    // The plan's own period and entry grid are ours, not the model's — the
+    // save path steps down from them to decide what a milestone is.
+    parsedJson.period = timeframe;
+    parsedJson.entries = alignEntriesToTemplate(parsedJson.entries, entriesTemplate);
 
     // Guard: if the model forgot the top-level description, build one
     // from the first two entries so the parent goal never ends up blank.
@@ -434,6 +706,9 @@ Guidance:
 module.exports = {
   getSummaryFromGoalItems,
   getNextStepsFromGoalItems,
+  getNextStepsListFromGoalItems,
+  normaliseDescription,
+  normaliseNextSteps,
   generateMilestonePlan,
   extractTaskFromNaturalLanguage,
   enhanceRoutineItemWithAI,

@@ -184,25 +184,60 @@ function getCompletedTotal({
   // return aggregatePoints;
 }
 
-function getEfficiency({ periodRoutines }) {
+/**
+ * The unit the ratio runs across. A Day window holds ONE routine day, so what it
+ * runs across is that day's ROUTINES; "across this day's days" was a sentence
+ * saying nothing. Every longer period runs across its days.
+ */
+const EFFICIENCY_UNIT = { day: 'routines' };
+
+/**
+ * The one definition of "Routine Efficiency", shipped next to the number so
+ * every screen that prints it can also explain it.
+ *
+ * /progress and /history used to each average the day's points their own way —
+ * this function divided by the days that happened to score, CheckHistory.vue
+ * divided by every routine day ever — so the same account read 15% on one
+ * screen and 6% on the other. Neither quotient was a percentage: both are a
+ * mean of raw points, unbounded, and the old denominator here also made a
+ * missed day invisible (a zero day left both sum and consideredDays alone, so
+ * the figure sat still while the week got worse).
+ *
+ * Earned over available is the share the name claims: bounded by 100, it falls
+ * when a day is missed, and it is scoped to the period asked for. Skipped days
+ * stay out of it — a skip day is spent quota, not a failure.
+ */
+const efficiencyFormula = (period) => `Routine points earned ÷ routine points available, across this ${period}'s ${EFFICIENCY_UNIT[period] || 'days'}. Skipped days do not count.`;
+
+/**
+ * The efficiency percentage itself, or null when the period has nothing to earn
+ * (no routine doc, only skipped days, or no pointed tasks). Null, not 0: an
+ * empty window is "no data", and 0% would read as a day of doing nothing. The
+ * progress statement reads this same number so the headline cannot disagree
+ * with the figure under it.
+ */
+function getEfficiencyPercent(periodRoutines) {
+  const { earned, available } = periodRoutines.reduce((acc, routine) => {
+    if (routine.skip) return acc;
+
+    acc.earned += countTotal(routine);
+    acc.available += routine.tasklist.reduce((total, task) => total + (task.points || 0), 0);
+    return acc;
+  }, { earned: 0, available: 0 });
+
+  return available ? Math.min(100, Math.round((earned / available) * 100)) : null;
+}
+
+function getEfficiency({ periodRoutines, period }) {
   // TODO: Get the dharma points to determine efficiency
   try {
-    let consideredDays = 0;
-    const sum = periodRoutines.reduce((acc, routine) => {
-      if (countTotal(routine) > 0 && !routine.skip) {
-        console.log('=== routine', routine);
-        consideredDays += 1;
-        return acc + countTotal(routine);
-      }
-      return acc;
-    }, 0);
-
-    if (!sum && !consideredDays) return 0;
+    const value = getEfficiencyPercent(periodRoutines);
 
     return {
       id: 'efficiency',
       name: 'Routine Efficiency',
-      value: `${Math.ceil(sum / consideredDays)}%`,
+      value: value == null ? null : `${value}%`,
+      description: efficiencyFormula(period),
     };
   } catch (e) {
     console.log(e);
@@ -227,14 +262,17 @@ function getStimuli({ periodRoutines }) {
   ];
 
   const { length } = periodRoutines;
+  // No routine doc in the window: nothing to average, and x / 0 is NaN, which
+  // GraphQLString rejects. Empty values is how the UI says "no data" (the ring
+  // card hides rather than drawing three zero rings).
+  if (!length) return { id: 'radar-chart', name: 'Radar Chart', values: [] };
+
   const stimuliTotal = periodRoutines.reduce((acc, routine) => {
     acc[0].value += countTotal(routine);
     acc[1].value += countTotal(routine, 'K');
     acc[2].value += countTotal(routine, 'G');
     return acc;
   }, initialData);
-
-  if (!stimuliTotal && !length) return initialData;
 
   const stimuliPercentage = [...stimuliTotal];
 
@@ -288,6 +326,10 @@ function getTaskActivities({
   }
 
   const { length } = periodRoutines;
+  // Same divide-by-zero as getStimuli: an empty window has no average. Empty
+  // values leaves each bar labelled with no figure ("—") instead of NaN.
+  if (!length) return { id: 'task-activities', name: 'Task and Activities Completed', values: [] };
+
   const stimuliTotal = periodRoutines.reduce((acc, routine) => {
     const completedD = getCompletedTotal({
       routine, goals, periodDailyTasks, stimulus: 'D', period,
@@ -303,8 +345,6 @@ function getTaskActivities({
     adder(acc[2], completedG);
     return acc;
   }, initialData);
-
-  if (!stimuliTotal && !length) return initialData;
 
   const stimuliPercentage = [...stimuliTotal];
 
@@ -323,20 +363,17 @@ function getTaskActivities({
   };
 }
 
+/**
+ * The headline reads the SAME number as the efficiency card (D-13). It used to
+ * average raw D points over only the days that scored - the definition D-13
+ * removed from getEfficiency - so a week at 47% said "Great Going!" while a day
+ * at 63% said "Live your potential".
+ */
 function getProgressStatement({ periodRoutines }) {
   try {
-    let consideredDays = 0;
-    const sum = periodRoutines.reduce((acc, routine) => {
-      if (countTotal(routine) > 0 && !routine.skip) {
-        consideredDays += 1;
-        return acc + countTotal(routine);
-      }
-      return acc;
-    }, 0);
+    const efficiency = getEfficiencyPercent(periodRoutines);
 
-    if (!sum && !consideredDays) return 'Stay Calm and focus on what\'s right?';
-
-    const efficiency = Math.ceil(sum / consideredDays);
+    if (efficiency == null) return 'Stay Calm and focus on what\'s right?';
 
     if (efficiency >= 70) {
       return 'Great Going!';
@@ -458,6 +495,9 @@ function getProgressReport({
 
   const mock = {
     period,
+    // Echoed so the client can tell which window a report belongs to.
+    startDate,
+    endDate,
     progressStatement: 'Great Going',
     cards: [
       {
@@ -575,7 +615,7 @@ function getProgressReport({
     progressStatement: getProgressStatement({ periodRoutines: currentPeriodRoutines }),
     cards: mock.cards.map((card) => {
       if (card.id === 'efficiency') {
-        return getEfficiency({ periodRoutines: currentPeriodRoutines });
+        return getEfficiency({ periodRoutines: currentPeriodRoutines, period });
       }
 
       if (card.id === 'radar-chart') {
@@ -627,6 +667,8 @@ function getProgressReport({
 }
 
 module.exports = {
+  efficiencyFormula,
+  getEfficiencyPercent,
   getEfficiency,
   getStimuli,
   getOnTrack,

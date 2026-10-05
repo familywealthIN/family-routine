@@ -2,168 +2,95 @@
 /**
  * Unit tests for MoleculeGoalTagsInput.
  *
- * The commit/backspace routing itself is covered exhaustively in
- * tests/tagKeydown.spec.js (the shared helper). Here we verify:
- *  - the component wires that helper up correctly (end-to-end through the real
- *    addTag/removeTag so a keypress actually emits update-new-tag-items), and
- *  - the autocomplete navigation that is specific to this input.
- *
- * Methods are exercised against a minimal vm-like context (no mount needed),
- * matching the AgendaTaskList.test.js convention.
+ * GoalTagsInput is no longer an implementation — it is the legacy-contract shim
+ * over MoleculeHierarchicalTagInput (see that component's test for the chips,
+ * the level-aware autocomplete and every key path). What matters here is the
+ * adapter itself: the four existing call sites pass `goalTags` / `userTags` and
+ * listen for `update-new-tag-items`, and must keep working unchanged.
  */
+const Vue = require('vue');
+
 const GoalTagsInput = require('./GoalTagsInput.vue').default;
 
-const makeEvent = (key) => ({ key, preventDefault: jest.fn() });
+Vue.config.productionTip = false;
+Vue.config.devtools = false;
 
-// Context wired with the component's REAL addTag/removeTag so `this.addTag(...)`
-// inside handleKeydown runs the genuine emit path (this === ctx).
-const makeCtx = (overrides = {}) => ({
-  activeSuggestion: null,
-  inputValue: '',
-  normalizedTags: [],
-  filteredSuggestions: [],
-  activeSuggestionIndex: -1,
-  $refs: { tagInput: { blur: jest.fn(), focus: jest.fn() } },
-  $emit: jest.fn(),
-  addTag: GoalTagsInput.methods.addTag,
-  removeTag: GoalTagsInput.methods.removeTag,
-  ...overrides,
-});
+const render = (props = {}) => {
+  const host = new Vue({
+    data() {
+      return { emitted: [] };
+    },
+    render(h) {
+      return h(GoalTagsInput, {
+        props,
+        on: { 'update-new-tag-items': (next) => this.emitted.push(next) },
+      });
+    },
+  }).$mount();
+  return { host, cmp: host.$children[0], el: host.$el };
+};
 
 describe('MoleculeGoalTagsInput', () => {
   describe('Component contract', () => {
-    it('is named GoalTagsInput', () => {
+    it('is still named GoalTagsInput for the existing call sites', () => {
       expect(GoalTagsInput.name).toBe('GoalTagsInput');
     });
 
-    it('exposes the tag-entry methods used by the template', () => {
-      expect(typeof GoalTagsInput.methods.handleKeydown).toBe('function');
-      expect(typeof GoalTagsInput.methods.addTag).toBe('function');
-      expect(typeof GoalTagsInput.methods.removeTag).toBe('function');
+    it('delegates to the one shared tag editor instead of reimplementing it', () => {
+      const { cmp } = render();
+      expect(cmp.$children).toHaveLength(1);
+      expect(cmp.$children[0].$options.name).toBe('MoleculeHierarchicalTagInput');
     });
   });
 
-  describe('handleKeydown — commit wiring (end-to-end through addTag)', () => {
-    ['Enter', 'Tab', ',', ' '].forEach((key) => {
-      const label = {
-        Enter: 'Enter', Tab: 'Tab', ',': 'Comma', ' ': 'Space',
-      }[key];
-
-      it(`emits the appended tag list on ${label}`, () => {
-        const ctx = makeCtx({ inputValue: 'focus', normalizedTags: ['a'] });
-
-        GoalTagsInput.methods.handleKeydown.call(ctx, makeEvent(key));
-
-        expect(ctx.$emit).toHaveBeenCalledWith('update-new-tag-items', ['a', 'focus']);
-        expect(ctx.inputValue).toBe('');
-      });
+  describe('Prop mapping', () => {
+    it('renders goalTags as chips, one segment span per `:` level', () => {
+      const { el } = render({ goalTags: ['area:health', 'morning'] });
+      const chips = el.querySelectorAll('[data-testid="tag-chip"]');
+      expect(chips).toHaveLength(2);
+      expect(chips[0].querySelectorAll('.rn-tag-input__segment')).toHaveLength(2);
     });
 
-    it('prefers the highlighted autocomplete suggestion over the typed text', () => {
-      const ctx = makeCtx({ inputValue: 'foc', activeSuggestion: 'focus:deep' });
-
-      GoalTagsInput.methods.handleKeydown.call(ctx, makeEvent('Enter'));
-
-      expect(ctx.$emit).toHaveBeenCalledWith('update-new-tag-items', ['focus:deep']);
+    it('feeds userTags in as the suggestion vocabulary', async () => {
+      const { el, cmp } = render({ userTags: ['area:health:sleep'] });
+      const input = cmp.$children[0];
+      input.focused = true;
+      input.inputValue = 'area:';
+      await Vue.nextTick();
+      // The leaf's ancestors join the universe, so `area:` can be drilled into.
+      expect(el.querySelectorAll('[data-testid="tag-suggestion"]')).toHaveLength(1);
+      expect(el.querySelector('[data-testid="tag-drill"]').textContent).toContain('1 inside');
     });
 
-    it('does not emit or preventDefault on Tab when the field is empty', () => {
-      const ctx = makeCtx({ inputValue: '' });
-      const e = makeEvent('Tab');
-
-      GoalTagsInput.methods.handleKeydown.call(ctx, e);
-
-      expect(ctx.$emit).not.toHaveBeenCalled();
-      expect(e.preventDefault).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('handleKeydown — Backspace wiring', () => {
-    it('emits the list without the last tag when the field is empty', () => {
-      const ctx = makeCtx({ inputValue: '', normalizedTags: ['a', 'b'] });
-
-      GoalTagsInput.methods.handleKeydown.call(ctx, makeEvent('Backspace'));
-
-      expect(ctx.$emit).toHaveBeenCalledWith('update-new-tag-items', ['a']);
+    it('tolerates a null or non-array goalTags', () => {
+      expect(render({ goalTags: null }).el.querySelectorAll('[data-testid="tag-chip"]'))
+        .toHaveLength(0);
     });
 
-    it('does nothing on Backspace while text is still being typed', () => {
-      const ctx = makeCtx({ inputValue: 'x', normalizedTags: ['a'] });
+    it('keeps the dense goal forms their original height by hiding the hint', () => {
+      const { el } = render();
+      expect(el.querySelector('[data-testid="tag-hint"]').textContent).toBe('');
+    });
 
-      GoalTagsInput.methods.handleKeydown.call(ctx, makeEvent('Backspace'));
-
-      expect(ctx.$emit).not.toHaveBeenCalled();
+    it('counts usage in goals, not routines, when a host supplies counts', () => {
+      const { cmp } = render();
+      expect(cmp.$children[0].usageNoun).toBe('goal');
     });
   });
 
-  describe('handleKeydown — autocomplete navigation (component-specific)', () => {
-    it('moves the active suggestion down on ArrowDown, clamped to the last item', () => {
-      const ctx = makeCtx({ filteredSuggestions: ['x', 'y'], activeSuggestionIndex: -1 });
-      const e = makeEvent('ArrowDown');
-
-      GoalTagsInput.methods.handleKeydown.call(ctx, e);
-      expect(ctx.activeSuggestionIndex).toBe(0);
-      expect(e.preventDefault).toHaveBeenCalled();
-
-      GoalTagsInput.methods.handleKeydown.call(ctx, makeEvent('ArrowDown'));
-      GoalTagsInput.methods.handleKeydown.call(ctx, makeEvent('ArrowDown'));
-      expect(ctx.activeSuggestionIndex).toBe(1); // clamped at length - 1
+  describe('Event mapping', () => {
+    it('re-emits an added tag as update-new-tag-items with the full list', () => {
+      const { host, cmp } = render({ goalTags: ['a'] });
+      const input = cmp.$children[0];
+      input.inputValue = 'focus';
+      input.onKeydown({ key: 'Enter', preventDefault: jest.fn(), target: { selectionStart: 5 } });
+      expect(host.emitted).toEqual([['a', 'focus']]);
     });
 
-    it('moves the active suggestion up on ArrowUp, clamped to -1', () => {
-      const ctx = makeCtx({ filteredSuggestions: ['x', 'y'], activeSuggestionIndex: 1 });
-
-      GoalTagsInput.methods.handleKeydown.call(ctx, makeEvent('ArrowUp'));
-      expect(ctx.activeSuggestionIndex).toBe(0);
-
-      GoalTagsInput.methods.handleKeydown.call(ctx, makeEvent('ArrowUp'));
-      GoalTagsInput.methods.handleKeydown.call(ctx, makeEvent('ArrowUp'));
-      expect(ctx.activeSuggestionIndex).toBe(-1); // clamped at -1
-    });
-
-    it('resets the active suggestion and blurs the input on Escape', () => {
-      const ctx = makeCtx({ activeSuggestionIndex: 1 });
-
-      GoalTagsInput.methods.handleKeydown.call(ctx, makeEvent('Escape'));
-
-      expect(ctx.activeSuggestionIndex).toBe(-1);
-      expect(ctx.$refs.tagInput.blur).toHaveBeenCalled();
-    });
-  });
-
-  describe('addTag', () => {
-    const makeAddCtx = (overrides = {}) => ({
-      normalizedTags: [],
-      inputValue: 'x',
-      activeSuggestionIndex: 2,
-      $emit: jest.fn(),
-      ...overrides,
-    });
-
-    it('emits update-new-tag-items with the trimmed tag appended and clears state', () => {
-      const ctx = makeAddCtx({ normalizedTags: ['a'] });
-
-      GoalTagsInput.methods.addTag.call(ctx, '  focus  ');
-
-      expect(ctx.$emit).toHaveBeenCalledWith('update-new-tag-items', ['a', 'focus']);
-      expect(ctx.inputValue).toBe('');
-      expect(ctx.activeSuggestionIndex).toBe(-1);
-    });
-
-    it('ignores empty / whitespace-only input', () => {
-      const ctx = makeAddCtx();
-
-      GoalTagsInput.methods.addTag.call(ctx, '   ');
-
-      expect(ctx.$emit).not.toHaveBeenCalled();
-    });
-
-    it('ignores a duplicate tag', () => {
-      const ctx = makeAddCtx({ normalizedTags: ['focus'] });
-
-      GoalTagsInput.methods.addTag.call(ctx, 'focus');
-
-      expect(ctx.$emit).not.toHaveBeenCalled();
+    it('re-emits a removal as update-new-tag-items without that tag', () => {
+      const { host, el } = render({ goalTags: ['a', 'b'] });
+      el.querySelectorAll('[data-testid="tag-remove"]')[1].click();
+      expect(host.emitted).toEqual([['a']]);
     });
   });
 });

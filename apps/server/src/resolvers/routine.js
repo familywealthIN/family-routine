@@ -17,6 +17,7 @@ const { UserModel } = require('../schema/UserSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
 const sortTimes = require('../utils/sortTimes');
+const { hasTaskStarted } = require('../utils/timezone');
 const { updateStimulusEarnedPoint } = require('../utils/stimulusPoints');
 
 async function findTodayandSort(args, email) {
@@ -49,8 +50,13 @@ async function getSkipDayCount(email) {
   }
   const selectedRoutines = await Promise.all(promises);
 
+  // Only a day the user deliberately marked as a Skip Day spends the quota. A
+  // missing document means the app was never opened that day — addRoutine
+  // creates one on first open — not that a rest day was claimed, so counting
+  // it charged holidays, illness and brand-new sign-ups against the allowance
+  // and disabled Skip Day exactly when it was needed.
   const skipDayCount = selectedRoutines.reduce((acc, selectedItem) => {
-    if ((selectedItem && selectedItem.skip) || selectedItem === null) {
+    if (selectedItem && selectedItem.skip) {
       return acc + 1;
     }
     return acc;
@@ -59,28 +65,17 @@ async function getSkipDayCount(email) {
   return skipDayCount;
 }
 
-/**
- * Hours between a routine item and the next one, as a real number.
- *
- * This feeds D.splitRate, and `D.splitRate / K.splitRate` (K is always 2, i.e.
- * "one task per two hours") is the number of day goal-items the task needs
- * before its counter reads full. So an error here silently changes how many
- * goals a task demands.
- *
- * It used to subtract only the hour field — `'06:40'` and `'09:00'` became
- * 9 - 6 = 3 — which rounded a 2h20m gap up to 3h. That gave `round(3/2) = 2`
- * slots for a task the user had given one goal, so the card sat on "1/2"
- * forever and the agent end event (which waits for completed >= total) could
- * never fire. Minutes are counted now: 2.33h -> `round(1.17) = 1`.
- */
-function timeDiff(time, nextTime) {
-  const toMinutes = (value) => {
-    const [hour, minute] = String(value).split(':');
-    return (Number(hour) * 60) + (Number(minute) || 0);
-  };
+function timeOfDayInHours(time) {
+  const [hour, minute] = time.split(':');
 
-  // Rounded to 2dp so the stored value stays readable rather than 2.3333333333333335.
-  const taskTime = Number(((toMinutes(nextTime) - toMinutes(time)) / 60).toFixed(2));
+  return Number(hour) + (Number(minute || 0) / 60);
+}
+
+function timeDiff(time, nextTime) {
+  // Minutes are part of the gap. Reading only the hour stretched a 06:40 ->
+  // 09:00 window into a full 3 hours, which bought the task a second goal-item
+  // slot (round(3 / 2) = 2) that its 2h20m never earned.
+  const taskTime = timeOfDayInHours(nextTime) - timeOfDayInHours(time);
 
   return taskTime > 2 ? taskTime : 2;
 }
@@ -108,6 +103,58 @@ function buildStimuliForRoutineItem(taskId, tasklist) {
       earned: 0,
     },
   ];
+}
+
+/**
+ * Re-derive a carried-over day copy's split rates from the current schedule,
+ * keeping whatever that day has already earned.
+ *
+ * D's split rate is the gap to the next routine item, so editing any item's
+ * time re-slices its neighbour's window. A day document written before the
+ * edit kept the rate it was created with for ever, and the same routine item
+ * then read 0/6 on one day of the week and 0/1 on the next.
+ *
+ * A task that has already banked K keeps its stored rate: that K was credited
+ * as points/count against the old slicing, so re-slicing underneath it would
+ * move the completed figure as well as the total.
+ */
+function refreshStimuliSplitRates(stimuli, taskId, tasklist) {
+  const k = stimuli.find((stimulus) => stimulus.name === 'K');
+  if (k && k.earned) {
+    return stimuli;
+  }
+
+  const rebuilt = buildStimuliForRoutineItem(taskId, tasklist);
+
+  return stimuli.map((stimulus) => {
+    const current = rebuilt.find((built) => built.name === stimulus.name);
+    if (current) {
+      stimulus.splitRate = current.splitRate;
+    }
+
+    return stimulus;
+  });
+}
+
+/**
+ * Clear the per-day state on a routine item seeded from the shared
+ * `routineItems` template.
+ *
+ * One routineItem document is reused by every day, so `ticked` / `passed` /
+ * `redeemed` / `passedPoints` only ever mean anything on the copy inside a
+ * day's `routines.tasklist[]`. Every writer already respects that (see
+ * xp.js redeemRoutineItem and passRoutineItem below, which both write
+ * `tasklist.$.*`), but the seeding paths used to inherit whatever the template
+ * happened to carry. Resetting explicitly makes "per day" an invariant rather
+ * than an accident of addRoutineItem's initial values — otherwise a template
+ * that ever picked up `redeemed: true` would make that item unredeemable, and
+ * its agent unstartable, on every future day.
+ */
+function resetDayState(task) {
+  task.ticked = false;
+  task.passed = false;
+  task.redeemed = false;
+  task.passedPoints = undefined;
 }
 
 // Threshold constants for G stimulus scaling
@@ -175,6 +222,9 @@ const DayStimuliType = new GraphQLObjectType({
     D: { type: GraphQLFloat },
     K: { type: GraphQLFloat },
     G: { type: GraphQLFloat },
+    // A day the user deliberately marked as a Skip Day also scores zero, so the
+    // week strip cannot tell a rest day from a day that got away without it.
+    skipped: { type: GraphQLBoolean },
   },
 });
 
@@ -282,14 +332,13 @@ const query = {
             // migration.
             const fresh = buildStimuliForRoutineItem(task._id, tasklist);
             task.stimuli = foundTask.stimuli && foundTask.stimuli.length
-              ? fresh.map((stimulus) => {
-                const previous = foundTask.stimuli.find((st) => st.name === stimulus.name);
-                return previous
-                  ? { ...stimulus, earned: previous.earned }
-                  : stimulus;
-              })
-              : fresh;
+              ? refreshStimuliSplitRates(foundTask.stimuli, task._id, tasklist)
+              : buildStimuliForRoutineItem(task._id, tasklist);
           } else {
+            // Not in this day's document yet — there is no per-day state to
+            // carry over, so start it clean instead of inheriting the shared
+            // template's flags.
+            resetDayState(task);
             task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
           }
         });
@@ -352,6 +401,7 @@ const query = {
           D: stimuli.D,
           K: stimuli.K,
           G: stimuli.G,
+          skipped: !!(routine && routine.skip),
         };
       });
     },
@@ -377,6 +427,7 @@ const mutation = {
       const tasklist = await RoutineItemModel.find({ email });
       sortTimes(tasklist);
       tasklist.forEach((task) => {
+        resetDayState(task);
         task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
       });
 
@@ -465,6 +516,18 @@ const mutation = {
         return routine;
       }
 
+      // Only a task whose start has actually arrived can be marked passed. The
+      // client decides "passed" from the time of day alone, so a client holding
+      // another day's document id (a stale `did` around a day switch or
+      // midnight) used to stamp a FUTURE day's tasks passed — they then showed
+      // "Missed" all morning and could only be redeemed with points.
+      if (args.passed && taskToUpdate) {
+        const user = await UserModel.findOne({ email }, { timezone: 1 }).exec();
+        if (!hasTaskStarted(routine.date, taskToUpdate.time, user && user.timezone)) {
+          return routine;
+        }
+      }
+
       // Freeze the redemption price at the moment the task passes so later
       // edits to the task cannot change what a redeem costs.
       const set = { 'tasklist.$.passed': args.passed };
@@ -499,5 +562,10 @@ const mutation = {
 };
 
 module.exports = {
-  query, mutation, buildStimuliForRoutineItem, aggregateStimuliForRoutine,
+  query,
+  mutation,
+  buildStimuliForRoutineItem,
+  refreshStimuliSplitRates,
+  aggregateStimuliForRoutine,
+  resetDayState,
 };

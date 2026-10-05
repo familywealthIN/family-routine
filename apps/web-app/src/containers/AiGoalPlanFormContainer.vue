@@ -42,8 +42,8 @@ import { addMultipleGoalItemsToCache } from '../composables/useApolloCacheUpdate
 // server hasn't picked the change up yet (dev environments, hot
 // schema reloads etc).
 const GENERATE_MILESTONE_PLAN_WITH_DESCRIPTION = gql`
-  mutation generateMilestonePlan($query: String!, $systemPrompt: String) {
-    generateMilestonePlan(query: $query, systemPrompt: $systemPrompt) {
+  mutation generateMilestonePlan($query: String!, $systemPrompt: String, $period: String) {
+    generateMilestonePlan(query: $query, systemPrompt: $systemPrompt, period: $period) {
       period
       title
       description
@@ -59,8 +59,8 @@ const GENERATE_MILESTONE_PLAN_WITH_DESCRIPTION = gql`
 `;
 
 const GENERATE_MILESTONE_PLAN_LEGACY = gql`
-  mutation generateMilestonePlan($query: String!, $systemPrompt: String) {
-    generateMilestonePlan(query: $query, systemPrompt: $systemPrompt) {
+  mutation generateMilestonePlan($query: String!, $systemPrompt: String, $period: String) {
+    generateMilestonePlan(query: $query, systemPrompt: $systemPrompt, period: $period) {
       period
       title
       entries {
@@ -302,7 +302,7 @@ export default {
         try {
           const result = await this.$apollo.mutate({
             mutation: GENERATE_MILESTONE_PLAN_WITH_DESCRIPTION,
-            variables: { query: modifiedQuery, systemPrompt },
+            variables: { query: modifiedQuery, systemPrompt, period: this.selectedPeriod },
           });
           plan = result && result.data && result.data.generateMilestonePlan;
         } catch (modernErr) {
@@ -316,7 +316,7 @@ export default {
           );
           const legacy = await this.$apollo.mutate({
             mutation: GENERATE_MILESTONE_PLAN_LEGACY,
-            variables: { query: modifiedQuery, systemPrompt },
+            variables: { query: modifiedQuery, systemPrompt, period: this.selectedPeriod },
           });
           plan = legacy && legacy.data && legacy.data.generateMilestonePlan;
           if (plan) {

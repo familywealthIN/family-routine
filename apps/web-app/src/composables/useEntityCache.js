@@ -6,9 +6,9 @@
  * WHY THIS EXISTS
  * ---------------
  * Apollo Client 2.x normalizes every entity under `${__typename}:${id}` (the
- * default `dataIdFromObject`, and this app uses `new InMemoryCache()` with no
- * override). When you patch that normalized record by id, EVERY query that
- * references it updates at once — `optimizedDailyGoals`, `agendaGoals`,
+ * default `dataIdFromObject`, which main.js wraps only to stop a null id from
+ * being treated as one). When you patch that normalized record by id, EVERY
+ * query that references it updates at once — `optimizedDailyGoals`, `agendaGoals`,
  * `routineDate`, week views, etc. — with zero chance of the copies drifting
  * apart.
  *
@@ -33,8 +33,9 @@
  */
 import gql from 'graphql-tag';
 
-// Default InMemoryCache id shape. Keep in sync if a custom dataIdFromObject is
-// ever added in main.js.
+// The id shape main.js configures (apollo/dataIdFromObject.js). Keep in sync
+// with it. Only entities with a real id are normalized, which is the only kind
+// this module is ever asked to patch.
 const cacheId = (typename, id) => `${typename}:${id}`;
 
 // Fragments are pure functions of (typename, sorted field names); memoize so we
@@ -129,10 +130,62 @@ export function patchSubTaskItem(cache, id, fields) {
   return patchEntity(cache, { typename: 'SubTaskItem', id, fields });
 }
 
+const SUB_TASKS_FRAGMENT = gql`
+  fragment GoalItemSubTasksAppend on GoalItem {
+    subTasks {
+      id
+      body
+      isComplete
+    }
+  }
+`;
+
+/**
+ * Append a subtask to its parent GoalItem's `subTasks`, by the parent's id.
+ *
+ * A list CREATE, but on ONE normalized entity — the parent — so every query that
+ * shows the item sees the new row at once; nothing query-level is cloned. Run
+ * from `addSubTaskItem`'s `update`, it first lands the optimistic temp row, then
+ * (after Apollo drops the optimistic layer) the server's real one. An id that is
+ * already there is not added twice.
+ *
+ * @returns {boolean} true when the parent was in the cache and was written
+ */
+export function appendSubTaskItem(cache, goalItemId, subTask) {
+  if (!cache || typeof cache.readFragment !== 'function' || !goalItemId || !subTask || !subTask.id) {
+    return false;
+  }
+  try {
+    const id = cacheId('GoalItem', goalItemId);
+    const parent = cache.readFragment({ id, fragment: SUB_TASKS_FRAGMENT });
+    if (!parent) return false;
+    const current = parent.subTasks || [];
+    if (current.some((st) => st && st.id === subTask.id)) return true;
+    cache.writeFragment({
+      id,
+      fragment: SUB_TASKS_FRAGMENT,
+      data: {
+        __typename: 'GoalItem',
+        subTasks: [...current, {
+          __typename: 'SubTaskItem',
+          id: subTask.id,
+          body: subTask.body || '',
+          isComplete: !!subTask.isComplete,
+        }],
+      },
+    });
+    return true;
+  } catch (e) {
+    // Same rule as patchEntity: a cache miss is harmless, never throw.
+    return false;
+  }
+}
+
 export default {
   patchEntity,
   readEntity,
   patchGoalItem,
   patchRoutineItem,
   patchSubTaskItem,
+  appendSubTaskItem,
 };

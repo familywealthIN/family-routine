@@ -28,6 +28,7 @@
       <TaskStatusTag
         v-if="result.status"
         :status="result.status"
+        :isComplete="isCompleted"
         :showStatus="true"
         class="ml-2"
       />

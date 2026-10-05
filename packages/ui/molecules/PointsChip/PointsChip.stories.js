@@ -8,6 +8,7 @@ export default {
     pendingToday: { control: 'number' },
     entitled: { control: 'boolean' },
     loading: { control: 'boolean' },
+    error: { control: 'boolean' },
     small: { control: 'boolean' },
   },
 };
@@ -50,4 +51,9 @@ Subscribed.args = {
 export const Loading = Template.bind({});
 Loading.args = {
   loading: true,
+};
+
+export const Unavailable = Template.bind({});
+Unavailable.args = {
+  error: true,
 };

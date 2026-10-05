@@ -28,6 +28,66 @@ export function getRedeemCost(task) {
   return typeof task.passedPoints === 'number' ? task.passedPoints : (task.points || 0);
 }
 
+/**
+ * Turn a rejected redeem into a toast that names the button the user pressed
+ * and the reason the server gave.
+ *
+ * A late check-in is reached from two very different controls — the task's own
+ * check button and "Start agent" — so a single "Could not redeem this task"
+ * left the user unable to tell what had failed. The server's ApiError arrives
+ * as "<status>:<reason>" inside error.message; match on the reason, which is
+ * unambiguous, rather than the status digits (a task id can contain those).
+ *
+ * 402 is deliberately absent: an unaffordable check-in opens the paywall
+ * drawer instead of a toast.
+ */
+export function describeRedeemFailure(message, { startingAgent = false } = {}) {
+  const reason = String(message || '');
+  const title = startingAgent ? "Couldn't start the agent" : "Couldn't complete this task";
+
+  let text = 'Something went wrong. Please try again.';
+  if (reason.includes('Redemption is only available for today')
+    || reason.includes('Date does not match routine')) {
+    text = "A late check-in only works on today's routine. Move to today and try again.";
+  } else if (reason.includes('Task is already checked')) {
+    text = 'This task is already checked off for today.';
+  } else if (reason.includes('Task has not passed yet')) {
+    text = "This task hasn't passed yet — check it off the usual way.";
+  } else if (reason.includes('Routine not found') || reason.includes('Task not found')) {
+    text = "This task is no longer on today's routine. Refresh and try again.";
+  }
+
+  return { title, text };
+}
+
+/**
+ * Receipt for a redeem that went through, or null when nothing was charged.
+ *
+ * A late check-in is the only silent debit in the app, and "Start agent" on a
+ * passed task pays exactly the same frozen price as the check button — the
+ * balance simply dropped. Name the control that spent the points, the amount
+ * and what is left; an emptied balance keeps its "earn more" nudge.
+ *
+ * Subscribers are debited zero server-side, so they get no receipt.
+ */
+export function describeRedeemReceipt(cost, balance, { startingAgent = false } = {}) {
+  if (!(cost > 0) || (balance && balance.entitled)) return null;
+
+  const title = startingAgent
+    ? `Agent started for ${Math.round(cost)} points`
+    : `Task checked in for ${Math.round(cost)} points`;
+
+  let text = 'Charged to your points balance.';
+  if (balance) {
+    const available = Math.round(balance.available);
+    text = available > 0
+      ? `${available.toLocaleString()} points left.`
+      : 'That was your last point — earn more by completing your routine, goals and milestones; points settle overnight.';
+  }
+
+  return { title, text };
+}
+
 export function canAffordRedeem(task, xpBalance) {
   // Balance still loading / entitled — let the flow proceed; the server's 402
   // check remains the authoritative backstop.

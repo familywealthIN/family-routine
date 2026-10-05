@@ -13,8 +13,21 @@
     :buttonLoading="buttonLoading"
     :loading-action="loadingAction"
     :agent-state="agentState"
+    :redeem-cost="redeemCost"
+    :allow-start-without-task="allowStartWithoutTask"
+    :open-item-count="openItemCount"
+    :sheet="sheet"
+    :open="open"
+    :shell="shell"
+    :routine-name="routineName"
+    :routine-time="routineTime"
+    :routine-end-time="routineEndTime"
+    :earn-points="earnPoints"
+    :description="description"
+    :parent-goal-period-label="parentGoalPeriodLabel"
     @add-goal-item="addGoalItem"
     @goal-ref-changed="updateCurrentGoalRef"
+    @close="$emit('close')"
     @start-quick-goal-task="(task) => $emit('start-quick-goal-task', task)"
     @build-agent="$emit('build-agent', selectedTaskRef)"
     @start-agent="startAgent"
@@ -22,8 +35,8 @@
 </template>
 
 <script>
-import moment from 'moment';
 import QuickGoalCreation from '@routine-notes/ui/organisms/QuickGoalCreation/QuickGoalCreation.vue';
+import { relatedGoalTasks } from '@routine-notes/ui/utils/relatedGoalTasks';
 import { GOALS_BY_GOAL_REF_QUERY } from '../composables/useGoalQueries';
 import { scopeGoalsToRef } from '../utils/goalRefScope';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
@@ -63,6 +76,65 @@ export default {
       default: false,
     },
     selectedTaskRef: {
+      type: String,
+      default: '',
+    },
+    // Points the page will charge for this task if it has already passed.
+    redeemCost: {
+      type: Number,
+      default: 0,
+    },
+    // Lets Start Task start the routine with nothing typed — see the organism.
+    allowStartWithoutTask: {
+      type: Boolean,
+      default: false,
+    },
+    // Open goal items already on the routine. Feeds the hint line only; -1 means
+    // the host does not know and the hint stays hidden.
+    openItemCount: {
+      type: Number,
+      default: -1,
+    },
+    // --- presentation -----------------------------------------------------
+    // Off by default: the classic dashboard and QuickTaskModalContainer already
+    // wrap this container in their own v-dialog, so the organism renders inline
+    // for them. Routine Focus turns it on and the organism owns the chassis
+    // sheet (phone bottom sheet · tablet 860 · desktop 720).
+    sheet: {
+      type: Boolean,
+      default: false,
+    },
+    open: {
+      type: Boolean,
+      default: false,
+    },
+    shell: {
+      type: String,
+      default: 'phone',
+    },
+    // Header copy — "Start Work" / "09:00 – 12:30 · earns +12 pts" — plus the
+    // routine description the host sheet used to render above the form.
+    routineName: {
+      type: String,
+      default: '',
+    },
+    routineTime: {
+      type: String,
+      default: '',
+    },
+    routineEndTime: {
+      type: String,
+      default: '',
+    },
+    earnPoints: {
+      type: Number,
+      default: 0,
+    },
+    description: {
+      type: String,
+      default: '',
+    },
+    parentGoalPeriodLabel: {
       type: String,
       default: '',
     },
@@ -117,54 +189,11 @@ export default {
       return agent ? 'assigned' : 'none';
     },
     relatedTasks() {
-      if (!this.currentGoalRef || !this.relatedGoalsData || !Array.isArray(this.relatedGoalsData)) {
-        return [];
-      }
-
-      const today = moment(this.date, 'DD-MM-YYYY');
-      const seen = new Set();
-      const tasks = [];
-
-      this.relatedGoalsData.forEach((goal) => {
-        if (!goal.goalItems || !Array.isArray(goal.goalItems)) return;
-
-        // Show the whole week's activity for this goal ref — today's earlier
-        // completions included. Only future-dated items are excluded.
-        if (goal.date) {
-          const goalDate = moment(goal.date, 'DD-MM-YYYY');
-          if (goalDate.isValid() && goalDate.isAfter(today, 'day')) return;
-        }
-
-        goal.goalItems.forEach((goalItem) => {
-          if (goalItem.goalRef !== this.currentGoalRef) return;
-          if (seen.has(goalItem.id)) return;
-          seen.add(goalItem.id);
-
-          const routineTask = this.tasklist
-            ? this.tasklist.find((t) => t.id === goalItem.taskRef || t.taskId === goalItem.taskRef)
-            : null;
-
-          tasks.push({
-            id: goalItem.id,
-            body: goalItem.body,
-            date: goal.date,
-            period: goal.period,
-            time: (routineTask && routineTask.time) || null,
-            isComplete: goalItem.isComplete,
-            goalRef: goalItem.goalRef,
-            taskRef: goalItem.taskRef,
-            tags: goalItem.tags || [],
-          });
-        });
+      return relatedGoalTasks(this.relatedGoalsData, {
+        goalRef: this.currentGoalRef,
+        date: this.date,
+        tasklist: this.tasklist,
       });
-
-      return tasks
-        .sort((a, b) => {
-          const da = moment(a.date, 'DD-MM-YYYY');
-          const db = moment(b.date, 'DD-MM-YYYY');
-          return db.valueOf() - da.valueOf();
-        })
-        .slice(0, 10);
     },
   },
   methods: {

@@ -18,6 +18,7 @@ const {
   PriorityGoalsType,
 } = require('../schema/GoalSchema');
 const { GoalItemInput } = require('../schema/AiSchema');
+const { encryption, ENCRYPTION_FIELDS } = require('../utils/encryption');
 const { UserModel } = require('../schema/UserSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
@@ -30,6 +31,7 @@ const { RoutineModel } = require('../schema/RoutineSchema');
 const { buildStimuliForRoutineItem } = require('./routine');
 const { threshold } = require('../utils/getProgressReport');
 const { deriveGoalItemStatus } = require('../utils/goalItemStatus');
+const { collectPeriodCriteria, buildMilestoneDays, evaluateAutoComplete } = require('../utils/goalCompletionCriteria');
 
 const getDaysArray = (year, month) => {
   let firstMonday = '';
@@ -239,6 +241,23 @@ async function autoCheckTaskPeriod({
 
       const dayCleanGoals = childPeriodGoals.filter((g) => g.goalItems && g.goalItems.length);
 
+      // Everything the user hung off this goal inside the period. The streak
+      // threshold alone used to close a week goal at five wins with a seventh
+      // milestone still open, so it is now a floor rather than the whole rule.
+      const criteria = collectPeriodCriteria(dayCleanGoals, periodGoalItem.id);
+
+      // The figure the dashboard renders for "how close am I?". Derived from the
+      // same criteria the auto-complete rule uses, so the count can never
+      // disagree with the tick. GraphQL-only, like `progress` — neither is a
+      // path on GoalItemSchema, so neither is ever persisted.
+      periodGoalItem.milestonesTotal = criteria.length;
+      periodGoalItem.milestonesComplete = criteria.filter((criterion) => criterion.isComplete).length;
+
+      // The same criteria laid out against the period's own calendar, one entry
+      // per child date, so the streak widget can show WHERE a week broke rather
+      // than only how many wins it holds. GraphQL-only, like the tallies above.
+      periodGoalItem.milestoneDays = buildMilestoneDays(childDates, criteria, date);
+
       if (dayCleanGoals && dayCleanGoals.length) {
         const tempGRoutineTasks = [];
         dayCleanGoals.forEach((dayCleanGoal) => {
@@ -257,35 +276,48 @@ async function autoCheckTaskPeriod({
               date: dayCleanGoal.date,
               taskRef: matchedDayGoal.taskRef,
             });
-
-            if (periodGoalItem.progress === completionThreshold && !periodGoalItem.isComplete) {
-              // Mirror completion into cleanGoals so a caller that re-uses it
-              // (completeGoalItem's month→year backtrack) sees the parent as
-              // done. Guarded: a caller may not include the parent doc.
-              const cleanGoalsParent = cleanGoals
-                .find((cleanGoal) => String(cleanGoal.id) === String(periodGoal.id));
-              const cleanGoalsGoalItem = cleanGoalsParent && cleanGoalsParent.goalItems
-                .find((cleanGoalItem) => String(cleanGoalItem.id) === String(periodGoalItem.id));
-
-              periodGoalItem.isComplete = true;
-              if (cleanGoalsGoalItem) cleanGoalsGoalItem.isComplete = true;
-
-              updatePromises.push(GoalModel.findOneAndUpdate(
-                {
-                  date: periodGoal.date,
-                  period: periodGoal.period,
-                  email,
-                  'goalItems._id': periodGoalItem.id,
-                },
-                { $set: { 'goalItems.$.isComplete': true } },
-                { new: true },
-              ).exec());
-
-              // backtrack all associated task
-              updateGTasksMap(gRoutineTasks, tempGRoutineTasks);
-            }
           }
         });
+
+        // Judged once, on the whole period. Inside the loop above it was judged
+        // against `progress`, which counts one win per child DOCUMENT, so a
+        // parent whose milestones share a child document — five week milestones
+        // in one week doc — could never clear the floor however many of them
+        // were met, while the tallies above reported 5 of 5.
+        const autoComplete = evaluateAutoComplete({
+          criteria,
+          completionThreshold,
+          stepDownPeriod,
+          date: periodGoal.date,
+        });
+
+        if (autoComplete.isComplete && !periodGoalItem.isComplete) {
+          // Mirror completion into cleanGoals so a caller that re-uses it
+          // (completeGoalItem's month→year backtrack) sees the parent as
+          // done. Guarded: a caller may not include the parent doc.
+          const cleanGoalsParent = cleanGoals
+            .find((cleanGoal) => String(cleanGoal.id) === String(periodGoal.id));
+          const cleanGoalsGoalItem = cleanGoalsParent && cleanGoalsParent.goalItems
+            .find((cleanGoalItem) => String(cleanGoalItem.id) === String(periodGoalItem.id));
+
+          periodGoalItem.isComplete = true;
+          periodGoalItem.completionNote = autoComplete.note;
+          if (cleanGoalsGoalItem) cleanGoalsGoalItem.isComplete = true;
+
+          updatePromises.push(GoalModel.findOneAndUpdate(
+            {
+              date: periodGoal.date,
+              period: periodGoal.period,
+              email,
+              'goalItems._id': periodGoalItem.id,
+            },
+            { $set: { 'goalItems.$.isComplete': true, 'goalItems.$.completionNote': autoComplete.note } },
+            { new: true },
+          ).exec());
+
+          // backtrack all associated task
+          updateGTasksMap(gRoutineTasks, tempGRoutineTasks);
+        }
       }
     });
   });
@@ -294,6 +326,92 @@ async function autoCheckTaskPeriod({
 
   // console.log('periodGoals', periodGoals);
   return periodGoals;
+}
+
+/**
+ * OWNER RULE: a day goal is ALWAYS linked to the week goal of its routine.
+ *
+ * `autoCheckTaskPeriod` only counts a day goal toward a week goal when
+ * `dayItem.goalRef === weekItem.id`, but most creation paths (Goals quick-add,
+ * Home add-task, Priority, AI, MCP) never send a goalRef — so their day goals
+ * never counted, while the Goals screen predicted progress by routine. The link
+ * is therefore made here, server-side, so every path gets it.
+ *
+ * Week/date math is the server's own: a day's week Goal doc is
+ * `periodGoalDates('week', day)` (the Friday of its Sunday→Saturday week), and a
+ * week doc's day docs are `periodChildDates('week', weekDate)` — exactly the
+ * pair `autoCheckTaskPeriod` reads with, so a link made here is a link counted.
+ *
+ * "The week goal of the routine" is the FIRST week item with the same taskRef
+ * (document order), which is also what the client's `itemForRoutine` picks.
+ */
+async function findRoutineWeekGoalItem(email, dayDate, taskRef) {
+  const weekGoals = await GoalModel.find({
+    email, period: 'week', date: periodGoalDates('week', dayDate),
+  }).exec();
+  let found = null;
+  (weekGoals || []).some((weekGoal) => {
+    found = (weekGoal.goalItems || [])
+      .find((item) => item.taskRef && String(item.taskRef) === String(taskRef)) || null;
+    return !!found;
+  });
+  return found;
+}
+
+/**
+ * Direction 1 — a new day goal. Returns the goalRef/isMilestone to store.
+ * An explicit goalRef always wins; no routine or no week goal → left unlinked.
+ * `isMilestone` comes along because a goalRef without it is refused by the
+ * create mutations and is what the Goals tree nests under the week goal.
+ */
+async function resolveDayGoalLink(email, {
+  period, date, taskRef, goalRef, isMilestone,
+}) {
+  if (period !== 'day' || !taskRef || goalRef) return { goalRef, isMilestone };
+  try {
+    const weekItem = await findRoutineWeekGoalItem(email, date, taskRef);
+    // eslint-disable-next-line no-underscore-dangle
+    const weekItemId = weekItem && (weekItem._id || weekItem.id);
+    if (weekItemId) return { goalRef: String(weekItemId), isMilestone: true };
+  } catch (e) {
+    // The create is the user's action; a failed link must not lose it.
+    console.error('Day goal → week goal link lookup failed:', e && e.message);
+  }
+  return { goalRef, isMilestone };
+}
+
+/**
+ * Direction 2 — a new week goal. Links that week's existing UNLINKED day goals
+ * of the same routine to it. Bounded to this user, this week's seven day docs
+ * and this taskRef; an item that already has a goalRef is never touched. Only
+ * runs when the new item IS the routine's week goal (the first one for that
+ * taskRef), so both directions always agree on which week item a day joins.
+ */
+async function linkDayGoalsToWeekGoal(email, weekGoalDoc, weekItem) {
+  if (!weekGoalDoc || !weekItem || !weekItem.taskRef) return;
+  try {
+    const taskRef = String(weekItem.taskRef);
+    // eslint-disable-next-line no-underscore-dangle
+    const weekItemId = String(weekItem._id || weekItem.id);
+    const first = (weekGoalDoc.goalItems || [])
+      .find((item) => item.taskRef && String(item.taskRef) === taskRef);
+    // eslint-disable-next-line no-underscore-dangle
+    if (!first || String(first._id || first.id) !== weekItemId) return;
+
+    const unlinked = { $in: [null, ''] };
+    await GoalModel.updateMany(
+      {
+        email,
+        period: 'day',
+        date: { $in: periodChildDates('week', weekGoalDoc.date) },
+        goalItems: { $elemMatch: { taskRef, goalRef: unlinked } },
+      },
+      { $set: { 'goalItems.$[dayItem].goalRef': weekItemId, 'goalItems.$[dayItem].isMilestone': true } },
+      { arrayFilters: [{ 'dayItem.taskRef': taskRef, 'dayItem.goalRef': unlinked }] },
+    ).exec();
+  } catch (e) {
+    console.error('Week goal → day goals link failed:', e && e.message);
+  }
 }
 
 function weekOfMonth(d) {
@@ -341,6 +459,130 @@ async function setUserTag(email, tags) {
       }
     }
   }
+}
+
+/**
+ * Move a goal item to another date and/or period, applying `updates` on the way.
+ *
+ * Goal items are subdocuments of the Goal document for their (email, date,
+ * period), so rescheduling one is a pull from the old document and a push into
+ * the new one. The subdocument keeps its `_id`: milestone links (`goalRef`),
+ * sub-tasks and the client's entity cache are all keyed on the goal item id, so
+ * a moved item must stay the same entity.
+ *
+ * `$push` does not run the schema's pre-save hook, and the source item comes
+ * back decrypted from the read middleware, so the encrypted fields are
+ * re-encrypted here the way GoalSchema would have done on save.
+ *
+ * @returns {Object} the moved goal item, read back from its new document
+ */
+async function moveGoalItem({
+  email, id, sourceGoal, date, period, updates,
+}) {
+  const sourceItem = sourceGoal.goalItems.find((item) => item.id === id);
+  // An argument the caller left out must not wipe the stored value, matching
+  // the in-place `$set` path (Mongoose drops undefined paths from an update).
+  const changes = Object.entries(updates)
+    .filter(([, value]) => value !== undefined)
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+  const movedItem = {
+    ...(sourceItem.toObject ? sourceItem.toObject() : sourceItem),
+    ...changes,
+    // First move records where the item started; later moves keep that origin.
+    originalDate: sourceItem.originalDate || sourceGoal.date,
+  };
+
+  // Same rule addGoalItem applies: a day item sitting away from its original
+  // date is a rescheduled one. A finished item keeps the status it earned.
+  if (period === 'day' && !movedItem.isComplete && movedItem.originalDate !== date) {
+    movedItem.status = 'rescheduled';
+  }
+
+  const storedItem = encryption.encryptObject(movedItem, ENCRYPTION_FIELDS.goalItem);
+  storedItem.subTasks = encryption.encryptArray(movedItem.subTasks || [], ENCRYPTION_FIELDS.subTask);
+
+  // Upsert: the target day may have no goal document yet.
+  await GoalModel.findOneAndUpdate(
+    { date, period, email },
+    { $push: { goalItems: storedItem } },
+    { upsert: true, new: true },
+  ).exec();
+
+  await GoalModel.findOneAndUpdate(
+    { date: sourceGoal.date, period: sourceGoal.period, email },
+    { $pull: { goalItems: { _id: id } } },
+    { new: true },
+  ).exec();
+
+  const targetGoal = await GoalModel.findOne({ date, period, email }).exec();
+
+  return targetGoal.goalItems.find((item) => item.id === id);
+}
+
+/**
+ * Every goal item transitively hanging off `rootId` through `goalRef`, paired
+ * with the period/date of the Goal document it lives in.
+ *
+ * A milestone only ever points UP, at its parent's id, so deleting the parent
+ * with a bare `$pull` left the children in place holding a reference that no
+ * longer resolves. `getGoalMilestone` then listed them at their own period,
+ * outside the tree they were planned in, and the day counters kept counting
+ * them — the "Total Day Tasks stays at 7" report.
+ *
+ * Walks the links a level at a time so a whole AI plan (month -> week -> day)
+ * comes out in one pass; `seen` also stops a self-referencing link looping.
+ */
+async function collectGoalItemDescendants(rootId, email) {
+  const descendants = [];
+  const seen = new Set([String(rootId)]);
+  let frontier = [String(rootId)];
+
+  while (frontier.length) {
+    // eslint-disable-next-line no-await-in-loop
+    const goals = await GoalModel.find({
+      email,
+      'goalItems.goalRef': { $in: frontier },
+    }).exec();
+
+    const nextFrontier = [];
+    goals.forEach((goal) => {
+      (goal.goalItems || []).forEach((goalItem) => {
+        const parentId = goalItem.goalRef ? String(goalItem.goalRef) : '';
+        if (!frontier.includes(parentId) || seen.has(String(goalItem.id))) return;
+
+        seen.add(String(goalItem.id));
+        descendants.push({ goalItem, period: goal.period, date: goal.date });
+        nextFrontier.push(String(goalItem.id));
+      });
+    });
+    frontier = nextFrontier;
+  }
+
+  return descendants;
+}
+
+/**
+ * Give back the K a completed day goal item earned on its routine task.
+ *
+ * Deleting the item without this leaves the credit behind and the card keeps
+ * counting a goal item that no longer exists (a routine reading 1/2 with an
+ * empty goal list). Mirrors what un-checking the item does.
+ */
+async function refundGoalItemStimulus(goalItem, date, email) {
+  if (!goalItem || !goalItem.isComplete || !goalItem.taskRef) return;
+
+  const routine = await RoutineModel.findOne({ date, email }).exec();
+  const task = routine && routine.tasklist
+    ? routine.tasklist.find((t) => t._id.toString() === goalItem.taskRef.toString())
+    : null;
+  if (!task) return;
+
+  task.stimuli = removeStimulusEarnedPoint('K', task);
+  await RoutineModel.findOneAndUpdate(
+    { date, email, 'tasklist._id': goalItem.taskRef },
+    { $set: { 'tasklist.$.stimuli': task.stimuli } },
+    { new: true },
+  ).exec();
 }
 
 const query = {
@@ -857,13 +1099,47 @@ const query = {
       // `toObject()` drops the mongoose `id` virtual, so map `_id` back onto
       // `id` — without it every Goal resolves id:null and Apollo normalizes all
       // of them into a single cached entity.
+      //
+      // The NESTED goalItems need the same treatment, and for a sharper reason:
+      // `toObject()` nulls the virtual all the way down, and the related-goals
+      // timeline dedupes items by id. With every id null the first item claimed
+      // the slot and every later one was discarded as its duplicate, so a week
+      // of logged entries rendered as "Related Goals (1)".
       return goals
         .map((goal) => ({
           ...goal.toObject(),
           // eslint-disable-next-line no-underscore-dangle
           id: goal._id,
+          // Array.from first: mapping a mongoose DocumentArray yields another
+          // DocumentArray, which re-casts each plain object through the schema.
+          goalItems: Array.from(goal.goalItems || []).map((item) => ({
+            ...(item.toObject ? item.toObject() : item),
+            // eslint-disable-next-line no-underscore-dangle
+            id: item._id || item.id,
+          })),
         }))
-        .filter((goal) => (goal.goalItems || []).length > 0);
+        .filter((goal) => goal.goalItems.length > 0);
+    },
+  },
+  // The milestones that deleting `id` would take with it, so the confirmation
+  // dialog can name them before anything is destroyed. Transitive: deleting a
+  // month goal also removes the week goals under it and their days.
+  goalItemMilestones: {
+    type: new GraphQLList(GoalItemType),
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+
+      const descendants = await collectGoalItemDescendants(args.id, email);
+
+      // Own id only — these are the real GoalItem entities, so the dialog reads
+      // the same records the delete will remove.
+      return descendants.map(({ goalItem }) => ({
+        ...goalItem.toObject(),
+        id: goalItem.id,
+      }));
     },
   },
   goal: {
@@ -1098,15 +1374,19 @@ const mutation = {
             }
           }
 
+          const link = await resolveDayGoalLink(email, {
+            period, date, taskRef, goalRef, isMilestone,
+          });
+
           const goalItemToAdd = {
             body,
             deadline,
             contribution,
             reward,
             isComplete,
-            isMilestone,
+            isMilestone: link.isMilestone,
             taskRef,
-            goalRef,
+            goalRef: link.goalRef,
             tags: ensurePriorityTag(tags, { period, date, body }),
             status: finalStatus,
             createdAt: new Date(),
@@ -1145,7 +1425,10 @@ const mutation = {
             email,
           }).exec();
 
-          return updatedGoal.goalItems[updatedGoal.goalItems.length - 1];
+          const added = updatedGoal.goalItems[updatedGoal.goalItems.length - 1];
+          if (period === 'week') await linkDayGoalsToWeekGoal(email, updatedGoal, added);
+
+          return added;
         });
 
         const createdGoals = await Promise.all(goalPromises);
@@ -1197,6 +1480,10 @@ const mutation = {
 
       await setUserTag(email, tags);
 
+      const link = await resolveDayGoalLink(email, {
+        period, date, taskRef, goalRef, isMilestone,
+      });
+
       // Determine initial status based on task context
       let status = 'todo'; // default status
 
@@ -1217,9 +1504,9 @@ const mutation = {
         contribution,
         reward,
         isComplete,
-        isMilestone,
+        isMilestone: link.isMilestone,
         taskRef,
-        goalRef,
+        goalRef: link.goalRef,
         // Fallback for non-UI callers: stamp a priority:* tag if none supplied.
         tags: ensurePriorityTag(tags, { period, date, body }),
         status,
@@ -1261,7 +1548,10 @@ const mutation = {
         },
       ).exec();
 
-      return goal.goalItems[goal.goalItems.length - 1];
+      const added = goal.goalItems[goal.goalItems.length - 1];
+      if (period === 'week') await linkDayGoalsToWeekGoal(email, goal, added);
+
+      return added;
     },
   },
   bulkAddGoalItems: {
@@ -1275,75 +1565,119 @@ const mutation = {
       const email = getEmailfromSession(context);
       const { goalItems } = args;
 
-      // Process goal items in parallel using Promise.all
-      const addedGoalItems = await Promise.all(
-        goalItems.map(async (goalItemData) => {
-          const {
-            date,
-            period,
-            body,
-            deadline,
-            contribution,
-            reward,
-            isComplete,
-            isMilestone,
-            taskRef,
-            goalRef,
-            tags = [],
-          } = goalItemData;
+      const addOne = async (goalItemData) => {
+        const {
+          date,
+          period,
+          body,
+          deadline,
+          contribution,
+          reward,
+          isComplete,
+          isMilestone,
+          taskRef,
+          goalRef,
+          tags = [],
+        } = goalItemData;
 
-          // Validation: if goalRef is passed, isMilestone must be true
-          if (goalRef && !isMilestone) {
-            throw new Error(`When goalRef is provided, isMilestone must be true for item: ${body || 'Unknown'}`);
-          }
+        // Validation: if goalRef is passed, isMilestone must be true
+        if (goalRef && !isMilestone) {
+          throw new Error(`When goalRef is provided, isMilestone must be true for item: ${body || 'Unknown'}`);
+        }
 
-          await setUserTag(email, tags);
+        await setUserTag(email, tags);
 
-          const goalToAdd = {
-            date,
-            email,
-            period,
-            goalItems: [
-              {
-                body,
-                deadline,
-                contribution,
-                reward,
-                isComplete,
-                isMilestone,
-                taskRef,
-                goalRef,
-                tags: ensurePriorityTag(tags, { period, date, body }),
-              },
-            ],
-          };
+        const link = await resolveDayGoalLink(email, {
+          period, date, taskRef, goalRef, isMilestone,
+        });
 
-          const goalEntry = await GoalModel.findOne({
-            date,
-            period: period || 'day',
-            email,
-          }).exec();
+        const goalToAdd = {
+          date,
+          email,
+          period,
+          goalItems: [
+            {
+              body,
+              deadline,
+              contribution,
+              reward,
+              isComplete,
+              isMilestone: link.isMilestone,
+              taskRef,
+              goalRef: link.goalRef,
+              tags: ensurePriorityTag(tags, { period, date, body }),
+            },
+          ],
+        };
 
-          if (goalEntry && goalEntry.date) {
-            await GoalModel.findOneAndUpdate(
-              { email, date, period },
-              { $set: { goalItems: [...goalEntry.goalItems, goalToAdd.goalItems[0]] } },
-              { new: true },
-            ).exec();
-          } else {
-            const goal = new GoalModel(goalToAdd);
-            await goal.save();
-          }
+        const goalEntry = await GoalModel.findOne({
+          date,
+          period: period || 'day',
+          email,
+        }).exec();
 
-          const updatedGoal = await GoalModel.findOne({
-            date,
-            period,
-            email,
-          }).exec();
+        if (goalEntry && goalEntry.date) {
+          await GoalModel.findOneAndUpdate(
+            { email, date, period },
+            { $set: { goalItems: [...goalEntry.goalItems, goalToAdd.goalItems[0]] } },
+            { new: true },
+          ).exec();
+        } else {
+          const goal = new GoalModel(goalToAdd);
+          await goal.save();
+        }
 
-          return updatedGoal.goalItems[updatedGoal.goalItems.length - 1];
-        }),
+        const updatedGoal = await GoalModel.findOne({
+          date,
+          period,
+          email,
+        }).exec();
+
+        const addedGoalItem = updatedGoal
+          && updatedGoal.goalItems[updatedGoal.goalItems.length - 1];
+
+        // Never report a save that didn't happen — the caller closes its
+        // modal on success, so a swallowed item disappears without a trace.
+        if (!addedGoalItem) {
+          throw new Error(`Failed to save goal item "${body || 'Unknown'}" for ${period} ${date}`);
+        }
+
+        if (period === 'week') await linkDayGoalsToWeekGoal(email, updatedGoal, addedGoalItem);
+
+        return addedGoalItem;
+      };
+
+      // Items sharing a date + period live in the same Goal document, and
+      // adding one is a read-append-write. Run those in parallel and every
+      // item but the last is lost (or forked into a duplicate Goal document
+      // that no read path returns). Group by document, write each group in
+      // order, keep separate documents parallel.
+      const buckets = new Map();
+      goalItems.forEach((goalItemData, index) => {
+        const key = `${goalItemData.date}|${goalItemData.period || 'day'}`;
+        if (!buckets.has(key)) {
+          buckets.set(key, []);
+        }
+        buckets.get(key).push({ goalItemData, index });
+      });
+
+      const addedGoalItems = [];
+      const writeBuckets = (bucketList) => Promise.all(
+        bucketList.map((bucket) => bucket.reduce(
+          (previous, { goalItemData, index }) => previous.then(async () => {
+            addedGoalItems[index] = await addOne(goalItemData);
+          }),
+          Promise.resolve(),
+        )),
       );
+
+      // Day goals link to their routine's week goal on create, so a plan that
+      // carries both writes its week (and longer) goals first — written in
+      // parallel, a day item could read the week doc before its goal landed.
+      const isDayBucket = (bucket) => (bucket[0].goalItemData.period || 'day') === 'day';
+      const allBuckets = Array.from(buckets.values());
+      await writeBuckets(allBuckets.filter((bucket) => !isDayBucket(bucket)));
+      await writeBuckets(allBuckets.filter(isDayBucket));
 
       return addedGoalItems;
     },
@@ -1381,6 +1715,52 @@ const mutation = {
       } = args;
 
       await setUserTag(email, tags);
+
+      // A goal item lives inside the Goal document for ITS date and period, so
+      // the (date, period) the caller is saving to is not necessarily where the
+      // item is now: an edit that reschedules it has to move the subdocument
+      // between documents. Find it by id first, then decide.
+      const sourceGoal = await GoalModel.findOne({
+        email,
+        'goalItems._id': id,
+      }).exec();
+
+      if (!sourceGoal) {
+        throw new Error('Goal item not found');
+      }
+
+      // Switching the dialog's period tab rewrites the date on its own: to ''
+      // for a dated period, to the '01-01-1970' lifetime stand-in for "no
+      // date" (see the lifetime bucket in goalsOptimized). Filing the item
+      // under either one hides it from every read path that asks for a day,
+      // so an undated target is refused rather than moved to.
+      if (!date || (date === '01-01-1970' && sourceGoal.period !== 'lifetime')) {
+        throw new Error('This task needs a date. Pick one before saving.');
+      }
+
+      // A milestone hangs off a goal of the period above it — a day item's
+      // goalRef names a week goal (utils/getGoalMilestone) — so carrying the
+      // link into another period unroots it: the parent loses the milestone
+      // and the item resurfaces at the top of its new period. Refuse, so the
+      // switch cannot drop the link without the user clearing it first.
+      const sourceItem = sourceGoal.goalItems.find((aGoalItem) => aGoalItem.id === id);
+
+      if (sourceGoal.period !== period && (goalRef || sourceItem.goalRef)) {
+        throw new Error('This task is a milestone of a goal. Clear its goal task before changing the period.');
+      }
+
+      if (sourceGoal.date !== date || sourceGoal.period !== period) {
+        return moveGoalItem({
+          email,
+          id,
+          sourceGoal,
+          date,
+          period,
+          updates: {
+            body, deadline, contribution, reward, isMilestone, taskRef, goalRef, tags,
+          },
+        });
+      }
 
       await GoalModel.findOneAndUpdate(
         {
@@ -1498,6 +1878,18 @@ const mutation = {
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
+      const goal = await GoalModel.findOne({
+        date: args.date,
+        period: args.period,
+        email,
+      }).exec();
+      const deletedItem = goal && goal.goalItems
+        ? goal.goalItems.find((aGoalItem) => aGoalItem.id === args.id)
+        : null;
+
+      // Read the children BEFORE the parent goes, while the links still resolve.
+      const descendants = await collectGoalItemDescendants(args.id, email);
+
       await GoalModel.findOneAndUpdate(
         {
           date: args.date,
@@ -1506,6 +1898,30 @@ const mutation = {
         },
         { $pull: { goalItems: { _id: args.id } } },
       ).exec();
+
+      // Cascade. A milestone is only reachable through its parent's id, so
+      // pulling the parent alone left the children alive but unreachable from
+      // the goal tree, still counted by the day totals and the calendar, and
+      // removable only one day at a time from Home. The confirmation dialog
+      // tells the user these go too — this is what makes that true.
+      await Promise.all(descendants.map(({ goalItem, period, date }) => GoalModel.findOneAndUpdate(
+        { date, period, email },
+        { $pull: { goalItems: { _id: goalItem.id } } },
+      ).exec()));
+
+      // Completing a day item credits K on its routine task; the bare $pull
+      // left that credit behind, so the card kept counting a goal item that no
+      // longer exists (a routine reading 1/2 with an empty goal list). Refund
+      // it exactly the way un-checking the item does — for the item itself and
+      // for every day milestone the cascade just took with it.
+      if (args.period === 'day') {
+        await refundGoalItemStimulus(deletedItem, args.date, email);
+      }
+
+      await Promise.all(descendants
+        .filter(({ period }) => period === 'day')
+        .map(({ goalItem, date }) => refundGoalItemStimulus(goalItem, date, email)));
+
       return args;
     },
   },
@@ -1647,14 +2063,25 @@ const mutation = {
 
         if (args.period === 'day') {
           Array.from(gRoutineTasks.values()).forEach(async (gTask) => {
-            const currentDate = await RoutineModel.findOne({ date: gTask.date, email }).exec();
-            const task = currentDate.tasklist.find((t) => t._id.toString() === gTask.taskRef.toString());
-            task.stimuli = updateStimulusEarnedPoint('G', task, gTask.updatePeriod);
-            await RoutineModel.findOneAndUpdate(
-              { date: gTask.date, email, 'tasklist._id': gTask.taskRef },
-              { $set: { 'tasklist.$.stimuli': task.stimuli } },
-              { new: true },
-            ).exec();
+            // Fire-and-forget: an uncaught rejection here takes down the whole
+            // server process, so skip what can't be updated and log the rest.
+            try {
+              const currentDate = await RoutineModel.findOne({ date: gTask.date, email }).exec();
+              const task = currentDate
+                && currentDate.tasklist.find((t) => t._id.toString() === gTask.taskRef.toString());
+              // The goal can point at a routine task that isn't on that day's routine.
+              if (!task || !Array.isArray(task.stimuli) || !task.stimuli.some((st) => st.name === 'G')) {
+                return;
+              }
+              task.stimuli = updateStimulusEarnedPoint('G', task, gTask.updatePeriod);
+              await RoutineModel.findOneAndUpdate(
+                { date: gTask.date, email, 'tasklist._id': gTask.taskRef },
+                { $set: { 'tasklist.$.stimuli': task.stimuli } },
+                { new: true },
+              ).exec();
+            } catch (err) {
+              console.error('[completeGoalItem] G stimulus update failed', gTask.taskRef, err.message);
+            }
           });
         }
       }
@@ -1738,6 +2165,51 @@ const mutation = {
       return goal && goal.goalItems
         ? goal.goalItems.find((item) => item.id === args.id)
         : null;
+    },
+  },
+  /**
+   * Record that an item was not done, without destroying it.
+   *
+   * Completing or deleting were the only ways to clear an item off a day, so a
+   * missed day was either a lie or a lost record. `missed` is already in the
+   * GoalItemSchema status enum — autoCheckTaskPeriod, collectPeriodCriteria and
+   * buildMilestoneDays all count off `isComplete`, which this deliberately does
+   * not touch, so a marked item still reads as outstanding everywhere.
+   */
+  markGoalItemMissed: {
+    type: GoalItemType,
+    args: {
+      id: { type: GraphQLNonNull(GraphQLID) },
+      isMissed: { type: GraphQLNonNull(GraphQLBoolean) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const { id, isMissed } = args;
+
+      // Addressed by id alone, the way updateGoalItemReward is: the caller's
+      // idea of the item's date can be stale after a move, and a miss that
+      // silently matched no document would be a miss the user thinks they
+      // recorded.
+      const goal = await GoalModel.findOneAndUpdate(
+        {
+          email,
+          'goalItems._id': id,
+        },
+        {
+          $set: {
+            // Unmarking returns the item to the schema default, the same state
+            // completeGoalItem restores when a tick is undone.
+            'goalItems.$.status': isMissed ? 'missed' : 'todo',
+          },
+        },
+        { new: true },
+      ).exec();
+
+      if (!goal) {
+        throw new Error('Goal item not found');
+      }
+
+      return goal.goalItems.find((aGoalItem) => aGoalItem.id === id);
     },
   },
   rescheduleGoalItem: {

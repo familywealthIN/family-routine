@@ -40,6 +40,9 @@ nohup.out
 # Turbo
 .turbo
 
+# Agent scratch worktrees
+.claude/worktrees/
+
 # Legacy Capacitor native project locations (pre-July 2026, repo root).
 # Rooted with a leading slash so they do NOT match apps/android and apps/ios,
 # where the native projects now live.
@@ -59,3 +62,16 @@ fastlane/Preview.html
 # Playwright
 apps/web-app/test-results/
 apps/web-app/playwright-report/
+
+# Local env variants (.env itself is ignored above). Keep committed examples.
+.env.*
+!.env.example
+!**/.env.example
+
+# Local dev server logs from agent runs
+/.srv.log
+/.wf.log
+/.wfweb.log
+
+# Beta-cycle run evidence (screenshots + logs) - referenced by Asana tickets, too heavy to commit
+.beta-runs/

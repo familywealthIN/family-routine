@@ -1,13 +1,20 @@
 <template>
-  <div class="weekday-selector">
+  <div class="weekday-selector" :class="{ 'weekday-selector--compact': isCompact }">
     <div
       v-for="(weekDay, i) in weekDays"
       :key="weekDay.day"
-      @click="!isLoading && handleDateSelect(i)"
+      :data-testid="`weekday-${weekDay.fullDate}`"
+      :style="cellStyle"
+      @click="onClick(i)"
+      @pointerdown="pressStart(weekDay)"
+      @pointerup="pressEnd"
+      @pointerleave="pressEnd"
+      @pointercancel="pressEnd"
+      @contextmenu="onContextMenu(weekDay, $event)"
       :class="['day-column', { active: weekDay.isActive, disabled: isLoading }]"
     >
       <div class="day-label">{{ weekDay.day }}</div>
-      <div class="ring-container">
+      <div class="ring-container" :style="ringStyle">
         <svg :viewBox="`0 0 ${svgSize} ${svgSize}`" class="rings-svg">
           <!-- Track circles (background) -->
           <circle
@@ -49,6 +56,19 @@
           />
         </svg>
         <div class="day-number">{{ weekDay.dayNumber }}</div>
+        <!--
+          A skipped day is not a failed one, so it does not read as an empty
+          ring. The pause overlay covers the rings entirely — their value for a
+          skipped day is noise.
+        -->
+        <div
+          v-if="isSkipped(weekDay.fullDate)"
+          class="day-skipped"
+          :data-testid="`weekday-skipped-${weekDay.fullDate}`"
+          title="Routines are paused for this day"
+        >
+          <i class="rn-mi">pause</i>
+        </div>
       </div>
     </div>
   </div>
@@ -56,6 +76,14 @@
 
 <script>
 import moment from 'moment';
+
+/**
+ * How much cell there is around the ring in the compact (header) form: the
+ * design's iPad and desktop frames both draw a 28px ring in a 38px cell. The
+ * cell does not stretch there — the strip sits beside the date at a 40px pitch
+ * (38 + the 2px gap), it does not spread across the row.
+ */
+const CELL_SURROUND = 10;
 
 export default {
   name: 'OrganismWeekdaySelector',
@@ -77,6 +105,37 @@ export default {
       type: Boolean,
       default: false,
     },
+    /**
+     * Ring diameter in px. Null keeps the responsive default (36 on phone,
+     * 48 above) — the Routine Focus header asks for its own size instead,
+     * because there the strip sits in a 64px row, not on its own line.
+     */
+    ringSize: {
+      type: Number,
+      default: null,
+    },
+    /**
+     * Days (DD-MM-YYYY) whose routines are paused. Drawn as a pause overlay.
+     */
+    skippedDates: {
+      type: Array,
+      default: () => [],
+    },
+    /**
+     * Which cell can be long-pressed. Only today's routines can be skipped —
+     * `skipRoutine` takes the day's routine document id and the quota is counted
+     * from the week start to today, so arming the gesture on another day would
+     * promise something the server will refuse.
+     */
+    todayDate: {
+      type: String,
+      default: null,
+    },
+    /** How long a press has to be held before it counts as a long press. */
+    longPressMs: {
+      type: Number,
+      default: 520,
+    },
   },
   data() {
     const svgSize = 48;
@@ -94,7 +153,33 @@ export default {
       ringD: { radius: radiusD, circumference: 2 * Math.PI * radiusD },
       ringK: { radius: radiusK, circumference: 2 * Math.PI * radiusK },
       ringG: { radius: radiusG, circumference: 2 * Math.PI * radiusG },
+      pressTimer: null,
+      // A long press that fired must swallow the click that follows it,
+      // otherwise the gesture both opens the skip sheet AND selects the day.
+      suppressClick: false,
     };
+  },
+  beforeDestroy() {
+    this.pressEnd();
+  },
+  computed: {
+    /**
+     * A host that names its own ring size is the Routine Focus header, where the
+     * strip is a seven-cell row beside the date rather than a full-width band.
+     * That is the only thing the two forms differ by, so it keys off the one
+     * prop already plumbed for it instead of a second `variant`.
+     */
+    isCompact() {
+      return !!this.ringSize;
+    },
+    ringStyle() {
+      if (!this.ringSize) return {};
+      return { width: `${this.ringSize}px`, height: `${this.ringSize}px` };
+    },
+    cellStyle() {
+      if (!this.isCompact) return {};
+      return { flex: '0 0 auto', width: `${this.ringSize + CELL_SURROUND}px` };
+    },
   },
   watch: {
     selectedDate: {
@@ -141,6 +226,44 @@ export default {
       });
 
       return weekDays;
+    },
+    isSkipped(date) {
+      return (this.skippedDates || []).indexOf(date) >= 0;
+    },
+    /** Only today arms the gesture — see the `todayDate` prop. */
+    canLongPress(weekDay) {
+      return !!this.todayDate && !!weekDay && weekDay.fullDate === this.todayDate;
+    },
+    pressStart(weekDay) {
+      this.pressEnd();
+      if (this.isLoading || !this.canLongPress(weekDay)) return;
+      this.pressTimer = setTimeout(() => {
+        this.pressTimer = null;
+        this.suppressClick = true;
+        this.$emit('long-press', weekDay.fullDate);
+      }, this.longPressMs);
+    },
+    pressEnd() {
+      if (this.pressTimer) {
+        clearTimeout(this.pressTimer);
+        this.pressTimer = null;
+      }
+    },
+    /** Pointer users get the same sheet from the context menu. */
+    onContextMenu(weekDay, event) {
+      if (!this.canLongPress(weekDay)) return;
+      if (event && event.preventDefault) event.preventDefault();
+      this.pressEnd();
+      this.suppressClick = true;
+      this.$emit('long-press', weekDay.fullDate);
+    },
+    onClick(index) {
+      if (this.suppressClick) {
+        this.suppressClick = false;
+        return;
+      }
+      if (this.isLoading) return;
+      this.handleDateSelect(index);
     },
     handleDateSelect(index) {
       if (this.weekDays[index] && this.weekDays[index].isActive) {
@@ -245,9 +368,52 @@ export default {
   pointer-events: none;
 }
 
+.day-skipped {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  bottom: 2px;
+  left: 2px;
+  border-radius: 50%;
+  background: #fff3e0;
+  color: #e68900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.day-skipped .rn-mi {
+  font-size: 15px;
+}
+
 .day-column.active .day-number {
   font-weight: 700;
   color: rgba(0, 0, 0, 0.85);
+}
+
+/*
+  The compact (Routine Focus header) form. Seven 38px cells at a 40px pitch with
+  10px labels and 11px numbers — the same figures on iPad and desktop. The full
+  form's 11px/14px type belongs to the legacy dashboard's 48px strip, and reading
+  it into the header stretched every cell to 50px.
+*/
+.weekday-selector--compact {
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+}
+
+.weekday-selector--compact .day-column {
+  padding: 3px 0;
+}
+
+.weekday-selector--compact .day-label {
+  font-size: 10px;
+}
+
+.weekday-selector--compact .day-number {
+  font-size: 11px;
 }
 
 /* Mobile: smaller rings */

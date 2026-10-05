@@ -1,0 +1,163 @@
+/* eslint-disable no-console */
+// Files a beta run's findings into Asana as an epic + one subtask per defect,
+// in the same shape as the 16-22 Aug "Beta Test fixes" epic.
+//
+//   node tools/beta/file-findings.js <findings.json> [--label "5-11 Sep 2026"] [--dry]
+//
+// Dedupes against every still-open subtask of every prior beta epic, so a defect that
+// survived the last cycle is commented on rather than filed twice. Title matching is a
+// fallback: a finding that carries `recurrenceOf` (a ticket gid, or an array of them)
+// names its own target, which is the only thing that works when the run words a defect
+// better than the ticket it belongs to. `recurrenceLead` overrides the comment's opening
+// line - use it when the finding is a residual of a landed fix rather than a regression.
+const fs = require('fs');
+const { api, IDS } = require('./asana');
+
+const [, , findingsPath, ...rest] = process.argv;
+const DRY = rest.includes('--dry');
+const label = (() => {
+  const i = rest.indexOf('--label');
+  return i >= 0 ? rest[i + 1] : 'unlabelled run';
+})();
+// Append to an epic that already exists instead of opening another one. A cycle
+// produces more than one batch of findings - a scoped re-verification of last
+// cycle's tickets, say - and those belong on the same board with continuous
+// refs, not on a second epic for the same week.
+const epicGid = (() => {
+  const i = rest.indexOf('--epic');
+  return i >= 0 ? rest[i + 1] : null;
+})();
+
+if (!findingsPath) {
+  console.error('usage: node tools/beta/file-findings.js <findings.json> [--label "..."] [--epic <gid>] [--dry]');
+  process.exit(1);
+}
+
+const run = JSON.parse(fs.readFileSync(findingsPath, 'utf8'));
+const findings = run.findings || [];
+
+// Titles are compared on their meaning, not their punctuation: severity prefix, the D-NN
+// ref, case, curly quotes and runs of whitespace all get stripped before comparison.
+const normalise = (s) => s
+  .replace(/^D-\d+\s*/i, '')
+  .replace(/^\[[^\]]+\]\s*/, '')
+  .toLowerCase()
+  .replace(/[‘’“”]/g, "'")
+  .replace(/[^a-z0-9' ]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const SEVERITY_ORDER = ['Blocker', 'Critical', 'Major', 'Minor', 'Cosmetic'];
+const bySeverity = (a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity);
+
+function renderNotes(f, ref, reportUrl) {
+  return `Area: ${f.area} · Found: day ${f.day} · Priority: ${f.priority || 'unset'}
+
+REPRO
+${f.preconditions ? `Preconditions: ${f.preconditions}\n` : ''}${f.steps}
+
+EXPECTED
+${f.expected}
+
+ACTUAL
+${f.actual}
+
+EVIDENCE
+${f.evidence}${f.screenshot ? `\nScreenshot: ${f.screenshot}` : ''}
+
+DONE WHEN
+${f.doneWhen || 'The Expected behaviour above holds, and any failure to achieve it surfaces to the user rather than failing silently.'}
+
+---
+Found in the seven-day beta simulation, ${label} (account grvpanchalus@gmail.com, live Atlas).${reportUrl ? `\nFull report: ${reportUrl}` : ''}`;
+}
+
+(async () => {
+  // Collect every open ticket across all beta epics so we can dedupe against history.
+  const epics = await api('GET', `/tasks?project=${IDS.project}&opt_fields=name,completed&limit=100`);
+  const betaEpics = epics.filter((t) => /^Beta Test fixes/i.test(t.name));
+  const seen = new Map();
+  for (const e of betaEpics) {
+    const subs = await api('GET', `/tasks/${e.gid}/subtasks?opt_fields=name,completed`);
+    subs.forEach((s) => { if (!s.completed) seen.set(normalise(s.name), s); });
+  }
+  console.log(`${betaEpics.length} prior beta epic(s), ${seen.size} still-open ticket(s) to dedupe against.`);
+
+  // The title matcher only catches a recurrence that was reported under roughly the same
+  // words. A run that describes a defect more sharply than the original ticket did will
+  // slip straight past it - the 6-12 Sep run scored 23 new / 0 recurrences when 16 of the
+  // 23 were already on the board. So a finding may name its own target explicitly with
+  // `recurrenceOf` (a gid, or an array of them), which beats the matcher and also reaches
+  // tickets that are already closed - that is the case worth hearing about loudest.
+  const fresh = [];
+  const repeats = [];
+  for (const f of findings.slice().sort(bySeverity)) {
+    const declared = [].concat(f.recurrenceOf || []);
+    if (declared.length) {
+      for (const gid of declared) {
+        const hit = await api('GET', `/tasks/${gid}?opt_fields=name,completed`);
+        repeats.push({ f, hit });
+      }
+    } else {
+      const hit = seen.get(normalise(f.title));
+      if (hit) repeats.push({ f, hit }); else fresh.push(f);
+    }
+  }
+
+  const onClosed = repeats.filter((r) => r.hit.completed);
+  console.log(`${fresh.length} new, ${repeats.length} recurrence comment(s) on ${new Set(repeats.map((r) => r.hit.gid)).size} existing ticket(s).`);
+  if (onClosed.length) {
+    console.log(`${onClosed.length} of them land on a ticket that is already CLOSED:`);
+    onClosed.forEach((r) => console.log(`  !! ${r.hit.gid}  ${r.hit.name}`));
+  }
+  // Appending continues the ref sequence, so the dry run has to know the offset
+  // too - otherwise it previews D-01 for a ticket that will be filed as D-15.
+  const refOffset = epicGid
+    ? (await api('GET', `/tasks/${epicGid}/subtasks?opt_fields=name`)).length
+    : 0;
+
+  if (DRY) {
+    if (epicGid) console.log(`  (appending to epic ${epicGid}, after ${refOffset} existing)`);
+    fresh.forEach((f, i) => console.log(`  NEW  D-${String(refOffset + i + 1).padStart(2, '0')} [${f.severity}] ${f.title}`));
+    repeats.forEach((r) => console.log(`  RPT  ${r.hit.gid}${r.hit.completed ? ' [closed]' : ''}  ${r.hit.name}`));
+    return;
+  }
+
+  // A recurrence is evidence the fix did not hold - say so on the existing ticket. A
+  // finding that is a residual rather than a regression says so in its own words instead.
+  for (const { f, hit } of repeats) {
+    const lead = f.recurrenceLead || `Still reproducing in the ${label} run (day ${f.day}).`;
+    await api('POST', `/tasks/${hit.gid}/stories`, {
+      text: `${lead}\n\nSeen as: ${f.title}\n\nActual: ${f.actual}\n\nEvidence: ${f.evidence}${run.reportUrl ? `\n\nFull report: ${run.reportUrl}` : ''}`,
+    });
+    console.log(`RPT   ${hit.gid}${hit.completed ? ' [closed]' : ''}  ${hit.name}`);
+  }
+  if (!fresh.length) { console.log('\nNothing new to file.'); return; }
+
+  let epic;
+  const offset = refOffset;
+  if (epicGid) {
+    epic = await api('GET', `/tasks/${epicGid}?opt_fields=name,permalink_url`);
+    console.log(`\nEPIC  ${epic.gid}  ${epic.name}  (appending after ${offset} existing)`);
+  } else {
+    epic = await api('POST', '/tasks', {
+      name: `Beta Test fixes — ${label}`,
+      notes: `${run.summary || ''}\n\nRelease recommendation: ${run.releaseRecommendation || 'unstated'}\n\n${fresh.length} defect(s) filed from the seven-day beta simulation, ${label}.`,
+      projects: [IDS.project],
+      memberships: [{ project: IDS.project, section: IDS.sectionTodo }],
+    });
+    console.log(`\nEPIC  ${epic.gid}  ${epic.name}`);
+  }
+
+  for (let i = 0; i < fresh.length; i += 1) {
+    const f = fresh[i];
+    const ref = `D-${String(offset + i + 1).padStart(2, '0')}`;
+    const t = await api('POST', `/tasks/${epic.gid}/subtasks`, {
+      name: `${ref} [${f.severity}] ${f.title}`,
+      notes: renderNotes(f, ref, run.reportUrl),
+    });
+    console.log(`OK    ${t.gid}  ${t.name}`);
+  }
+  console.log(`\nfiled ${fresh.length} under ${epic.gid}`);
+  console.log(`https://app.asana.com/0/${IDS.project}/${epic.gid}`);
+})().catch((e) => { console.error('ERR', e.message); process.exit(1); });

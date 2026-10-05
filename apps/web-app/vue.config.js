@@ -32,12 +32,20 @@ module.exports = {
   },
   pwa: {
     name: 'Routine Notes',
-    themeColor: '#FFFFFF',
-    msTileColor: '#FFFFFF',
+    // The app bar of every redesigned screen (AppShell topbar, RoutineTopBar)
+    // is #f4f4f4, so the Android status bar / task-switcher tint matches it.
+    // The app has no dark theme, so a single (non media-qualified) colour.
+    themeColor: '#f4f4f4',
+    msTileColor: '#f4f4f4',
     appleMobileWebAppCapable: 'yes',
-    appleMobileWebAppStatusBarStyle: '#FFFFFF',
+    // Must be one of default | black | black-translucent ('#FFFFFF' was
+    // invalid). `default` = dark status-bar text on a light bar, with the page
+    // starting below it; `black-translucent` drew WHITE clock/battery text
+    // over the light app bar, which made them unreadable.
+    appleMobileWebAppStatusBarStyle: 'default',
     workboxPluginMode: 'InjectManifest',
     manifestOptions: {
+      background_color: '#f4f4f4',
       start_url: '/?install=true',
       gcm_sender_id: '350952942983',
       gcm_user_visible_only: true,

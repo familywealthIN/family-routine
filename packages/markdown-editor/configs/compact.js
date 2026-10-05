@@ -22,6 +22,8 @@ function compactConfig(overrides = {}) {
     minHeight,
     maxHeight,
     placeholder,
+    // Same preview typography as the read-only renderers (markdown-content.css).
+    previewClass: ['editor-preview', 'rn-markdown'],
     renderingConfig: {
       singleLineBreaks: true,
       markedOptions: {

@@ -74,6 +74,15 @@
       </div>
     </template>
 
+    <!-- A day we failed to load is not a day with nothing in it. Groups we
+         already hold still win over this (the branch above), matching /agents. -->
+    <load-error-state
+      v-else-if="error"
+      message="We couldn't load this day's tasks."
+      :retrying="retrying"
+      @retry="$emit('retry')"
+    />
+
     <atom-card v-else class="agenda-empty-card">
       <atom-card-text class="text-xs-center">
         <p>No Day Tasks</p>
@@ -86,6 +95,7 @@
 import AtomCard from '../../atoms/Card/Card.vue';
 import AtomCardText from '../../atoms/CardText/CardText.vue';
 import AtomProgressCircular from '../../atoms/ProgressCircular/ProgressCircular.vue';
+import LoadErrorState from '../../molecules/LoadErrorState/LoadErrorState.vue';
 
 export default {
   name: 'OrganismAgendaTaskList',
@@ -93,6 +103,7 @@ export default {
     AtomCard,
     AtomCardText,
     AtomProgressCircular,
+    LoadErrorState,
   },
   props: {
     groups: {
@@ -104,6 +115,16 @@ export default {
       default: false,
     },
     hideCheckbox: {
+      type: Boolean,
+      default: false,
+    },
+    // The day's data failed to load. Distinct from "no groups": without it a
+    // connection failure reads as "this day has no tasks".
+    error: {
+      type: Boolean,
+      default: false,
+    },
+    retrying: {
       type: Boolean,
       default: false,
     },

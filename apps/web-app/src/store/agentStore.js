@@ -1,5 +1,6 @@
 import Vue from 'vue';
 import moment from 'moment';
+import { ranToday } from '@routine-notes/ui/constants/agents';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import {
   AGENTS_QUERY,
@@ -20,6 +21,12 @@ import { GC_AUTH_TOKEN } from '../constants/settings';
 
 const RESULT_BODY_MAX = 65536;
 const ERROR_MAX = 2048;
+
+// A run is open from the moment the start event is dispatched until an end
+// event closes it — the same window recordAgentExecution guards server-side
+// (resolvers/agent.js). Read off the persisted agent doc, not the day-scoped
+// badge: an implicitly started run has no badge but is still open.
+const RUN_OPEN_STATUSES = ['running', 'listening'];
 
 const cap = (value, max) => {
   if (typeof value !== 'string') return value;
@@ -42,6 +49,9 @@ const state = Vue.observable({
   agents: [],
   agentsByTaskRef: {},
   statusByRoutineId: {},
+  // The day ('DD-MM-YYYY') the badges in statusByRoutineId belong to. Badges are
+  // only ever about TODAY's trigger, so readers compare this to today.
+  statusDay: '',
   lastResultByRoutineId: {},
   loading: false,
   error: null,
@@ -87,7 +97,10 @@ const persistStatus = () => {
   try {
     if (typeof localStorage === 'undefined') return;
     localStorage.setItem(STATUS_STORAGE_KEY, JSON.stringify({
-      day: todayKey(),
+      // The day the badges were SET on — not the day they are written. Stamping
+      // todayKey() here re-dated yesterday's badges as today's whenever the app
+      // stayed open across midnight and then wrote any status.
+      day: state.statusDay || todayKey(),
       statuses: state.statusByRoutineId,
       meta: statusMeta,
     }));
@@ -96,9 +109,20 @@ const persistStatus = () => {
   }
 };
 
+// A badge set on another day is gone: drop every badge if the day rolled over
+// since they were set (the app stayed open across midnight).
+const rollStatusDay = () => {
+  const today = todayKey();
+  if (state.statusDay === today) return;
+  Object.keys(state.statusByRoutineId).forEach((taskRef) => Vue.delete(state.statusByRoutineId, taskRef));
+  statusMeta = {};
+  state.statusDay = today;
+};
+
 // resolveTo is only meaningful for a 'running' status — where the badge should
 // land if this page dies before the dispatch resolves.
 const setStatus = (taskRef, status, resolveTo) => {
+  rollStatusDay();
   Vue.set(state.statusByRoutineId, taskRef, status);
   if (status === 'running') {
     statusMeta[taskRef] = { at: now(), resolveTo: resolveTo || 'finished' };
@@ -110,6 +134,7 @@ const setStatus = (taskRef, status, resolveTo) => {
 };
 
 const clearStatus = (taskRef) => {
+  rollStatusDay();
   if (state.statusByRoutineId[taskRef] === undefined) return;
   Vue.delete(state.statusByRoutineId, taskRef);
   delete statusMeta[taskRef];
@@ -121,7 +146,14 @@ const clearStatus = (taskRef) => {
 const clearDayStatuses = () => {
   Object.keys(state.statusByRoutineId).forEach((taskRef) => Vue.delete(state.statusByRoutineId, taskRef));
   statusMeta = {};
+  state.statusDay = todayKey();
   persistStatus();
+};
+
+// Today's badge for a task, or '' — a badge from another day never shows.
+const statusFor = (taskRef) => {
+  if (!taskRef || state.statusDay !== todayKey()) return '';
+  return state.statusByRoutineId[taskRef] || '';
 };
 
 // Restore day-scoped badges on load — but only for the SAME day, so reopening
@@ -133,6 +165,7 @@ const hydrateStatus = () => {
     if (!raw) return;
     const parsed = JSON.parse(raw);
     if (parsed && parsed.day === todayKey() && parsed.statuses) {
+      state.statusDay = parsed.day;
       const meta = parsed.meta || {};
       let resolvedAny = false;
       Object.keys(parsed.statuses).forEach((taskRef) => {
@@ -163,6 +196,7 @@ const hydrateStatus = () => {
       if (resolvedAny) persistStatus();
     } else {
       localStorage.removeItem(STATUS_STORAGE_KEY);
+      state.statusDay = todayKey();
     }
   } catch (e) {
     // ignore malformed storage
@@ -175,8 +209,15 @@ hydrateStatus();
 // finish (closed mid-flight). Only overwrites a badge that's actually shown —
 // silent/implicit runs stay silent, and a cleared badge stays cleared.
 const TERMINAL_STATUSES = ['finished', 'failed'];
-const applySyncResult = (taskRef, resolvedStatus) => {
+const isTodayTimestamp = (at) => {
+  if (!at) return true; // no timestamp to judge by: fall back to the badge guard
+  return moment(at).format('DD-MM-YYYY') === todayKey();
+};
+const applySyncResult = (taskRef, resolvedStatus, createdAt) => {
   if (!taskRef || !resolvedStatus) return;
+  // A replay of a dispatch from another day is not about today's trigger.
+  if (!isTodayTimestamp(createdAt)) return;
+  if (state.statusDay !== todayKey()) return;
   if (state.statusByRoutineId[taskRef] === undefined) return;
   // Don't regress a task that already reached a terminal state — e.g. its end
   // event finished — back to an in-flight 'running'/'listening' just because a
@@ -188,10 +229,10 @@ const applySyncResult = (taskRef, resolvedStatus) => {
 };
 
 // Live results from an in-flight SW dispatch (page reopened while it ran).
-onSyncResult((data) => applySyncResult(data.taskRef, data.resolvedStatus));
+onSyncResult((data) => applySyncResult(data.taskRef, data.resolvedStatus, data.createdAt));
 // Results the SW completed entirely while the app was closed.
 drainDoneJobs().then((jobs) => {
-  jobs.forEach((j) => applySyncResult(j.taskRef, j.outcome && j.outcome.resolvedStatus));
+  jobs.forEach((j) => applySyncResult(j.taskRef, j.outcome && j.outcome.resolvedStatus, j.createdAt));
 }).catch(() => {});
 
 // A task is "visible" (shows badges) once it has a status — only explicit
@@ -199,7 +240,8 @@ drainDoneJobs().then((jobs) => {
 // silently and never set a status. Because the status is persisted, the
 // visibility survives reload, so an end event still shows running/done after
 // reopening the app. Presence-of-status replaces the old in-memory Set.
-const isStatusVisible = (taskRef) => state.statusByRoutineId[taskRef] !== undefined;
+const isStatusVisible = (taskRef) => state.statusDay === todayKey()
+  && state.statusByRoutineId[taskRef] !== undefined;
 
 const setResult = (taskRef, result) => {
   Vue.set(state.lastResultByRoutineId, taskRef, result);
@@ -428,6 +470,11 @@ const actions = {
     clearStatus(taskRef);
   },
 
+  /** Today's badge for a task ('' when none, or when it was set another day). */
+  statusFor(taskRef) {
+    return statusFor(taskRef);
+  },
+
   clearResult(taskRef) {
     Vue.delete(state.lastResultByRoutineId, taskRef);
     if (state.resultModalRoutineId === taskRef) state.resultModalRoutineId = null;
@@ -543,6 +590,15 @@ const actions = {
   }) {
     const agent = state.agentsByTaskRef[taskRef];
     if (!agent || !agent.endEvent || !agent.endEvent.value) return null;
+    // An end event CLOSES a run, so it may only go out while one is open. A
+    // task completed with "Start Task" — the button that means "do not run the
+    // agent" — never opened one, so filling its goal-item counter must not put
+    // the end event on the wire, record an execution, or touch the status of
+    // the run that did happen.
+    if (!RUN_OPEN_STATUSES.includes(agent.executionStatus)) return null;
+    // ...and only a run TODAY's trigger opened. A run left listening yesterday
+    // is history: today's ticks must not close it (a new day starts idle).
+    if (!ranToday(agent)) return null;
 
     // Badges only for agents the user explicitly started — detected by the
     // presence of a (persisted) status like "listening". An agent that
@@ -575,16 +631,37 @@ const actions = {
         ? cap(resultData, RESULT_BODY_MAX)
         : cap(JSON.stringify(resultData == null ? null : resultData), RESULT_BODY_MAX);
 
-      const updated = await recordExecution(apollo, {
-        id: agent.id,
-        // Silent (implicit) end-event failures don't persist a "failed" state.
-        status: recordedStatus(visible, ok, 'finished'),
-        lastResultType: resultType || null,
-        lastResultBody,
-        lastError: ok ? null : cap((result && result.statusText) || 'End event failed', ERROR_MAX),
-        incrementSuccess: ok ? 1 : 0,
-        incrementFailure: ok ? 0 : 1,
-      });
+      let updated;
+      try {
+        updated = await recordExecution(apollo, {
+          id: agent.id,
+          // Silent (implicit) end-event failures don't persist a "failed" state.
+          status: recordedStatus(visible, ok, 'finished'),
+          lastResultType: resultType || null,
+          lastResultBody,
+          lastError: ok ? null : cap((result && result.statusText) || 'End event failed', ERROR_MAX),
+          incrementSuccess: ok ? 1 : 0,
+          incrementFailure: ok ? 0 : 1,
+        });
+      } catch (err) {
+        // The server refuses a close that closes no open run. That refusal is
+        // not a dispatch failure: booking one here would count a failure
+        // against the agent and overwrite the very status the refusal exists
+        // to protect. Tell the user instead of failing silently, and stop
+        // short of the transcript a refused close never earned.
+        console.warn('[agentStore.fireEndEvent] execution not recorded', err);
+        show(ok ? 'finished' : 'failed');
+        if (vm && vm.$notify) {
+          vm.$notify({
+            title: 'Agent run not recorded',
+            text: `The end event for "${agent.name}" ran but could not be recorded`,
+            group: 'notify',
+            type: 'warning',
+            duration: 4000,
+          });
+        }
+        return null;
+      }
       if (updated) upsertAgent(updated);
       // Leaves the badge on "Agent done" (persisted, day-scoped) as the final
       // visible state.
@@ -639,6 +716,7 @@ const actions = {
     state.agents = [];
     state.agentsByTaskRef = {};
     state.statusByRoutineId = {};
+    state.statusDay = '';
     state.lastResultByRoutineId = {};
     state.loading = false;
     state.error = null;
@@ -653,6 +731,7 @@ export default {
   get agents() { return state.agents; },
   get agentsByTaskRef() { return state.agentsByTaskRef; },
   get statusByRoutineId() { return state.statusByRoutineId; },
+  get statusDay() { return state.statusDay; },
   get lastResultByRoutineId() { return state.lastResultByRoutineId; },
   get loading() { return state.loading; },
   get error() { return state.error; },

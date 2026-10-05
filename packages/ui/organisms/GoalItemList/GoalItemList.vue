@@ -38,6 +38,31 @@
           The goal is a milestone
         </v-list-tile-sub-title> -->
         </AtomListTileContent>
+
+        <!-- How close this goal is: the milestones it was declared against and
+             how many are still open. Only period goals carry the tally. -->
+        <AtomListTileAction v-if="goalItem.milestonesTotal">
+          <div
+            class="milestone-counter"
+            data-testid="goal-milestone-counter"
+            :title="getMilestonesOutstanding(goalItem)"
+          >
+            {{ getMilestonesProgress(goalItem) }}
+          </div>
+        </AtomListTileAction>
+
+        <!-- A day the user did not manage, recorded on the item instead of
+             deleted. Only shown while the item is still unticked. -->
+        <AtomListTileAction v-if="isMissed(goalItem)">
+          <div
+            class="missed-counter"
+            data-testid="goal-missed-marker"
+            title="Marked missed"
+          >
+            Missed
+          </div>
+        </AtomListTileAction>
+
         <AtomListTileAction v-if="goalItem.subTasks && goalItem.subTasks.length > 0">
           <div class="subtask-counter">
             {{ getSubTasksProgress(goalItem.subTasks) }}
@@ -175,6 +200,29 @@ export default {
       const total = subTasks.length;
       return `${completed}/${total} subtasks`;
     },
+    getMilestonesProgress(goalItem) {
+      const total = goalItem.milestonesTotal || 0;
+      if (!total) {
+        return '';
+      }
+
+      const completed = goalItem.milestonesComplete || 0;
+      return `${completed}/${total} milestones`;
+    },
+    isMissed(goalItem) {
+      return !!goalItem && goalItem.status === 'missed' && !goalItem.isComplete;
+    },
+    getMilestonesOutstanding(goalItem) {
+      const total = goalItem.milestonesTotal || 0;
+      if (!total) {
+        return '';
+      }
+
+      const outstanding = total - (goalItem.milestonesComplete || 0);
+      return outstanding
+        ? `${outstanding} of ${total} milestones outstanding`
+        : `All ${total} milestones met`;
+    },
     /**
      * Ask the parent to toggle a sub-task. Emits intent only.
      *
@@ -295,6 +343,30 @@ export default {
     font-size: 0.75rem;
     color: #757575;
     background-color: #f5f5f5;
+    border-radius: 12px;
+    padding: 4px 8px;
+    min-width: 60px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* Milestone counter styling */
+  .milestone-counter {
+    font-size: 0.75rem;
+    color: #1976d2;
+    background-color: #e3f2fd;
+    border-radius: 12px;
+    padding: 4px 8px;
+    min-width: 60px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* Missed marker styling */
+  .missed-counter {
+    font-size: 0.75rem;
+    color: #c62828;
+    background-color: #ffebee;
     border-radius: 12px;
     padding: 4px 8px;
     min-width: 60px;

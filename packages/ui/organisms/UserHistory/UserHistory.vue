@@ -229,15 +229,6 @@ export default {
       }
       return 'more_horiz';
     },
-    getRoutineEfficiency(date) {
-      const routines = this.routinesMap[date];
-      if (!routines || !routines.length) return 0;
-      const tasklist = routines[0].tasklist || [];
-      const total = tasklist.reduce((sum, t) => sum + (t.points || 1), 0);
-      if (!total) return 0;
-      const ticked = tasklist.reduce((sum, t) => sum + (t.ticked ? (t.points || 1) : 0), 0);
-      return Math.min(100, Math.ceil((ticked / total) * 100));
-    },
     getRingOffset(date, stimulus, circumference) {
       const stimuli = this.routineStimuliMap[date];
       if (!stimuli) return circumference;

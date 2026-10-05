@@ -13,13 +13,32 @@ const { UserItemType, UserModel } = require('../schema/UserSchema');
 const { authenticateGoogle, authenticateApple } = require('../passport');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
-const { ApiError } = require('../utils/ApiError');
+const ApiError = require('../utils/ApiError');
 const { RoutineModel } = require('../schema/RoutineSchema');
 const { RoutineItemModel } = require('../schema/RoutineItemSchema');
 const { GoalModel } = require('../schema/GoalSchema');
 const { ProgressModel } = require('../schema/ProgressSchema');
 const { ReferralModel } = require('../schema/ReferralSchema');
 const { grantWelcomePoints } = require('../utils/xpLedger');
+
+/** `sendInvite` stores the session email as typed — match addresses case-insensitively. */
+const sameEmail = (a, b) => !!a && !!b && String(a).toLowerCase() === String(b).toLowerCase();
+
+/** An exact, case-insensitive email match for a Mongo filter (regex-escaped). */
+const emailMatcher = (email) => {
+  const escaped = String(email).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${escaped}$`, 'i');
+};
+
+/**
+ * The only fields an inviter may see of the person they invited — the invitee
+ * has not joined yet, so nothing beyond what the pending row draws.
+ */
+const inviteeView = (user) => ({
+  email: user.email,
+  name: user.name || '',
+  picture: user.picture || '',
+});
 
 const query = {
   getUserTags: {
@@ -61,6 +80,31 @@ const query = {
       }
 
       return UserModel.find({ groupId: args.groupId }).exec();
+    },
+  },
+  /**
+   * Invites the caller has sent that are still open: users whose
+   * `inviterEmail` is the caller and who have not joined the caller's group.
+   * Accepting or declining clears `inviterEmail`, so a declined invite drops
+   * out here and stops holding a member slot. Only email/name/picture leave.
+   */
+  pendingInvites: {
+    type: GraphQLList(UserItemType),
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const me = await UserModel.findOne({ email }).exec();
+      const groupId = (me && me.groupId) || '';
+
+      const invitees = await UserModel.find(
+        { inviterEmail: emailMatcher(email) },
+        'email name picture groupId inviterEmail',
+      ).exec();
+
+      return (invitees || [])
+        .filter((user) => user && user.email && !sameEmail(user.email, email))
+        .filter((user) => sameEmail(user.inviterEmail, email))
+        .filter((user) => !groupId || user.groupId !== groupId)
+        .map(inviteeView);
     },
   },
 };
@@ -108,7 +152,7 @@ const mutation = {
               return (new ApiError(500, '500:something went wrong'));
           }
         }
-        return (ApiError(500, '500:server error'));
+        return (new ApiError(500, '500:server error'));
       } catch (error) {
         return error;
       }
@@ -155,7 +199,7 @@ const mutation = {
               return (new ApiError(500, '500:something went wrong'));
           }
         }
-        return (ApiError(500, '500:server error'));
+        return (new ApiError(500, '500:server error'));
       } catch (error) {
         console.error('Apple auth error:', error);
         return new ApiError(500, `500:Apple authentication failed: ${error.message}`);
@@ -190,6 +234,39 @@ const mutation = {
         { inviterEmail: email },
         { new: true },
       );
+    },
+  },
+  /**
+   * Withdraw an invite the caller sent. Clears the invitee's `inviterEmail`
+   * only when the caller is the one who invited them; never touches anyone's
+   * `groupId`. Unknown address or someone else's invite -> 403.
+   */
+  cancelInvite: {
+    type: UserItemType,
+    args: {
+      invitedEmail: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const invitee = await UserModel.findOne({ email: emailMatcher(args.invitedEmail) }).exec();
+
+      if (!invitee || !sameEmail(invitee.inviterEmail, email)) {
+        throw new ApiError(403, '403:Invite Not Found');
+      }
+
+      // Conditional on the invite still being ours: an accept/decline (or a
+      // re-invite from someone else) racing this must not be overwritten.
+      const updated = await UserModel.findOneAndUpdate(
+        { _id: invitee._id, inviterEmail: invitee.inviterEmail },
+        { inviterEmail: '' },
+        { new: true },
+      );
+
+      if (!updated) {
+        throw new ApiError(403, '403:Invite Not Found');
+      }
+
+      return { ...inviteeView(updated), inviterEmail: '' };
     },
   },
   acceptInvite: {
@@ -263,7 +340,7 @@ const mutation = {
       const email = getEmailfromSession(context);
 
       if (!email) {
-        throw new ApiError('Authentication required', 401);
+        throw new ApiError(401, '401:Authentication required');
       }
 
       // Generate a unique API key
@@ -288,7 +365,7 @@ const mutation = {
       const email = getEmailfromSession(context);
 
       if (!email) {
-        throw new ApiError('Authentication required', 401);
+        throw new ApiError(401, '401:Authentication required');
       }
 
       // Generate a unique authorization code
@@ -322,7 +399,7 @@ const mutation = {
       const email = getEmailfromSession(context);
 
       if (!email) {
-        throw new ApiError('Authentication required', 401);
+        throw new ApiError(401, '401:Authentication required');
       }
 
       return UserModel.findOneAndUpdate(
@@ -341,7 +418,7 @@ const mutation = {
       const email = getEmailfromSession(context);
 
       if (!email) {
-        throw new ApiError('Authentication required', 401);
+        throw new ApiError(401, '401:Authentication required');
       }
 
       const update = { needsOnboarding: false };
@@ -384,7 +461,7 @@ const mutation = {
       const email = getEmailfromSession(context);
 
       if (!email) {
-        throw new ApiError('Authentication required', 401);
+        throw new ApiError(401, '401:Authentication required');
       }
 
       try {
@@ -410,7 +487,7 @@ const mutation = {
         };
       } catch (error) {
         console.error('Error deleting account:', error);
-        throw new ApiError('Failed to delete account', 500);
+        throw new ApiError(500, '500:Failed to delete account');
       }
     },
   },

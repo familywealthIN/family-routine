@@ -18,6 +18,8 @@ type Query {
   showInvite: UserItem
   # Get all users in the same group
   getUsersByGroupId(groupId: String!): [UserItem]
+  # Invites you sent that are still open (email, name, picture only)
+  pendingInvites: [UserItem]
 
   # ── Routine Items (templates) ──────────────────────────────────────────────
   # Get all routine item templates for the user
@@ -117,6 +119,8 @@ type Mutation {
   deleteAccount: DeleteAccountResponse
   # Invite another user to join your group by email
   sendInvite(invitedEmail: String!): UserItem
+  # Withdraw an invite you sent (403 if it is not yours or no longer open)
+  cancelInvite(invitedEmail: String!): UserItem
   # Accept a pending group invitation
   acceptInvite(inviterEmail: String!): UserItem
   # Decline a pending group invitation
@@ -222,6 +226,10 @@ type Mutation {
   addSubTaskItem(taskId: ID!, date: String!, period: String!, body: String, isComplete: Boolean): SubTaskItem
   # Update a sub-task's body text
   updateSubTaskItem(id: ID!, taskId: ID!, date: String!, period: String!, body: String): SubTaskItem
+  # Reorder a goal item's sub-tasks; ids is the desired order. Returns the parent goal item.
+  reorderSubTaskItems(taskId: ID!, date: String!, period: String!, ids: [ID!]!): GoalItem
+  # Tick or untick a sub-task. Returns the parent goal item.
+  completeSubTaskItem(id: ID!, taskId: ID!, date: String!, period: String!, isComplete: Boolean!): GoalItem
   # Delete a sub-task from a goal item
   deleteSubTaskItem(id: ID!, taskId: ID!, date: String!, period: String!): SubTaskItem
 
@@ -324,6 +332,8 @@ type DayStimuli {
   D: Float
   K: Float
   G: Float
+  # The user marked this day as a Skip Day — a rest day, not a day that got away
+  skipped: Boolean
 }
 
 type Goal {

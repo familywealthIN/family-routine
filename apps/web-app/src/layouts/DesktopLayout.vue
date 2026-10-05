@@ -22,6 +22,7 @@
                 :available="(xpBalance && xpBalance.available) || 0"
                 :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
                 :entitled="!!(xpBalance && xpBalance.entitled)"
+                :error="xpBalanceError && !xpBalance"
                 :loading="$apollo.queries.xpBalance.loading"
               />
             </v-list-tile-sub-title>
@@ -48,7 +49,6 @@
           </v-list-tile-content>
         </v-list-tile>
         <year-goal-sidebar :yearGoals="yearGoals" />
-        <area-sidebar :areaTags="areaTags" />
         <v-list-tile v-for="item in otherItems" :key="item.title" :to="item.route">
           <v-list-tile-action>
             <v-icon>{{ item.icon }}</v-icon>
@@ -58,8 +58,6 @@
             <v-list-tile-title>{{ item.title }}</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
-
-        <project-sidebar :projectTags="projectTags" />
 
         <!-- Settings Group with Submenu -->
         <v-list class="pa-0">
@@ -146,8 +144,6 @@
 <script>
 import gql from 'graphql-tag';
 import moment from 'moment';
-import ProjectSidebar from '@routine-notes/ui/molecules/ProjectSidebar/ProjectSidebar.vue';
-import AreaSidebar from '@routine-notes/ui/molecules/AreaSidebar/AreaSidebar.vue';
 import YearGoalSidebar from '@routine-notes/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue';
 import PointsChip from '@routine-notes/ui/molecules/PointsChip/PointsChip.vue';
 import localforage from 'localforage';
@@ -164,8 +160,6 @@ import { clearData, getSessionItem } from '../token';
 export default {
   components: {
     PendingList,
-    ProjectSidebar,
-    AreaSidebar,
     YearGoalSidebar,
     TaskTimingBar,
     PointsChip,
@@ -175,6 +169,7 @@ export default {
     return {
       drawer: null,
       pendingDialog: false,
+      xpBalanceError: false,
       toolbarRoutine: null,
       items: [
         { title: 'Home', icon: 'home', route: '/home' },
@@ -186,8 +181,6 @@ export default {
         { title: 'Agents', icon: 'smart_toy', route: '/agents' },
       ],
       yearGoals: [],
-      projectTags: [],
-      areaTags: [],
     };
   },
   apollo: {
@@ -212,26 +205,6 @@ export default {
       update(data) {
         return data.currentYearGoals || [];
       },
-      skip() {
-        return !this.$root.$data.email;
-      },
-    },
-    projectTags: {
-      query: gql`
-        query projectTags {
-          projectTags
-        }
-      `,
-      skip() {
-        return !this.$root.$data.email;
-      },
-    },
-    areaTags: {
-      query: gql`
-        query areaTags {
-          areaTags
-        }
-      `,
       skip() {
         return !this.$root.$data.email;
       },
@@ -269,6 +242,15 @@ export default {
       },
       skip() {
         return !this.$root.$data.email;
+      },
+      result({ data }) {
+        if (data) this.xpBalanceError = false;
+      },
+      // A failed load leaves xpBalance undefined, which the chip would paint as
+      // `0` — a balance the app does not actually know.
+      error(error) {
+        console.error('[DesktopLayout] xpBalance query failed:', error);
+        this.xpBalanceError = true;
       },
     },
   },
