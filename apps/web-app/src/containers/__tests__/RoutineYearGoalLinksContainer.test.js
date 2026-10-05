@@ -77,8 +77,27 @@ describe('the routine -> year goal map', () => {
     expect(links([{ date: '01-01-2026', goalItems: [yearGoal({ taskRef: '' })] }])).toEqual({});
   });
 
-  it('skips a milestone that happens to sit in a year document', () => {
-    expect(links([{ date: '01-01-2026', goalItems: [yearGoal({ isMilestone: true })] }])).toEqual({});
+  it('skips a step toward a sibling year goal that sits in the same year document', () => {
+    expect(links([{
+      date: '01-01-2026',
+      goalItems: [
+        yearGoal({ taskRef: '' }),
+        yearGoal({
+          id: 'g2', body: 'Step', isMilestone: true, goalRef: 'g1',
+        }),
+      ],
+    }])).toEqual({});
+  });
+
+  // grvpanchal@gmail.com: every 2026 year goal hangs off a lifetime goal, so the
+  // server stored each with isMilestone: true (a goalRef requires it). They are
+  // still year goals, and the editor's LINKED row must find them.
+  it('links a year goal that is a milestone of a LIFETIME goal', () => {
+    const map = links([{
+      date: '31-12-2026',
+      goalItems: [yearGoal({ isMilestone: true, goalRef: 'life-1' })],
+    }]);
+    expect(map.sw.id).toBe('g1');
   });
 
   it('skips an item with no id', () => {

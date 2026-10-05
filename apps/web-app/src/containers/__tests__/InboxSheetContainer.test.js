@@ -24,6 +24,7 @@ jest.mock('../../utils/cacheGuard', () => ({
 
 const Container = require('../InboxSheetContainer.vue').default;
 const { guardFields, releaseEntity } = require('../../utils/cacheGuard');
+const { toPendingRows } = require('../../composables/graphql/mottoQueries');
 
 const ITEM = {
   id: 'i1',
@@ -58,8 +59,9 @@ const ctx = (over = {}) => ({
   },
   $notify: jest.fn(),
   $emit: jest.fn(),
-  notifyError: Container.methods.notifyError,
-  assign: Container.methods.assign,
+  removedPending: [],
+  ...Container.methods,
+  refetchPending: jest.fn(),
   ...over,
 });
 
@@ -176,5 +178,73 @@ describe('InboxSheetContainer — delete', () => {
     const vm = ctx();
     call('onRemove', vm, {});
     expect(vm.$goals.deleteGoalItem).not.toHaveBeenCalled();
+  });
+});
+
+describe('InboxSheetContainer — pending items (the old "Pending Items" list)', () => {
+  const PENDING = {
+    id: 'pending:m1', mottoId: 'm1', kind: 'pending', body: 'Fix the bike',
+  };
+  const flush = async () => {
+    for (let i = 0; i < 5; i += 1) await Promise.resolve(); // eslint-disable-line no-await-in-loop
+  };
+
+  it('maps motto entries to rows, de-duped and without blanks', () => {
+    const rows = toPendingRows([
+      { id: 'm1', mottoItem: 'Fix the bike' },
+      { id: 'm1', mottoItem: 'Fix the bike' },
+      { id: 'm2', mottoItem: '   ' },
+      null,
+    ]);
+    expect(rows).toEqual([expect.objectContaining({
+      id: 'pending:m1', mottoId: 'm1', kind: 'pending', body: 'Fix the bike',
+    })]);
+  });
+
+  it('hides a deleted pending id from the rows', () => {
+    const vm = { motto: [{ id: 'm1', mottoItem: 'A' }, { id: 'm2', mottoItem: 'B' }], removedPending: ['m1'] };
+    const rows = Container.computed.pendingRows.call(vm);
+    expect(rows.map((r) => r.mottoId)).toEqual(['m2']);
+  });
+
+  it('Do now creates the goal item on the routine, then deletes the pending entry', async () => {
+    const vm = ctx();
+    call('onDoNow', vm, PENDING);
+    expect(vm.$goals.addGoalItem).toHaveBeenCalledWith(expect.objectContaining({
+      body: 'Fix the bike', taskRef: 'sw', goalRef: 'wg_sw', date: '12-09-2026',
+    }));
+    await flush();
+    expect(vm.$apollo.mutate).toHaveBeenCalledWith(expect.objectContaining({
+      variables: { id: 'm1' },
+    }));
+    expect(vm.removedPending).toEqual(['m1']);
+    expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({ title: 'Moved to Start Work' }));
+  });
+
+  it('a failed create keeps the pending entry', async () => {
+    const vm = ctx();
+    vm.$goals.addGoalItem = jest.fn(() => Promise.reject(new Error('x')));
+    call('onMove', vm, { item: PENDING, routine: vm.routines[0] });
+    await flush();
+    expect(vm.$apollo.mutate).not.toHaveBeenCalled();
+    expect(vm.removedPending).toEqual([]);
+  });
+
+  it('delete removes the pending entry, not a goal item', async () => {
+    const vm = ctx();
+    call('onRemove', vm, PENDING);
+    expect(vm.$goals.deleteGoalItem).not.toHaveBeenCalled();
+    expect(vm.removedPending).toEqual(['m1']);
+    await flush();
+    expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({ title: 'Removed from Inbox' }));
+  });
+
+  it('a failed delete brings the row back', async () => {
+    const vm = ctx({
+      $apollo: { mutate: jest.fn(() => Promise.reject(new Error('x'))) },
+    });
+    call('onRemove', vm, PENDING);
+    await flush();
+    expect(vm.removedPending).toEqual([]);
   });
 });

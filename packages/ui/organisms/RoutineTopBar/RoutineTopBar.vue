@@ -27,7 +27,17 @@
       >{{ inboxCount }}</div>
     </div>
 
-    <div class="rn-topbar__title" :style="{ opacity: ticked ? 0 : 1 }">{{ title }}</div>
+    <!-- The day line ("5 routines left · 7/9 tasks") under the title is the same
+         line the tablet/desktop header carries; it fades with the title when
+         the ticked routine's mini ring takes the centre. -->
+    <div class="rn-topbar__title" :style="{ opacity: ticked ? 0 : 1 }">
+      <div class="rn-topbar__title-text">{{ title }}</div>
+      <div
+        v-if="subtitle"
+        class="rn-topbar__subtitle"
+        data-testid="topbar-day-summary"
+      >{{ subtitle }}</div>
+    </div>
 
     <div class="rn-topbar__centre" :style="{ visibility: showMini ? 'visible' : 'hidden' }">
       <div ref="ringTarget" class="rn-topbar__mini-wrap">
@@ -81,6 +91,8 @@ export default {
   components: { FocusPointsChip },
   props: {
     title: { type: String, default: 'Home' },
+    /** The day's progress line under the title. Empty hides it. */
+    subtitle: { type: String, default: '' },
     ticked: { type: Boolean, default: false },
     routineName: { type: String, default: '' },
     /** Hidden while the tick ghost is still flying — otherwise both are visible. */
@@ -188,7 +200,23 @@ export default {
   font-size: 24px;
   font-weight: 500;
   flex: 1;
+  min-width: 0;
   transition: opacity .3s;
+}
+
+.rn-topbar__title-text {
+  line-height: 1.15;
+}
+
+.rn-topbar__subtitle {
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: rgba(0, 0, 0, .5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rn-topbar__centre {

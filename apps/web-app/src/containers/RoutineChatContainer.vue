@@ -113,8 +113,11 @@ export default {
       chatMessages: [],
       typing: false,
       sending: false,
-      /** taskRef -> collapsed. Absent means open, which is the default state. */
-      briefCollapsed: {},
+      /**
+       * taskRef -> open. Absent means collapsed: the brief starts minimised so
+       * the thread leads with the conversation, and a tap on its header opens it.
+       */
+      briefOpen: {},
       /**
        * `${taskRef}|${exact step text}` for steps added in this session. The
        * checklist itself is the other half of the answer (see `isStepAdded`) —
@@ -223,7 +226,7 @@ export default {
         kind: 'brief',
         blocks: this.briefBlocks,
         subline: briefSubline(this.briefBlocks),
-        open: !this.briefCollapsed[this.taskRef],
+        open: !!this.briefOpen[this.taskRef],
       };
     },
 
@@ -304,10 +307,11 @@ export default {
     },
   },
   methods: {
+    /** Re-read the thread from the network. Resolves when the read settles. */
     refetch() {
-      if (this.$apollo.queries.chatMessages) {
-        this.$apollo.queries.chatMessages.refetch();
-      }
+      const query = this.$apollo.queries.chatMessages;
+      if (query && !query.skip) return query.refetch();
+      return Promise.resolve();
     },
 
     /**
@@ -497,16 +501,16 @@ export default {
     },
 
     toggleBrief() {
-      this.briefCollapsed = {
-        ...this.briefCollapsed,
-        [this.taskRef]: !this.briefCollapsed[this.taskRef],
+      this.briefOpen = {
+        ...this.briefOpen,
+        [this.taskRef]: !this.briefOpen[this.taskRef],
       };
     },
 
     /** The composer taking focus collapses the brief. Called by the page. */
     collapseBrief() {
-      if (!this.taskRef || this.briefCollapsed[this.taskRef]) return;
-      this.briefCollapsed = { ...this.briefCollapsed, [this.taskRef]: true };
+      if (!this.taskRef || !this.briefOpen[this.taskRef]) return;
+      this.briefOpen = { ...this.briefOpen, [this.taskRef]: false };
     },
 
     /**

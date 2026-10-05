@@ -69,13 +69,30 @@
           :style="ringStyle"
           data-testid="routine-focus-ring"
         >
-          <svg viewBox="0 0 96 96" class="rn-focus-card__ring-svg">
-            <circle cx="48" cy="48" r="42" fill="none" stroke="rgba(0,0,0,.06)" stroke-width="6" />
+          <!--
+            Drawn in the ring's own pixel space (viewBox = rendered size), so the
+            stroke is a whole-pixel width at every form factor and the radius
+            keeps the whole stroke inside the box and clear of the button. The
+            old fixed 96-unit viewBox scaled a 6-unit stroke to 2.9px on the
+            ticked tablet ring (and 7.5px on the phone) and let the button
+            overlap its inner edge — a lopsided, sub-pixel donut.
+          -->
+          <svg
+            :viewBox="`0 0 ${ringPx} ${ringPx}`"
+            class="rn-focus-card__ring-svg"
+            data-testid="routine-focus-ring-svg"
+          >
             <circle
-              cx="48" cy="48" r="42" fill="none" stroke="#FF9800" stroke-width="6"
-              stroke-dasharray="263.9"
-              :stroke-dashoffset="ringOffset"
-              stroke-linecap="round"
+              :cx="ringPx / 2" :cy="ringPx / 2" :r="ringGeom.r"
+              fill="none" stroke="rgba(0,0,0,.06)" :stroke-width="ringGeom.stroke"
+            />
+            <circle
+              v-if="ringRemaining < 1"
+              :cx="ringPx / 2" :cy="ringPx / 2" :r="ringGeom.r"
+              fill="none" stroke="#FF9800" :stroke-width="ringGeom.stroke"
+              :stroke-dasharray="ringGeom.c"
+              :stroke-dashoffset="ringGeom.c * ringRemaining"
+              :stroke-linecap="ringRemaining > 0 ? 'round' : 'butt'"
               class="rn-focus-card__ring-progress"
             />
           </svg>
@@ -98,7 +115,7 @@
             :style="tickStyle"
             @click.stop="$emit('action', $event)"
           >
-            <i class="rn-mi" :style="{ fontSize: `${geometry.ringGlyph}px` }">{{ tickGlyph }}</i>
+            <i class="rn-mi" :style="{ fontSize: `${tickGlyphPx}px` }">{{ tickGlyph }}</i>
           </button>
         </div>
 
@@ -108,24 +125,20 @@
           <div ref="title" class="rn-focus-card__title" :style="titleStyle">{{ routine.name }}</div>
         </div>
 
-        <div class="rn-focus-card__meta">
+        <!-- The stimulus pill + "06:00 – 06:30 · Ticked →" line was removed at
+             the owner's request (the status row already says all of it); only
+             the agent's "View result" link is left, and only when there is one. -->
+        <div v-if="showResultLink" class="rn-focus-card__meta">
           <span
-            class="rn-focus-card__stim"
-            :style="{ background: stimulus.tint, color: stimulus.color }"
-          >{{ stimulus.label }} +{{ routine.points || 0 }}</span>
-          <span class="rn-focus-card__window">
-            {{ routine.time }} – {{ endTime }}<template v-if="isDayTab"> · {{ tickHint }} →</template>
-          </span>
-          <span
-            v-if="showResultLink"
             class="rn-focus-card__result"
+            data-testid="focus-card-result-link"
             @click.stop="$emit('open-result')"
           >View result</span>
         </div>
       </div>
 
       <!-- CHECKLIST header. Collapses to a segmented progress strip. -->
-      <div v-if="isDayTab" class="rn-focus-card__checklist-head" @click="$emit('toggle-checklist')">
+      <div v-if="isDayTab" class="rn-focus-card__checklist-head" @click="onChecklistHead">
         <div class="rn-focus-card__checklist-head-row">
           <div class="rn-focus-card__checklist-label">
             CHECKLIST<i class="rn-mi rn-focus-card__chevron">{{ checklistOpen ? 'expand_less' : 'expand_more' }}</i>
@@ -225,12 +238,15 @@ import {
   agentStageOf,
   AGENT_LIVE_STAGES,
   focusVariant,
-  stimulusOf,
 } from '../../constants/routineFocus';
 import RoutineCascadePanel from '../RoutineCascadePanel/RoutineCascadePanel.vue';
 
-// r=42 in a 96 viewBox.
+// The progress unit `ringOffset` is expressed in: the circumference of the
+// design's r=42 ring. The drawn ring scales it to its real circumference.
 const RING_CIRCUMFERENCE = 263.9;
+// The phone's ticked check (RoutineTopBar mini ring): 20px glyph, 34px button.
+const TICKED_GLYPH = 20;
+const TICKED_BUTTON = 34;
 
 export default {
   name: 'OrganismRoutineFocusCard',
@@ -275,9 +291,6 @@ export default {
     geometry() {
       return focusVariant(this.variant);
     },
-    stimulus() {
-      return stimulusOf(this.routine.stimulus);
-    },
     isDayTab() {
       return this.period === 'day';
     },
@@ -316,6 +329,24 @@ export default {
         ? this.geometry.ringSm
         : this.geometry.ring;
     },
+    /**
+     * Ring stroke and radius in CSS pixels. Whole-pixel stroke (3px on the small
+     * ticked ring, 6px otherwise), radius set so the stroke's outer edge meets
+     * the box edge, and never closer to the button than 2px.
+     */
+    ringGeom() {
+      const small = this.ringPx < 64;
+      const stroke = small ? 3 : 6;
+      const maxStroke = Math.max(2, this.tickInset - 2);
+      const w = Math.min(stroke, maxStroke);
+      const r = (this.ringPx - w) / 2;
+      return { stroke: w, r, c: 2 * Math.PI * r };
+    },
+    /** Fraction of the ring still to draw (0 = full, 1 = nothing — hidden,
+        so a round line-cap never paints a stray dot at 12 o'clock). */
+    ringRemaining() {
+      return Math.min(1, Math.max(0, this.ringOffset / RING_CIRCUMFERENCE));
+    },
     ringStyle() {
       return {
         width: `${this.ringPx}px`,
@@ -331,6 +362,22 @@ export default {
       return this.routine.ticked && this.geometry.ringSm
         ? Math.round(this.geometry.ringSm / 10)
         : this.geometry.ringInset;
+    },
+    /**
+     * Glyph size inside the tick button, kept at the phone's proportion
+     * (32px glyph in its 100px button) on every variant and on the shrunken
+     * ticked ring — a fixed token oversized the icon on tablet/desktop. The
+     * shrunken ticked ring follows the phone's ticked check instead (the
+     * header's 20px check in its 34px button), so the check stays legible.
+     */
+    tickGlyphPx() {
+      const button = this.ringPx - 2 * this.tickInset;
+      if (this.routine.ticked && this.geometry.ringSm) {
+        return Math.round(button * (TICKED_GLYPH / TICKED_BUTTON));
+      }
+      const phone = focusVariant('phone');
+      const ratio = phone.ringGlyph / (phone.ring - 2 * phone.ringInset);
+      return Math.round(button * ratio);
     },
     ringOffset() {
       if (this.routine.ticked && this.geometry.ringSm) return 0;
@@ -371,15 +418,6 @@ export default {
       if (this.agentLive) return 'Agent working…';
       if (this.routine.ticked) return 'Ticked · tap to undo';
       if (this.routine.redeemable) return 'Redeem with points';
-      return 'Tick routine';
-    },
-    tickHint() {
-      if (this.agentLive) return 'Agent working';
-      if (this.routine.ticked) return 'Ticked';
-      // Only a redeemable routine can be redeemed; a passed one that is not
-      // (another day, or already redeemed) is a locked miss.
-      if (this.routine.redeemable) return 'Redeem';
-      if (this.routine.passed) return 'Missed';
       return 'Tick routine';
     },
     /** On the phone the ticked title lives in the header, not the card. */
@@ -428,8 +466,49 @@ export default {
     period() {
       this.$nextTick(this.scrollToTop);
     },
+    checklistOpen(open) {
+      if (open) this.$nextTick(this.restoreChecklistScroll);
+      else this.measureAfterCollapse();
+    },
+  },
+  created() {
+    // Non-reactive: scroll bookkeeping for the checklist accordion.
+    this.collapseScroll = null;
   },
   methods: {
+    /**
+     * The CHECKLIST header toggles the accordion. Collapsing removes the rows
+     * from the TOP of the shared scroller, so anything scrolled less than the
+     * list's height snaps to 0 (the browser's scroll anchoring has nothing above
+     * to hold on to), and expanding again then left the user at the very top —
+     * the "expand brings me back to top" report. Remember where they were and put
+     * them back, unless they have scrolled the collapsed view since.
+     */
+    onChecklistHead() {
+      const el = this.$refs.scroller;
+      if (el && this.checklistOpen) {
+        this.collapseScroll = { from: el.scrollTop, after: null };
+      } else if (el && this.collapseScroll && this.collapseScroll.after !== null
+        && Math.abs(el.scrollTop - this.collapseScroll.after) > 1) {
+        // Scrolled while collapsed: that position is theirs now; leave it alone.
+        this.collapseScroll = null;
+      }
+      this.$emit('toggle-checklist');
+    },
+    measureAfterCollapse() {
+      this.$nextTick(() => {
+        const el = this.$refs.scroller;
+        if (el && this.collapseScroll) this.collapseScroll.after = el.scrollTop;
+      });
+    },
+    restoreChecklistScroll() {
+      const el = this.$refs.scroller;
+      const saved = this.collapseScroll;
+      this.collapseScroll = null;
+      if (!el || !saved) return;
+      // Reading first lets any browser anchoring settle, so this never overshoots.
+      if (Math.abs(el.scrollTop - saved.from) > 1) el.scrollTop = saved.from;
+    },
     scrollToTop() {
       const el = this.$refs.scroller;
       if (el) el.scrollTop = 0;
@@ -616,8 +695,11 @@ export default {
 }
 
 .rn-focus-card__ring-svg {
+  /* Block, not the inline default: an inline SVG sits on the text baseline. */
+  display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
   transform: rotate(-90deg);
 }
 
@@ -692,7 +774,6 @@ export default {
 .rn-focus-card__meta {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
   margin-top: 2px;
@@ -704,25 +785,6 @@ export default {
   width: 100%;
 }
 
-.rn-focus-card__stim {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-.rn-focus-card--tablet .rn-focus-card__stim,
-.rn-focus-card--desktop .rn-focus-card__stim {
-  font-size: 11px;
-  padding: 3px 9px;
-}
-
-.rn-focus-card__window {
-  font-size: 12px;
-  color: rgba(0, 0, 0, .54);
-}
-
 .rn-focus-card__result {
   font-size: 12px;
   font-weight: 600;
@@ -730,8 +792,6 @@ export default {
   cursor: pointer;
 }
 
-.rn-focus-card--tablet .rn-focus-card__window,
-.rn-focus-card--desktop .rn-focus-card__window,
 .rn-focus-card--tablet .rn-focus-card__result,
 .rn-focus-card--desktop .rn-focus-card__result {
   font-size: 13px;
@@ -792,6 +852,9 @@ export default {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Don't chain an overscroll to the page: Home has its own pull-to-refresh,
+     and the browser's would reload the app on top of it. */
+  overscroll-behavior-y: contain;
 }
 
 /* The divider is a border-TOP on every row, as drawn: that puts the first rule

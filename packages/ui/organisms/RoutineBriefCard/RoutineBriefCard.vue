@@ -3,7 +3,8 @@
     "Before you start" — the area/project brief pinned as the first item in a
     routine's thread (design handoff § "Areas and projects live in chat").
 
-    Open by default; the host collapses it the moment the composer takes focus.
+    The Home host starts it collapsed (the owner wants it minimised) and opens
+    it on a tap of the header; it also collapses when the composer takes focus.
     One block per `area:`/`project:` tag on the routine: the standing
     commitment, up to three NEXT STEPS each with an Add pill, and up to three
     PAST ACTIVITY rows.

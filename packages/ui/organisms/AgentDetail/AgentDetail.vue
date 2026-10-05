@@ -192,7 +192,7 @@ export default {
   },
   computed: {
     status() {
-      return agentStatusKey(this.agent);
+      return agentStatusKey(this.agent, this.now);
     },
     token() {
       return AGENT_STATUS[this.status];

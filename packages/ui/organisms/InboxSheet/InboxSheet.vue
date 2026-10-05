@@ -53,11 +53,19 @@
         >Add</div>
       </div>
 
+      <template v-for="section in sections">
       <div
-        v-for="row in rows"
+        v-if="section.label"
+        :key="`label-${section.key}`"
+        class="rn-inbox__section"
+        :data-testid="`inbox-section-${section.key}`"
+      >{{ section.label }}</div>
+      <div
+        v-for="row in section.rows"
         :key="row.id"
         class="rn-inbox__row"
-        data-testid="inbox-row"
+        :class="{ 'rn-inbox__row--pending': row.kind === 'pending' }"
+        :data-testid="row.kind === 'pending' ? 'inbox-pending-row' : 'inbox-row'"
       >
         <div class="rn-inbox__body">{{ row.body }}</div>
         <div class="rn-inbox__meta">{{ metaFor(row) }}</div>
@@ -99,8 +107,9 @@
           </div>
         </div>
       </div>
+      </template>
 
-      <div v-if="!rows.length" class="rn-inbox__empty" data-testid="inbox-empty">
+      <div v-if="!total" class="rn-inbox__empty" data-testid="inbox-empty">
         <i class="rn-mi rn-inbox__empty-icon">inbox</i>
         <div class="rn-inbox__empty-title">Inbox zero</div>
         <div class="rn-inbox__empty-sub">Tasks without a routine land here.</div>
@@ -112,6 +121,15 @@
 <script>
 import ResponsiveSheet from '../../molecules/ResponsiveSheet/ResponsiveSheet.vue';
 
+function dedupe(list) {
+  const seen = {};
+  return (list || []).filter((item) => {
+    if (!item || item.id == null || seen[item.id]) return false;
+    seen[item.id] = true;
+    return true;
+  });
+}
+
 export default {
   name: 'OrganismInboxSheet',
   components: { ResponsiveSheet },
@@ -120,6 +138,12 @@ export default {
     shell: { type: String, default: 'phone' },
     /** Goal items with no `taskRef`. `[{ id, body, meta }]`. */
     items: { type: Array, default: () => [] },
+    /**
+     * Pending items — the pre-redesign Inbox ("Pending Items", the user's
+     * `motto` list). `[{ id, body, meta, kind: 'pending' }]`. Same three ways
+     * out as a goal item; the container routes each event by `row.kind`.
+     */
+    pending: { type: Array, default: () => [] },
     /** The routine "Do now" drops an item onto. `{ id, name, time }` or null. */
     currentRoutine: { type: Object, default: null },
     /** Every routine on the day. `[{ id, name, time }]`. */
@@ -130,15 +154,24 @@ export default {
   },
   computed: {
     rows() {
-      const seen = {};
-      return (this.items || []).filter((item) => {
-        if (!item || item.id == null || seen[item.id]) return false;
-        seen[item.id] = true;
-        return true;
-      });
+      return dedupe(this.items);
+    },
+    pendingRows() {
+      return dedupe(this.pending).map((row) => ({ ...row, kind: 'pending' }));
+    },
+    /** Goal items first (they belong to today), then the older pending list. */
+    sections() {
+      const both = this.rows.length && this.pendingRows.length;
+      return [
+        { key: 'today', label: both ? 'Today' : '', rows: this.rows },
+        { key: 'pending', label: this.pendingRows.length ? 'Pending' : '', rows: this.pendingRows },
+      ].filter((section) => section.rows.length);
+    },
+    total() {
+      return this.rows.length + this.pendingRows.length;
     },
     subline() {
-      const count = this.rows.length;
+      const count = this.total;
       if (!count) return 'All sorted';
       return `${count} task${count === 1 ? '' : 's'} without a routine`;
     },
@@ -249,6 +282,15 @@ export default {
   font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.rn-inbox__section {
+  padding: 14px 4px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, .45);
 }
 
 .rn-inbox__row {

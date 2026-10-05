@@ -30,3 +30,4 @@ export { default as YearGoalSidebar } from './YearGoalSidebar/YearGoalSidebar.vu
 // Routine Focus home screen (design_handoff_routine_focus)
 export { default as FocusPointsChip } from './FocusPointsChip/FocusPointsChip.vue';
 export { default as RoutineRail } from './RoutineRail/RoutineRail.vue';
+export { default as PullToRefresh } from './PullToRefresh/PullToRefresh.vue';

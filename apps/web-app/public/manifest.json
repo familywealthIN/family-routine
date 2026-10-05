@@ -1,7 +1,7 @@
 {
   "name": "Routine Notes",
   "short_name": "Routine Notes",
-  "theme_color": "#FFFFFF",
+  "theme_color": "#f4f4f4",
   "icons": [
     {
       "src": "../icons/icon-48.webp",
@@ -48,6 +48,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#FFFFFF",
+  "background_color": "#f4f4f4",
   "gcm_sender_id": "350952942983"
 }

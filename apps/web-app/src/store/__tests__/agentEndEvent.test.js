@@ -27,6 +27,8 @@ const makeAgent = (over = {}) => ({
   executionStatus: 'idle',
   successCount: 3,
   failureCount: 0,
+  // The run was opened today — only today's trigger can be closed.
+  lastRunAt: String(Date.now()),
   ...over,
 });
 
@@ -102,6 +104,20 @@ describe('agentStore.fireEndEvent', () => {
     expect(agentStore.agentsByTaskRef['task-1'].executionStatus).toBe('finished');
   });
 
+  it("leaves a run opened on a previous day alone — today's ticks cannot close it", async () => {
+    const yesterday = String(Date.now() - 36 * 60 * 60 * 1000);
+    const agent = makeAgent({ executionStatus: 'listening', lastRunAt: yesterday });
+    const apollo = await seed(agent);
+
+    const result = await agentStore.fireEndEvent({
+      apollo, vm: { $notify: jest.fn() }, taskRef: 'task-1', goalId: 'goal-1',
+    });
+
+    expect(result).toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(apollo.mutate).not.toHaveBeenCalled();
+  });
+
   it('never books a failure when the server refuses to record the close', async () => {
     const agent = makeAgent({ executionStatus: 'listening' });
     const refuse = jest.fn(() => Promise.reject(
@@ -122,5 +138,31 @@ describe('agentStore.fireEndEvent', () => {
     expect(agentStore.agentsByTaskRef['task-1'].executionStatus).toBe('listening');
     // ...and it says so rather than failing silently.
     expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({ type: 'warning' }));
+  });
+});
+
+describe("agentStore — badges are only about today's trigger", () => {
+  afterEach(() => {
+    agentStore.reset();
+    jest.restoreAllMocks();
+  });
+
+  it('shows a badge set today', () => {
+    agentStore.setLocalStatus('task-1', 'listening');
+    expect(agentStore.statusFor('task-1')).toBe('listening');
+  });
+
+  it('shows nothing once the day the badges were set has passed', () => {
+    agentStore.setLocalStatus('task-1', 'finished');
+    agentStore.state.statusDay = '01-01-2020';
+    expect(agentStore.statusFor('task-1')).toBe('');
+  });
+
+  it('drops every previous-day badge when a new one is set after midnight', () => {
+    agentStore.setLocalStatus('task-1', 'listening');
+    agentStore.state.statusDay = '01-01-2020';
+    agentStore.setLocalStatus('task-2', 'running');
+    expect(agentStore.statusByRoutineId['task-1']).toBeUndefined();
+    expect(agentStore.statusFor('task-2')).toBe('running');
   });
 });

@@ -662,14 +662,14 @@ describe('the figures the rest of the app reads', () => {
     expect(at(plus(3))).toBe(`Week ${moment(plus(3), 'DD-MM-YYYY').week()}`);
   });
 
-  it('leaves milestone items off the Year step, as the year-goal sidebar does', () => {
+  it('leaves a step toward a sibling year goal off the Year step, as the year-goal sidebar does', () => {
     const built = view(goalsFor({
       year: [
         {
           id: 'y1', body: 'Ship v2', taskRef: 'sw', progress: 3,
         },
         {
-          id: 'y2', body: 'Orphan milestone', taskRef: 'sw', progress: 6, isMilestone: true, goalRef: null,
+          id: 'y2', body: 'Step toward Ship v2', taskRef: 'sw', progress: 6, isMilestone: true, goalRef: 'y1',
         },
       ],
     }), { tab: 'year' });
@@ -677,5 +677,20 @@ describe('the figures the rest of the app reads', () => {
     expect(ids).toEqual(['y1']);
     expect(built.listTotal).toBe(1);
     expect(built.yearAverage).toBe(50);
+  });
+
+  // The reported bug: a year goal created under a LIFETIME goal carries
+  // isMilestone (the server requires it with a goalRef) and used to vanish.
+  it('keeps a year goal that is a milestone of a lifetime goal on the Year step', () => {
+    const built = view(goalsFor({
+      year: [
+        {
+          id: 'y1', body: 'Ship v2', taskRef: 'sw', progress: 3, isMilestone: true, goalRef: 'life-1',
+        },
+      ],
+    }), { tab: 'year' });
+    const ids = built.groups.reduce((all, group) => all.concat(group.rows.map((row) => row.id)), []);
+    expect(ids).toEqual(['y1']);
+    expect(built.listTotal).toBe(1);
   });
 });

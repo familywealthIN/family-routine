@@ -26,7 +26,7 @@
  * (chassis.md § "The goal cascade").
  */
 import { YEAR_GOALS_LIST_QUERY } from '../composables/graphql/yearGoalQueries';
-import { buildYearGoal } from '../utils/yearGoalModel';
+import { buildYearGoal, isYearGoalItem, yearItemIdsOf } from '../utils/yearGoalModel';
 
 export default {
   name: 'RoutineYearGoalLinksContainer',
@@ -50,15 +50,18 @@ export default {
      * routine id -> `{ id, body, pct }`.
      *
      * A year goal with no `taskRef` is not linked to a routine and is skipped;
-     * milestones (month/week/day items that happen to live in a year document)
-     * are skipped too. First one wins when two goals name the same routine — the
-     * row has space for one.
+     * a year item that is a step toward a sibling year goal is skipped too
+     * (`isYearGoalItem`). `isMilestone` is deliberately NOT the test: a year goal
+     * hung off a lifetime goal carries it, and filtering on the flag is what
+     * made every such routine read "No year goal linked". First one wins when
+     * two goals name the same routine — the row has space for one.
      */
     links() {
       const map = {};
+      const yearIds = yearItemIdsOf(this.yearGoals);
       (this.yearGoals || []).forEach((goal) => {
         ((goal && goal.goalItems) || []).forEach((item) => {
-          if (!item || !item.id || item.isMilestone || !item.taskRef) return;
+          if (!isYearGoalItem(item, yearIds) || !item.taskRef) return;
           const key = String(item.taskRef);
           if (map[key]) return;
           const tree = buildYearGoal({ ...item, period: 'year', date: item.date || goal.date });

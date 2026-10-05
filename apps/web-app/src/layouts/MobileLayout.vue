@@ -409,6 +409,7 @@ export default {
 <style>
 #mobileLayout {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -448,6 +449,16 @@ body.android15 .safe-area-top {
 
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mobile web / installed PWA (iOS standalone): `.fixed-bottom-nav` zeroes the
+   padding with !important and Vuetify sizes the nav with an inline 56px, so the
+   buttons sat under the iPhone home indicator. Grow the bar by the inset and pad
+   the buttons above it. The native WebView keeps its own rules
+   (android-safe-area.css), hence :not(.capacitor-native). */
+body:not(.capacitor-native) #mobileLayout .fixed-bottom-nav.safe-area-bottom {
+  height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
 }
 
 /* Android 14+ specific safe area handling */
@@ -556,6 +567,7 @@ body.android15 .safe-area-content {
 
 .login-content-wrapper {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #fff;
   display: flex;
   flex-direction: column;

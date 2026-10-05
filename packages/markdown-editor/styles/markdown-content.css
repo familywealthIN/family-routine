@@ -1,0 +1,218 @@
+/*
+ * Rendered-markdown typography, shared by every surface that shows markdown:
+ *   - the EasyMDE preview pane (full preview + side-by-side), which the
+ *     MarkdownEditor tags with `rn-markdown` through EasyMDE's `previewClass`;
+ *   - read-only renderers (vue-markdown), which put `rn-markdown` on their root.
+ * One stylesheet, so a description reads the same in the editor's preview as
+ * it does everywhere it is displayed. Everything is under `.rn-markdown` -
+ * nothing here may match outside a rendered-markdown block.
+ *
+ * Font size and family are inherited from the host, headings scale in `em`,
+ * so each surface keeps its own type scale. Colours are tokens on the root
+ * class (not :root) so a host can retheme a block without touching this file.
+ */
+.rn-markdown {
+    --rn-md-text: inherit;
+    --rn-md-muted: rgba(0, 0, 0, .6);
+    --rn-md-border: #e2e7ef;
+    --rn-md-code-bg: rgba(0, 0, 0, .06);
+    --rn-md-code-text: #c7254e;
+    --rn-md-pre-bg: #f3f6fb;
+    --rn-md-pre-border: #d5e1f2;
+    --rn-md-pre-text: #1f2937;
+    --rn-md-table-head: #edf3fb;
+    --rn-md-table-alt: #fbfdff;
+    --rn-md-accent: #288bd5;
+
+    color: var(--rn-md-text);
+    line-height: 1.6;
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+.rn-markdown > :first-child {
+    margin-top: 0;
+}
+
+.rn-markdown > :last-child {
+    margin-bottom: 0;
+}
+
+/* Headings */
+.rn-markdown h1,
+.rn-markdown h2,
+.rn-markdown h3,
+.rn-markdown h4,
+.rn-markdown h5,
+.rn-markdown h6 {
+    color: inherit;
+    font-weight: 700;
+    letter-spacing: normal;
+}
+
+.rn-markdown h1 {
+    font-size: 1.45em;
+    line-height: 1.3;
+    margin: 0 0 .6em;
+}
+
+.rn-markdown h2 {
+    font-size: 1.25em;
+    line-height: 1.35;
+    margin: 1.1em 0 .5em;
+}
+
+.rn-markdown h3 {
+    font-size: 1.1em;
+    line-height: 1.4;
+    margin: 1em 0 .45em;
+}
+
+.rn-markdown h4,
+.rn-markdown h5,
+.rn-markdown h6 {
+    font-size: 1em;
+    line-height: 1.45;
+    margin: .9em 0 .4em;
+}
+
+/* Blocks */
+.rn-markdown p,
+.rn-markdown ul,
+.rn-markdown ol,
+.rn-markdown dl {
+    margin: 0 0 .65em;
+}
+
+.rn-markdown ul,
+.rn-markdown ol {
+    padding-left: 1.4em;
+}
+
+.rn-markdown li {
+    margin: .15em 0;
+}
+
+.rn-markdown li > ul,
+.rn-markdown li > ol {
+    margin: .15em 0 0;
+}
+
+.rn-markdown li > p {
+    margin: 0;
+}
+
+/* Checklists: markdown-it-task-lists (vue-markdown) tags its items, marked
+   (EasyMDE preview) does not - so match the leading checkbox either way. */
+.rn-markdown .task-list-item {
+    list-style: none;
+}
+
+.rn-markdown li:has(> input[type="checkbox"]:first-child) {
+    list-style: none;
+}
+
+.rn-markdown li > input[type="checkbox"]:first-child,
+.rn-markdown .task-list-item-checkbox {
+    margin: 0 .45em 0 -1.3em;
+    vertical-align: middle;
+    pointer-events: none;
+}
+
+.rn-markdown blockquote {
+    border-left: 3px solid var(--rn-md-accent);
+    color: var(--rn-md-muted);
+    margin: .75em 0;
+    padding: .15em 0 .15em .85em;
+}
+
+.rn-markdown blockquote > :last-child {
+    margin-bottom: 0;
+}
+
+.rn-markdown hr {
+    border: 0;
+    border-top: 1px solid var(--rn-md-border);
+    margin: 1em 0;
+}
+
+.rn-markdown a {
+    color: var(--rn-md-accent);
+    overflow-wrap: anywhere;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* Code */
+.rn-markdown code {
+    background: var(--rn-md-code-bg);
+    border-radius: 4px;
+    color: var(--rn-md-code-text);
+    font-family: ui-monospace, Menlo, Consolas, "Ubuntu Mono", monospace;
+    font-size: .88em;
+    padding: 1px 5px;
+}
+
+.rn-markdown pre {
+    background: var(--rn-md-pre-bg);
+    border: 1px solid var(--rn-md-pre-border);
+    border-radius: 8px;
+    color: var(--rn-md-pre-text);
+    line-height: 1.55;
+    margin: .75em 0;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 10px 12px;
+    tab-size: 2;
+}
+
+.rn-markdown pre code {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    color: inherit;
+    display: block;
+    font-size: .88em;
+    padding: 0;
+    white-space: pre;
+}
+
+/* Tables scroll sideways inside their own box rather than widening the page. */
+.rn-markdown table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    display: block;
+    margin: .75em 0;
+    max-width: 100%;
+    overflow-x: auto;
+    width: max-content;
+}
+
+.rn-markdown th,
+.rn-markdown td {
+    border: 1px solid var(--rn-md-border);
+    padding: 6px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.rn-markdown thead th {
+    background: var(--rn-md-table-head);
+    font-weight: 700;
+}
+
+.rn-markdown tbody tr:nth-child(even) {
+    background: var(--rn-md-table-alt);
+}
+
+/* Images never overflow their container, on any viewport. */
+.rn-markdown img {
+    border-radius: 6px;
+    display: inline-block;
+    height: auto;
+    max-width: 100%;
+    vertical-align: middle;
+}

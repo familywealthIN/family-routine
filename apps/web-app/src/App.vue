@@ -37,6 +37,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { AgentResultModal } from '@routine-notes/ui/organisms';
+import { installSwipeDismiss, uninstallSwipeDismiss } from '@routine-notes/ui/utils/swipeDismiss';
 import {
   config, publicKey, isDevelopment, netlify,
 } from './blob/config';
@@ -138,8 +139,15 @@ export default {
       this.initPwaFCM();
     }
   },
+  mounted() {
+    // Swipe-down-to-dismiss for every v-dialog / v-bottom-sheet in the app
+    // (and the chassis sheets that carry `v-swipe-dismiss`). One document
+    // listener, so raw <v-dialog>s in pages get it without opting in.
+    installSwipeDismiss();
+  },
   beforeDestroy() {
     document.removeEventListener('visibilitychange', this.handleAppVisibility);
+    uninstallSwipeDismiss();
   },
   methods: {
     onAgentResultInput(open) {

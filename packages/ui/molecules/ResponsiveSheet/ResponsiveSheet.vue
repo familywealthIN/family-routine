@@ -29,6 +29,7 @@
     ></div>
     <section
       ref="panel"
+      v-swipe-dismiss="{ handler: onSwipeDismiss, disabled: !isPhone }"
       class="rn-rsheet__panel"
       :class="`rn-rsheet__panel--${mode}`"
       :style="panelStyle"
@@ -75,6 +76,8 @@
 </template>
 
 <script>
+import { swipeDismiss } from '../../utils/swipeDismiss';
+
 /** Chassis dialog widths. Phone ignores both — it spans the viewport. */
 const SHELL_WIDTH = { tablet: 860, desktop: 720 };
 
@@ -86,6 +89,7 @@ const openStack = [];
 
 export default {
   name: 'MoleculeResponsiveSheet',
+  directives: { swipeDismiss },
   props: {
     open: { type: Boolean, default: false },
     /** phone | tablet | desktop — the same three shells RoutineFocus resolves. */
@@ -175,6 +179,10 @@ export default {
       const { panel } = this.$refs;
       if (!panel || !this.active || panel.contains(document.activeElement)) return;
       panel.focus();
+    },
+    /** Phone swipe-down: the same `close` the scrim and the handle emit. */
+    onSwipeDismiss() {
+      this.$emit('close');
     },
     onKeydown(event) {
       if (event.key !== 'Escape' && event.key !== 'Esc') return;

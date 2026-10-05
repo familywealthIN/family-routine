@@ -182,3 +182,41 @@ describe('InboxSheet — quick add', () => {
     expect(sheet.moving).toBeNull();
   });
 });
+
+describe('InboxSheet — pending items (the pre-redesign Inbox)', () => {
+  const PENDING = [
+    { id: 'pending:m1', mottoId: 'm1', body: 'Fix the bike', meta: 'Pending · not planned yet' },
+  ];
+
+  it('lists pending items in their own section after today’s items', () => {
+    const { el } = render({ pending: PENDING });
+    expect(all(el, 'inbox-row')).toHaveLength(2);
+    expect(all(el, 'inbox-pending-row')).toHaveLength(1);
+    expect(q(el, 'inbox-section-today').textContent).toBe('Today');
+    expect(q(el, 'inbox-section-pending').textContent).toBe('Pending');
+    expect(q(el, 'inbox-sub').textContent).toBe('3 tasks without a routine');
+  });
+
+  it('needs no "Today" label when only pending items exist, and is not Inbox zero', () => {
+    const { el } = render({ items: [], pending: PENDING });
+    expect(q(el, 'inbox-section-today')).toBeNull();
+    expect(q(el, 'inbox-section-pending')).toBeTruthy();
+    expect(q(el, 'inbox-empty')).toBeNull();
+    expect(q(el, 'inbox-pending-row').textContent).toContain('Fix the bike');
+  });
+
+  it('routes a pending row out with its kind, so the container can tell them apart', async () => {
+    const { el, events } = render({ items: [], pending: PENDING });
+    q(el, 'inbox-do-now').click();
+    expect(events['do-now'][0]).toMatchObject({ mottoId: 'm1', kind: 'pending' });
+    q(el, 'inbox-delete').click();
+    expect(events.remove[0]).toMatchObject({ mottoId: 'm1', kind: 'pending' });
+    q(el, 'inbox-move').click();
+    await Vue.nextTick();
+    q(el, 'inbox-target-sw').click();
+    expect(events.move[0]).toMatchObject({
+      item: { mottoId: 'm1', kind: 'pending' },
+      routine: ROUTINES[1],
+    });
+  });
+});

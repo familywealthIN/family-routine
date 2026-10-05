@@ -11,7 +11,7 @@
         <span class="headline">{{ title }}</span>
       </AtomCardTitle>
       <AtomCardText>
-        <VueMarkdown v-if="description" :source="description" :html="false" />
+        <VueMarkdown v-if="description" class="rn-markdown" :source="description" :html="false" />
         <QuickGoalCreation
           :key="modalKey"
           :goals="goals"
@@ -30,6 +30,7 @@
 
 <script>
 import VueMarkdown from 'vue-markdown';
+import '@routine-notes/markdown-editor/styles/markdown-content.css';
 import {
   AtomCard, AtomCardText, AtomCardTitle, AtomDialog,
 } from '@routine-notes/ui/atoms';

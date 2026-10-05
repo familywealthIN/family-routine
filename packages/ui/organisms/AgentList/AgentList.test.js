@@ -35,7 +35,8 @@ const agent = (over = {}) => ({
 
 const render = (props = {}) => {
   const vm = new Vue({
-    render: (h) => h(AgentList, { props: { agents: [agent()], ...props } }),
+    // Pinned to the fixture's day: a status only counts for today's run.
+    render: (h) => h(AgentList, { props: { agents: [agent()], now: '2026-10-02T12:00:00.000Z', ...props } }),
   }).$mount();
   return { vm, el: vm.$el, list: vm.$children[0] };
 };
@@ -176,5 +177,17 @@ describe('AgentList — shell', () => {
     expect(render({ shell: 'phone' }).el.className).toContain('rn-agl--phone');
     expect(render({ shell: 'tablet' }).el.className).toContain('rn-agl--tablet');
     expect(render({ shell: 'desktop' }).el.className).toContain('rn-agl--desktop');
+  });
+});
+
+describe('AgentList — a new day starts every agent idle', () => {
+  it('shows a run from yesterday as Idle, whatever its status was', () => {
+    ['listening', 'finished', 'failed', 'running'].forEach((status) => {
+      const { el } = render({
+        agents: [agent({ executionStatus: status })],
+        now: '2026-10-03T08:00:00.000Z',
+      });
+      expect(text(q(el, 'agent-status-a1'))).toContain('Idle');
+    });
   });
 });
