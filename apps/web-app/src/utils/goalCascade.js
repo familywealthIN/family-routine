@@ -46,6 +46,7 @@ import {
 } from '@routine-notes/ui/constants/goalsCascade';
 import { periodGoalDates } from '@routine-notes/ui/utils/getDates';
 import { findCurrentRoutine, toMinutes } from './routineFocusModel';
+import { isYearGoalItem } from './yearGoalModel';
 
 export const DATE_FORMAT = 'DD-MM-YYYY';
 /** The date every lifetime goal is filed under (see GoalCreationContainer). */
@@ -651,10 +652,14 @@ export function buildCascade({
   const dayItems = itemsFor(goals, DAY, selectedDate);
   const weekItems = itemsFor(goals, WEEK);
   const monthItems = itemsFor(goals, MONTH);
-  // A year milestone is a step toward another goal, not a year goal of its own —
-  // the same rule the year-goal sidebar/switcher read (yearGoalModel.yearGoalRows).
+  // A year item that is a step toward a SIBLING year goal is not a year goal of
+  // its own — the same rule the year-goal sidebar/switcher read
+  // (yearGoalModel.isYearGoalItem). `isMilestone` alone is not that test: a year
+  // goal hung off a LIFETIME goal carries it too, and filtering on the flag hid
+  // every such year goal from this page.
   const allYearItems = itemsFor(goals, YEAR);
-  const yearItems = allYearItems.filter((item) => !item.isMilestone);
+  const yearIds = new Set(allYearItems.map((item) => String(item.id)));
+  const yearItems = allYearItems.filter((item) => isYearGoalItem(item, yearIds));
   const lifeItems = itemsFor(goals, LIFETIME);
 
   const yearAverage = yearAverageOf(yearItems);

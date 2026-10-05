@@ -90,7 +90,7 @@
                   <br />
                   <a @click="() => $router.push(`/agenda/tree/${task.id}`)">Go to Month Planner</a>
                   <div v-if="task.description" class="caption description-text">
-                    <vue-markdown :source="task.description" :html="false"></vue-markdown>
+                    <vue-markdown class="rn-markdown" :source="task.description" :html="false"></vue-markdown>
                   </div>
                 </atom-flex>
               </atom-layout>
@@ -237,6 +237,7 @@
 /* eslint-disable no-param-reassign */
 import moment from 'moment';
 import VueMarkdown from 'vue-markdown';
+import '@routine-notes/markdown-editor/styles/markdown-content.css';
 
 import TimelineItemList from '@routine-notes/ui/molecules/TimelineItemList/TimelineItemList.vue';
 import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';

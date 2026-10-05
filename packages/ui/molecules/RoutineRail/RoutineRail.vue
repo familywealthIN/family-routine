@@ -6,10 +6,11 @@
       - `chips` (iPad mini): 32px horizontally-scrolling pills.
     Clicking either focuses that routine.
   -->
-  <div v-if="layout === 'chips'" class="rn-rail rn-rail--chips rn-hidescroll">
+  <div v-if="layout === 'chips'" ref="chips" class="rn-rail rn-rail--chips rn-hidescroll">
     <div
       v-for="routine in routines"
       :key="routine.id"
+      :ref="`chip-${routine.id}`"
       class="rn-rail__chip"
       :style="chipStyle(routine)"
       :data-testid="`routine-chip-${routine.id}`"
@@ -69,7 +70,40 @@ export default {
     /** Which day the list is for — the viewed day, not always today. */
     dayLabel: { type: String, default: 'TODAY' },
   },
+  computed: {
+    focusId() {
+      const focus = this.routines.find((routine) => routine && routine.isFocus);
+      return focus ? focus.id : '';
+    },
+  },
+  watch: {
+    // Chips: the focused routine — on load, the one in progress now — slides to
+    // the head of the strip, so the routine you are on is never off-screen to
+    // the right. The first placement jumps; later switches glide.
+    focusId: {
+      handler(id) {
+        if (this.layout !== 'chips' || !id) return;
+        const smooth = this.placedOnce;
+        this.placedOnce = true;
+        this.$nextTick(() => this.slideChipToStart(id, smooth));
+      },
+      immediate: true,
+    },
+  },
   methods: {
+    slideChipToStart(id, smooth) {
+      const strip = this.$refs.chips;
+      const found = this.$refs[`chip-${id}`];
+      const chip = Array.isArray(found) ? found[0] : found;
+      if (!strip || !chip) return;
+      const pad = parseFloat(window.getComputedStyle(strip).paddingLeft) || 0;
+      const left = Math.max(0, chip.offsetLeft - pad);
+      if (smooth && typeof strip.scrollTo === 'function') {
+        strip.scrollTo({ left, behavior: 'smooth' });
+      } else {
+        strip.scrollLeft = left;
+      }
+    },
     chipStyle(routine) {
       return {
         background: routine.isFocus ? '#288bd5' : '#fff',
@@ -91,12 +125,23 @@ export default {
 }
 
 /* ---- chips (iPad mini) ---- */
+/* `position: relative` makes the strip the chips' offsetParent, which is what
+   the slide-to-start measures against. */
 .rn-rail--chips {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   overflow-x: auto;
   padding: 4px 20px 8px;
+}
+
+/* Trailing room, so even the last routines can slide all the way to the head
+   of the strip instead of stopping where the scroll runs out. */
+.rn-rail--chips::after {
+  content: '';
+  flex: 0 0 calc(100% - 180px);
+  height: 1px;
 }
 
 .rn-rail__chip {

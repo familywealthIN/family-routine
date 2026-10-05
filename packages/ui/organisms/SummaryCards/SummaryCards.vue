@@ -15,7 +15,7 @@
         {{ error }}
       </div>
       <div v-else class="text-body-1 w-100 summary-content">
-        <vue-markdown v-if="summary" :source="summary" :html="false"></vue-markdown>
+        <vue-markdown v-if="summary" class="rn-markdown" :source="summary" :html="false"></vue-markdown>
       </div>
     </AtomCardText>
   </AtomCard>
@@ -23,6 +23,7 @@
 
 <script>
 import VueMarkdown from 'vue-markdown';
+import '@routine-notes/markdown-editor/styles/markdown-content.css';
 import {
   AtomButton,
   AtomCard,

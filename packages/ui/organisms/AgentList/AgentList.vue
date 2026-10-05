@@ -122,7 +122,7 @@ export default {
   },
   computed: {
     totals() {
-      return agentTotals(this.agents);
+      return agentTotals(this.agents, this.now);
     },
     statTiles() {
       const { runs, rate, live } = this.totals;
@@ -141,7 +141,7 @@ export default {
     },
     rows() {
       return this.agents.map((agent) => {
-        const status = agentStatusKey(agent);
+        const status = agentStatusKey(agent, this.now);
         const token = AGENT_STATUS[status];
         const ok = Number(agent.successCount) || 0;
         const fail = Number(agent.failureCount) || 0;

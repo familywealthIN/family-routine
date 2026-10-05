@@ -227,13 +227,28 @@ export default {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
+/* A ruled divider, not just a caption: on the phone the thread runs on from the
+   checklist in one scroller, and the owner wants a clear break before chat. */
 .rn-chat__divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .6px;
   color: rgba(0, 0, 0, .38);
   text-align: center;
-  padding: 10px 0 6px;
+  margin-top: 12px;
+  padding: 10px 0 8px;
+}
+
+.rn-chat__divider::before,
+.rn-chat__divider::after {
+  content: '';
+  flex: 1;
+  min-width: 12px;
+  height: 1px;
+  background: rgba(0, 0, 0, .12);
 }
 
 .rn-chat__row {

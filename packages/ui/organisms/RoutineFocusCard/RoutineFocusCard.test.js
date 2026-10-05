@@ -86,6 +86,43 @@ describe('OrganismRoutineFocusCard — Today tab', () => {
     expect(card.ringOffset).toBeCloseTo(263.9 * (2 / 3), 1);
   });
 
+  // The donut used to be a 6-unit stroke in a fixed 96 viewBox: 2.9px on the
+  // ticked tablet ring, 7.5px on the phone, and the button overlapped its inner
+  // edge. It is now drawn in the ring's own pixel space.
+  describe('ring geometry is a clean, whole-pixel donut at every size', () => {
+    const geom = (props) => {
+      const { vm, el } = render(props);
+      const card = vm.$children[0];
+      const svg = el.querySelector('[data-testid="routine-focus-ring-svg"]');
+      return { card, svg };
+    };
+    const cases = [
+      ['phone', {}],
+      ['tablet', {}],
+      ['desktop', {}],
+      ['tablet', { routine: { ...ROUTINE, ticked: true } }],
+    ];
+    cases.forEach(([variant, extra]) => {
+      it(`${variant}${extra.routine ? ' (ticked)' : ''}`, () => {
+        const { card, svg } = geom({ variant, ...extra });
+        const px = card.ringPx;
+        expect(svg.getAttribute('viewBox')).toBe(`0 0 ${px} ${px}`);
+        const { stroke, r } = card.ringGeom;
+        expect(Number.isInteger(stroke)).toBe(true);
+        // Whole stroke inside the box…
+        expect(r + stroke / 2).toBeCloseTo(px / 2, 5);
+        // …and clear of the tick button by at least 2px.
+        const buttonR = px / 2 - card.tickInset;
+        expect(r - stroke / 2 - buttonR).toBeGreaterThanOrEqual(2);
+      });
+    });
+
+    it('draws no progress arc (no stray round-cap dot) at 0%', () => {
+      const { el } = render({ doneCount: 0, totalCount: 3 });
+      expect(el.querySelector('.rn-focus-card__ring-progress')).toBeNull();
+    });
+  });
+
   it('collapses the checklist to one segment per item', () => {
     const { el } = render({ checklistOpen: false });
     expect(el.querySelectorAll('.rn-focus-card__row')).toHaveLength(0);
@@ -243,7 +280,44 @@ describe('OrganismRoutineFocusCard — cascade tabs', () => {
   it('says so rather than showing an empty grid when the period has no goal', () => {
     const { el } = render({ period: 'month', cascade: null });
     expect(el.querySelector('.rn-cascade')).toBeNull();
-    expect(el.querySelector('.rn-cascade__empty').textContent).toContain('No goal set');
+    expect(el.querySelector('.rn-cascade__empty').textContent)
+      .toContain('No goal linked to this routine');
+  });
+
+  it('collapses the whole linked period behind its heading', async () => {
+    const { el } = render({
+      period: 'week',
+      cascade: {
+        ...CASCADE,
+        linked: [
+          {
+            id: 'a', label: 'Mon', body: 'First', isComplete: true,
+            detail: { period: 'Day goal', window: 'Mon, 7 Sep 2026', status: 'Done', tags: ['deep'] },
+          },
+          {
+            id: 'b', label: 'Wed', body: 'Second', isComplete: false,
+            detail: { period: 'Day goal', window: 'Wed, 9 Sep 2026', status: 'Open', tags: [] },
+          },
+        ],
+      },
+    });
+    const toggle = el.querySelector('[data-testid="cascade-linked-toggle"]');
+    expect(toggle.textContent).toContain('1/2 done');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelectorAll('[data-testid="cascade-linked"]')).toHaveLength(0);
+
+    toggle.click();
+    await Vue.nextTick();
+    const rows = el.querySelectorAll('[data-testid="cascade-linked"]');
+    expect(Array.from(rows).map((r) => r.querySelector('.rn-cascade__linked-body').textContent))
+      .toEqual(['First', 'Second']);
+    expect(rows[0].textContent).toContain('Done');
+    // Rows themselves are plain — no per-item toggle.
+    expect(rows[0].querySelector('button')).toBeNull();
+
+    toggle.click();
+    await Vue.nextTick();
+    expect(el.querySelectorAll('[data-testid="cascade-linked"]')).toHaveLength(0);
   });
 
   it('emits set-period from the bottom tabs', () => {
@@ -321,24 +395,22 @@ describe('OrganismRoutineFocusCard — checklist row metrics', () => {
 
 /**
  * In-card type. The desktop/tablet frames run 1px larger than the phone on the
- * status line, the stimulus pill and the time window; the built card used the
- * phone sizes on every shell.
+ * status line and the View result link; the built card used the phone sizes on
+ * every shell.
  */
 describe('OrganismRoutineFocusCard — in-card type per shell', () => {
-  it('steps the status line, stimulus pill and window up on tablet and desktop', () => {
+  it('steps the status line and result link up on tablet and desktop', () => {
     expect(declOf('.rn-focus-card--desktop .rn-focus-card__status-label', 'font-size')).toBe('12px');
-    expect(declOf('.rn-focus-card--desktop .rn-focus-card__stim', 'font-size')).toBe('11px');
-    expect(declOf('.rn-focus-card--desktop .rn-focus-card__window', 'font-size')).toBe('13px');
+    expect(declOf('.rn-focus-card--desktop .rn-focus-card__result', 'font-size')).toBe('13px');
   });
 
   it('leaves the phone on its own smaller set', () => {
     expect(declOf('.rn-focus-card__status-label', 'font-size')).toBe('11px');
-    expect(declOf('.rn-focus-card__stim', 'font-size')).toBe('10px');
-    expect(declOf('.rn-focus-card__window', 'font-size')).toBe('12px');
+    expect(declOf('.rn-focus-card__result', 'font-size')).toBe('12px');
   });
 
   it('gives tablet and desktop the same sizes as each other', () => {
-    ['status-label', 'stim', 'window'].forEach((part) => {
+    ['status-label', 'result'].forEach((part) => {
       expect(declOf(`.rn-focus-card--tablet .rn-focus-card__${part}`, 'font-size'))
         .toBe(declOf(`.rn-focus-card--desktop .rn-focus-card__${part}`, 'font-size'));
     });
@@ -423,9 +495,7 @@ describe('OrganismRoutineFocusCard — who owns the horizontal padding', () => {
   });
 });
 
-describe('OrganismRoutineFocusCard — status row and tick hint', () => {
-  const windowText = (el) => el.querySelector('.rn-focus-card__window').textContent.replace(/\s+/g, ' ');
-
+describe('OrganismRoutineFocusCard — status row', () => {
   // A narrow phone card used to clip the whole line, time range included.
   it('keeps the time range in its own non-shrinking span', () => {
     const { el } = render({ statusLabel: 'Missed · redeem with points' });
@@ -498,27 +568,95 @@ describe('OrganismRoutineFocusCard — status row and tick hint', () => {
     expect(fired).toBe(1);
   });
 
-  it('says Redeem for a redeemable routine (today\'s redeem flow)', () => {
-    const { el } = render({
-      routine: {
-        ...ROUTINE, isCurrent: false, passed: true, redeemable: true,
-      },
+  // The owner removed the "Geniuses +16 · 06:00 – 06:00 · Ticked →" line: the
+  // status row already carries the window. Only the View result link remains.
+  it('draws no stimulus pill or time-window line under the title', () => {
+    ['phone', 'tablet', 'desktop'].forEach((variant) => {
+      const { el } = render({ variant });
+      expect(el.querySelector('.rn-focus-card__stim')).toBeNull();
+      expect(el.querySelector('.rn-focus-card__window')).toBeNull();
+      expect(el.querySelector('.rn-focus-card__meta')).toBeNull();
     });
-    expect(windowText(el)).toContain('Redeem →');
   });
 
-  it('says Missed for a passed routine that cannot be redeemed (e.g. a past day)', () => {
-    const { el } = render({
-      routine: {
-        ...ROUTINE, isCurrent: false, passed: true, redeemable: false,
-      },
-    });
-    expect(windowText(el)).toContain('Missed →');
-    expect(windowText(el)).not.toContain('Redeem');
+  it('keeps the View result link when the agent has a result, and emits it', () => {
+    const { vm, el } = render({ showResultLink: true });
+    const link = el.querySelector('[data-testid="focus-card-result-link"]');
+    expect(link.textContent.trim()).toBe('View result');
+    let fired = 0;
+    vm.$children[0].$on('open-result', () => { fired += 1; });
+    link.click();
+    expect(fired).toBe(1);
+  });
+});
+
+describe('OrganismRoutineFocusCard — checklist accordion keeps the scroll', () => {
+  // Collapsing removes the rows above the thread, so a small scroll clamps to 0;
+  // expanding must put the user back where they were, not at the top.
+  const mountCard = () => {
+    const state = Vue.observable({ open: true });
+    const host = new Vue({
+      render: (h) => h(RoutineFocusCard, {
+        props: {
+          routine: ROUTINE,
+          items: [{ id: 'a', body: 'One', isComplete: false }],
+          checklistOpen: state.open,
+        },
+        on: { 'toggle-checklist': () => { state.open = !state.open; } },
+      }),
+    }).$mount();
+    const card = host.$children[0];
+    return { card, scroller: card.$refs.scroller };
+  };
+
+  it('restores the pre-collapse scroll position on expand', async () => {
+    const { card, scroller } = mountCard();
+    scroller.scrollTop = 120;
+    card.onChecklistHead(); // collapse
+    await Vue.nextTick();
+    await Vue.nextTick();
+    scroller.scrollTop = 0; // what the browser does to a small scroll
+    card.collapseScroll.after = 0;
+    card.onChecklistHead(); // expand
+    await Vue.nextTick();
+    await Vue.nextTick();
+    expect(scroller.scrollTop).toBe(120);
   });
 
-  it('says Tick routine for an open routine', () => {
-    const { el } = render();
-    expect(windowText(el)).toContain('Tick routine →');
+  it('leaves a position the user scrolled to while collapsed alone', async () => {
+    const { card, scroller } = mountCard();
+    scroller.scrollTop = 120;
+    card.onChecklistHead();
+    await Vue.nextTick();
+    await Vue.nextTick();
+    card.collapseScroll.after = 0;
+    scroller.scrollTop = 300; // scrolled the chat while collapsed
+    card.onChecklistHead();
+    await Vue.nextTick();
+    await Vue.nextTick();
+    expect(scroller.scrollTop).toBe(300);
+  });
+});
+
+describe('OrganismRoutineFocusCard — tick glyph proportion', () => {
+  const glyphPx = (props) => {
+    const { el } = render(props);
+    return parseFloat(el.querySelector('[data-testid="routine-tick-button"] .rn-mi').style.fontSize);
+  };
+
+  it('keeps the phone size (32px in a 100px button)', () => {
+    expect(glyphPx({ variant: 'phone' })).toBe(32);
+  });
+
+  it('scales tablet/desktop to the phone proportion instead of 38px', () => {
+    // 104 ring − 2×11 inset = 82px button → 82 × .32 ≈ 26px.
+    expect(glyphPx({ variant: 'tablet' })).toBe(26);
+    expect(glyphPx({ variant: 'desktop' })).toBe(26);
+  });
+
+  it('shrinks with the ticked tablet ring', () => {
+    // 46 ring − 2×5 inset = 36px button at the phone's ticked-check ratio
+    // (20/34) → 21px, not the 38px token.
+    expect(glyphPx({ variant: 'tablet', routine: { ...ROUTINE, ticked: true } })).toBe(21);
   });
 });

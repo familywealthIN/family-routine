@@ -81,7 +81,9 @@ describe('AgentsListContainer — the page summary', () => {
     const vm = ctx({
       $agent: {
         agents: [
-          { id: 'a1', taskRef: 'r1', executionStatus: 'listening' },
+          {
+            id: 'a1', taskRef: 'r1', executionStatus: 'listening', lastRunAt: String(Date.now()),
+          },
           { id: 'a2', taskRef: 'r2', executionStatus: 'idle' },
         ],
         error: null,

@@ -876,6 +876,39 @@ export function createDraft(tree, kind, context) {
 // The goal switcher
 // ---------------------------------------------------------------------------
 
+/**
+ * Is this item, filed in a YEAR Goal document, a year goal in its own right?
+ *
+ * `isMilestone` is NOT the test. The server refuses a `goalRef` without
+ * `isMilestone: true` (resolvers/goal.js), so `isMilestone` only means "this
+ * item hangs off some other goal" — and a year goal created as a step toward a
+ * LIFETIME goal carries it. Filtering on the flag hid every such year goal from
+ * the Goals page, the year-goal switcher and the routine editor's LINKED row
+ * (grvpanchal@gmail.com: all 8 of their 2026 year goals point at a lifetime or
+ * week goal, so all 8 vanished).
+ *
+ * The one year-document item that is NOT a year goal is a step toward a SIBLING
+ * year goal — its `goalRef` names another item of the same year read. Pass the
+ * ids of every item in that read as `yearItemIds`.
+ */
+export function isYearGoalItem(item, yearItemIds) {
+  if (!item || !item.id) return false;
+  if (!item.goalRef) return true;
+  const ids = yearItemIds instanceof Set ? yearItemIds : new Set(yearItemIds || []);
+  return !ids.has(String(item.goalRef));
+}
+
+/** Every item id across a list of year `Goal` documents, for `isYearGoalItem`. */
+export function yearItemIdsOf(goals) {
+  const ids = new Set();
+  (goals || []).forEach((goal) => {
+    ((goal && goal.goalItems) || []).forEach((item) => {
+      if (item && item.id) ids.add(String(item.id));
+    });
+  });
+  return ids;
+}
+
 export const SORT_CHIPS = [
   { key: 'routine', label: 'By routine time', icon: 'schedule' },
   { key: 'progress', label: 'By progress', icon: 'donut_large' },
@@ -900,9 +933,10 @@ export function yearGoalRows(goals, options) {
   const monthIndex = today.month();
 
   const items = [];
+  const yearIds = yearItemIdsOf(goals);
   (goals || []).forEach((goal) => {
     ((goal && goal.goalItems) || []).forEach((item) => {
-      if (!item || !item.id || item.isMilestone) return;
+      if (!isYearGoalItem(item, yearIds)) return;
       const tree = buildYearGoal(
         { ...item, period: 'year', date: item.date || goal.date },
         today,
@@ -950,6 +984,8 @@ export default {
   DOW_INITIALS,
   SORT_CHIPS,
   isDone,
+  isYearGoalItem,
+  yearItemIdsOf,
   parseDate,
   periodStatus,
   periodColor,

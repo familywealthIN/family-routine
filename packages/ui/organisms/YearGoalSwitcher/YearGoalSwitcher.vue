@@ -30,7 +30,10 @@
       @click="$emit('close')"
     ></div>
 
-    <section class="rn-ygs__panel">
+    <section
+      v-swipe-dismiss="{ handler: onSwipeDismiss, disabled: compact || shell !== 'phone' }"
+      class="rn-ygs__panel"
+    >
       <div
         v-if="shell === 'phone' && !compact"
         class="rn-ygs__grab"
@@ -162,10 +165,12 @@
 
 <script>
 import ProgressRing from '../../molecules/ProgressRing/ProgressRing.vue';
+import { swipeDismiss } from '../../utils/swipeDismiss';
 
 export default {
   name: 'OrganismYearGoalSwitcher',
   components: { ProgressRing },
+  directives: { swipeDismiss },
   props: {
     /** `yearGoalModel.yearGoalRows()` — headers and rows in one flat list. */
     rows: { type: Array, default: () => [] },
@@ -196,6 +201,9 @@ export default {
     },
   },
   methods: {
+    onSwipeDismiss() {
+      this.$emit('close');
+    },
     subFor(row) {
       if (this.compact) {
         return `${row.routineName || 'No routine'} · ${row.percent}%`;
