@@ -93,11 +93,13 @@ export default new Router({
       path: '/agenda/tree',
       name: 'agendaTree',
       component: () => import(/* webpackChunkName: "agendaTree" */ './views/AgendaTree.vue'),
+      meta: { appShell: true },
     },
     {
       path: '/agenda/tree/:selectedTaskRef',
       name: 'agendaTreeWithTask',
       component: () => import(/* webpackChunkName: "agendaTree" */ './views/AgendaTree.vue'),
+      meta: { appShell: true },
     },
     // {
     //   path: '/agenda',
