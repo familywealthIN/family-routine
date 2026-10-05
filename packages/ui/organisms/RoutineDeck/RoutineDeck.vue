@@ -1,14 +1,13 @@
 <template>
   <!--
-    Phone card deck: the "N OF M TICKED" header, the two routines peeking behind
-    the focus card, and the focus card itself in the default slot.
+    Phone card deck: the focus card, in the default slot.
 
     Routines switch by swiping the card sideways, like a card stack: the card
     follows the finger (or a mouse drag), and past the threshold it flies off and
     the neighbour slides in from the other side; short of it, it snaps back.
-    Swipe left = next routine, swipe right = previous. There are no ‹ › buttons —
-    the owner asked for the swipe to be the only switch. Tapping a peek card still
-    focuses that routine.
+    Swipe left = next routine, swipe right = previous. There are no ‹ › buttons
+    and no cards peeking out behind this one — the owner asked for the swipe to
+    be the only switch, so nothing else competes with the focus card.
 
     The gesture locks its axis after the first few pixels: a mostly-vertical
     drag is left entirely to the browser (the checklist/chat scroll, pull to
@@ -34,19 +33,6 @@
       @pointercancel="onPointerCancel"
       @click.capture="onClickCapture"
     >
-      <div
-        v-for="(peek, i) in peeks"
-        :key="peek.id"
-        class="rn-deck__peek"
-        :style="peekStyle(i)"
-        @click="$emit('focus-routine', peek.id)"
-      >
-        <span class="rn-deck__peek-left">
-          <i class="rn-mi rn-deck__peek-icon" :style="{ color: peek.stateColor }">{{ peek.stateIcon }}</i>
-          {{ peek.time }} · {{ peek.name }}
-        </span>
-        <span class="rn-deck__peek-right">{{ peek.stimulus }} +{{ peek.points }}</span>
-      </div>
       <div
         ref="card"
         class="rn-deck__card"
@@ -79,7 +65,6 @@ export default {
   name: 'OrganismRoutineDeck',
   props: {
     /** The next two routines after the focused one: { id, name, time, points, stimulus, stateIcon, stateColor } */
-    peeks: { type: Array, default: () => [] },
     /** Whether a swipe right / left has a routine to go to. */
     hasPrev: { type: Boolean, default: false },
     hasNext: { type: Boolean, default: false },
@@ -125,16 +110,6 @@ export default {
     this.clearTimers();
   },
   methods: {
-    peekStyle(index) {
-      // 28px / 14px up, 0.96 / 0.92 — the second card peeks out from behind
-      // the first, both anchored at the top so the focus card's own top edge
-      // stays the dominant line.
-      return {
-        transform: `translateY(-${28 - index * 14}px) scale(${1 - (index + 1) * 0.04})`,
-        zIndex: 2 - index,
-      };
-    },
-
     // --- gesture ------------------------------------------------------------
     onPointerDown(event) {
       // Primary button / first finger only, and never mid-animation.
@@ -297,11 +272,10 @@ export default {
   cursor: grabbing;
 }
 
-/* The moving part. Above the peeks (z 1–2) so the card slides over them.
-   It carries a stack shadow of its own (the focus card's shadow sits inside it
-   and is clipped by nothing): soft at rest, deeper while dragged, so the card
-   in hand visibly lifts off the one underneath. The phone body's 16px side
-   padding leaves the blur room before its overflow clip. */
+/* The moving part. It carries a shadow of its own (the focus card's shadow sits
+   inside it and is clipped by nothing): soft at rest, deeper while dragged, so
+   the card in hand visibly lifts. The phone body's 16px side padding leaves the
+   blur room before its overflow clip. */
 .rn-deck__card {
   position: relative;
   z-index: 3;
@@ -314,43 +288,4 @@ export default {
   box-shadow: 0 6px 12px -4px rgba(0, 0, 0, .14), 0 16px 32px -10px rgba(0, 0, 0, .3);
 }
 
-.rn-deck__peek {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 120px;
-  box-sizing: border-box;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .08), 0 4px 10px -4px rgba(0, 0, 0, .1);
-  transform-origin: top center;
-  cursor: pointer;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 16px;
-  font-size: 12px;
-  color: rgba(0, 0, 0, .5);
-}
-
-.rn-deck__peek-left {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.rn-deck__peek-icon {
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-.rn-deck__peek-right {
-  flex-shrink: 0;
-}
 </style>

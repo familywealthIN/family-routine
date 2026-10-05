@@ -193,14 +193,17 @@ export default {
 }
 
 .rn-ptime__select {
-  max-width: 170px;
+  /* 16px, and wider to hold it: iOS zooms the page when a focused field is
+     under 16px. The extra 30px keeps "(GMT -5:00) Eastern Time" from clipping
+     any worse than it did at 13px. */
+  max-width: 200px;
   height: 36px;
   flex-shrink: 0;
   border: 1px solid rgba(0, 0, 0, .15);
   border-radius: 10px;
   padding: 0 8px;
   font: inherit;
-  font-size: 13px;
+  font-size: 16px;
   color: #222;
   background: #fff;
   cursor: pointer;

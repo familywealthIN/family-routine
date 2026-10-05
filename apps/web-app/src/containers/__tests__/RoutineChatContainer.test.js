@@ -279,10 +279,13 @@ describe('RoutineChatContainer.postEvent', () => {
  * These exercise the computeds too, so they mount a real Vue instance with the
  * Apollo smart query stubbed out rather than calling methods on a bag.
  */
+// Ticked: the chat (composer and chips alike) only opens once the routine is
+// checked off, so an unticked fixture would make every chip test assert [].
 const ROUTINE = {
   id: 'wo',
   name: 'Workout',
   time: '07:00',
+  ticked: true,
   tags: ['area:health:fitness', 'project:dashboard', 'context:home'],
 };
 
@@ -362,8 +365,9 @@ describe('RoutineChatContainer — the brief card', () => {
     expect(first.open).toBe(false);
     expect(first.blocks.map((b) => b.tag)).toEqual(['area:health:fitness', 'project:dashboard']);
     expect(first.subline).toBe('Health › Fitness · Dashboard · 3 next steps');
-    // The synthesised greeting still follows it.
-    expect(vm.displayMessages[1].id).toBe('greeting');
+    // Nothing follows it: the synthesised greeting is gone, so an untouched
+    // thread opens with the brief alone.
+    expect(vm.displayMessages).toHaveLength(1);
   });
 
   it('does not render on a past day — nothing can be added to one', () => {
@@ -453,6 +457,13 @@ describe('RoutineChatContainer — the two brief quick replies', () => {
     expect(vm.quickReplies).toEqual(expect.arrayContaining([
       'What did I do last time?', 'Plan from next steps',
     ]));
+  });
+
+  // The composer is disabled until the routine is checked off; the chips send
+  // chat turns too, so leaving them live would just route around it.
+  it('offers no chips at all until the routine is checked off', () => {
+    const { vm } = mountContainer({ routine: { ...ROUTINE, ticked: false } });
+    expect(vm.quickReplies).toEqual([]);
   });
 
   it('answers "What did I do last time?" from the cache, not the model', async () => {
@@ -692,8 +703,8 @@ describe('RoutineChatContainer — lazy area/project context', () => {
     expect(vm.localMessages).toEqual([]);
     expect(mutations).toHaveLength(0);
     expect(notified).toHaveLength(0);
-    // The greeting is untouched and still first.
-    expect(vm.displayMessages[0].id).toBe('greeting');
+    // Nothing was synthesised in its place either — no brief, no greeting.
+    expect(vm.displayMessages).toEqual([]);
 
     await vm.send('Break it down');
     expect(mutations.filter((m) => m.mutation === SEND_ROUTINE_CHAT_MUTATION)).toHaveLength(1);

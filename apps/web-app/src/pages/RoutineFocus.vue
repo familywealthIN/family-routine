@@ -43,12 +43,10 @@
         <!-- Pull down from the top of the card to refetch the day. -->
         <pull-to-refresh :refreshing="refreshing" @refresh="pullRefresh">
           <routine-deck
-            :peeks="deckPeeks"
             :has-prev="focusIndex > 0"
             :has-next="focusIndex < rows.length - 1"
             @prev="focusPrev"
             @next="focusNext"
-            @focus-routine="setFocus"
           >
             <routine-focus-card v-if="focusRow" ref="card" v-bind="cardProps" v-on="cardHandlers">
               <template #thread>
@@ -69,6 +67,7 @@
           v-model="chatText"
           variant="phone"
           :placeholder="composerPlaceholder"
+          :disabled="chatDisabled"
           @send="sendChat"
           @focus="onComposerFocus(true)"
           @add-task="openAiSearch"
@@ -217,6 +216,7 @@
                 v-model="chatText"
                 :variant="shell"
                 :placeholder="composerPlaceholder"
+                :disabled="chatDisabled"
                 @send="sendChat"
                 @focus="onComposerFocus(false)"
                 @add-task="openAiSearch"
@@ -766,9 +766,6 @@ export default {
     showBackToNow() {
       return !!this.currentRoutineId && this.resolvedFocusId !== this.currentRoutineId;
     },
-    deckPeeks() {
-      return this.rows.slice(this.focusIndex + 1, this.focusIndex + 3);
-    },
     emptyMessage() {
       if (this.preparingRoutine) return 'Setting today up…';
       if (this.loadError) {
@@ -1095,7 +1092,6 @@ export default {
         routine: this.focusRow,
         endTime: this.focusWindowInfo.endTime,
         statusLabel: this.focusWindowInfo.statusLabel,
-        leftLabel: this.focusWindowInfo.leftLabel,
         goalItems: this.focusItems,
         scores: this.stimulusTotals,
         // The "Before you start" brief offers to add to today's checklist, so
@@ -1117,8 +1113,19 @@ export default {
       if (!this.focusRow) return '';
       return `${this.focusRow.doneCount} of ${this.focusRow.totalCount} done · ${this.focusWindowInfo.leftLabel}`;
     },
+    /**
+     * The chat opens once the routine has been checked off. Before that the
+     * card's own controls (tick, Break it down, Add task) are the way to work
+     * the routine, and the thread stays shut so it cannot be used to talk
+     * around doing it.
+     */
+    chatDisabled() {
+      return !(this.focusRow && this.focusRow.ticked);
+    },
     composerPlaceholder() {
-      return `Message ${this.focusRow ? this.focusRow.name : 'this routine'}…`;
+      if (!this.focusRow) return 'Message this routine…';
+      if (this.chatDisabled) return `Check off ${this.focusRow.name} to chat…`;
+      return `Message ${this.focusRow.name}…`;
     },
     showGoalsSkeleton() {
       const loading = this.$apollo.queries.goals && this.$apollo.queries.goals.loading;

@@ -78,7 +78,6 @@ export default {
     routine: { type: Object, default: null },
     endTime: { type: String, default: '' },
     statusLabel: { type: String, default: '' },
-    leftLabel: { type: String, default: '' },
     /** This routine's day goal items. */
     goalItems: { type: Array, default: () => [] },
     /** { D, K, G } percentages. */
@@ -166,36 +165,9 @@ export default {
     doneCount() {
       return this.goalItems.filter((item) => item && item.isComplete).length;
     },
-    /**
-     * The card's "x of y": y is the routine's slot count (the server's D/K
-     * equation), so an empty routine reads "0 of 1", never "0 of 0".
-     */
-    totalCount() {
-      const slots = this.routine && this.routine.totalCount;
-      return Math.max(this.goalItems.length, slots || 0);
-    },
     openItems() {
       return this.goalItems.filter((item) => item && !item.isComplete);
     },
-    /**
-     * The opening line is synthesised, not stored: it restates the routine's
-     * live state, so persisting it would mean showing yesterday's numbers.
-     */
-    greeting() {
-      if (!this.routine) return null;
-      const open = this.openItems[0];
-      const tail = open ? ` Want me to break down “${open.body}”?` : '';
-      return {
-        id: 'greeting',
-        from: 'routine',
-        kind: 'text',
-        text: `${this.routineName} · ${this.routine.time} – ${this.endTime}. `
-          + `${this.doneCount} of ${this.totalCount} done${this.leftLabel ? ` — ${this.leftLabel}` : ''}.${tail}`,
-        items: [],
-        proposals: [],
-      };
-    },
-
     // --- "Before you start" ------------------------------------------------
     /** The focused routine's `area:`/`project:` tags, in the order it lists them. */
     contextTags() {
@@ -240,14 +212,21 @@ export default {
 
     displayMessages() {
       const stored = Array.isArray(this.chatMessages) ? this.chatMessages : [];
+      // No synthesised opening line. It restated what the focus card's own
+      // status row already shows (routine, time range, "x of y done", time
+      // left) and then offered to break the first open item down unprompted.
+      // The "Break it down" quick reply still offers that on demand.
       return [
         ...(this.briefMessage ? [this.briefMessage] : []),
-        ...(this.greeting ? [this.greeting] : []),
         ...stored,
         ...this.localMessages,
       ];
     },
     quickReplies() {
+      // The chips send chat turns, so they follow the composer: both stay shut
+      // until the routine is checked off (RoutineFocus.chatDisabled). Offering
+      // them next to a disabled composer would just be a way around it.
+      if (!(this.routine && this.routine.ticked)) return [];
       const chips = [];
       if (this.openItems.length) chips.push('Break it down');
       if (this.briefDataBlocks.length) {

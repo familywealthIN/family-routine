@@ -520,7 +520,6 @@ describe('RoutineFocus computed graph', () => {
     expect(vm.focusWindowInfo.statusLabel).toBe('In progress');
     expect(vm.tickedCount).toBe(1);
     expect(vm.routinesLeft).toBe(2);
-    expect(vm.deckPeeks.map((p) => p.id)).toEqual(['lw']);
     expect(vm.showBackToNow).toBe(false);
   });
 
@@ -528,7 +527,6 @@ describe('RoutineFocus computed graph', () => {
     const vm = graph({ focusRoutineId: 'lw' });
     expect(vm.resolvedFocusId).toBe('lw');
     expect(vm.showBackToNow).toBe(true);
-    expect(vm.deckPeeks).toEqual([]);
   });
 
   // A focus held on a routine that is gone (edited away, or a day switch) must
@@ -552,7 +550,9 @@ describe('RoutineFocus computed graph', () => {
     expect(vm.cardProps.items).toHaveLength(2);
     expect(vm.chatProps.routine.id).toBe('sw');
     expect(vm.chatProps.scores).toEqual(vm.stimulusTotals);
-    expect(vm.composerPlaceholder).toBe('Message Start Work…');
+    // Not ticked yet, so the chat is shut and the placeholder says why.
+    expect(vm.chatDisabled).toBe(true);
+    expect(vm.composerPlaceholder).toBe('Check off Start Work to chat…');
   });
 
   it('has nothing to render for a day with no routine', () => {
