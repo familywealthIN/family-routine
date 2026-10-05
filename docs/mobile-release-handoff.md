@@ -138,6 +138,41 @@ Two gaps in local fidelity worth knowing:
   with dummy keys** now exists locally so the app builds and launches;
   `FirebaseApp.configure()` is unguarded and crashes without one. Swap in the
   real file for anything Firebase-dependent.
+- **Android needs the same treatment, and fails far less obviously.**
+  `apps/android/app/google-services.json` is gitignored and provisioned by CI.
+  Without it `apps/android/app/build.gradle` silently skips the
+  `com.google.gms.google-services` plugin ("google-services.json not found,
+  google-services plugin not applied"), the build still succeeds, and then the
+  app **hard-crashes a few seconds after launch** on a background thread:
+
+  ```
+  FATAL EXCEPTION: CapacitorPlugins
+  java.lang.IllegalStateException: Default FirebaseApp is not initialized
+    at PushNotificationsPlugin.register(PushNotificationsPlugin.java:103)
+  ```
+
+  What you see is a plain white screen, and `adb logcat` without `-b crash`
+  shows no error — the WebView had already loaded fine. A placeholder now
+  exists locally; keep one there.
+
+### Running it on Android
+
+```bash
+yarn workspace web-app build
+cd apps/web-app && PATH="$HOME/.rbenv/shims:$PATH" npx cap sync android
+cd ../android && JAVA_HOME=/usr/local/Cellar/openjdk@21/*/libexec/openjdk.jdk/Contents/Home ./gradlew :app:assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell monkey -p com.routine.note -c android.intent.category.LAUNCHER 1
+```
+
+Unlike the iOS simulator, the Android emulator can be driven headlessly
+(`adb shell input tap X Y`) and its WebView can be inspected over CDP, which is
+the only reliable way to *measure* a layout rather than eyeball a screenshot:
+
+```bash
+adb forward tcp:9333 localabstract:webview_devtools_remote_$(adb shell pidof com.routine.note)
+curl -s http://localhost:9333/json/list    # then Runtime.evaluate over the ws URL
+```
 
 ## ⚠️ The iOS app is already live on the App Store
 
