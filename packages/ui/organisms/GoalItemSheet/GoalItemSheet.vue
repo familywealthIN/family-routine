@@ -139,11 +139,27 @@
           <i class="rn-mi rn-gis__field-icon">account_tree</i>Linked to
         </div>
         <!--
-          Editable: the routine and the parent goal it rolls up into, with the
-          same two pickers the AI search toolbar uses. Locked (Year Goals,
-          where the plan fixes the parent): the read-only chips.
+          The pickers are an ADD-time control, not an edit-time one.
+
+          Adding: the routine and the parent goal it rolls up into, with the same
+          two pickers the AI search toolbar uses — that is where the link is
+          decided, and the sheet is the only place to decide it.
+
+          Editing (Home, which is the only host that opens this sheet on a saved
+          item): read-only chips. Re-pointing a saved item at a different routine
+          or a different parent re-parents a node in the middle of the cascade,
+          and the roll-up counts on both sides move silently with it — the
+          `day -> week -> month` thresholds in chassis.md § "The goal cascade"
+          are computed from what hangs off each parent. There was no confirm and
+          no undo, just two dropdowns on an otherwise read-only summary.
+
+          `linkLocked` stays, and still locks the ADD case too: Year Goals fixes
+          what a new goal rolls up into, so its sheet has nothing to pick either.
         -->
-        <div v-if="!linkLocked" class="rn-gis__field-value rn-gis__field-value--grow rn-gis__link-pickers">
+        <div
+          v-if="creating && !linkLocked"
+          class="rn-gis__field-value rn-gis__field-value--grow rn-gis__link-pickers"
+        >
           <goal-task-selector
             class="rn-gis__picker"
             :items="routines"
@@ -352,8 +368,9 @@ export default {
     /** Goal items one period up — the parent-goal picker's choices. */
     goalRefOptions: { type: Array, default: () => [] },
     /**
-     * Show Linked to as read-only chips instead of the pickers. Year Goals
-     * sets it: there the plan decides what a new goal rolls up into.
+     * Show Linked to as read-only chips even while ADDING. Year Goals sets it:
+     * there the plan decides what a new goal rolls up into. Editing is already
+     * read-only without this — see the template.
      */
     linkLocked: { type: Boolean, default: false },
     /** "Day goal · 12 Sep 2026". */
@@ -489,16 +506,13 @@ export default {
       this.$emit('update-tags', { item: this.item, tags });
     },
     /** Routine and/or parent goal. Editing writes through; adding drafts it. */
+    /*
+     * Draft-only. The pickers render while adding and nowhere else, so there is
+     * no saved item to write through — the `update-link` emit that used to live
+     * here went with the edit-time pickers (see the Linked to block).
+     */
     setLink(changes) {
-      if (this.creating) {
-        Object.assign(this.form, changes);
-        return;
-      }
-      if (!this.item) return;
-      const unchanged = Object.keys(changes)
-        .every((key) => (this.item[key] || '') === (changes[key] || ''));
-      if (unchanged) return;
-      this.$emit('update-link', { item: this.item, ...changes });
+      Object.assign(this.form, changes);
     },
     setDate(date) {
       this.form.date = date || '';

@@ -253,7 +253,7 @@ describe('QuickGoalCreation — parent goal picker', () => {
   it('is collapsed, and says so, until it is tapped', async () => {
     const { el } = render({ goalItemsRef: GOAL_ITEMS });
     expect(q(el, 'quick-goal-goal-options')).toBeNull();
-    expect(text(q(el, 'quick-goal-goal-picker'))).toContain('PARENT GOAL');
+    expect(text(q(el, 'quick-goal-goal-picker'))).toContain('flag');
     expect(text(q(el, 'quick-goal-goal-value'))).toBe('No parent goal');
 
     q(el, 'quick-goal-goal-picker').click();

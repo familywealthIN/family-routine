@@ -24,7 +24,6 @@
     :routine-end-time="routineEndTime"
     :earn-points="earnPoints"
     :description="description"
-    :parent-goal-period-label="parentGoalPeriodLabel"
     @add-goal-item="addGoalItem"
     @goal-ref-changed="updateCurrentGoalRef"
     @close="$emit('close')"
@@ -131,10 +130,6 @@ export default {
       default: 0,
     },
     description: {
-      type: String,
-      default: '',
-    },
-    parentGoalPeriodLabel: {
       type: String,
       default: '',
     },

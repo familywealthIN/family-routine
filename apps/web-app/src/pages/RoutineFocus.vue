@@ -310,7 +310,6 @@
       :tag-usage="tagUsage"
       :reward-meta="goalSheetRewardMeta"
       :reward-new="goalSheetRewardNew"
-      :routines="tasklist"
       @close="closeGoalItem"
       @toggle-item="toggleOpenGoalItem"
       @open-transcript="openTranscript"
