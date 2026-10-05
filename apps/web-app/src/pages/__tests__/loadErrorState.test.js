@@ -14,6 +14,11 @@
 // them). Stub them — they play no part in the error handling.
 jest.mock('vue-radar', () => ({ __esModule: true, default: {} }));
 jest.mock('vue-easymde', () => ({ __esModule: true, default: {} }));
+// MilestonesTime is on the chassis now, so it imports utils/signOut for the
+// drawer's Log out — which reaches the Google Auth plugin, shipped as ESM.
+jest.mock('@codetrix-studio/capacitor-google-auth', () => ({ GoogleAuth: {} }));
+jest.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false } }));
+jest.mock('../../blob/config', () => ({ gauthOption: {}, graphQLUrl: '' }), { virtual: true });
 
 const { agentTotals } = require('@routine-notes/ui/constants/agents');
 
@@ -99,16 +104,48 @@ describe('Goals load error', () => {
 });
 
 describe('MilestonesTime load error', () => {
-  it('flags the failure', () => {
-    const vm = { loadError: false };
-    MilestonesTime.apollo.goalMilestones.error.call(vm, new Error('Failed to fetch'));
-    expect(vm.loadError).toBe(true);
+  // One query per period now — the combined one returned 502 because the five
+  // together exceeded Lambda's response limit. So the failure is per period,
+  // and a card that fails costs only itself.
+  const ctx = (loadErrors = {}) => ({
+    loadErrors,
+    $set(obj, key, value) { obj[key] = value; },
+  });
+
+  it('flags the failure for the period that failed, and only that one', () => {
+    const vm = ctx();
+    MilestonesTime.apollo.milestonesDay.error.call(vm, new Error('Failed to fetch'));
+    expect(vm.loadErrors.day).toBe(true);
+    expect(vm.loadErrors.week).toBeUndefined();
   });
 
   it('clears the failure once a result arrives', () => {
-    const vm = { loadError: true };
-    MilestonesTime.apollo.goalMilestones.result.call(vm, { data: { goalMilestones: {} } });
-    expect(vm.loadError).toBe(false);
+    const vm = ctx({ day: true });
+    MilestonesTime.apollo.milestonesDay.result.call(vm, { data: { goalMilestones: { day: [] } } });
+    expect(vm.loadErrors.day).toBe(false);
+  });
+
+  it('only calls the whole page broken when every period failed', () => {
+    const periods = ['day', 'week', 'month', 'year', 'lifetime'];
+    const some = ctx({ day: true });
+    expect(MilestonesTime.computed.loadError.call(some)).toBe(false);
+
+    const all = ctx(periods.reduce((acc, p) => ({ ...acc, [p]: true }), {}));
+    expect(MilestonesTime.computed.loadError.call(all)).toBe(true);
+  });
+
+  it('still shows a failed period as a card, so the failure is visible', () => {
+    const vm = {
+      loadErrors: { day: true },
+      milestonesDay: [],
+      milestonesWeek: [],
+      milestonesMonth: [],
+      milestonesYear: [],
+      milestonesLifetime: [],
+    };
+    const groups = MilestonesTime.computed.groups.call(vm);
+    expect(groups.map((g) => g.period)).toEqual(['day']);
+    expect(groups[0].failed).toBe(true);
   });
 });
 

@@ -87,6 +87,7 @@ export default new Router({
       path: '/goals/milestones',
       name: 'milestones',
       component: () => import(/* webpackChunkName: "milestones" */'./views/Milestones.vue'),
+      meta: { appShell: true },
     },
     {
       path: '/agenda/tree',
