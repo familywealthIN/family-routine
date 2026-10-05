@@ -520,9 +520,13 @@ export default {
   color: rgba(0, 0, 0, .87);
 }
 
-.capacitor-native .rn-shell {
-  --rn-shell-safe-bottom: 0px;
-}
+/* No `.capacitor-native` override zeroing this. It used to be zeroed because
+   android-safe-area.css pads <body> by the inset — but `.rn-shell--phone` is
+   `position: fixed; inset: 0`, so it is laid out against the viewport and never
+   sees that padding. Zeroing it drew the tab bar's middle labels underneath the
+   gesture pill / home indicator (measured on an API 36 emulator: inset 24px,
+   tabbar 850-914 in a 914px viewport, padding-bottom 4px). Same fix as
+   `--rn-safe-bottom` on the Home page. */
 
 /* Unknown is not 0: a page that did not supply D/K/G or the streak gets no
    "0%" rings and no "0-day streak" in the drawer. The points pill on the

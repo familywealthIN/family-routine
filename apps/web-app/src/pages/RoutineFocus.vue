@@ -2352,7 +2352,7 @@ export default {
    underneath WKWebView's contentInset. The nav therefore sits on the very bottom
    of the screen on both platforms, and zeroing the inset drew its labels beneath
    the home indicator / gesture pill. Verified on an iPhone 16 Pro Max simulator
-   and an API 36 emulator (inset 24px; nav grew 56px -> 80px). The rule also beat
+   and an API 36 emulator (inset 24px; the bar grew by exactly that). It also beat
    android-safe-area.css's correct `.capacitor-native .v-bottom-nav` handling on
    specificity, so Android lost its padding twice over. */
 
@@ -2428,14 +2428,18 @@ export default {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 8px 16px calc(56px + var(--rn-safe-bottom));
+  padding: 8px 16px calc(64px + var(--rn-safe-bottom));
   overflow: hidden;
 }
 
 /* The MobileLayout bottom nav: fixed to the viewport bottom, grown by the
    home-indicator inset with the buttons padded above it. */
+/* 64px of tabs, matching AppShell's `.rn-shell__tabbar` and the phone chassis
+   ("64px header + 64px bottom bar", docs/redesign/chassis.md). Home used to be
+   56px, which made the bar visibly change height when moving between Home and
+   every other page. */
 .rn-home .rn-home__nav.v-bottom-nav {
-  height: calc(56px + var(--rn-safe-bottom)) !important;
+  height: calc(64px + var(--rn-safe-bottom)) !important;
   padding-bottom: var(--rn-safe-bottom);
   box-sizing: border-box;
   box-shadow: 0 -1px 3px rgba(0, 0, 0, .08);
@@ -2443,7 +2447,7 @@ export default {
 }
 
 .rn-home .rn-home__nav .v-btn {
-  height: 56px;
+  height: 64px;
 }
 
 /* ---- tablet / desktop ---- */
