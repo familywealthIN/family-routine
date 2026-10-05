@@ -78,6 +78,13 @@ describe('MarkdownField — preview is the resting state', () => {
     expect(q(el, 'stub-rendered')).toBeTruthy();
   });
 
+  it('renders under the shared rn-markdown styles the editor preview also uses', () => {
+    // Same class as the EasyMDE preview pane, so Preview here and the editor's
+    // eye button look identical and images are width-capped in both.
+    const { el } = render();
+    expect(q(el, 'stub-rendered').classList.contains('rn-markdown')).toBe(true);
+  });
+
   it('shows the placeholder instead of an empty preview', () => {
     const { el } = render({ value: '   ' });
     expect(q(el, 'markdown-preview').textContent.trim())

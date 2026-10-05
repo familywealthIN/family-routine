@@ -498,17 +498,30 @@ export default {
 
 <style>
 /* 100vh, not 100%: the shell renders straight under <v-app>'s content area,
-   which has no resolved height of its own — same as `.rn-home`. */
+   which has no resolved height of its own — same as `.rn-home`. 100dvh where
+   supported: iOS Safari's 100vh includes the area behind its toolbar, which
+   pushed the tab bar off-screen. In a standalone PWA / native WebView the two
+   are equal.
+
+   `--rn-shell-safe-bottom` is the home-indicator inset the tab bar pads by.
+   The native WebView already pads <body> by it (android-safe-area.css), so
+   there it is 0 — the native layout is unchanged. */
 .rn-shell {
+  --rn-shell-safe-bottom: env(safe-area-inset-bottom, 0px);
   position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   min-height: 0;
   overflow: hidden;
   background: #f4f4f4;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   color: rgba(0, 0, 0, .87);
+}
+
+.capacitor-native .rn-shell {
+  --rn-shell-safe-bottom: 0px;
 }
 
 /* Unknown is not 0: a page that did not supply D/K/G or the streak gets no
@@ -628,12 +641,14 @@ export default {
 }
 
 .rn-shell__tabbar {
-  height: 64px;
+  /* 64px of tabs, plus the iPhone home-indicator strip underneath them (the
+     bar's white runs down behind the indicator, the tabs sit above it). */
+  height: calc(64px + var(--rn-shell-safe-bottom));
   box-sizing: border-box;
   background: #fff;
   box-shadow: 0 -1px 3px rgba(0, 0, 0, .08);
   display: flex;
-  padding-bottom: 4px;
+  padding-bottom: calc(4px + var(--rn-shell-safe-bottom));
   flex-shrink: 0;
   z-index: 5;
 }

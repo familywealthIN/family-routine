@@ -63,7 +63,12 @@
         stored-XSS vector. Agent output is different — it is arbitrary webhook
         HTML and goes through the sandboxed iframe in AgentResultModal instead.
       -->
-      <vue-markdown v-if="hasValue" :source="draft" :html="false" />
+      <!--
+        `rn-markdown` is the shared rendered-markdown stylesheet, the same one
+        the editor's preview pane uses, so Preview here and the eye button in
+        the editor show the text identically (images capped to the width).
+      -->
+      <vue-markdown v-if="hasValue" class="rn-markdown" :source="draft" :html="false" />
       <span v-else>{{ placeholder }}</span>
     </div>
   </div>
@@ -72,6 +77,7 @@
 <script>
 import VueMarkdown from 'vue-markdown';
 import { MarkdownEditor } from '@routine-notes/markdown-editor';
+import '@routine-notes/markdown-editor/styles/markdown-content.css';
 
 /** How long typing must pause before the draft autosaves. */
 export const AUTOSAVE_MS = 1000;
@@ -259,27 +265,9 @@ export default {
   color: rgba(0, 0, 0, .35);
 }
 
-.rn-mdf__preview p {
-  margin: 0 0 10px;
-}
-
-.rn-mdf__preview > :last-child {
-  margin-bottom: 0;
-}
-
-.rn-mdf__preview code {
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: .88em;
-  background: rgba(0, 0, 0, .06);
-  padding: 1px 5px;
-  border-radius: 4px;
-  color: #c7254e;
-}
-
-.rn-mdf__preview blockquote {
-  border-left: 3px solid rgba(0, 0, 0, .2);
-  padding: 2px 0 2px 12px;
-  margin: 0 0 10px;
-  color: rgba(0, 0, 0, .65);
+/* The editor's own preview pane (eye button) reads at the Preview's size. */
+.rn-mdf__editor .rn-markdown {
+  font-size: 15px;
+  color: rgba(0, 0, 0, .82);
 }
 </style>

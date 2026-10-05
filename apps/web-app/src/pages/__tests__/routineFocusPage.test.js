@@ -155,11 +155,69 @@ describe('RoutineFocus agent stage', () => {
   });
 });
 
+describe('RoutineFocus READY tag and agent-driven refresh', () => {
+  const decorate = (item, isTarget = true) => methods.decorateItem.call({
+    isAgentTargetItem: () => isTarget,
+  }, item);
+
+  it('is not READY just because an agent is assigned (or its status moved)', () => {
+    expect(decorate({ id: 'g1', taskRef: 'sw', isComplete: false }).ready).toBe(false);
+    expect(decorate({
+      id: 'g1', taskRef: 'sw', isComplete: false, contribution: '   ',
+    }).ready).toBe(false);
+  });
+
+  it('is READY once the agent has written its contribution', () => {
+    expect(decorate({
+      id: 'g1', taskRef: 'sw', isComplete: false, contribution: 'Summary of 3 PRs',
+    }).ready).toBe(true);
+  });
+
+  it('is never READY on a non-target or completed item', () => {
+    expect(decorate({ id: 'g1', contribution: 'x', isComplete: false }, false).ready).toBe(false);
+    expect(decorate({ id: 'g1', contribution: 'x', isComplete: true }).ready).toBe(false);
+  });
+
+  it('refetches the list when an agent status settles today', () => {
+    const refetchGoals = jest.fn();
+    const ctx = { isToday: true, refetchGoals };
+    methods.onAgentStatusChanged.call(ctx, { taskRef: 'sw', status: 'listening' });
+    methods.onAgentStatusChanged.call(ctx, { taskRef: 'sw', status: 'finished' });
+    methods.onAgentStatusChanged.call(ctx, { taskRef: 'sw', status: 'running' });
+    expect(refetchGoals).toHaveBeenCalledTimes(2);
+    methods.onAgentStatusChanged.call({ isToday: false, refetchGoals }, { status: 'finished' });
+    expect(refetchGoals).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps polling the list while one of today’s agents is live', () => {
+    const refetchGoals = jest.fn();
+    methods.handleRoutineItemCheck.call({ canMaintainPassWait: false, anyAgentLiveToday: true, refetchGoals });
+    methods.handleRoutineItemCheck.call({ canMaintainPassWait: false, anyAgentLiveToday: false, refetchGoals });
+    expect(refetchGoals).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('RoutineFocus effectiveAgentStatus', () => {
-  const vm = (status, items) => ({
-    $agent: { statusByRoutineId: { sw: status } },
+  const vm = (status, items, over = {}) => ({
+    $agent: { statusByRoutineId: { sw: status }, statusDay: '05-10-2026' },
+    isToday: true,
+    todayDate: '05-10-2026',
     dayGoalItems: items,
     taskAgentEndEventDone: methods.taskAgentEndEventDone,
+    ...over,
+  });
+
+  // Agents show status for today's trigger only.
+  it('shows no status on any day but today', () => {
+    const ctx = vm('listening', [], { isToday: false });
+    ctx.taskAgentEndEventDone = methods.taskAgentEndEventDone.bind(ctx);
+    expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('');
+  });
+
+  it('shows every agent idle on a new day, whatever yesterday left behind', () => {
+    const ctx = vm('finished', [], { todayDate: '06-10-2026' });
+    ctx.taskAgentEndEventDone = methods.taskAgentEndEventDone.bind(ctx);
+    expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('');
   });
 
   // A late start-event dispatch resolving after the end event already saved a
@@ -394,7 +452,7 @@ describe('RoutineFocus computed graph', () => {
           focusRoutineId: '',
           period: 'day',
           checklistOpen: true,
-          weekStripOpen: false,
+          refreshing: false,
           fly: null,
           endEventFiring: {},
           goalsFirstLoad: false,
@@ -407,6 +465,8 @@ describe('RoutineFocus computed graph', () => {
         decorateItem: RoutineFocus.methods.decorateItem,
         isAgentTargetItem: () => false,
         countTotal: RoutineFocus.methods.countTotal,
+        countTaskTotal: RoutineFocus.methods.countTaskTotal,
+        countTaskCompleted: RoutineFocus.methods.countTaskCompleted,
         weekOfMonth: RoutineFocus.methods.weekOfMonth,
         effectiveAgentStatus: () => '',
         redeemCostForTask: () => 0,
@@ -435,9 +495,23 @@ describe('RoutineFocus computed graph', () => {
     const vm = graph();
     expect(vm.focusItems.map((i) => i.id)).toEqual(['g1', 'g2']);
     expect(vm.focusRow.doneCount).toBe(1);
-    expect(vm.focusRow.totalCount).toBe(2);
+    // Start Work's 6-slot window owes more than its 2 checklist items.
+    expect(vm.focusRow.totalCount).toBe(6);
+    // The day line sums the cards: 4 + 6 + 4 slots, one item done.
     expect(vm.dayDoneCount).toBe(1);
-    expect(vm.dayTotalCount).toBe(2);
+    expect(vm.dayTotalCount).toBe(14);
+  });
+
+  it('counts the day’s tasks as one per 2 hours of each routine window', () => {
+    const stim = (d) => [{ name: 'D', splitRate: d, earned: 0 }, { name: 'K', splitRate: 2, earned: 0 }];
+    const tasklist = [
+      { ...TASKS[0], stimuli: stim(2) }, // 1 slot, no items
+      { ...TASKS[1], stimuli: stim(7 / 3) }, // 2h20m: still 1 slot, but 2 items
+      { ...TASKS[2], stimuli: stim(4.5) }, // 2 slots
+    ];
+    const vm = graph({ routineDate: { id: 'r1', tasklist } });
+    expect(vm.rows.map((r) => r.totalCount)).toEqual([1, 2, 2]);
+    expect(vm.daySummary).toContain('1/5 tasks');
   });
 
   it('reports the focused routine’s window and the deck counters', () => {
@@ -899,8 +973,13 @@ describe('RoutineFocus inbox', () => {
   });
 
   it('badges the count', () => {
-    expect(call('inboxCount', { inboxItems: [{ id: 'i1' }, { id: 'i2' }] })).toBe(2);
-    expect(call('inboxCount', { inboxItems: [] })).toBe(0);
+    expect(call('inboxCount', { inboxItems: [{ id: 'i1' }, { id: 'i2' }], inboxPendingCount: 0 })).toBe(2);
+    expect(call('inboxCount', { inboxItems: [], inboxPendingCount: 0 })).toBe(0);
+  });
+
+  // The Inbox sheet reports the unrouted tasks it holds beyond today's items.
+  it('adds the pending count the inbox sheet reports to the badge', () => {
+    expect(call('inboxCount', { inboxItems: [{ id: 'i1' }], inboxPendingCount: 3 })).toBe(4);
   });
 
   it('gives every routine the goalRef an item will inherit when it lands', () => {
@@ -1205,12 +1284,27 @@ describe('RoutineFocus shell geometry', () => {
   });
 
   // --- 7. phone details ----------------------------------------------------
-  it('opens the phone week strip to the design 80px', () => {
+  it('always shows the phone week strip, at the design 80px', () => {
     // Measured 73px: `max-height` alone left the cells deciding the height.
-    const open = call('weekStripStyle', { weekStripOpen: true });
-    expect(open.height).toBe('80px');
-    expect(open.maxHeight).toBe('80px');
-    expect(call('weekStripStyle', { weekStripOpen: false }).height).toBe('0px');
+    const style = call('weekStripStyle', {});
+    expect(style.height).toBe('80px');
+    expect(style.maxHeight).toBe('80px');
+    // No grab handle, no hidden state: the owner wants the week always in view.
+    expect(source).not.toContain('week-grab');
+    expect(source).not.toContain('weekStripOpen');
+  });
+
+  it('switches routines by swiping the deck, with no prev/next buttons', () => {
+    const deck = fs.readFileSync(path.join(
+      __dirname, '../../../../../packages/ui/organisms/RoutineDeck/RoutineDeck.vue',
+    ), 'utf8');
+    expect(deck).not.toContain('deck-prev');
+    expect(deck).not.toContain('deck-next');
+    expect(deck).toContain('touch-action: pan-y');
+  });
+
+  it('wraps the phone deck in pull-to-refresh, refetching through the network', () => {
+    expect(source).toMatch(/<pull-to-refresh[^>]*@refresh="pullRefresh"/);
   });
 
   it('draws the phone header avatar at 40px', () => {

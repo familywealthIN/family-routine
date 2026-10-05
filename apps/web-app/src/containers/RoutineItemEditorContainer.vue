@@ -50,6 +50,7 @@
  */
 import RoutineEditorSheet from '@routine-notes/ui/organisms/RoutineEditorSheet/RoutineEditorSheet.vue';
 import { fromMinutes, maxPointsFor } from '@routine-notes/ui/utils/dayDial';
+import { agentStatusKey } from '@routine-notes/ui/constants/agents';
 import {
   ADD_ROUTINE_ITEM_MUTATION,
   DELETE_ROUTINE_ITEM_MUTATION,
@@ -115,7 +116,8 @@ export default {
       if (!id || !this.$agent) return null;
       const found = this.$agent.getByTaskRef(String(id));
       if (!found) return null;
-      return { name: found.name || '', status: found.executionStatus || 'idle' };
+      // Day-scoped: yesterday's run reads idle, like everywhere else.
+      return { name: found.name || '', status: agentStatusKey(found) };
     },
 
     yearGoal() {

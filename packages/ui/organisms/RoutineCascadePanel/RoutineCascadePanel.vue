@@ -50,28 +50,52 @@
       </div>
     </div>
 
-    <template v-if="cascade.linked && cascade.linked.length">
-      <div class="rn-cascade__linked-label">{{ cascade.linkedLabel }}</div>
-      <div
-        v-for="(linked, i) in cascade.linked"
-        :key="`l-${i}-${linked.body}`"
-        class="rn-cascade__linked"
+    <!--
+      Linked goals arrive sorted oldest window first (routineFocusModel.linkedGoals).
+      The whole linked period collapses behind its heading — collapsed by
+      default so a year's twelve months still fit the card; the rows inside
+      are plain, not individually expandable.
+    -->
+    <div v-if="cascade.linked && cascade.linked.length" class="rn-cascade__linked-group">
+      <button
+        type="button"
+        class="rn-cascade__linked-label"
+        :aria-expanded="linkedOpen ? 'true' : 'false'"
+        data-testid="cascade-linked-toggle"
+        @click="linkedOpen = !linkedOpen"
       >
-        <span class="rn-cascade__linked-tag">{{ linked.label }}</span>
-        <span
-          class="rn-cascade__linked-body"
-          :style="{
-            textDecoration: linked.isComplete ? 'line-through' : 'none',
-            color: linked.isComplete ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.8)',
-          }"
-        >{{ linked.body }}</span>
-      </div>
-    </template>
+        <span class="rn-cascade__linked-label-text">{{ cascade.linkedLabel }}</span>
+        <span class="rn-cascade__linked-count">{{ linkedDone }}/{{ cascade.linked.length }} done</span>
+        <i class="rn-mi rn-cascade__linked-chevron">{{ linkedOpen ? 'expand_less' : 'expand_more' }}</i>
+      </button>
+      <template v-if="linkedOpen">
+        <div
+          v-for="(linked, i) in cascade.linked"
+          :key="linked.id ? `l-${linked.id}` : `l-${i}-${linked.body}`"
+          class="rn-cascade__linked"
+          data-testid="cascade-linked"
+        >
+          <span class="rn-cascade__linked-tag">{{ linked.label }}</span>
+          <span
+            class="rn-cascade__linked-body"
+            :style="{
+              textDecoration: linked.isComplete ? 'line-through' : 'none',
+              color: linked.isComplete ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.8)',
+            }"
+          >{{ linked.body }}</span>
+          <span
+            v-if="linked.detail && linked.detail.status"
+            class="rn-cascade__linked-status"
+            :class="`rn-cascade__linked-status--${linked.detail.status.toLowerCase()}`"
+          >{{ linked.detail.status }}</span>
+        </div>
+      </template>
+    </div>
 
     <div v-if="cascade.parent" class="rn-cascade__parent">{{ cascade.parent }}</div>
   </div>
   <div v-else class="rn-cascade__empty">
-    No goal set for this period yet. Use Add task → Goal to set one.
+    No goal linked to this routine for this period yet. Use Add task → Goal to set one.
   </div>
 </template>
 
@@ -84,16 +108,25 @@ export default {
      *   title, range, unitName, done, threshold, complete, statusLabel,
      *   statusColor, pct, rule, parent, cols,
      *   units: [{ label, sub, state, icon, color, fg, bg }],
-     *   linked: [{ label, body, isComplete }], linkedLabel
+     *   linked: [{ id, label, body, isComplete,
+     *              detail: { period, window, status, tags } }], linkedLabel
      * }
      * Built by the page from the real goal data — this organism only draws it.
      */
     cascade: { type: Object, default: null },
   },
+  data() {
+    /** The linked period starts collapsed. */
+    return { linkedOpen: false };
+  },
   computed: {
     gridColumns() {
       const cols = (this.cascade && this.cascade.cols) || 7;
       return `repeat(${cols}, minmax(0, 1fr))`;
+    },
+    linkedDone() {
+      const linked = (this.cascade && this.cascade.linked) || [];
+      return linked.filter((l) => l && l.isComplete).length;
     },
   },
 };
@@ -204,14 +237,38 @@ export default {
 }
 
 .rn-cascade__linked-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.rn-cascade__linked-label-text {
+  flex: 1;
+  min-width: 0;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .5px;
   color: rgba(0, 0, 0, .45);
-  margin-top: 12px;
   text-transform: uppercase;
 }
-
+.rn-cascade__linked-count {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .45);
+}
+.rn-cascade__linked-chevron {
+  flex-shrink: 0;
+  font-size: 18px;
+  color: rgba(0, 0, 0, .45);
+}
 .rn-cascade__linked {
   display: flex;
   align-items: center;
@@ -219,7 +276,6 @@ export default {
   padding: 6px 0;
   border-bottom: 1px solid rgba(0, 0, 0, .06);
 }
-
 .rn-cascade__linked-tag {
   flex-shrink: 0;
   min-width: 34px;
@@ -228,7 +284,6 @@ export default {
   color: rgba(0, 0, 0, .45);
   text-transform: uppercase;
 }
-
 .rn-cascade__linked-body {
   flex: 1;
   min-width: 0;
@@ -236,6 +291,21 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.rn-cascade__linked-status {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.rn-cascade__linked-status--done {
+  color: #4caf50;
+}
+.rn-cascade__linked-status--missed {
+  color: #e53935;
+}
+.rn-cascade__linked-status--open {
+  color: #ef6c00;
 }
 
 .rn-cascade__parent {

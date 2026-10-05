@@ -65,17 +65,44 @@ export const AGENT_STATUS = {
   },
 };
 
+/** A timestamp as GraphQL hands it over: ms-epoch string, ISO string or Date. */
+const toDate = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const raw = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value;
+  const at = new Date(raw);
+  return Number.isNaN(at.getTime()) ? null : at;
+};
+
+/**
+ * Whether the agent's last recorded run happened on `now`'s local calendar day.
+ * A status is only ever about today's trigger: a run that was listening (or
+ * finished, or failed) yesterday is history, not state.
+ */
+export function ranToday(agent, now = undefined) {
+  const at = toDate(agent && agent.lastRunAt);
+  if (!at) return false;
+  const ref = now === undefined ? new Date() : toDate(now);
+  if (!ref) return false;
+  return at.getFullYear() === ref.getFullYear()
+    && at.getMonth() === ref.getMonth()
+    && at.getDate() === ref.getDate();
+}
+
 /**
  * An agent that has never run has no `executionStatus`, and the server is free
  * to grow the enum — both resolve to `idle` rather than rendering a blank ring.
+ * So does any status whose run was not TODAY: a new day starts every agent idle
+ * (the persisted `executionStatus` is never reset server-side at midnight).
  */
-export function agentStatusKey(agent) {
+export function agentStatusKey(agent, now = undefined) {
   const raw = agent && agent.executionStatus;
-  return AGENT_STATUS[raw] ? raw : 'idle';
+  if (!AGENT_STATUS[raw]) return 'idle';
+  if (raw !== 'idle' && !ranToday(agent, now)) return 'idle';
+  return raw;
 }
 
-export function agentStatusOf(agent) {
-  return AGENT_STATUS[agentStatusKey(agent)];
+export function agentStatusOf(agent, now = undefined) {
+  return AGENT_STATUS[agentStatusKey(agent, now)];
 }
 
 /** The four-step strip, in order. */
@@ -161,7 +188,7 @@ export function successRate(ok, fail) {
 }
 
 /** Page-header totals: RUNS, SUCCESS %, LIVE NOW. */
-export function agentTotals(agents) {
+export function agentTotals(agents, now = undefined) {
   const list = Array.isArray(agents) ? agents : [];
   let ok = 0;
   let fail = 0;
@@ -169,7 +196,7 @@ export function agentTotals(agents) {
   list.forEach((agent) => {
     ok += Number(agent.successCount) || 0;
     fail += Number(agent.failureCount) || 0;
-    const key = agentStatusKey(agent);
+    const key = agentStatusKey(agent, now);
     if (key === 'running' || key === 'listening') live += 1;
   });
   return {
@@ -200,5 +227,6 @@ export default {
   agentStatusOf,
   agentLifecycle,
   agentTotals,
+  ranToday,
   successRate,
 };

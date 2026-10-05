@@ -351,14 +351,15 @@ describe('RoutineChatContainer — the brief card', () => {
     cache('area:health:fitness', FITNESS);
   });
 
-  it('pins the brief first, open, one block per area/project tag only', () => {
+  it('pins the brief first, collapsed, one block per area/project tag only', () => {
     cache('project:dashboard', { description: 'Ship v2 by end of Q4.', nextSteps: 'Ship it', activity: [] });
     cache('context:home', { description: 'Not an area.', nextSteps: 'Ignore me', activity: [] });
     const { vm } = mountContainer();
 
     const [first] = vm.displayMessages;
     expect(first.kind).toBe('brief');
-    expect(first.open).toBe(true);
+    // Minimised by default — the owner wants the thread to lead with the chat.
+    expect(first.open).toBe(false);
     expect(first.blocks.map((b) => b.tag)).toEqual(['area:health:fitness', 'project:dashboard']);
     expect(first.subline).toBe('Health › Fitness · Dashboard · 3 next steps');
     // The synthesised greeting still follows it.
@@ -385,15 +386,16 @@ describe('RoutineChatContainer — the brief card', () => {
     expect(vm.displayMessages.some((m) => m.kind === 'brief')).toBe(false);
   });
 
-  it('collapses when the composer takes focus, and toggles back by hand', () => {
+  it('opens by hand, and collapses again when the composer takes focus', () => {
     const { vm } = mountContainer();
+    expect(vm.briefMessage.open).toBe(false);
+    vm.toggleBrief();
+    expect(vm.briefMessage.open).toBe(true);
     vm.collapseBrief();
     expect(vm.briefMessage.open).toBe(false);
     // A second focus is a no-op, not a re-open.
     vm.collapseBrief();
     expect(vm.briefMessage.open).toBe(false);
-    vm.toggleBrief();
-    expect(vm.briefMessage.open).toBe(true);
   });
 
   it('appends an added step verbatim and logs a blue chat event', async () => {
@@ -596,7 +598,7 @@ describe('RoutineChatContainer — lazy area/project context', () => {
 
     // Waiting: the heads are already true — they come off the tag, not the model.
     const waiting = brief();
-    expect(waiting.open).toBe(true);
+    expect(waiting.open).toBe(false);
     expect(waiting.blocks.map((b) => [b.kind, b.breadcrumb, b.pending])).toEqual([
       ['AREA', 'Health › Fitness', true],
       ['PROJECT', 'Dashboard', true],

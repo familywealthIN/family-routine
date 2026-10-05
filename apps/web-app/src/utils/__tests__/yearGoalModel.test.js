@@ -436,6 +436,22 @@ describe('the goal switcher rows', () => {
     expect(rows.map((r) => r.id)).toEqual(['y2']);
   });
 
+  // grvpanchal@gmail.com: every 2026 year goal hangs off a lifetime goal, so each
+  // is stored with isMilestone: true — and the switcher used to show none.
+  it('lists a year goal that is a milestone of a lifetime goal, not a step of a sibling', () => {
+    const linked = [{
+      ...goals[0],
+      goalItems: [
+        { ...goals[0].goalItems[0], isMilestone: true, goalRef: 'life-1' },
+        {
+          id: 'y3', body: 'Step toward Ship v2', date: '31-12-2026', isMilestone: true, goalRef: 'y1',
+        },
+      ],
+    }];
+    const rows = yearGoalRows(linked, { today: TODAY }).filter((r) => !r.header);
+    expect(rows.map((r) => r.id)).toEqual(['y1']);
+  });
+
   it('sorts lowest progress first on the progress chip', () => {
     const rows = yearGoalRows(goals, { sort: 'progress', today: TODAY });
     expect(rows[0].header).toBe('LOWEST PROGRESS FIRST');

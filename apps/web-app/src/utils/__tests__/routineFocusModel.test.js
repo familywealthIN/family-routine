@@ -7,6 +7,7 @@ import {
   primaryStimulus,
   pickCascadeItem,
   buildCascade,
+  routineSlotCount,
 } from '../routineFocusModel';
 
 const stimuli = (dSplit, kSplit, gSplit, earned = {}) => [
@@ -163,8 +164,9 @@ describe('buildRoutineRows — tick button states', () => {
     });
     const sw = rows.find((r) => r.id === 'sw');
     expect(sw.doneCount).toBe(1);
-    expect(sw.totalCount).toBe(2);
-    expect(rows.find((r) => r.id === 'lw').totalCount).toBe(0);
+    // Total is the server slot count (D 6 / K 1) when it exceeds the items.
+    expect(sw.totalCount).toBe(6);
+    expect(rows.find((r) => r.id === 'lw').totalCount).toBe(4);
   });
 });
 
@@ -235,8 +237,21 @@ describe('pickCascadeItem', () => {
 
   // The goal today's checklist actually rolls up into beats every heuristic.
   it('prefers the goal the focused routine’s day items link to', () => {
+    const linked = [{
+      ...goals[0],
+      goalItems: [
+        { id: 'wg_first', body: 'Created against sw first', taskRef: 'sw' },
+        { id: 'wg_free', body: 'No routine', taskRef: '' },
+      ],
+    }];
+    const focusRow = { id: 'sw', items: [{ goalRef: 'wg_free' }] };
+    expect(pickCascadeItem({ goals: linked, period: 'week', focusRow }).id).toBe('wg_free');
+  });
+
+  // A stray goalRef must not drag another routine's goal onto this one's tab.
+  it('ignores a linked goal that belongs to another routine', () => {
     const focusRow = { id: 'lw', items: [{ goalRef: 'wg_sw' }] };
-    expect(pickCascadeItem({ goals, period: 'week', focusRow }).id).toBe('wg_sw');
+    expect(pickCascadeItem({ goals, period: 'week', focusRow })).toBeNull();
   });
 
   it('falls back to a goal created against this routine', () => {
@@ -244,9 +259,18 @@ describe('pickCascadeItem', () => {
     expect(pickCascadeItem({ goals, period: 'week', focusRow }).id).toBe('wg_other');
   });
 
-  it('falls back to the period’s first goal', () => {
+  // The reported bug: with no goal of its own the tab showed another
+  // routine's. It is empty instead.
+  it('never falls back to another routine’s goal for the period', () => {
     const focusRow = { id: 'nope', items: [] };
-    expect(pickCascadeItem({ goals, period: 'week', focusRow }).id).toBe('wg_other');
+    expect(pickCascadeItem({ goals, period: 'week', focusRow })).toBeNull();
+    expect(buildCascade({
+      period: 'week', goals, focusRow, date: '12-09-2026',
+    })).toBeNull();
+  });
+
+  it('shows nothing when no routine is focused', () => {
+    expect(pickCascadeItem({ goals, period: 'week', focusRow: null })).toBeNull();
   });
 
   it('returns null when the period has no goal', () => {
@@ -313,11 +337,75 @@ describe('buildCascade', () => {
     expect(cascade.units[0].state).toBe('none');
   });
 
-  it('lists the linked lower-level goals it was given', () => {
+  it('lists the linked lower-level goals it was given, with a detail summary', () => {
     expect(cascade.linkedLabel).toBe('Linked day goals');
-    expect(cascade.linked).toEqual([
-      { label: 'Thu', body: 'Current task card', isComplete: true },
-    ]);
+    expect(cascade.linked).toEqual([{
+      id: 'x',
+      label: 'Thu',
+      body: 'Current task card',
+      isComplete: true,
+      detail: {
+        period: 'Day goal', window: 'Thu, 10 Sep 2026', status: 'Done', tags: [],
+      },
+    }]);
+  });
+
+  it('sorts linked goals by their window, oldest first, and flags misses', () => {
+    const sorted = buildCascade({
+      period: 'week',
+      goals: weekGoals,
+      focusRow: { id: 'sw', items: [] },
+      date: '12-09-2026',
+      children: [
+        {
+          id: 'd3', period: 'day', date: '11-09-2026', goalItems: [{ id: 'c', body: 'Fri', tags: ['deep'] }],
+        },
+        {
+          id: 'd1', period: 'day', date: '07-09-2026', goalItems: [{ id: 'a', body: 'Mon', isComplete: true }],
+        },
+        {
+          id: 'd4', period: 'day', date: '12-09-2026', goalItems: [{ id: 'd', body: 'Sat' }],
+        },
+        {
+          id: 'd2', period: 'day', date: '09-09-2026', goalItems: [{ id: 'b', body: 'Wed' }],
+        },
+      ],
+    });
+    expect(sorted.linked.map((row) => row.body)).toEqual(['Mon', 'Wed', 'Fri', 'Sat']);
+    expect(sorted.linked.map((row) => row.detail.status)).toEqual(['Done', 'Missed', 'Missed', 'Open']);
+    expect(sorted.linked[2].detail.tags).toEqual(['deep']);
+  });
+
+  it('numbers a month goal’s linked weeks by their place in the grid', () => {
+    const month = buildCascade({
+      period: 'month',
+      goals: [{
+        id: 'mo',
+        period: 'month',
+        date: '30-09-2026',
+        goalItems: [{
+          id: 'mg',
+          body: 'Launch',
+          taskRef: 'sw',
+          milestoneDays: [
+            { date: '04-09-2026', status: 'complete' },
+            { date: '11-09-2026', status: 'upcoming' },
+          ],
+        }],
+      }],
+      focusRow: { id: 'sw', items: [] },
+      date: '12-09-2026',
+      children: [
+        {
+          id: 'w2', period: 'week', date: '11-09-2026', goalItems: [{ id: 'w2i', body: 'Second' }],
+        },
+        {
+          id: 'w1', period: 'week', date: '04-09-2026', goalItems: [{ id: 'w1i', body: 'First', isComplete: true }],
+        },
+      ],
+    });
+    expect(month.linked.map((row) => [row.label, row.body])).toEqual([['W1', 'First'], ['W2', 'Second']]);
+    expect(month.linked[1].detail.period).toBe('Week goal');
   });
 
   it('names its range', () => {
@@ -330,11 +418,11 @@ describe('buildCascade', () => {
       period: 'month',
       date: '12-09-2026',
       goalItems: [{
-        id: 'mg', body: 'Launch mobile dashboard', date: '12-09-2026', milestoneDays: [{ date: '04-09-2026', status: 'complete' }],
+        id: 'mg', body: 'Launch mobile dashboard', date: '12-09-2026', taskRef: 'sw', milestoneDays: [{ date: '04-09-2026', status: 'complete' }],
       }],
     }];
     const month = buildCascade({
-      period: 'month', goals: monthGoals, focusRow: null, date: '12-09-2026',
+      period: 'month', goals: monthGoals, focusRow: { id: 'sw', items: [] }, date: '12-09-2026',
     });
     expect(month.unitName).toBe('weeks');
     expect(month.threshold).toBe(3);
@@ -347,11 +435,11 @@ describe('buildCascade', () => {
       period: 'year',
       date: '12-09-2026',
       goalItems: [{
-        id: 'yg', body: 'Ship v2', date: '12-09-2026', milestoneDays: [{ date: '15-03-2026', status: 'complete' }],
+        id: 'yg', body: 'Ship v2', date: '12-09-2026', taskRef: 'sw', milestoneDays: [{ date: '15-03-2026', status: 'complete' }],
       }],
     }];
     const year = buildCascade({
-      period: 'year', goals: yearGoals, focusRow: null, date: '12-09-2026',
+      period: 'year', goals: yearGoals, focusRow: { id: 'sw', items: [] }, date: '12-09-2026',
     });
     expect(year.unitName).toBe('months');
     expect(year.threshold).toBe(6);
@@ -371,10 +459,12 @@ describe('buildCascade', () => {
       period: 'week',
       date: '12-09-2026',
       goalItems: [{
-        id: 'wg', body: 'Done goal', date: '12-09-2026', isComplete: true, milestoneDays: [],
+        id: 'wg', body: 'Done goal', date: '12-09-2026', isComplete: true, taskRef: 'sw', milestoneDays: [],
       }],
     }];
-    const result = buildCascade({ period: 'week', goals: completed, date: '12-09-2026' });
+    const result = buildCascade({
+      period: 'week', goals: completed, focusRow: { id: 'sw', items: [] }, date: '12-09-2026',
+    });
     expect(result.complete).toBe(true);
     expect(result.statusLabel).toBe('Done');
   });
@@ -411,5 +501,30 @@ describe('past and future days ignore the live clock', () => {
     const w = focusWindow(rows, rows.indexOf(lw), at('12:29'), { isToday: false });
     expect(w.statusLabel).toBe('Up next');
     expect(w.leftLabel).toBe('starts 12:30');
+  });
+});
+
+describe('routineSlotCount (server equation: round(D / K))', () => {
+  const task = (d) => ({ stimuli: [{ name: 'D', splitRate: d }, { name: 'K', splitRate: 2 }] });
+  it('gives one slot to a short window, including 2h20m', () => {
+    expect(routineSlotCount(task(2))).toBe(1);
+    expect(routineSlotCount(task(7 / 3))).toBe(1);
+  });
+  it('gives two slots to a 4h30m window', () => {
+    expect(routineSlotCount(task(4.5))).toBe(2);
+  });
+  it('is 0 before stimuli load', () => {
+    expect(routineSlotCount({})).toBe(0);
+    expect(routineSlotCount({ stimuli: [] })).toBe(0);
+  });
+});
+
+describe('buildRoutineRows totalCount', () => {
+  it('reads "0 of 1" for a routine with no checklist items yet', () => {
+    const [row] = buildRoutineRows([{
+      id: 'a', time: '06:00', stimuli: [{ name: 'D', splitRate: 2 }, { name: 'K', splitRate: 2 }],
+    }], { now: moment('06:30', 'HH:mm'), itemsByTask: {}, isToday: true });
+    expect(row.doneCount).toBe(0);
+    expect(row.totalCount).toBe(1);
   });
 });

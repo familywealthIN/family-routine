@@ -260,9 +260,18 @@ describe('the linked rows it reads', () => {
   it('finds the agent bound to this routine in the agent store', () => {
     const c = ctx({
       routine: saved(),
-      $agent: { getByTaskRef: (ref) => (ref === 'sw' ? { name: 'PR Summarizer', executionStatus: 'running' } : null) },
+      $agent: { getByTaskRef: (ref) => (ref === 'sw' ? { name: 'PR Summarizer', executionStatus: 'running', lastRunAt: String(Date.now()) } : null) },
     });
     expect(computed.agent.call(c)).toEqual({ name: 'PR Summarizer', status: 'running' });
+  });
+
+  it('reads a run from a previous day as idle — a new day starts every agent idle', () => {
+    const yesterday = String(Date.now() - 36 * 60 * 60 * 1000);
+    const c = ctx({
+      routine: saved(),
+      $agent: { getByTaskRef: () => ({ name: 'A', executionStatus: 'listening', lastRunAt: yesterday }) },
+    });
+    expect(computed.agent.call(c).status).toBe('idle');
   });
 
   it('defaults an agent with no recorded status to idle', () => {

@@ -21,13 +21,15 @@
         :picture="profileImage"
         :user-name="userName"
         :inbox-count="inboxCount"
+        :subtitle="daySummary"
         @open-drawer="drawerOpen = true"
         @mini-click="onMiniClick"
         @open-points="goTo('/progress')"
         @open-inbox="inboxOpen = true"
       />
 
-      <div class="rn-home__week" :style="weekStripStyle">
+      <!-- Always shown: the owner wants the week in view, not behind a grab handle. -->
+      <div class="rn-home__week" :style="weekStripStyle" data-testid="week-strip">
         <weekday-selector-container
           :selectedDate="date"
           :skipped-dates="skippedDates"
@@ -36,35 +38,31 @@
           @long-press="onDayLongPress"
         />
       </div>
-      <div class="rn-home__grab" data-testid="week-grab" @click="toggleWeekStrip">
-        <div class="rn-home__grab-bar"></div>
-      </div>
 
       <div class="rn-home__phone-body">
-        <routine-deck
-          :peeks="deckPeeks"
-          :ticked-count="tickedCount"
-          :total-count="rows.length"
-          :has-prev="focusIndex > 0"
-          :has-next="focusIndex < rows.length - 1"
-          :show-back-to-now="showBackToNow"
-          @prev="focusPrev"
-          @next="focusNext"
-          @back-to-now="backToNow"
-          @focus-routine="setFocus"
-        >
-          <routine-focus-card v-if="focusRow" ref="card" v-bind="cardProps" v-on="cardHandlers">
-            <template #thread>
-              <routine-chat-container v-bind="chatProps" ref="chat" v-on="chatHandlers" />
-            </template>
-          </routine-focus-card>
-          <div v-else class="rn-home__empty">
-            <p>{{ emptyMessage }}</p>
-            <button type="button" class="rn-home__empty-btn" @click="goTo('/settings')">
-              Open Routine Settings
-            </button>
-          </div>
-        </routine-deck>
+        <!-- Pull down from the top of the card to refetch the day. -->
+        <pull-to-refresh :refreshing="refreshing" @refresh="pullRefresh">
+          <routine-deck
+            :peeks="deckPeeks"
+            :has-prev="focusIndex > 0"
+            :has-next="focusIndex < rows.length - 1"
+            @prev="focusPrev"
+            @next="focusNext"
+            @focus-routine="setFocus"
+          >
+            <routine-focus-card v-if="focusRow" ref="card" v-bind="cardProps" v-on="cardHandlers">
+              <template #thread>
+                <routine-chat-container v-bind="chatProps" ref="chat" v-on="chatHandlers" />
+              </template>
+            </routine-focus-card>
+            <div v-else class="rn-home__empty">
+              <p>{{ emptyMessage }}</p>
+              <button type="button" class="rn-home__empty-btn" @click="goTo('/settings')">
+                Open Routine Settings
+              </button>
+            </div>
+          </routine-deck>
+        </pull-to-refresh>
 
         <routine-composer
           v-if="focusRow"
@@ -127,7 +125,7 @@
             <div class="rn-home__header-text">
               <div class="rn-home__date">{{ longDate }}</div>
               <div class="rn-home__header-sub">
-                {{ routinesLeft }} routines left · {{ dayDoneCount }}/{{ dayTotalCount }} tasks
+                {{ daySummary }}
               </div>
             </div>
             <div class="rn-home__header-week">
@@ -320,6 +318,7 @@
       period="day"
       @close="inboxOpen = false"
       @changed="refetchGoals"
+      @pending-count="inboxPendingCount = $event"
     />
 
     <skip-day-container
@@ -380,6 +379,7 @@ import { PaywallDrawer } from '@routine-notes/ui/organisms';
 import { buildTagUniverse } from '@routine-notes/ui/utils/tags';
 import RoutineRail from '@routine-notes/ui/molecules/RoutineRail/RoutineRail.vue';
 import FocusPointsChip from '@routine-notes/ui/molecules/FocusPointsChip/FocusPointsChip.vue';
+import PullToRefresh from '@routine-notes/ui/molecules/PullToRefresh/PullToRefresh.vue';
 import { FOCUS_NAV, agentStageOf, AGENT_LIVE_STAGES } from '@routine-notes/ui/constants/routineFocus';
 
 import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue';
@@ -423,15 +423,13 @@ import {
 const FLY_MS = 820;
 // A day counts toward the streak once this many routines are ticked.
 const STREAK_TICKS = 3;
-// The week strip's reveal state is a per-device preference (handoff § State).
-const WEEK_STRIP_KEY = 'rn-week-strip-open';
 // The ring inside a tablet/desktop header day cell. Both large frames (6a, 6b)
 // draw 28px; only the phone's own strip runs at 36.
 // TODO move to packages/ui/constants/routineFocus.js — a per-shell token.
 const HEADER_RING_SIZE = 28;
-// The phone strip's revealed height. The design declares it as a token
-// (`weekMaxH: '80px'`) rather than letting the cells decide, so the grab handle
-// below it does not shift as the rings change size.
+// The phone strip's height. The design declares it as a token
+// (`weekMaxH: '80px'`) rather than letting the cells decide, so the card below
+// it does not shift as the rings change size.
 // TODO move to packages/ui/constants/routineFocus.js — a per-shell token.
 const WEEK_STRIP_OPEN_PX = 80;
 // Which agent transcripts have been looked at, so the orange NEW pill is about
@@ -455,6 +453,7 @@ export default {
     UserDrawer,
     RoutineRail,
     FocusPointsChip,
+    PullToRefresh,
     QuickGoalCreation,
     PaywallDrawer,
     WeekdaySelectorContainer,
@@ -565,7 +564,8 @@ export default {
       focusRoutineId: '',
       period: 'day',
       checklistOpen: true,
-      weekStripOpen: false,
+      // Pull-to-refresh refetch in flight (phone).
+      refreshing: false,
       drawerOpen: false,
       actionSheetOpen: false,
       // Bumped each time the action sheet opens so <quick-goal-creation>
@@ -577,6 +577,9 @@ export default {
       // rendering the values from the moment it was tapped.
       openGoalItemId: '',
       inboxOpen: false,
+      // Unrouted tasks the Inbox sheet holds that `inboxItems` (today's goal
+      // items with no routine) does not — reported by the container.
+      inboxPendingCount: 0,
       skipSheetOpen: false,
       rewardSeen: {},
       paywallDrawerOpen: false,
@@ -732,11 +735,21 @@ export default {
     routinesLeft() {
       return this.rows.filter((row) => !row.ticked).length;
     },
+    /**
+     * The day's task count is the sum of each routine card's "x of y done":
+     * y is the server's slot count (one task per 2 hours of the window, see
+     * routineSlotCount) or the checklist length when that is larger.
+     */
     dayDoneCount() {
-      return this.dayGoalItems.filter((item) => item && item.isComplete).length;
+      return this.rows.reduce((sum, row) => sum + row.doneCount, 0);
     },
     dayTotalCount() {
-      return this.dayGoalItems.length;
+      return this.rows.reduce((sum, row) => sum + row.totalCount, 0);
+    },
+    /** "5 routines left · 7/9 tasks" — the large shells' header line, which the
+        phone top bar now shows too. */
+    daySummary() {
+      return `${this.routinesLeft} routines left · ${this.dayDoneCount}/${this.dayTotalCount} tasks`;
     },
     showBackToNow() {
       return !!this.currentRoutineId && this.resolvedFocusId !== this.currentRoutineId;
@@ -789,6 +802,14 @@ export default {
     },
     agentLive() {
       return AGENT_LIVE_STAGES.indexOf(this.agentStage) !== -1;
+    },
+    /** Any of today's routines has an agent mid-run (badge running/listening). */
+    anyAgentLiveToday() {
+      if (!this.isToday) return false;
+      return this.tasklist.some((task) => {
+        const status = this.effectiveAgentStatus(task.id);
+        return status === 'running' || status === 'listening';
+      });
     },
     agentRingMs() {
       const stage = agentStageOf(this.agentStage);
@@ -964,7 +985,7 @@ export default {
         }));
     },
     inboxCount() {
-      return this.inboxItems.length;
+      return this.inboxItems.length + this.inboxPendingCount;
     },
     /** Routines carry the goalRef an Inbox item inherits when it lands on one. */
     inboxRoutines() {
@@ -1025,8 +1046,9 @@ export default {
         statusLabel: this.focusWindowInfo.statusLabel,
         statusColor: this.focusWindowInfo.statusColor,
         leftLabel: this.focusWindowInfo.leftLabel,
-        // The phone shows it in the deck header instead.
-        showBackToNow: this.shell !== 'phone' && this.showBackToNow,
+        // Every shell: the phone's deck header (and its "N OF M TICKED" bar) is
+        // gone, so the card's status row carries it everywhere, as on desktop.
+        showBackToNow: this.showBackToNow,
         elapsedPct: this.focusWindowInfo.elapsedPct,
         items: this.focusItems,
         doneCount: this.focusRow ? this.focusRow.doneCount : 0,
@@ -1095,17 +1117,13 @@ export default {
       return HEADER_RING_SIZE;
     },
     /**
-     * The revealed strip is the design's 80px, not whatever the cells add up to.
-     * `max-height` alone only caps it — the strip measured 73px, so the box was
-     * being sized by its content and the grab handle sat 7px high.
+     * The strip is the design's 80px, not whatever the cells add up to (they
+     * measure 73px). It is always shown — the grab-handle reveal was removed on
+     * the owner's call, so there is no open/closed state any more.
      */
     weekStripStyle() {
-      const open = `${WEEK_STRIP_OPEN_PX}px`;
-      return {
-        height: this.weekStripOpen ? open : '0px',
-        maxHeight: this.weekStripOpen ? open : '0px',
-        opacity: this.weekStripOpen ? 1 : 0,
-      };
+      const px = `${WEEK_STRIP_OPEN_PX}px`;
+      return { height: px, maxHeight: px };
     },
 
     // --- nav --------------------------------------------------------------
@@ -1210,6 +1228,9 @@ export default {
     eventBus.$on(EVENTS.GOAL_ITEM_CREATED, this.refetchGoals);
     eventBus.$on(EVENTS.TASK_CREATED, this.refetchGoals);
     eventBus.$on(EVENTS.GOALS_SAVED, this.refetchGoals);
+    // An agent's status moving (start sent, listening, finished, failed) is the
+    // moment its contribution / reward may have landed on the goal item.
+    eventBus.$on(EVENTS.AGENT_STATUS_CHANGED, this.onAgentStatusChanged);
     // The points chip lives in this page's own top bar now, so this page owns
     // re-reading it. Earnings are settled server-side, so a tick changes the
     // balance without the mutation ever returning it.
@@ -1226,18 +1247,13 @@ export default {
     this.nowTimerId = setInterval(() => {
       this.now = moment();
     }, 60 * 1000);
-
-    try {
-      this.weekStripOpen = localStorage.getItem(WEEK_STRIP_KEY) === 'true';
-    } catch (e) {
-      // best effort — a blocked localStorage just means the strip starts closed
-    }
   },
   beforeDestroy() {
     eventBus.$off(EVENTS.REFETCH_DAILY_GOALS, this.refetchGoals);
     eventBus.$off(EVENTS.GOAL_ITEM_CREATED, this.refetchGoals);
     eventBus.$off(EVENTS.TASK_CREATED, this.refetchGoals);
     eventBus.$off(EVENTS.GOALS_SAVED, this.refetchGoals);
+    eventBus.$off(EVENTS.AGENT_STATUS_CHANGED, this.onAgentStatusChanged);
     eventBus.$off(EVENTS.ROUTINE_TICKED, this.refetchXpBalance);
     eventBus.$off(EVENTS.XP_REDEEMED, this.refetchXpBalance);
     this.stopIntelligentRefresh();
@@ -1264,14 +1280,6 @@ export default {
       this.date = newDate;
       this.focusRoutineId = '';
       this.period = 'day';
-    },
-    toggleWeekStrip() {
-      this.weekStripOpen = !this.weekStripOpen;
-      try {
-        localStorage.setItem(WEEK_STRIP_KEY, String(this.weekStripOpen));
-      } catch (e) {
-        // best effort — a blocked localStorage must not break the gesture
-      }
     },
     toggleChecklist() {
       this.checklistOpen = !this.checklistOpen;
@@ -1310,20 +1318,48 @@ export default {
     refetchXpBalance() {
       if (this.$apollo.queries.xpBalance) this.$apollo.queries.xpBalance.refetch();
     },
+    /**
+     * Pull to refresh: re-read the day from the network — the routine, its
+     * goal items, the points chip, the week strip's rings and the open chat
+     * thread. `refetch()` is network-only; an optimistic tick still in flight is
+     * protected by the pending-entity guard link (utils/cacheGuard.js), which
+     * keeps the guarded fields over whatever this read returns.
+     */
+    async pullRefresh() {
+      if (this.refreshing) return;
+      this.refreshing = true;
+      const queries = ['routineDate', 'goals', 'xpBalance', 'cascadeChildren']
+        .map((name) => this.$apollo.queries[name])
+        .filter((query) => query && !query.skip && typeof query.refetch === 'function');
+      const reads = queries.map((query) => query.refetch());
+      if (this.$refs.chat && this.$refs.chat.refetch) reads.push(this.$refs.chat.refetch());
+      eventBus.$emit(EVENTS.DASHBOARD_REFRESH);
+      try {
+        await Promise.all(reads);
+        this.loadError = false;
+      } catch (error) {
+        console.error('[RoutineFocus] pull-to-refresh failed:', error);
+      } finally {
+        this.refreshing = false;
+      }
+    },
 
     // =====================================================================
     // Checklist rows
     // =====================================================================
     /**
      * Add the display flags the checklist row needs: READY marks the goal item
-     * an assigned agent will be dispatched against, and `hasReward` means a
-     * saved end-event transcript is available.
+     * an assigned agent works against ONCE the agent has written its
+     * contribution to it — not merely because an agent is assigned or its
+     * status changed — and `hasReward` means a saved end-event transcript is
+     * available.
      */
     decorateItem(item) {
       const subTasks = item.subTasks || [];
       return {
         ...item,
-        ready: !item.isComplete && this.isAgentTargetItem(item),
+        ready: !item.isComplete && this.isAgentTargetItem(item)
+          && !!(item.contribution && String(item.contribution).trim()),
         hasReward: !!item.reward,
         subTotal: subTasks.length,
         subDone: subTasks.filter((sub) => sub && sub.isComplete).length,
@@ -2001,7 +2037,14 @@ export default {
     // Agents
     // =====================================================================
     effectiveAgentStatus(taskRef) {
-      const status = (taskRef && this.$agent.statusByRoutineId[taskRef]) || '';
+      // Badges are only about TODAY's trigger: another day's view shows every
+      // agent idle (routine tasks share their _id across days, so a taskRef-keyed
+      // badge would otherwise paint today's run onto yesterday's card), and a
+      // badge set on a previous day never survives into a new one.
+      if (!taskRef || !this.isToday) return '';
+      const day = this.$agent.statusDay;
+      if (day && day !== this.todayDate) return '';
+      const status = this.$agent.statusByRoutineId[taskRef] || '';
       // A 'listening' agent whose end event already saved a transcript is done;
       // never leave the badge stuck when a late start dispatch resolves after.
       if (status === 'listening' && this.taskAgentEndEventDone(taskRef)) return 'finished';
@@ -2242,6 +2285,19 @@ export default {
     },
     handleRoutineItemCheck() {
       if (this.canMaintainPassWait) this.setPassedWait();
+      // An agent that is live today writes its contribution on its own clock,
+      // not on any event this page hears — keep the list fresh while one runs.
+      if (this.anyAgentLiveToday) this.refetchGoals();
+    },
+    /**
+     * Re-read the day's goal items whenever an agent badge changes, so the
+     * checklist shows what the agent wrote (READY, transcript) without a pull to
+     * refresh. 'running' is skipped: nothing has been written yet.
+     */
+    onAgentStatusChanged(payload) {
+      const status = payload && payload.status;
+      if (!this.isToday || status === 'running' || status === 'waiting') return;
+      this.refetchGoals();
     },
 
     notifyGeneric() {
@@ -2261,18 +2317,28 @@ export default {
 /* Root-class prefixed: this page is a full app shell rendered OUTSIDE
    MobileLayout/DesktopLayout, and none of it may reach the legacy screens. */
 .rn-home {
+  /* Mirrors AppShell: the iPhone PWA home-indicator inset, zeroed inside the
+     native shell (Capacitor already insets the web view). */
+  --rn-safe-bottom: env(safe-area-inset-bottom, 0px);
   position: relative;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: #f4f4f4;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   color: rgba(0, 0, 0, .87);
 }
 
+.capacitor-native .rn-home {
+  --rn-safe-bottom: 0px;
+}
+
 .rn-home--phone {
   display: flex;
   flex-direction: column;
   padding-top: env(safe-area-inset-top);
+  /* The page's own pull-to-refresh replaces the browser's; don't run both. */
+  overscroll-behavior-y: contain;
 }
 
 .rn-home--tablet,
@@ -2321,24 +2387,6 @@ export default {
 .rn-home__week {
   flex-shrink: 0;
   overflow: hidden;
-  transition: height .35s cubic-bezier(.4, 0, .2, 1),
-    max-height .35s cubic-bezier(.4, 0, .2, 1), opacity .25s;
-}
-
-.rn-home__grab {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 0 4px;
-  cursor: grab;
-  flex-shrink: 0;
-}
-
-.rn-home__grab-bar {
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(0, 0, 0, .18);
 }
 
 .rn-home__phone-body {
@@ -2346,7 +2394,7 @@ export default {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 8px 16px 64px;
+  padding: 8px 16px calc(64px + var(--rn-safe-bottom));
   overflow: hidden;
 }
 
@@ -2355,12 +2403,14 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 64px;
+  /* Grow by the inset rather than eat into the 64px — padding inside a fixed
+     64px box squeezed the icons on iPhone PWAs. */
+  height: calc(64px + var(--rn-safe-bottom));
   box-sizing: border-box;
   background: #fff;
   box-shadow: 0 -1px 3px rgba(0, 0, 0, .08);
   display: flex;
-  padding-bottom: calc(4px + env(safe-area-inset-bottom));
+  padding-bottom: calc(4px + var(--rn-safe-bottom));
   z-index: 5;
 }
 

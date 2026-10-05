@@ -10,7 +10,13 @@
   -->
   <div v-if="value" class="rn-sheet-root" :class="`rn-sheet-root--${mode}`">
     <div class="rn-sheet__scrim" data-testid="sheet-scrim" @click="$emit('input', false)"></div>
-    <section class="rn-sheet" :class="`rn-sheet--${mode}`" role="dialog" :aria-label="title">
+    <section
+      v-swipe-dismiss="{ handler: onSwipeDismiss, disabled: mode !== 'bottom' }"
+      class="rn-sheet"
+      :class="`rn-sheet--${mode}`"
+      role="dialog"
+      :aria-label="title"
+    >
       <header v-if="title" class="rn-sheet__head">
         <div class="rn-sheet__title">{{ title }}</div>
         <button type="button" class="rn-sheet__close" title="Close" @click="$emit('input', false)">
@@ -25,8 +31,11 @@
 </template>
 
 <script>
+import { swipeDismiss } from '../../utils/swipeDismiss';
+
 export default {
   name: 'OrganismRoutineSheet',
+  directives: { swipeDismiss },
   props: {
     value: { type: Boolean, default: false },
     title: { type: String, default: '' },
@@ -53,6 +62,9 @@ export default {
     document.removeEventListener('keydown', this.onKeydown);
   },
   methods: {
+    onSwipeDismiss() {
+      this.$emit('input', false);
+    },
     onKeydown(event) {
       if (event.key !== 'Escape' && event.key !== 'Esc') return;
       if (event.defaultPrevented) return;

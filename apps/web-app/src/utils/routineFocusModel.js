@@ -11,6 +11,20 @@ import moment from 'moment';
 import { CASCADE_UNIT_STYLE, STIMULI } from '@routine-notes/ui/constants/routineFocus';
 import { threshold } from './getDates';
 
+/**
+ * Goal-item slots the server expects for a routine — the same equation as
+ * apps/server utils/stimulusPoints.js: Number((D.splitRate / K.splitRate).toFixed(0)).
+ * 0 while stimuli have not loaded.
+ */
+export function routineSlotCount(task) {
+  const stimuli = (task && task.stimuli) || [];
+  const d = stimuli.find((st) => st.name === 'D');
+  const k = stimuli.find((st) => st.name === 'K');
+  if (!d || !k || !k.splitRate) return 0;
+  const count = Number((d.splitRate / k.splitRate).toFixed(0));
+  return Number.isNaN(count) ? 0 : count;
+}
+
 const DAY_FORMAT = 'DD-MM-YYYY';
 
 export function toMinutes(time) {
@@ -155,7 +169,10 @@ export function buildRoutineRows(tasklist, {
       ...task,
       items,
       doneCount: items.filter((item) => item && item.isComplete).length,
-      totalCount: items.length,
+      // The routine owes its server slot count (one task per 2 hours of its
+      // window) even before any checklist item exists — "0 of 1", not "0 of 0".
+      // More items than slots still count every item.
+      totalCount: Math.max(items.length, routineSlotCount(task)),
       isCurrent,
       past,
       redeemable,
@@ -321,26 +338,108 @@ function rangeLabel(period, dateStr) {
 /**
  * Pick the goal item the cascade tab should show.
  *
- * Preference order: the goal today's focused routine actually rolls up into
- * (its day items' `goalRef`), then one created against this routine
- * (`taskRef`), then the period's first goal. Without the first rule the panel
- * shows an unrelated goal for a routine that has a perfectly good parent.
+ * ONLY a goal that belongs to the focused routine: the goal its day items
+ * actually roll up into (their `goalRef`), else one created against this
+ * routine (`taskRef`). A goal filed against ANOTHER routine is never a
+ * candidate — not even through a stray `goalRef` — and there is no "the
+ * period's first goal" fallback: a routine with no week/month/year goal of its
+ * own gets `null`, which the panel draws as its empty state. The old fallback
+ * showed some other routine's goal as if it were this one's.
  */
 export function pickCascadeItem({ goals, period, focusRow }) {
+  if (!focusRow || !focusRow.id) return null;
+  const routineId = String(focusRow.id);
   const items = (goals || [])
     .filter((goal) => goal && goal.period === period)
-    .reduce((acc, goal) => acc.concat(goal.goalItems || []), []);
+    .reduce((acc, goal) => acc.concat(goal.goalItems || []), [])
+    // A goal with no routine is not another routine's; one that names a
+    // different routine is.
+    .filter((item) => item && item.id && (!item.taskRef || String(item.taskRef) === routineId));
   if (!items.length) return null;
 
-  const refs = ((focusRow && focusRow.items) || [])
+  const refs = (focusRow.items || [])
     .map((item) => item && item.goalRef)
     .filter(Boolean)
     .map(String);
   const byRef = items.find((item) => refs.indexOf(String(item.id)) !== -1);
   if (byRef) return byRef;
 
-  const byTask = focusRow && items.find((item) => item.taskRef === focusRow.id);
-  return byTask || items[0];
+  return items.find((item) => String(item.taskRef) === routineId) || null;
+}
+
+/** What one linked goal's period is called in its detail summary. */
+const PERIOD_NAME = {
+  day: 'Day goal', week: 'Week goal', month: 'Month goal', year: 'Year goal',
+};
+
+/** "Mon, 5 Oct 2026" / "Week of 4 – 10 Oct" / "October 2026" — a child's window. */
+function childWindowLabel(period, dateStr) {
+  const m = moment(dateStr, DAY_FORMAT);
+  if (!m.isValid()) return dateStr || '';
+  if (period === 'day') return m.format('ddd, D MMM YYYY');
+  return rangeLabel(period, dateStr);
+}
+
+/**
+ * The short tag on a linked row. A month's weeks are numbered by their place in
+ * the grid; a week the grid does not hold is named by its Friday instead of a
+ * wrong "W1".
+ */
+function linkedLabelFor(period, dateStr, index) {
+  if (period === 'month' && index === -1) {
+    const m = moment(dateStr, DAY_FORMAT);
+    return m.isValid() ? m.format('D MMM') : '';
+  }
+  return unitLabel(period, dateStr, Math.max(index, 0)).label;
+}
+
+/**
+ * The child goals hung off the cascade item, oldest window first, each with
+ * the detail its collapsible summary expands to.
+ *
+ * Sorted by the child Goal document's DATE (the end of its window: the day
+ * itself, a week's Friday, a month's last day), so the list reads in calendar
+ * order — Mon → Sun, W1 → W5, Jan → Dec — whatever order the server returned
+ * the documents in. Items sharing a window keep their stored order.
+ */
+export function linkedGoals({
+  period, children, unitDates = [], date,
+}) {
+  const viewed = moment(date, DAY_FORMAT);
+  const rows = [];
+  (children || []).forEach((goal) => {
+    if (!goal) return;
+    const at = moment(goal.date, DAY_FORMAT);
+    const index = unitDates.indexOf(goal.date);
+    (goal.goalItems || []).forEach((child, order) => {
+      if (!child) return;
+      const done = !!child.isComplete;
+      const childPeriod = goal.period || (CASCADE_META[period] || {}).stepDown || '';
+      // A window that closed before the viewed day without the tick is missed.
+      const ended = at.isValid() && viewed.isValid()
+        && at.isBefore(viewed, CASCADE_UNIT_GRANULARITY[period] || 'day');
+      let status = 'Open';
+      if (done) status = 'Done';
+      else if (ended) status = 'Missed';
+      rows.push({
+        id: String(child.id || `${goal.date}-${order}`),
+        label: linkedLabelFor(period, goal.date, index),
+        body: child.body || '',
+        isComplete: done,
+        sortKey: at.isValid() ? at.valueOf() : Number.MAX_SAFE_INTEGER,
+        order: rows.length,
+        detail: {
+          period: PERIOD_NAME[childPeriod] || '',
+          window: childWindowLabel(childPeriod, goal.date),
+          status,
+          tags: (child.tags || []).filter(Boolean),
+        },
+      });
+    });
+  });
+  return rows
+    .sort((a, b) => (a.sortKey - b.sortKey) || (a.order - b.order))
+    .map(({ sortKey, order, ...row }) => row);
 }
 
 /**
@@ -372,15 +471,9 @@ export function buildCascade({
   const done = units.filter((unit) => unit.state === 'done').length;
   const complete = !!item.isComplete || done >= limit;
 
-  const linked = (children || [])
-    .reduce((acc, goal) => acc.concat(
-      (goal.goalItems || []).map((child) => ({
-        label: unitLabel(period, goal.date, 0).label,
-        body: child.body,
-        isComplete: !!child.isComplete,
-      })),
-    ), [])
-    .slice(0, 12);
+  const linked = linkedGoals({
+    period, children, unitDates: days.map((day) => day.date), date,
+  }).slice(0, 12);
 
   return {
     title: item.body,
@@ -411,5 +504,6 @@ export default {
   primaryStimulus,
   focusWindow,
   pickCascadeItem,
+  linkedGoals,
   buildCascade,
 };
