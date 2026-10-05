@@ -75,18 +75,30 @@
         />
       </div>
 
-      <nav class="rn-home__nav">
-        <div
+      <!-- The pre-redesign MobileLayout's bottom nav, as it was: a Vuetify
+           v-bottom-nav pinned with position: fixed to the real viewport bottom.
+           An in-flow bar under a 100vh/100dvh column fell off-screen in the
+           iPhone standalone PWA, whose vh units disagree with the window. -->
+      <v-bottom-nav
+        :value="true"
+        :active="activeNavRoute"
+        fixed
+        color="white"
+        class="rn-home__nav"
+        data-testid="home-bottom-nav"
+      >
+        <v-btn
           v-for="item in navItems"
           :key="item.route"
-          class="rn-home__nav-item"
-          :style="{ color: item.active ? '#288bd5' : 'rgba(0,0,0,.54)' }"
+          color="primary"
+          flat
+          :value="item.route"
           @click="goTo(item.route)"
         >
-          <i class="rn-mi rn-home__nav-icon">{{ item.icon }}</i>
-          <span class="rn-home__nav-label">{{ item.label }}</span>
-        </div>
-      </nav>
+          <span>{{ item.label }}</span>
+          <v-icon>{{ item.icon }}</v-icon>
+        </v-btn>
+      </v-bottom-nav>
     </template>
 
     <!-- ================= TABLET / DESKTOP ================= -->
@@ -1132,6 +1144,10 @@ export default {
         ...item,
         active: this.$route.path === item.route || this.$route.path.startsWith(`${item.route}/`),
       }));
+    },
+    activeNavRoute() {
+      const active = this.navItems.find((item) => item.active);
+      return active ? active.route : null;
     },
     drawerNavItems() {
       return [
@@ -2333,7 +2349,18 @@ export default {
   --rn-safe-bottom: 0px;
 }
 
+/* Fixed to the window, not sized by vh: in an iPhone standalone PWA 100vh /
+   100dvh can be taller than the window (by the status bar), which pushed the
+   bottom of the column - and anything laid out against it - off-screen. The
+   pre-redesign MobileLayout survived only because its nav was position: fixed.
+   inset: 0 makes the whole column match the real window. */
 .rn-home--phone {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: auto;
   display: flex;
   flex-direction: column;
   padding-top: env(safe-area-inset-top);
@@ -2394,40 +2421,22 @@ export default {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 8px 16px calc(64px + var(--rn-safe-bottom));
+  padding: 8px 16px calc(56px + var(--rn-safe-bottom));
   overflow: hidden;
 }
 
-.rn-home__nav {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  /* Grow by the inset rather than eat into the 64px — padding inside a fixed
-     64px box squeezed the icons on iPhone PWAs. */
-  height: calc(64px + var(--rn-safe-bottom));
+/* The MobileLayout bottom nav: fixed to the viewport bottom, grown by the
+   home-indicator inset with the buttons padded above it. */
+.rn-home .rn-home__nav.v-bottom-nav {
+  height: calc(56px + var(--rn-safe-bottom)) !important;
+  padding-bottom: var(--rn-safe-bottom);
   box-sizing: border-box;
-  background: #fff;
   box-shadow: 0 -1px 3px rgba(0, 0, 0, .08);
-  display: flex;
-  padding-bottom: calc(4px + var(--rn-safe-bottom));
   z-index: 5;
 }
 
-.rn-home__nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.rn-home__nav-icon {
-  font-size: 24px;
+.rn-home .rn-home__nav .v-btn {
+  height: 56px;
 }
 
 /* ---- tablet / desktop ---- */
