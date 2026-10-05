@@ -2345,9 +2345,16 @@ export default {
   color: rgba(0, 0, 0, .87);
 }
 
-.capacitor-native .rn-home {
-  --rn-safe-bottom: 0px;
-}
+/* There is deliberately no `.capacitor-native` override zeroing --rn-safe-bottom.
+   It used to be zeroed on the theory that "Capacitor already insets the web
+   view", but that does not hold for this shell: `.rn-home--phone` is
+   `position: fixed; inset: 0`, and a fixed element anchors to the whole window,
+   underneath WKWebView's contentInset. The nav therefore sits on the very bottom
+   of the screen on both platforms, and zeroing the inset drew its labels beneath
+   the home indicator / gesture pill. Verified on an iPhone 16 Pro Max simulator
+   and an API 36 emulator (inset 24px; nav grew 56px -> 80px). The rule also beat
+   android-safe-area.css's correct `.capacitor-native .v-bottom-nav` handling on
+   specificity, so Android lost its padding twice over. */
 
 /* Fixed to the window, not sized by vh: in an iPhone standalone PWA 100vh /
    100dvh can be taller than the window (by the status bar), which pushed the
