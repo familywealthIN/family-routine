@@ -1473,3 +1473,62 @@ describe('RoutineFocus shell geometry', () => {
     expect(image.slice(0, image.indexOf('}'))).toContain('width: 40px');
   });
 });
+
+/**
+ * D-03: an agent on a 0-point routine could never finish.
+ *
+ * The end event fires when the slot counter fills, and `countTaskCompleted`
+ * scales `K.earned` by the routine's points — so 0 points divides by zero,
+ * reads 0 for ever, and leaves the agent in `listening` with every checklist
+ * item ticked. 0 is legacy data: `assertMinPoints` refuses anything below 1 but
+ * grandfathers a stored 0.
+ */
+describe('RoutineFocus zero-point agent refusal', () => {
+  const vmFor = (points) => ({
+    tasklist: [{ id: 'sw', points }],
+    $notify: jest.fn(),
+  });
+
+  it('refuses, and names the repair rather than just the failure', () => {
+    const vm = vmFor(0);
+    expect(methods.refuseAgentWithoutPoints.call(vm, 'sw')).toBe(true);
+    expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'This routine is worth 0 points',
+      type: 'warning',
+      group: 'notify',
+    }));
+    expect(vm.$notify.mock.calls[0][0].text).toMatch(/at least 1 point in Routines/);
+  });
+
+  it('lets a routine worth any points through untouched', () => {
+    const vm = vmFor(12);
+    expect(methods.refuseAgentWithoutPoints.call(vm, 'sw')).toBe(false);
+    expect(vm.$notify).not.toHaveBeenCalled();
+  });
+
+  // An unknown taskRef is not this guard's business — the caller handles it.
+  it('does not refuse a routine it cannot find', () => {
+    const vm = vmFor(0);
+    expect(methods.refuseAgentWithoutPoints.call(vm, 'nope')).toBe(false);
+    expect(vm.$notify).not.toHaveBeenCalled();
+  });
+
+  it('stops the start dispatch before it reaches the agent store', () => {
+    const vm = {
+      ...vmFor(0),
+      actionSheetOpen: true,
+      focusRow: { id: 'sw', ticked: true, passed: false, wait: false, redeemable: false },
+      findFirstGoalIdForRoutine: jest.fn(() => 'g1'),
+      $agent: { fireStartEventIfPresent: jest.fn() },
+      date: '06-10-2026',
+      // The real guard, not a stub: the point of this case is that
+      // `onStartAgent` actually consults it before dispatching.
+      refuseAgentWithoutPoints(ref) {
+        return methods.refuseAgentWithoutPoints.call(this, ref);
+      },
+    };
+    methods.onStartAgent.call(vm);
+    expect(vm.$agent.fireStartEventIfPresent).not.toHaveBeenCalled();
+    expect(vm.$notify).toHaveBeenCalled();
+  });
+});

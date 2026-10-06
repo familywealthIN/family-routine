@@ -1714,6 +1714,9 @@ export default {
         this.redeemRoutine(row, { fireAgent: true, agentImplicit: false });
         return;
       }
+      // Same refusal as the tick/redeem paths — this one dispatches directly
+      // rather than through `fireAgentWhenReady`, so it needs its own guard.
+      if (this.refuseAgentWithoutPoints(row.id)) return;
       const goalId = this.findFirstGoalIdForRoutine(row.id);
       if (goalId && !String(goalId).startsWith('temp-')) {
         this.$agent.fireStartEventIfPresent({
@@ -2137,7 +2140,44 @@ export default {
       if (!taskRef) return false;
       return this.dayGoalItems.some((item) => item.taskRef === taskRef && item.reward);
     },
+    /**
+     * Refuse an agent the routine could never finish, and say how to fix it.
+     *
+     * The end event fires when the SLOT counter fills, and `countTaskCompleted`
+     * scales `K.earned` by the routine's own points — so a 0-point routine
+     * divides by zero, reads 0 for ever, and strands the agent in `listening`
+     * with every checklist item ticked (D-03).
+     *
+     * 0 points is legacy data, not something a user can make today:
+     * `assertMinPoints` (apps/server/src/resolvers/routineItem.js) refuses
+     * anything below `POINTS_MIN` of 1, but grandfathers a stored 0 so an old
+     * routine can still be saved back. Those routines are the whole population
+     * of this bug.
+     *
+     * Refusing is the conservative half of the ticket's two options. Making a
+     * worthless routine complete would mean inventing a second end-event signal
+     * — the checklist — and `docs/routine-focus-home.md` is explicit that the
+     * checklist and the slot counter must NOT be unified. That is an economy
+     * decision, not a UI one.
+     *
+     * The message uses `$notify`, the app's one notification system (departure
+     * #2), and names the repair rather than just the failure.
+     */
+    refuseAgentWithoutPoints(taskRef) {
+      const task = this.tasklist.find((t) => t.id === taskRef);
+      if (!task || Number(task.points) > 0) return false;
+      this.$notify({
+        title: 'This routine is worth 0 points',
+        text: 'An agent here could never finish — it waits on points the routine '
+          + 'cannot earn. Give it at least 1 point in Routines, then start the agent.',
+        group: 'notify',
+        type: 'warning',
+        duration: 5000,
+      });
+      return true;
+    },
     fireAgentWhenReady(taskRef, { implicit = true } = {}) {
+      if (this.refuseAgentWithoutPoints(taskRef)) return null;
       return startAgentWhenReady({
         taskRef,
         implicit,

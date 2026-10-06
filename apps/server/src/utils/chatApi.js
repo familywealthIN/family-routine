@@ -269,7 +269,15 @@ Rules for the fields:
   ask which one.
 - intent "status": the user asked how they are doing. Quote the D/K/G percentages you were
   given, verbatim.
-- intent "chat": anything else. Leave "tasks" empty and "completeItemId" null.`;
+- intent "chat": anything else. Leave "tasks" empty and "completeItemId" null.
+
+What you CANNOT do — never claim otherwise:
+- You cannot move, reschedule, defer, postpone or carry over a checklist item to another day.
+- You cannot skip, cancel or delete a checklist item or a routine.
+- You cannot change an item's date, points, tags or parent goal.
+If the user asks for any of these, use intent "chat" and say plainly that you cannot do it
+from here, then point them at the item's date chips in its goal sheet (tap the checklist row
+to open it). Never reply as though the move already happened.`;
 
 function describeContext(context = {}) {
   const {
@@ -315,6 +323,37 @@ function coerceTasks(value) {
     .slice(0, 5)
     .map((body) => (body.length > 120 ? body.slice(0, 120) : body));
 }
+
+/**
+ * A reply claiming the assistant MOVED or SKIPPED something, in the first
+ * person and as a completed act.
+ *
+ * The chat can do exactly three things to data — add items, break one down, and
+ * tick one off. There is no reschedule or skip intent, so when the model says
+ * "I've moved that to tomorrow" the intent is `chat` and nothing happens at all;
+ * the user reads a confirmation, reloads, and finds the item exactly where it
+ * was (D-04).
+ *
+ * Deliberately narrow. It matches a first-person completed claim and nothing
+ * else, so advice ("you could skip it today", "try moving this to tomorrow")
+ * and questions survive untouched — those are useful and true.
+ */
+const ACTION_VERBS = 'moved|rescheduled|deferred|postponed|pushed|carried|shifted'
+  + '|skipped|cancelled|canceled|removed|deleted';
+
+const FALSE_ACTION_CLAIM = new RegExp([
+  // "I've moved it", "I have rescheduled", "I just skipped that"
+  `\\bi(?:'ve|’ve| have| )\\s*(?:just\\s+)?(?:${ACTION_VERBS}|move|reschedule|defer|postpone`
+  + '|push|carry|shift|skip|cancel|remove|delete)\\b',
+  // "Moved it to tomorrow for you." — the model drops the pronoun as often as
+  // not, so a past-tense verb opening a sentence counts as the same claim.
+  // Past tense only: "Try moving this" and "you could skip it" are advice.
+  `(?:^|[.!?]\\s+)(?:${ACTION_VERBS})\\b`,
+].join('|'), 'i');
+
+/** What the chat says instead, naming where the user CAN do it. */
+const CANNOT_MOVE_REPLY = "I can't move or skip items from here. Tap the item in the "
+  + 'checklist to open it, then use its date chips to change the day.';
 
 /**
  * Turn the user's message into a reply plus a machine-readable intent the
@@ -390,9 +429,18 @@ async function chatWithRoutine({ text, history = [], context = {} }) {
     // hallucinated id would otherwise complete nothing and report success.
     const completeItemId = claimed && openIds.includes(claimed) ? claimed : null;
 
+    // An intent that will change nothing must not carry a reply claiming it
+    // did. Same rule as `completeItemId` above, applied to the prose: the chat
+    // never asserts an action the system did not take.
+    const settledIntent = intent === 'complete_task' && !completeItemId ? 'chat' : intent;
+    const rawReply = String(parsed.reply || '').trim() || 'Noted.';
+    const reply = settledIntent === 'chat' && FALSE_ACTION_CLAIM.test(rawReply)
+      ? CANNOT_MOVE_REPLY
+      : rawReply;
+
     return {
-      reply: String(parsed.reply || '').trim() || 'Noted.',
-      intent: intent === 'complete_task' && !completeItemId ? 'chat' : intent,
+      reply,
+      intent: settledIntent,
       tasks: intent === 'add_tasks' || intent === 'break_down' ? tasks : [],
       completeItemId,
       model,
