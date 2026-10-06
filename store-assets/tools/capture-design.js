@@ -43,11 +43,29 @@ const MIME = {
   '.css': 'text/css',
 };
 
+/**
+ * A real photographed avatar for the slides, if one has been provided.
+ *
+ * The design prototypes render `assets/avatar.svg`, a neutral illustrated
+ * placeholder, because the mocks previously loaded a Google-hosted photo of an
+ * identifiable stranger - fine in a prototype, not publishable as marketing.
+ *
+ * Drop a portrait you own or that carries a licence permitting commercial use
+ * (Unsplash, Pexels, or a photo of yourself) at the path below and every slide
+ * picks it up on the next capture. No design file changes: the request for the
+ * SVG is served this file instead. Absent, the SVG is served as normal, so the
+ * prototypes always render.
+ */
+const AVATAR_OVERRIDE = path.join(DESIGN, 'assets', 'avatar-demo.png');
+
 function serve(dir) {
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
       const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
-      const file = path.join(dir, rel);
+      let file = path.join(dir, rel);
+      if (rel === 'assets/avatar.svg' && fs.existsSync(AVATAR_OVERRIDE)) {
+        file = AVATAR_OVERRIDE;
+      }
       if (!file.startsWith(dir) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
         res.writeHead(404); res.end('not found'); return;
       }

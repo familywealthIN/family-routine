@@ -8,29 +8,29 @@ const groups = JSON.parse(fs.readFileSync(path.join(root, 'build', 'review-cards
 
 const DECISIONS = [
   {
-    k: 'Source',
-    t: 'These are cut from packages/design, not from the running app',
-    d: 'The previous 24 slides showed <code>DashBoard.vue</code> &mdash; the page this branch deletes. Rather than stand up a server, an account and seeded data to re-capture, the slides now come from the design prototypes, which carry the demo data and render identically every run. <b>The one thing to keep checking:</b> Apple 2.3.3 and Play&rsquo;s metadata policy both require screenshots to show the real in-app experience. The redesign shipped, so they agree today &mdash; but a UI change that lands in <code>apps/web-app</code> without landing in <code>packages/design</code> quietly makes this listing wrong.',
-  },
-  {
-    k: 'iPad',
-    t: 'The tablet set is landscape now',
-    d: 'The design has no portrait tablet layout &mdash; only iPad mini landscape &mdash; so the canvas moved to <b>2732&times;2048</b>. The App Store takes a 13&Prime; set in either orientation as long as every slide in the set agrees, and all six do. The same six double as Play&rsquo;s 10&Prime; tablet set, which is what earns the tablet-optimised badge.',
+    k: 'Deck',
+    t: 'The stacked peek cards are gone, in the design too',
+    d: 'The app dropped them in <code>4ed0905</code> &mdash; along with the &ldquo;N OF M TICKED&rdquo; header and the &lsquo;&rsaquo; buttons, with &ldquo;Back to now&rdquo; moving into the focus card&rsquo;s status row. <code>packages/design</code> still drew all of it, so the previous slides advertised a layout the app no longer ships. The prototype now matches, and these 24 are re-cut from it.',
   },
   {
     k: 'Avatar',
-    t: 'Replaced &mdash; it was a photo of a real person',
-    d: 'Every design file loaded its avatar from a Google-hosted image of an identifiable stranger. That cannot appear in published marketing, so it is now <code>packages/design/assets/avatar.svg</code>, a neutral illustrated placeholder in the brand blue. Swap in a photo you own and re-run the three commands if you would rather have a face.',
+    t: 'Still the illustrated placeholder',
+    d: 'The mocks used to load a Google-hosted photo of an identifiable stranger, which cannot appear in published marketing. It is <code>packages/design/assets/avatar.svg</code> for now. <b>To use a real face:</b> drop a portrait you own, or one licensed for commercial use, at <code>packages/design/assets/avatar-demo.png</code> &mdash; the capture serves it in place of the SVG automatically, no design edits, and all 24 pick it up on the next run.',
   },
   {
-    k: 'Fixed',
-    t: 'Both previously flagged defects are gone',
-    d: 'The year-goal ladder no longer clips (that was a real responsive bug in the old page, not a capture artefact) and the routine builder has no label overlap. The &ldquo;Refine <em>you</em> Year Goals&rdquo; typo is fixed &mdash; the caption now reads &ldquo;Build and refine your year goals&rdquo;.',
+    k: 'Source',
+    t: 'Cut from packages/design, not from the running app',
+    d: 'The prototypes carry the demo data and render identically every run, with no backend or seeded database. <b>The standing check:</b> Apple 2.3.3 and Play&rsquo;s metadata policy both require screenshots to show the real in-app experience, so a UI change that lands in <code>apps/web-app</code> without landing in <code>packages/design</code> makes this listing wrong &mdash; which is exactly what the deck change just did. Re-pointing the capture at the real app would remove the risk permanently.',
+  },
+  {
+    k: 'iPad',
+    t: 'The tablet set is landscape',
+    d: 'The design has no portrait tablet layout &mdash; only iPad mini landscape &mdash; so the canvas is <b>2732&times;2048</b>. The App Store takes a 13&Prime; set in either orientation as long as every slide agrees, and all six do. The same six double as Play&rsquo;s 10&Prime; tablet set, which earns the tablet-optimised badge.',
   },
   {
     k: 'Copy',
     t: 'Listing text is written and length-checked',
-    d: '<code>fastlane/metadata</code> was empty. It now holds both trees, built from the app&rsquo;s own feature text in <code>packages/ui/constants/about.js</code> so the listing and the About page cannot describe different products. <code>node store-assets/tools/verify-listing.js</code> asserts every store cap &mdash; 21 checks, all passing.',
+    d: '<code>fastlane/metadata</code> holds both trees, built from the app&rsquo;s own feature text in <code>packages/ui/constants/about.js</code> so the listing and the About page cannot describe different products. <code>node store-assets/tools/verify-listing.js</code> asserts every store cap &mdash; 24 checks, all passing &mdash; and the release workflow now runs it before either upload.',
   },
   {
     k: 'Mac',

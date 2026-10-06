@@ -81,19 +81,11 @@ a{color:#288bd5}a:hover{color:#1f6fab}
     <div style="width:36px;height:4px;border-radius:2px;background:rgba(0,0,0,.18)"></div>
   </div>
   <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:8px 16px 64px;min-height:0">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 8px">
-      <div onClick="{{ goPrev }}" style="width:36px;height:36px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.1);cursor:pointer;opacity:{{ hasPrevOpacity }}"><span class="mi" style="font-size:22px">chevron_left</span></div>
-      <div style="text-align:center"><div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ deckDoneCount }} OF 7 TICKED</div><sc-if value="{{ focusNotCur }}" hint-placeholder-val="{{ false }}"><div onClick="{{ backToNow }}" style="font-size:12px;font-weight:600;color:#FF9800;cursor:pointer;margin-top:2px">Back to now</div></sc-if></div>
-      <div onClick="{{ goNext }}" style="width:36px;height:36px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.1);cursor:pointer;opacity:{{ hasNextOpacity }}"><span class="mi" style="font-size:22px">chevron_right</span></div>
-    </div>
-    <div style="position:relative;flex:1;min-height:0;margin-top:30px">
-      <sc-for list="{{ deckNext }}" as="n" hint-placeholder-count="2">
-        <div onClick="{{ n.onFocus }}" style="position:absolute;left:0;right:0;top:0;height:120px;border-radius:16px;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.06);transform:translateY(-{{ n.top }}) scale({{ n.scale }});transform-origin:top center;z-index:{{ n.z }};cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;padding:10px 16px;font-size:12px;color:rgba(0,0,0,.5)"><span style="display:flex;align-items:center;gap:6px"><span class="mi" style="font-size:14px;color:{{ n.agentDotColor }}">{{ n.agentIcon }}</span>{{ n.time }} · {{ n.name }}</span><span>{{ n.stim }} +{{ n.pts }}</span></div>
-      </sc-for>
+    <div style="position:relative;flex:1;min-height:0">
       <div style="position:relative;z-index:5;background:#fff;border-radius:16px;box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05);padding:14px 16px 16px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px">
           <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.6px;color:{{ focusStatusColor }};white-space:nowrap"><div style="width:8px;height:8px;border-radius:50%;background:{{ focusStatusColor }};animation:rn-pulse 1.4s ease-in-out infinite"></div>{{ focusStatus }} · {{ focus.time }} – {{ focusEnd }}</div>
-          <div style="font-size:12px;color:rgba(0,0,0,.54);white-space:nowrap">{{ focusLeft }}</div>
+          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap"><sc-if value="{{ focusNotCur }}" hint-placeholder-val="{{ false }}"><span onClick="{{ backToNow }}" style="font-size:12px;font-weight:600;color:#FF9800;cursor:pointer">Back to now</span></sc-if><span style="font-size:12px;color:rgba(0,0,0,.54)">{{ focusLeft }}</span></div>
         </div>
         <div style="height:4px;border-radius:2px;background:rgba(0,0,0,.08);overflow:hidden"><div style="height:100%;width:{{ focusElapsedPct }}%;background:{{ focusStatusColor }};border-radius:2px"></div></div>
         <div style="display:flex;flex-direction:column;align-items:center;padding:6px 0 2px">
@@ -1898,7 +1890,6 @@ class Component extends DCLogic {
       focusTickBorder: focus.past && !focus.ticked ? '1px solid #288bd5' : '1px solid transparent',
       focusOthers: rows.filter(r => r.id !== focusId).map(r => ({ ...r, bg: r.isCur ? 'rgba(255,152,0,.12)' : '#f5f5f5', fg: r.past ? 'rgba(0,0,0,.4)' : 'rgba(0,0,0,.8)', onFocus: () => this.setState({ focusId: r.id }), stateIcon: r.ticked ? 'check_circle' : (r.isCur ? 'radio_button_checked' : (r.past ? 'diamond' : 'radio_button_unchecked')), stateColor: r.ticked ? '#4CAF50' : (r.isCur ? '#FF9800' : 'rgba(0,0,0,.3)') })),
       rail: rows.map(r => { const f = r.id === focusId; return { ...r, isFocus: f, notFocus: !f, dotBg: r.ticked ? '#4CAF50' : (r.isCur ? '#FF9800' : (r.past ? '#fff' : '#e0e0e0')), dotBorder: r.past && !r.ticked ? '2px solid #288bd5' : '2px solid transparent', lineBg: r.past || r.isCur ? '#4CAF50' : 'rgba(0,0,0,.1)', onFocus: () => this.setState({ focusId: r.id }), lineFg: r.past ? 'rgba(0,0,0,.4)' : 'rgba(0,0,0,.8)' }; }),
-      deckNext: rows.slice(fi + 1, fi + 3).map((r, i) => ({ ...r, agentIcon: r.id === 'sw' && s.agentAssigned ? 'smart_toy' : 'radio_button_unchecked', agentDotColor: r.id === 'sw' && s.agentAssigned ? '#1976d2' : 'rgba(0,0,0,.25)', top: 28 - i * 14 + 'px', scale: 1 - (i + 1) * 0.04, z: 2 - i, onFocus: () => this.setState({ focusId: r.id }) })),
       deckNextFirst: nextR ? { name: nextR.name, time: nextR.time } : { name: 'Day complete', time: '' },
       hasPrevOpacity: fi > 0 ? 1 : 0.35, hasNextOpacity: nextR ? 1 : 0.35,
       hasDeckNext: !!nextR, deckDoneCount: rows.filter(r => r.ticked).length, deckPrev: fi > 0 ? rows[fi - 1] : null, hasPrev: fi > 0,
