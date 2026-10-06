@@ -8,24 +8,34 @@ const groups = JSON.parse(fs.readFileSync(path.join(root, 'build', 'review-cards
 
 const DECISIONS = [
   {
-    k: 'Avatar',
-    t: 'The face is still a placeholder',
-    d: 'Every slide carries a generated silhouette; on iPad and Mac it sits in the sidebar next to your name. I cannot put a stranger&rsquo;s likeness into published marketing &mdash; drop a photo you own into the repo (or point me at a path) and I&rsquo;ll wire it in as <code>avatar-demo.png</code> and re-render all 24.',
+    k: 'Source',
+    t: 'These are cut from packages/design, not from the running app',
+    d: 'The previous 24 slides showed <code>DashBoard.vue</code> &mdash; the page this branch deletes. Rather than stand up a server, an account and seeded data to re-capture, the slides now come from the design prototypes, which carry the demo data and render identically every run. <b>The one thing to keep checking:</b> Apple 2.3.3 and Play&rsquo;s metadata policy both require screenshots to show the real in-app experience. The redesign shipped, so they agree today &mdash; but a UI change that lands in <code>apps/web-app</code> without landing in <code>packages/design</code> quietly makes this listing wrong.',
   },
   {
-    k: 'Clipping',
-    t: 'Year goal ladder overflows on the phone',
-    d: 'The month rows read &ldquo;0 / 3 weeks &middot; I&hellip;&rdquo; because <code>.period-progress-label</code> sets <code>white-space: nowrap</code> inside a cell capped at 200&thinsp;px. It is a real responsive bug, not a capture artefact, and it disappears on iPad and Mac where there is room. Say the word and I&rsquo;ll let the label wrap.',
+    k: 'iPad',
+    t: 'The tablet set is landscape now',
+    d: 'The design has no portrait tablet layout &mdash; only iPad mini landscape &mdash; so the canvas moved to <b>2732&times;2048</b>. The App Store takes a 13&Prime; set in either orientation as long as every slide in the set agrees, and all six do. The same six double as Play&rsquo;s 10&Prime; tablet set, which is what earns the tablet-optimised badge.',
+  },
+  {
+    k: 'Avatar',
+    t: 'Replaced &mdash; it was a photo of a real person',
+    d: 'Every design file loaded its avatar from a Google-hosted image of an identifiable stranger. That cannot appear in published marketing, so it is now <code>packages/design/assets/avatar.svg</code>, a neutral illustrated placeholder in the brand blue. Swap in a photo you own and re-run the three commands if you would rather have a face.',
+  },
+  {
+    k: 'Fixed',
+    t: 'Both previously flagged defects are gone',
+    d: 'The year-goal ladder no longer clips (that was a real responsive bug in the old page, not a capture artefact) and the routine builder has no label overlap. The &ldquo;Refine <em>you</em> Year Goals&rdquo; typo is fixed &mdash; the caption now reads &ldquo;Build and refine your year goals&rdquo;.',
   },
   {
     k: 'Copy',
-    t: 'Captions are new, not your existing lines',
-    d: 'Your live listing uses &ldquo;An Evolution Framework App for Routine and Goals&rdquo; and friends. I wrote fresh ones per slide, flattened to a single line on the landscape Mac canvas. Keep mine or swap back to yours &mdash; either way I&rsquo;ll fix the &ldquo;Refine <em>you</em> Year Goals&rdquo; typo.',
+    t: 'Listing text is written and length-checked',
+    d: '<code>fastlane/metadata</code> was empty. It now holds both trees, built from the app&rsquo;s own feature text in <code>packages/ui/constants/about.js</code> so the listing and the About page cannot describe different products. <code>node store-assets/tools/verify-listing.js</code> asserts every store cap &mdash; 21 checks, all passing.',
   },
   {
     k: 'Mac',
-    t: 'The Mac set has nowhere to go yet',
-    d: 'Catalyst was dropped, so the App Store record is &ldquo;Designed for iPad&rdquo; and serves the iPad screenshots on Macs &mdash; there is no macOS screenshot slot to upload these to. They are ready for a marketing site or a future Mac target; tell me if you want the Mac build reinstated instead.',
+    t: 'The Mac set still has nowhere to go',
+    d: 'Catalyst was dropped, so the App Store record is &ldquo;Designed for iPad&rdquo; and serves the iPad screenshots on Macs &mdash; there is no macOS screenshot slot. These six are built for a marketing site or a future Mac target.',
   },
 ];
 

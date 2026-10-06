@@ -18,10 +18,11 @@ const TITLES = {
 };
 
 // Only the things a reviewer cannot see for themselves go here.
-const FLAGS = {
-  '06-year-goals': 'Clipping',
-  '07-routine': 'Label overlap',
-};
+// Only the things a reviewer cannot see for themselves go here. Both entries
+// that used to live in this map - the year-goal ladder clipping and the routine
+// builder's label overlap - were defects in the live pages the old slides were
+// captured from, and neither survives in the design-sourced set.
+const FLAGS = {};
 
 (async () => {
   const out = [];
