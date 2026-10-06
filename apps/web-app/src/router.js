@@ -70,6 +70,10 @@ export default new Router({
       path: '/wizard',
       name: 'welcome',
       component: () => import(/* webpackChunkName: "wizard" */'./views/Wizard.vue'),
+      /* Onboarding draws its own frame and NO app navigation: the toolbar,
+         drawer and bottom bar only offered a brand-new user exits from the one
+         flow they were put in, into pages with nothing in them yet. */
+      meta: { appShell: true },
     },
     {
       path: '/groups',
