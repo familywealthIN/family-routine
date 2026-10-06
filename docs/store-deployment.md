@@ -237,25 +237,42 @@ All four trees are populated now:
 | `fastlane/metadata/android/en-US/images/*Screenshots/`, `fastlane/screenshots/` | the slide set | **no** — staged from `store-assets/final/` |
 
 The staged screenshots are gitignored so the same 12MB of PNG is not committed
-twice. A job that sets `SYNC_STORE_METADATA=true` must therefore run the staging
-step first, or `supply`/`deliver` will push text with no images:
+twice. That means an empty folder on a fresh checkout — and an empty folder is
+not a no-op: `supply` and `deliver` read it as "this listing has no screenshots"
+and strip the live ones. So `release-mobile.yml` stages and verifies before each
+upload, both gated on the same resolved flag:
 
-```
-node store-assets/tools/stage-fastlane.js   # pure file copy, no browser needed
+```yaml
+- name: Stage listing assets      # pure file copy, no browser, no yarn install
+  if: needs.prepare.outputs.sync_metadata == 'true'
+  run: node store-assets/tools/stage-fastlane.js
+
+- name: Verify the listing        # non-zero exit fails the job here
+  if: needs.prepare.outputs.sync_metadata == 'true'
+  run: node store-assets/tools/verify-listing.js
 ```
 
-Before either store sees any of it:
+**Turning the sync on.** The `prepare` job resolves one `sync_metadata` output
+that both publish jobs read, so they can never disagree:
 
-```
-node store-assets/tools/verify-listing.js
-```
+| Trigger | Where the answer comes from |
+|---|---|
+| `workflow_dispatch` | the **"Also push listing text + screenshots"** checkbox (default off) |
+| `v*.*.*` tag push | the repository variable `SYNC_STORE_METADATA` (absent = off) |
 
-That asserts every cap in the two tables above — name, subtitle, keyword,
-description and changelog lengths; screenshot count, exact canvas size and the
-3840px side limit per set; the feature graphic's 1024x500-with-no-alpha rule and
-the App Store icon's no-alpha rule — and exits non-zero on any failure. It ends
-by printing the six things it cannot check from the repo, the demo account among
-them.
+A tag push has nowhere to answer a prompt, which is why the variable exists.
+Anything that is not exactly the string `true` normalises to `false`, so a
+`True` or a `1` means binary-only rather than failing open.
+
+`verify-listing.js` asserts every cap in the two tables above — name, subtitle,
+keyword, description and changelog lengths; screenshot count, exact canvas size
+and the 3840px side limit per set; the feature graphic's 1024x500-with-no-alpha
+rule and the App Store icon's no-alpha rule; https-only URLs; and that the
+staged folders hold the file counts the upload expects. It needs no
+`yarn install` — only Node built-ins — and exits non-zero on any failure, so a
+violation costs nothing. Failing at the upload instead would burn a build number
+that can never be reused. It ends by printing the six things it cannot check from
+the repo, the App Review demo account among them.
 
 The screenshots themselves come from `packages/design`, not from a capture of
 the running app; `store-assets/README.md` has the chain and the one standing

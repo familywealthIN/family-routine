@@ -10,9 +10,14 @@
 // demo account, the App Privacy and Data Safety questionnaires, the content
 // rating, and whether the shipped app still looks like the design the slides
 // were cut from. Those are in the pre-submission list it prints at the end.
+//
+// Deliberately dependency-free: a release job runs this right before handing the
+// listing to `supply`/`deliver`, and the only thing it needs from a PNG is the
+// IHDR chunk, which is 25 bytes in at a fixed offset. Pulling `sharp` in for
+// that would make the pre-flight depend on a native module that no package.json
+// in this repo declares.
 const fs = require('fs');
 const path = require('path');
-const sharp = require('sharp');
 const slides = require('./slides');
 const platforms = require('./platforms');
 
@@ -41,9 +46,30 @@ function checkText(label, file, max) {
   else ok(label, `${n}/${max} chars`);
 }
 
-async function size(file) {
-  const m = await sharp(file).metadata();
-  return { w: m.width, h: m.height, alpha: !!m.hasAlpha, bytes: fs.statSync(file).size };
+/**
+ * Width, height and whether the image carries alpha, read straight out of the
+ * PNG header.
+ *
+ * A PNG opens with an 8-byte signature and then IHDR, so width and height are
+ * big-endian uint32s at offsets 16 and 20, and the colour type is the single
+ * byte at 25. Colour types 4 (grey+alpha) and 6 (truecolour+alpha) have an alpha
+ * channel; type 3 (indexed) can fake one with a tRNS chunk, which is why that
+ * case is reported rather than silently called opaque — Play and Apple both
+ * reject a transparent icon, so a maybe has to be looked at.
+ */
+function imageInfo(file) {
+  const b = fs.readFileSync(file);
+  if (b.length < 26 || b.readUInt32BE(0) !== 0x89504e47) {
+    throw new Error(`${path.relative(ROOT, file)} is not a PNG`);
+  }
+  const colourType = b[25];
+  return {
+    w: b.readUInt32BE(16),
+    h: b.readUInt32BE(20),
+    alpha: colourType === 4 || colourType === 6,
+    indexed: colourType === 3,
+    bytes: b.length,
+  };
 }
 
 (async () => {
@@ -85,7 +111,7 @@ async function size(file) {
       const f = path.join(FINAL, `${name}-${s.key}.png`);
       if (!fs.existsSync(f)) { wrong.push(`${s.key} missing`); continue; }
       count += 1;
-      const { w, h, bytes } = await size(f);
+      const { w, h, bytes } = imageInfo(f);
       if (w !== cw || h !== ch) wrong.push(`${s.key} is ${w}x${h}, expected ${cw}x${ch}`);
       if (Math.max(w, h) > 3840) wrong.push(`${s.key} exceeds 3840px on a side`);
       if (bytes > 8 * 1024 * 1024) wrong.push(`${s.key} is ${Math.round(bytes / 1048576)}MB`);
@@ -99,7 +125,7 @@ async function size(file) {
   const icon = path.join(PLAY, 'images', 'icon.png');
   if (!fs.existsSync(icon)) bad('Play icon', 'missing');
   else {
-    const m = await size(icon);
+    const m = imageInfo(icon);
     if (m.w !== 512 || m.h !== 512) bad('Play icon', `${m.w}x${m.h}, must be 512x512`);
     else if (m.bytes > 1024 * 1024) bad('Play icon', `${Math.round(m.bytes / 1024)}kb, limit 1MB`);
     else ok('Play icon', `512x512, ${Math.round(m.bytes / 1024)}kb`);
@@ -108,9 +134,10 @@ async function size(file) {
   const fg = path.join(PLAY, 'images', 'featureGraphic.png');
   if (!fs.existsSync(fg)) bad('Play feature graphic', 'missing');
   else {
-    const m = await size(fg);
+    const m = imageInfo(fg);
     if (m.w !== 1024 || m.h !== 500) bad('Play feature graphic', `${m.w}x${m.h}, must be 1024x500`);
     else if (m.alpha) bad('Play feature graphic', 'has an alpha channel; Play rejects it');
+    else if (m.indexed) warn('Play feature graphic', 'indexed PNG - check it carries no tRNS chunk');
     else ok('Play feature graphic', '1024x500, no alpha');
   }
 
@@ -118,9 +145,10 @@ async function size(file) {
   const appIcon = path.join(ROOT, 'apps/ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png');
   if (!fs.existsSync(appIcon)) bad('App Store icon', 'missing from the asset catalogue');
   else {
-    const m = await size(appIcon);
+    const m = imageInfo(appIcon);
     if (m.w !== 1024 || m.h !== 1024) bad('App Store icon', `${m.w}x${m.h}, must be 1024x1024`);
     else if (m.alpha) bad('App Store icon', 'has an alpha channel; Apple rejects it');
+    else if (m.indexed) warn('App Store icon', 'indexed PNG - check it carries no tRNS chunk');
     else ok('App Store icon', '1024x1024, no alpha');
   }
 
@@ -130,6 +158,28 @@ async function size(file) {
   const dupes = slides.map((s) => s.caption).filter((c, i, a) => a.indexOf(c) !== i);
   if (dupes.length) warn('Slide captions', `repeated: ${[...new Set(dupes)].join(' / ')}`);
   else ok('Slide captions', `${slides.length} distinct`);
+
+  // --- Staged copies -------------------------------------------------------
+  // Everything above checks store-assets/final/, which is the source of truth.
+  // What `supply` and `deliver` actually upload is the staged copy, and those
+  // folders are gitignored — so on a fresh checkout they are empty until
+  // stage-fastlane.js runs. An empty folder is not a no-op: both tools read it
+  // as "this listing has no screenshots" and strip the live ones.
+  const staged = [
+    ['Play phone', path.join(PLAY, 'images', 'phoneScreenshots'), slides.length],
+    ['Play 10" tablet', path.join(PLAY, 'images', 'tenInchScreenshots'), slides.length],
+    ['App Store screenshots', path.join(ROOT, 'fastlane', 'screenshots', 'en-US'), slides.length * 2],
+  ];
+  const anyStaged = staged.some(([, dir]) => fs.existsSync(dir));
+  if (!anyStaged) {
+    warn('Staged screenshots', 'none — run stage-fastlane.js before a job that syncs metadata');
+  } else {
+    staged.forEach(([label, dir, want]) => {
+      const got = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.png')).length : 0;
+      if (got !== want) bad(`Staged ${label}`, `${got} files, expected ${want}`);
+      else ok(`Staged ${label}`, `${got} files`);
+    });
+  }
 
   // --- Report --------------------------------------------------------------
   const pad = Math.max(...results.map((r) => r.what.length));

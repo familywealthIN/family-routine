@@ -75,6 +75,12 @@ into assertions, so the listing cannot drift past a cap between releases. It
 prints the six things it cannot check from the repo — demo account, privacy
 questionnaires, content rating, and whether the app still matches the design.
 
+The last two run in CI as well: `release-mobile.yml` stages and verifies before
+each upload whenever the release is syncing metadata, so a fresh checkout's empty
+screenshot folders can never reach `supply`/`deliver` — which would read them as
+"no screenshots" and strip the live listing's. Both scripts use Node built-ins
+only, so neither needs a `yarn install` to run.
+
 ## Review sheet
 
 ```
