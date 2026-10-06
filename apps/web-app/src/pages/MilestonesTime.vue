@@ -27,13 +27,13 @@
     <template v-slot:header-actions>
       <button
         type="button"
-        class="rn-miles__act"
-        :class="labelledActions ? 'rn-miles__act--label' : 'rn-miles__act--icon'"
+        class="rn-shell__act"
+        :class="labelledActions ? 'rn-shell__act--label' : 'rn-shell__act--icon'"
         title="Goals"
         data-testid="milestones-goals"
         @click="goTo('/goals')"
       >
-        <i class="rn-mi rn-miles__act-glyph">view_agenda</i>
+        <i class="rn-mi rn-shell__act-glyph">view_agenda</i>
         <span v-if="labelledActions">Goals</span>
       </button>
     </template>
@@ -656,39 +656,3 @@ export default {
   line-height: 1.5;
   color: rgba(0, 0, 0, .55);
 }
-
-.rn-miles__act {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(0, 0, 0, .12);
-  background: #fff;
-  color: rgba(0, 0, 0, .7);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.rn-miles__act--label {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 18px;
-}
-
-.rn-miles__act--icon {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  justify-content: center;
-  border-color: transparent;
-  background: transparent;
-  border-radius: 50%;
-  color: rgba(0, 0, 0, .6);
-}
-
-.rn-miles__act-glyph {
-  font-size: 20px;
-}
-</style>

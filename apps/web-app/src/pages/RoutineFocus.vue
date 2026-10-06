@@ -441,8 +441,14 @@ const HEADER_RING_SIZE = 28;
 // The phone strip's height. The design declares it as a token
 // (`weekMaxH: '80px'`) rather than letting the cells decide, so the card below
 // it does not shift as the rings change size.
+//
+// 68, not the design's 80: the token sizes a box whose CONTENT the design does
+// not pin, and ours came to 73px of label + ring inside 80, leaving a dead band
+// under the rings. With the day cell's 12px vertical padding down to 6px the
+// content is 61px, so 68 keeps the same breathing room the 80 was meant to give
+// — measured, not guessed.
 // TODO move to packages/ui/constants/routineFocus.js — a per-shell token.
-const WEEK_STRIP_OPEN_PX = 80;
+const WEEK_STRIP_OPEN_PX = 68;
 // Which agent transcripts have been looked at, so the orange NEW pill is about
 // this user and not about this page load. Ids only — the transcript itself lives
 // on the goal item.

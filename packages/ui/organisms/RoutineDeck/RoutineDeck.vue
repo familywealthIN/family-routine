@@ -258,11 +258,14 @@ export default {
 
 /* `pan-y`: the browser keeps vertical scrolling (and every scroller inside the
    card inherits the restriction), while a horizontal drag is ours alone. */
+/* No top margin: the 30px that used to be here was headroom for the two peek
+   cards, which `peekStyle` lifted 28px and 14px above the focus card. The peeks
+   went in 4ed0905 and the margin stayed behind as 30px of dead space between
+   the weekday strip and the card. */
 .rn-deck__stage {
   position: relative;
   flex: 1;
   min-height: 0;
-  margin-top: 30px;
   touch-action: pan-y;
 }
 

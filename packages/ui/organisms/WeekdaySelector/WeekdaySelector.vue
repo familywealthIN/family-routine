@@ -431,8 +431,12 @@ export default {
     font-size: 11px;
   }
 
+  /* 4px, not 8. On Home this cell sits in a strip whose height is fixed from
+     outside (`WEEK_STRIP_OPEN_PX`), so its padding does not make the strip
+     taller — it just pushed the rings up against the top and left a dead band
+     underneath. Measured: 69px of cell inside an 80px strip. */
   .day-column {
-    padding: 8px 1px;
+    padding: 4px 1px;
   }
 }
 </style>

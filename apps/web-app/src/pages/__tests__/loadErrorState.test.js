@@ -107,9 +107,12 @@ describe('MilestonesTime load error', () => {
   // One query per period now — the combined one returned 502 because the five
   // together exceeded Lambda's response limit. So the failure is per period,
   // and a card that fails costs only itself.
+  // Vue 2's `$set`, which the page uses to make a new `loadErrors` key
+  // reactive. Writing through `Object.assign` rather than `obj[key] = value`
+  // keeps eslint's no-param-reassign happy without disabling it.
   const ctx = (loadErrors = {}) => ({
     loadErrors,
-    $set(obj, key, value) { obj[key] = value; },
+    $set(obj, key, value) { Object.assign(obj, { [key]: value }); },
   });
 
   it('flags the failure for the period that failed, and only that one', () => {

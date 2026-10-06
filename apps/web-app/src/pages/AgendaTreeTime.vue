@@ -50,13 +50,13 @@
     <template v-slot:header-actions>
       <button
         type="button"
-        class="rn-plan__act"
-        :class="labelledActions ? 'rn-plan__act--label' : 'rn-plan__act--icon'"
+        class="rn-shell__act"
+        :class="labelledActions ? 'rn-shell__act--label' : 'rn-shell__act--icon'"
         title="Progress"
         data-testid="plan-progress"
         @click="goTo('/progress')"
       >
-        <i class="rn-mi rn-plan__act-glyph">insights</i>
+        <i class="rn-mi rn-shell__act-glyph">insights</i>
         <span v-if="labelledActions">Progress</span>
       </button>
     </template>
@@ -600,40 +600,6 @@ export default {
 
 /* ---- header action, as Milestones draws it ---- */
 
-.rn-plan__act {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  background: rgba(0, 0, 0, .05);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, .7);
-  cursor: pointer;
-}
-
-.rn-plan__act--icon {
-  width: 36px;
-  height: 36px;
-  justify-content: center;
-  border-radius: 18px;
-}
-
-.rn-plan__act--label {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 18px;
-}
-
-.rn-plan__act-glyph {
-  font-size: 18px;
-}
-
-/* ---- the three pickers ---- */
-
-/* Wraps rather than scrolls: three pills do not fit one 360px row, and a row
-   that scrolls sideways hides a control the page cannot be used without. */
 .rn-plan__bar {
   display: flex;
   flex-wrap: wrap;

@@ -640,6 +640,82 @@ export default {
   min-width: 0;
 }
 
+/*
+ * The header action — ONE definition for every page's `header-actions` slot.
+ *
+ * Six pages had each rolled their own (`goals-page__act`, `rn-agents__new`,
+ * `rn-groups__invite-btn`, `rn-routines__new`, `rn-miles__act`, `rn-plan__act`)
+ * and they had drifted: the icon-only ones were 40x40 on Goals, Milestones and
+ * Routines but 36x36 on the Month Planner, while every labelled one was 36.
+ * Every design file's phone frame draws this control at 36px — a circle when it
+ * is a glyph alone, an r18 pill when it carries a word — so that is what this
+ * is, and the pages consume it instead of restating it.
+ *
+ * This block is deliberately NOT scoped: slot content belongs to the page, so a
+ * scoped rule here would never reach it.
+ */
+.rn-shell__act {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  border: 1px solid rgba(0, 0, 0, .12);
+  border-radius: 18px;
+  background: #fff;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .7);
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* 36 square + r18 is the circle; no second radius to keep in step. */
+.rn-shell__act--icon {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+  background: transparent;
+  color: rgba(0, 0, 0, .6);
+}
+
+.rn-shell__act--icon:hover {
+  background: rgba(0, 0, 0, .05);
+}
+
+.rn-shell__act--label {
+  padding: 0 14px;
+}
+
+.rn-shell__act--primary.rn-shell__act--label {
+  border-color: transparent;
+  background: #288bd5;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .14);
+}
+
+/* Icon-only has no room for a filled pill, so "primary" is the blue glyph. */
+.rn-shell__act--primary.rn-shell__act--icon {
+  color: #288bd5;
+}
+
+/* Groups' invite button when the group is full or failed to load. */
+.rn-shell__act--muted.rn-shell__act--label {
+  border-color: transparent;
+  background: rgba(0, 0, 0, .25);
+  color: #fff;
+}
+
+.rn-shell__act-glyph {
+  font-size: 18px;
+}
+
+.rn-shell__act--icon .rn-shell__act-glyph {
+  font-size: 22px;
+}
+
 .rn-shell__avatar-btn {
   width: 40px;
   height: 40px;

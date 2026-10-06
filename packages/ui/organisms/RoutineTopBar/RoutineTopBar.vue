@@ -196,9 +196,13 @@ export default {
   box-shadow: 0 0 0 2px #f4f4f4;
 }
 
+/* 24px/700 and a 12px/.54 subtitle: the same numbers `SHELL_CHROME.phone` gives
+   AppShell, so Home's header reads as the same header as every other page's.
+   It was 24/500 over an 11px/.5 subtitle — close enough to look like a mistake
+   rather than a variation. */
 .rn-topbar__title {
   font-size: 24px;
-  font-weight: 500;
+  font-weight: 700;
   flex: 1;
   min-width: 0;
   transition: opacity .3s;
@@ -210,10 +214,10 @@ export default {
 
 .rn-topbar__subtitle {
   margin-top: 1px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.3;
-  color: rgba(0, 0, 0, .5);
+  color: rgba(0, 0, 0, .54);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -295,9 +299,12 @@ export default {
   flex-shrink: 0;
 }
 
+/* 32px is what every design file's phone header draws, and what
+   `SHELL_CHROME.phone.avatar` already gave the other eleven pages. The 40px
+   button around it keeps the tap target. */
 .rn-topbar__avatar {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
 }

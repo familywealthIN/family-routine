@@ -40,24 +40,24 @@
     <template v-slot:header-actions>
       <button
         type="button"
-        class="goals-page__act"
-        :class="labelledActions ? 'goals-page__act--label' : 'goals-page__act--icon'"
+        class="rn-shell__act"
+        :class="labelledActions ? 'rn-shell__act--label' : 'rn-shell__act--icon'"
         title="Milestones"
         data-testid="goals-milestones"
         @click="openMilestones"
       >
-        <i class="rn-mi goals-page__act-glyph">widgets</i>
+        <i class="rn-mi rn-shell__act-glyph">widgets</i>
         <span v-if="labelledActions">Milestones</span>
       </button>
       <button
         type="button"
-        class="goals-page__act goals-page__act--primary"
-        :class="labelledActions ? 'goals-page__act--label' : 'goals-page__act--icon'"
+        class="rn-shell__act rn-shell__act--primary"
+        :class="labelledActions ? 'rn-shell__act--label' : 'rn-shell__act--icon'"
         title="New goal"
         data-testid="goals-new"
         @click="openSheet"
       >
-        <i class="rn-mi goals-page__act-glyph">add</i>
+        <i class="rn-mi rn-shell__act-glyph">add</i>
         <span v-if="labelledActions">New goal</span>
       </button>
     </template>
@@ -558,60 +558,3 @@ export default {
   flex: 1;
   min-height: 0;
 }
-
-.goals-page__act {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(0, 0, 0, .12);
-  background: #fff;
-  color: rgba(0, 0, 0, .7);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.goals-page__act--label {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 18px;
-}
-
-/* The phone header has 412px to hold a title, two actions, the points chip and
-   the avatar — so there the actions are bare glyphs. */
-.goals-page__act--icon {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  justify-content: center;
-  border-color: transparent;
-  background: transparent;
-  border-radius: 50%;
-  color: rgba(0, 0, 0, .6);
-}
-
-.goals-page__act--icon:hover {
-  background: rgba(0, 0, 0, .05);
-}
-
-.goals-page__act--primary.goals-page__act--label {
-  border-color: transparent;
-  background: #288bd5;
-  color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, .14);
-}
-
-.goals-page__act--primary.goals-page__act--icon {
-  color: #288bd5;
-}
-
-.goals-page__act-glyph {
-  font-size: 18px;
-}
-
-.goals-page__act--icon .goals-page__act-glyph {
-  font-size: 24px;
-}
-</style>

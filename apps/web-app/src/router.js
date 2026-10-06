@@ -35,6 +35,7 @@ export default new Router({
       path: '/history',
       name: 'history',
       component: () => import(/* webpackChunkName: "history" */'./views/History.vue'),
+      meta: { appShell: true },
     },
     {
       path: '/settings/notifications',
