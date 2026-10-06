@@ -58,7 +58,7 @@ a{color:#288bd5}a:hover{color:#1f6fab}
       <div ref="{{ nameTargetRef }}" style="font-size:12px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:170px;text-align:center">{{ focus.name }}</div>
     </div>
     <div ref="{{ chipRef }}" style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;margin-right:8px"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div>
-    <div onClick="{{ openDrawer }}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin:0 8px 0 6px;cursor:pointer"><img src="assets/avatar.svg" style="width:40px;height:40px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
+    <div onClick="{{ openDrawer }}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin:0 8px 0 6px;cursor:pointer"><!-- 32px image in a 40px hit area, matching rn-topbar__avatar inside rn-topbar__avatar-btn: the tap target keeps its 40px, the picture does not. --><img src="assets/avatar.svg" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
   </div>
   <div style="flex-shrink:0;overflow:hidden;max-height:{{ weekMaxH }};opacity:{{ weekOpacity }};transition:max-height .35s cubic-bezier(.4,0,.2,1),opacity .25s">
   <div style="position:relative;display:flex;justify-content:space-between;align-items:center;margin:0 12px;flex-shrink:0">

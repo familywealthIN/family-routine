@@ -43,7 +43,7 @@ The `.dc.html` files are **design references built in HTML**: prototypes of inte
 ## Screens
 
 ### Home — `Routine Notes Final.dc.html` (RoutineFocus.vue)
-- **Header (phone):** Inbox (40px white circle, orange count badge) at far left · "Home" · points pill · avatar (40px) at right. When the routine is ticked, the ring + routine name fly into the header centre (stacked, 34px ring, 12/700 name).
+- **Header (phone):** Inbox (40px white circle, orange count badge) at far left · "Home" · points pill · avatar (32px image in a 40px hit area) at right. When the routine is ticked, the ring + routine name fly into the header centre (stacked, 34px ring, 12/700 name).
 - **Week selector:** 7 day rings (D/K/G triple ring); sliding white highlight; **long-press today (≥520ms) or right-click** → Skip day sheet. Skipped day shows an orange pause badge.
 - **Focus card:** 120px tick ring (Muse-style), title under it. Checklist (15/500 rows, 24px checkbox, 44px min height) → row opens the goal item page; checkbox ticks. Bottom tabs Today · Week · Month · Year with sliding underline.
 - **Chat with the routine** under the checklist:

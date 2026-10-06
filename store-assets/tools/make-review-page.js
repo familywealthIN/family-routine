@@ -14,8 +14,8 @@ const DECISIONS = [
   },
   {
     k: 'Avatar',
-    t: 'Still the illustrated placeholder',
-    d: 'The mocks used to load a Google-hosted photo of an identifiable stranger, which cannot appear in published marketing. It is <code>packages/design/assets/avatar.svg</code> for now. <b>To use a real face:</b> drop a portrait you own, or one licensed for commercial use, at <code>packages/design/assets/avatar-demo.png</code> &mdash; the capture serves it in place of the SVG automatically, no design edits, and all 24 pick it up on the next run.',
+    t: 'A real photo now, and sized like the app',
+    d: 'Every slide carries a photograph from Unsplash, whose licence allows commercial use with no attribution; the source id is recorded in <code>packages/design/assets/README.md</code> so the provenance is traceable. It replaced a Google-hosted image of an identifiable stranger, which had no licence at all. <b>Size fixed too:</b> the design drew a flat 40px image where the app renders a <b>32px</b> picture inside a 40px tap target (<code>rn-topbar__avatar</code> in <code>rn-topbar__avatar-btn</code>) &mdash; measured in both, now matched. To use your own face instead, drop it at <code>packages/design/assets/avatar-demo.png</code>.',
   },
   {
     k: 'Source',
