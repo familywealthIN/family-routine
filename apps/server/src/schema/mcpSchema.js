@@ -103,7 +103,7 @@ type Mutation {
   # Sign in / register with Google Identity Services JWT
   authGoogle(accessToken: String!, notificationId: String!): UserItem
   # Sign in / register with Apple Identity Token
-  authApple(identityToken: String!, notificationId: String!): UserItem
+  authApple(identityToken: String!, notificationId: String!, timezone: String, name: String): UserItem
 
   # ── User ──────────────────────────────────────────────────────────────────
   # Generate a new API key for MCP / external tool access

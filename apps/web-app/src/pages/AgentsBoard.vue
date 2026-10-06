@@ -22,8 +22,8 @@
     @sign-out="onSignOut"
   >
     <template v-slot:header-actions>
-      <button type="button" class="rn-agents__new" data-testid="agents-new" @click="openNew">
-        <i class="rn-mi rn-agents__new-glyph">add</i>New agent
+      <button type="button" class="rn-shell__act rn-shell__act--primary rn-shell__act--label" data-testid="agents-new" @click="openNew">
+        <i class="rn-mi rn-shell__act-glyph">add</i>New agent
       </button>
     </template>
 
@@ -291,27 +291,3 @@ export default {
 .rn-agents__card::-webkit-scrollbar {
   display: none;
 }
-
-/* --- header action ----------------------------------------------------- */
-
-.rn-agents__new {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 36px;
-  padding: 0 14px 0 10px;
-  border: 0;
-  border-radius: 18px;
-  background: #288bd5;
-  color: #fff;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.rn-agents__new-glyph {
-  font-size: 18px;
-}
-</style>

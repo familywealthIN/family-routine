@@ -12,7 +12,7 @@ process.env.ENCRYPTION_KEY = 'routine-resolver-test-key';
 
 const { buildStimuliForRoutineItem } = require('./routine');
 
-// Mirrors the consumers (DashBoard.countTaskTotal, utils/stimulusPoints).
+// Mirrors the consumers (utils/routineTaskDisplay.countTaskTotal).
 const slotsFor = (stimuli) => {
   const d = stimuli.find((st) => st.name === 'D');
   const k = stimuli.find((st) => st.name === 'K');
@@ -38,8 +38,10 @@ const splitRateOf = (id, tasklist = TASKLIST) => buildStimuliForRoutineItem(id, 
 describe('timeDiff (via buildStimuliForRoutineItem)', () => {
   it('counts minutes, not just the hour field', () => {
     // 06:40 -> 09:00 is 2h20m. The old code read the hours alone (9 - 6) and
-    // called it 3, which is the entire D-20 bug.
-    expect(splitRateOf('meditation')).toBe(2.33);
+    // called it 3, which is the entire D-20 bug. Compared loosely because the
+    // gap is stored unrounded: 7 / 3 is 2.3333333333333335 in binary floating
+    // point.
+    expect(splitRateOf('meditation')).toBeCloseTo(7 / 3, 6);
   });
 
   it('gives a 2h20m gap ONE goal slot, so the card can read 1/1', () => {

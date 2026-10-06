@@ -9,13 +9,13 @@
   >
     <template v-slot:header-actions>
       <div
-        class="rn-groups__invite-btn"
-        :class="{ 'rn-groups__invite-btn--full': isFull || loadFailed }"
+        class="rn-shell__act rn-shell__act--label"
+        :class="isFull || loadFailed ? 'rn-shell__act--muted' : 'rn-shell__act--primary'"
         title="Invite member"
         data-testid="groups-invite-button"
         @click="openInvite"
       >
-        <i class="rn-mi rn-groups__invite-glyph">person_add</i>Invite
+        <i class="rn-mi rn-shell__act-glyph">person_add</i>Invite
       </div>
     </template>
 
@@ -570,31 +570,6 @@ export default {
 
 <style>
 /* Root-class-prefixed so none of this leaks into the rest of the app. */
-.rn-groups .rn-groups__invite-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 36px;
-  padding: 0 14px 0 10px;
-  border-radius: 18px;
-  background: #288bd5;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-/* Full: dimmed and still tappable — tapping is how you learn why (toast). */
-.rn-groups .rn-groups__invite-btn--full {
-  background: rgba(0, 0, 0, .25);
-}
-
-.rn-groups .rn-groups__invite-glyph {
-  font-size: 18px;
-}
-
 .rn-groups .rn-groups__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

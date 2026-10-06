@@ -86,11 +86,10 @@ function timeOfDayInHours(time) {
 }
 
 function timeDiff(time, nextTime) {
-  // Rounded to 2dp. It is persisted into every day document, so the readable
-  // 2.33 beats 2.3333333333333335, and it changes no slot count: the slot total
-  // is `round(D.splitRate / 2)`, and with minute-granularity times the only gaps
-  // that land on a .5 boundary are whole hours, which have no decimals to round.
-  const taskTime = Number((timeOfDayInHours(nextTime) - timeOfDayInHours(time)).toFixed(2));
+  // Minutes are part of the gap. Reading only the hour stretched a 06:40 ->
+  // 09:00 window into a full 3 hours, which bought the task a second goal-item
+  // slot (round(3 / 2) = 2) that its 2h20m never earned.
+  const taskTime = timeOfDayInHours(nextTime) - timeOfDayInHours(time);
 
   return taskTime > 2 ? taskTime : 2;
 }

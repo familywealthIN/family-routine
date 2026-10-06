@@ -138,6 +138,15 @@ platform :ios do
   end
 
   desc 'Build the PR branch and push it to TestFlight internal testers'
+  # NOTE: this lane stamps only the BUILD number. The marketing version comes
+  # from MARKETING_VERSION in the Xcode project and is not derived from the PR,
+  # so every PR build uploads into the same pre-release train.
+  #
+  # Apple closes a train once that version is approved: the upload then fails
+  # with "Invalid Pre-Release Train. The train version 'X.Y' is closed for new
+  # build submissions", which is how 1.2 broke on 2026-10-05 (run 37317268690).
+  # When that happens, bump MARKETING_VERSION to a version that has never been
+  # released — a used-but-unreleased one is fine, an approved one is not.
   lane :pr_testflight do
     setup_ci
     match(type: 'appstore', readonly: true)

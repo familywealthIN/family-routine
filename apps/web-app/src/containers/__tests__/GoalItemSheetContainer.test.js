@@ -159,41 +159,17 @@ describe('GoalItemSheetContainer — writeItem sends the whole field set', () =>
   });
 });
 
-describe('GoalItemSheetContainer — Linked to is editable', () => {
-  it('a new parent goal is written, and makes the item its milestone', () => {
-    const vm = ctx();
-    call('onUpdateLink', vm, { item: ITEM, goalRef: 'wg2' });
-    expect(varsOf(vm)).toMatchObject({
-      goalRef: 'wg2', isMilestone: true, taskRef: 'sw', body: 'Ship dashboard PR',
-    });
-    expect(guardFields).toHaveBeenCalledWith('GoalItem', 'g1', ['goalRef', 'isMilestone']);
-  });
-
-  it('unlinking clears the parent and the milestone flag', () => {
-    const vm = ctx({ item: { ...ITEM, isMilestone: true } });
-    call('onUpdateLink', vm, { item: { ...ITEM, isMilestone: true }, goalRef: '' });
-    expect(varsOf(vm)).toMatchObject({ goalRef: '', isMilestone: false });
-  });
-
-  it('a new routine is written without touching the parent', () => {
-    const vm = ctx();
-    call('onUpdateLink', vm, { item: ITEM, taskRef: 'evening' });
-    expect(varsOf(vm)).toMatchObject({ taskRef: 'evening', goalRef: 'wg1', isMilestone: false });
-  });
-
-  it('loads the parent choices one period up from the item', async () => {
-    const fetchGoalDatePeriod = jest.fn(() => Promise.resolve({ goalItems: [{ id: 'wg1' }] }));
-    const vm = {
-      parentKey: 'day|12-09-2026',
-      period: 'day',
-      date: '12-09-2026',
-      parentSeq: 0,
-      goalRefOptions: [],
-      $goals: { fetchGoalDatePeriod },
-    };
-    await call('loadParentGoals', vm);
-    expect(fetchGoalDatePeriod).toHaveBeenCalledWith('week', expect.any(String), { useCache: false });
-    expect(vm.goalRefOptions).toEqual([{ id: 'wg1' }]);
+/*
+ * Linked to is read-only while editing, and this container only ever opens the
+ * sheet that way — so `onUpdateLink` and the parent-goal read that fed its
+ * pickers are both gone. The add path keeps them, in GoalItemCreateContainer.
+ */
+describe('GoalItemSheetContainer — Linked to is not writable from here', () => {
+  it('has no link writer and no parent-goal read left to run', () => {
+    const { methods, data } = Container;
+    expect(methods.onUpdateLink).toBeUndefined();
+    expect(methods.loadParentGoals).toBeUndefined();
+    expect(data ? data() : {}).not.toHaveProperty('goalRefOptions');
   });
 });
 

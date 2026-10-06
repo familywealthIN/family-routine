@@ -33,8 +33,6 @@
       :reward-meta="rewardMeta"
       :reward-new="rewardNew"
       :period="period"
-      :routines="routines"
-      :goal-ref-options="goalRefOptions"
       @close="$emit('close')"
       @toggle-status="$emit('toggle-item', $event)"
       @open-transcript="$emit('open-transcript', $event)"
@@ -43,7 +41,6 @@
       @update-title="onUpdateTitle"
       @commit-contribution="onCommitContribution"
       @update-tags="onUpdateTags"
-      @update-link="onUpdateLink"
       @pick-date="onPickDate"
       @add-subtask="onAddSubtask"
       @toggle-subtask="onToggleSubtask"
@@ -51,7 +48,7 @@
       @move-subtask-up="onMoveSubtaskUp"
       @remove-subtask="onRemoveSubtask"
     />
-    <goal-delete-confirm-container ref="deleteConfirm" @confirm="onDeleteConfirmed" />
+    <goal-delete-confirm-container ref="deleteConfirm" :shell="shell" @confirm="onDeleteConfirmed" />
   </div>
 </template>
 
@@ -66,7 +63,6 @@ import {
 import { patchSubTaskItem } from '../composables/useEntityCache';
 import { isTempSubTaskId } from '../utils/tempIds';
 import { guardFields, releaseEntity } from '../utils/cacheGuard';
-import { fetchParentGoalOptions } from '../utils/parentGoalOptions';
 
 export default {
   name: 'GoalItemSheetContainer',
@@ -90,39 +86,14 @@ export default {
     tagUsage: { type: Object, default: () => ({}) },
     rewardMeta: { type: String, default: '' },
     rewardNew: { type: Boolean, default: false },
-    /** `[{ id, name, time }]` — the Linked to routine picker's choices. */
-    routines: { type: Array, default: () => [] },
   },
-  data() {
-    return {
-      /** Goals one period up from this item — Linked to's parent choices. */
-      goalRefOptions: [],
-      parentSeq: 0,
-    };
-  },
-  watch: {
-    /** Each item the sheet opens on gets the parent goals of its own period. */
-    parentKey: {
-      handler() {
-        this.loadParentGoals();
-      },
-      immediate: true,
-    },
-  },
-  computed: {
-    parentKey() {
-      return this.open && this.item ? `${this.period}|${this.date}` : '';
-    },
-  },
+  /*
+   * No parent-goal read here any more. It existed to fill the Linked to
+   * pickers, which are an add-time control now — and this container only ever
+   * mounts the sheet in EDIT mode, so the query ran on every open and fed
+   * nothing. `GoalItemCreateContainer` keeps its own, for the add path.
+   */
   methods: {
-    loadParentGoals() {
-      if (!this.parentKey) return Promise.resolve();
-      this.parentSeq += 1;
-      const seq = this.parentSeq;
-      return fetchParentGoalOptions(this.$goals, this.period, this.date).then((items) => {
-        if (seq === this.parentSeq) this.goalRefOptions = items;
-      });
-    },
     notifyError(error, fallback) {
       const [gqlError] = (error && error.graphQLErrors) || [];
       this.$notify({
@@ -203,20 +174,6 @@ export default {
     onCommitContribution({ item, contribution }) {
       if ((item.contribution || '') === (contribution || '')) return;
       this.writeItem(item, { contribution: contribution || '' }).catch(() => {});
-    },
-    /**
-     * Linked to: the routine and/or the parent goal. A goal that rolls up into
-     * a parent is that parent's milestone, so `isMilestone` follows `goalRef`.
-     */
-    onUpdateLink({ item, ...link }) {
-      const changes = {};
-      if ('taskRef' in link) changes.taskRef = link.taskRef || '';
-      if ('goalRef' in link) {
-        changes.goalRef = link.goalRef || '';
-        changes.isMilestone = !!link.goalRef;
-      }
-      if (!Object.keys(changes).length) return;
-      this.writeItem(item, changes).catch(() => {});
     },
     onUpdateTags({ item, tags }) {
       this.writeItem(item, { tags: (tags || []).slice() }).catch(() => {});

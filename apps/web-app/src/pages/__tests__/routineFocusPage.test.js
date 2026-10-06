@@ -605,7 +605,6 @@ describe('RoutineFocus computed graph', () => {
     expect(vm.focusWindowInfo.statusLabel).toBe('In progress');
     expect(vm.tickedCount).toBe(1);
     expect(vm.routinesLeft).toBe(2);
-    expect(vm.deckPeeks.map((p) => p.id)).toEqual(['lw']);
     expect(vm.showBackToNow).toBe(false);
   });
 
@@ -613,7 +612,6 @@ describe('RoutineFocus computed graph', () => {
     const vm = graph({ focusRoutineId: 'lw' });
     expect(vm.resolvedFocusId).toBe('lw');
     expect(vm.showBackToNow).toBe(true);
-    expect(vm.deckPeeks).toEqual([]);
   });
 
   // A focus held on a routine that is gone (edited away, or a day switch) must
@@ -637,7 +635,9 @@ describe('RoutineFocus computed graph', () => {
     expect(vm.cardProps.items).toHaveLength(2);
     expect(vm.chatProps.routine.id).toBe('sw');
     expect(vm.chatProps.scores).toEqual(vm.stimulusTotals);
-    expect(vm.composerPlaceholder).toBe('Message Start Work…');
+    // Not ticked yet, so the chat is shut and the placeholder says why.
+    expect(vm.chatDisabled).toBe(true);
+    expect(vm.composerPlaceholder).toBe('Check off Start Work to chat…');
   });
 
   it('has nothing to render for a day with no routine', () => {
@@ -1436,11 +1436,21 @@ describe('RoutineFocus shell geometry', () => {
   });
 
   // --- 7. phone details ----------------------------------------------------
-  it('always shows the phone week strip, at the design 80px', () => {
-    // Measured 73px: `max-height` alone left the cells deciding the height.
+  /*
+   * 68px, down from the design token's 80.
+   *
+   * The token sizes a box whose CONTENT the design does not pin, and ours came
+   * to 73px of label + ring inside the 80, so the rings sat against the top and
+   * left a dead band under them — which, with the deck's leftover 30px peek
+   * margin above the card, is the empty space between the strip and the card
+   * the owner asked about. The day cell's phone padding is 4px now (it was 8),
+   * putting the content at 61px, so 68 keeps the same breathing room the 80 was
+   * meant to give. Both numbers are measured, not guessed.
+   */
+  it('sizes the phone week strip to its content, not the raw design token', () => {
     const style = call('weekStripStyle', {});
-    expect(style.height).toBe('80px');
-    expect(style.maxHeight).toBe('80px');
+    expect(style.height).toBe('68px');
+    expect(style.maxHeight).toBe('68px');
     // No grab handle, no hidden state: the owner wants the week always in view.
     expect(source).not.toContain('week-grab');
     expect(source).not.toContain('weekStripOpen');
@@ -1459,18 +1469,51 @@ describe('RoutineFocus shell geometry', () => {
     expect(source).toMatch(/<pull-to-refresh[^>]*@refresh="pullRefresh"/);
   });
 
-  it('draws the phone header avatar at 40px', () => {
-    // The rule lives in RoutineTopBar.vue — this page is its only consumer, and
-    // the design's phone header fills the 40px tap target with the image instead
-    // of insetting a 32px one inside a 36px button.
+  /*
+   * Home's header has to BE the header every other page draws.
+   *
+   * This asserted 40px, on the stated premise that "the design's phone header
+   * fills the 40px tap target with the image". The design files say otherwise:
+   * all nine draw the phone header avatar at 32px, and the only 36px one in
+   * each — Home's file included — is the DESKTOP sidebar's profile row. The
+   * other eleven pages already render 32 through `SHELL_CHROME.phone.avatar`,
+   * so Home at 40 was the single outlier on the one screen most people open.
+   *
+   * The 40px button stays: that is the tap target, and the image is inset in it.
+   */
+  it('draws the phone header avatar at the shell size, so Home matches every other page', () => {
     const topbar = fs.readFileSync(path.join(
       __dirname, '..', '..', '..', '..', '..',
       'packages', 'ui', 'organisms', 'RoutineTopBar', 'RoutineTopBar.vue',
     ), 'utf8');
+    // eslint-disable-next-line global-require
+    const { SHELL_CHROME } = require('@routine-notes/ui/constants/navigation');
+
     const button = topbar.slice(topbar.indexOf('.rn-topbar__avatar-btn'));
     expect(button.slice(0, button.indexOf('}'))).toContain('width: 40px');
+
     const image = button.slice(button.indexOf('.rn-topbar__avatar {'));
-    expect(image.slice(0, image.indexOf('}'))).toContain('width: 40px');
+    expect(image.slice(0, image.indexOf('}')))
+      .toContain(`width: ${SHELL_CHROME.phone.avatar}px`);
+  });
+
+  it('titles the header the way the shell titles every other page', () => {
+    const topbar = fs.readFileSync(path.join(
+      __dirname, '..', '..', '..', '..', '..',
+      'packages', 'ui', 'organisms', 'RoutineTopBar', 'RoutineTopBar.vue',
+    ), 'utf8');
+    // eslint-disable-next-line global-require
+    const { SHELL_CHROME } = require('@routine-notes/ui/constants/navigation');
+
+    const title = topbar.slice(topbar.indexOf('.rn-topbar__title {'));
+    const titleRule = title.slice(0, title.indexOf('}'));
+    expect(titleRule).toContain(`font-size: ${SHELL_CHROME.phone.title}px`);
+    // 700, as `.rn-shell__title` is. It was 500 — the only page that differed.
+    expect(titleRule).toContain('font-weight: 700');
+
+    const sub = topbar.slice(topbar.indexOf('.rn-topbar__subtitle {'));
+    expect(sub.slice(0, sub.indexOf('}')))
+      .toContain(`font-size: ${SHELL_CHROME.phone.subtitle}px`);
   });
 });
 

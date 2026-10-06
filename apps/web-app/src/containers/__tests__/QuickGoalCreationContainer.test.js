@@ -32,7 +32,6 @@ jest.mock(
         routineEndTime: { type: String, default: '' },
         earnPoints: { type: Number, default: 0 },
         description: { type: String, default: '' },
-        parentGoalPeriodLabel: { type: String, default: '' },
         selectedTaskRef: { type: String, default: '' },
         selectedBody: { type: String, default: '' },
         agentState: { type: String, default: 'none' },

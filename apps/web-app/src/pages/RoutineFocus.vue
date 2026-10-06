@@ -43,12 +43,10 @@
         <!-- Pull down from the top of the card to refetch the day. -->
         <pull-to-refresh :refreshing="refreshing" @refresh="pullRefresh">
           <routine-deck
-            :peeks="deckPeeks"
             :has-prev="focusIndex > 0"
             :has-next="focusIndex < rows.length - 1"
             @prev="focusPrev"
             @next="focusNext"
-            @focus-routine="setFocus"
           >
             <routine-focus-card v-if="focusRow" ref="card" v-bind="cardProps" v-on="cardHandlers">
               <template #thread>
@@ -69,6 +67,7 @@
           v-model="chatText"
           variant="phone"
           :placeholder="composerPlaceholder"
+          :disabled="chatDisabled"
           @send="sendChat"
           @focus="onComposerFocus(true)"
           @add-task="openAiSearch"
@@ -217,6 +216,7 @@
                 v-model="chatText"
                 :variant="shell"
                 :placeholder="composerPlaceholder"
+                :disabled="chatDisabled"
                 @send="sendChat"
                 @focus="onComposerFocus(false)"
                 @add-task="openAiSearch"
@@ -317,7 +317,6 @@
       :tag-usage="tagUsage"
       :reward-meta="goalSheetRewardMeta"
       :reward-new="goalSheetRewardNew"
-      :routines="tasklist"
       @close="closeGoalItem"
       @toggle-item="toggleOpenGoalItem"
       @open-transcript="openTranscript"
@@ -449,8 +448,14 @@ const HEADER_RING_SIZE = 28;
 // The phone strip's height. The design declares it as a token
 // (`weekMaxH: '80px'`) rather than letting the cells decide, so the card below
 // it does not shift as the rings change size.
+//
+// 68, not the design's 80: the token sizes a box whose CONTENT the design does
+// not pin, and ours came to 73px of label + ring inside 80, leaving a dead band
+// under the rings. With the day cell's 12px vertical padding down to 6px the
+// content is 61px, so 68 keeps the same breathing room the 80 was meant to give
+// — measured, not guessed.
 // TODO move to packages/ui/constants/routineFocus.js — a per-shell token.
-const WEEK_STRIP_OPEN_PX = 80;
+const WEEK_STRIP_OPEN_PX = 68;
 // Which agent transcripts have been looked at, so the orange NEW pill is about
 // this user and not about this page load. Ids only — the transcript itself lives
 // on the goal item.
@@ -772,9 +777,6 @@ export default {
     },
     showBackToNow() {
       return !!this.currentRoutineId && this.resolvedFocusId !== this.currentRoutineId;
-    },
-    deckPeeks() {
-      return this.rows.slice(this.focusIndex + 1, this.focusIndex + 3);
     },
     emptyMessage() {
       if (this.preparingRoutine) return 'Setting today up…';
@@ -1127,7 +1129,6 @@ export default {
         routine: this.focusRow,
         endTime: this.focusWindowInfo.endTime,
         statusLabel: this.focusWindowInfo.statusLabel,
-        leftLabel: this.focusWindowInfo.leftLabel,
         goalItems: this.focusItems,
         scores: this.stimulusTotals,
         // The "Before you start" brief offers to add to today's checklist, so
@@ -1149,8 +1150,19 @@ export default {
       if (!this.focusRow) return '';
       return `${this.focusRow.doneCount} of ${this.focusRow.totalCount} done · ${this.focusWindowInfo.leftLabel}`;
     },
+    /**
+     * The chat opens once the routine has been checked off. Before that the
+     * card's own controls (tick, Break it down, Add task) are the way to work
+     * the routine, and the thread stays shut so it cannot be used to talk
+     * around doing it.
+     */
+    chatDisabled() {
+      return !(this.focusRow && this.focusRow.ticked);
+    },
     composerPlaceholder() {
-      return `Message ${this.focusRow ? this.focusRow.name : 'this routine'}…`;
+      if (!this.focusRow) return 'Message this routine…';
+      if (this.chatDisabled) return `Check off ${this.focusRow.name} to chat…`;
+      return `Message ${this.focusRow.name}…`;
     },
     showGoalsSkeleton() {
       const loading = this.$apollo.queries.goals && this.$apollo.queries.goals.loading;
@@ -2464,9 +2476,16 @@ export default {
   color: rgba(0, 0, 0, .87);
 }
 
-.capacitor-native .rn-home {
-  --rn-safe-bottom: 0px;
-}
+/* There is deliberately no `.capacitor-native` override zeroing --rn-safe-bottom.
+   It used to be zeroed on the theory that "Capacitor already insets the web
+   view", but that does not hold for this shell: `.rn-home--phone` is
+   `position: fixed; inset: 0`, and a fixed element anchors to the whole window,
+   underneath WKWebView's contentInset. The nav therefore sits on the very bottom
+   of the screen on both platforms, and zeroing the inset drew its labels beneath
+   the home indicator / gesture pill. Verified on an iPhone 16 Pro Max simulator
+   and an API 36 emulator (inset 24px; the bar grew by exactly that). It also beat
+   android-safe-area.css's correct `.capacitor-native .v-bottom-nav` handling on
+   specificity, so Android lost its padding twice over. */
 
 /* Fixed to the window, not sized by vh: in an iPhone standalone PWA 100vh /
    100dvh can be taller than the window (by the status bar), which pushed the
@@ -2540,14 +2559,18 @@ export default {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 8px 16px calc(56px + var(--rn-safe-bottom));
+  padding: 8px 16px calc(64px + var(--rn-safe-bottom));
   overflow: hidden;
 }
 
 /* The MobileLayout bottom nav: fixed to the viewport bottom, grown by the
    home-indicator inset with the buttons padded above it. */
+/* 64px of tabs, matching AppShell's `.rn-shell__tabbar` and the phone chassis
+   ("64px header + 64px bottom bar", docs/redesign/chassis.md). Home used to be
+   56px, which made the bar visibly change height when moving between Home and
+   every other page. */
 .rn-home .rn-home__nav.v-bottom-nav {
-  height: calc(56px + var(--rn-safe-bottom)) !important;
+  height: calc(64px + var(--rn-safe-bottom)) !important;
   padding-bottom: var(--rn-safe-bottom);
   box-sizing: border-box;
   box-shadow: 0 -1px 3px rgba(0, 0, 0, .08);
@@ -2555,7 +2578,7 @@ export default {
 }
 
 .rn-home .rn-home__nav .v-btn {
-  height: 56px;
+  height: 64px;
 }
 
 /* ---- tablet / desktop ---- */

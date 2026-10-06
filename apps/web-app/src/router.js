@@ -35,6 +35,7 @@ export default new Router({
       path: '/history',
       name: 'history',
       component: () => import(/* webpackChunkName: "history" */'./views/History.vue'),
+      meta: { appShell: true },
     },
     {
       path: '/settings/notifications',
@@ -70,6 +71,10 @@ export default new Router({
       path: '/wizard',
       name: 'welcome',
       component: () => import(/* webpackChunkName: "wizard" */'./views/Wizard.vue'),
+      /* Onboarding draws its own frame and NO app navigation: the toolbar,
+         drawer and bottom bar only offered a brand-new user exits from the one
+         flow they were put in, into pages with nothing in them yet. */
+      meta: { appShell: true },
     },
     {
       path: '/groups',
@@ -87,16 +92,19 @@ export default new Router({
       path: '/goals/milestones',
       name: 'milestones',
       component: () => import(/* webpackChunkName: "milestones" */'./views/Milestones.vue'),
+      meta: { appShell: true },
     },
     {
       path: '/agenda/tree',
       name: 'agendaTree',
       component: () => import(/* webpackChunkName: "agendaTree" */ './views/AgendaTree.vue'),
+      meta: { appShell: true },
     },
     {
       path: '/agenda/tree/:selectedTaskRef',
       name: 'agendaTreeWithTask',
       component: () => import(/* webpackChunkName: "agendaTree" */ './views/AgendaTree.vue'),
+      meta: { appShell: true },
     },
     // {
     //   path: '/agenda',
