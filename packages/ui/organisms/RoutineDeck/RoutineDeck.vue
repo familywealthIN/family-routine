@@ -284,11 +284,17 @@ export default {
   z-index: 3;
   height: 100%;
   border-radius: 16px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .06), 0 8px 18px -8px rgba(0, 0, 0, .14);
+  /* None at rest. This wraps the focus card, which draws the visible
+     surface and its own shadow, so anything here stacks a second one
+     underneath and reads as a much heavier card than either specifies.
+     Since the peek cards went there is nothing behind it to lift off. */
+  box-shadow: none;
 }
 
 .rn-deck__card--moving {
-  box-shadow: 0 6px 12px -4px rgba(0, 0, 0, .14), 0 16px 32px -10px rgba(0, 0, 0, .3);
+  /* Only while the card is in hand: a drag still has to look lifted, but it
+     is now a step up from flat rather than from an already-floating card. */
+  box-shadow: 0 4px 10px -2px rgba(0, 0, 0, .12), 0 10px 20px -8px rgba(0, 0, 0, .18);
 }
 
 </style>

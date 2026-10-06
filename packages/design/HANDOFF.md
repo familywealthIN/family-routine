@@ -36,7 +36,9 @@ The `.dc.html` files are **design references built in HTML**: prototypes of inte
   - Stimuli (Progress only): D `#4CAF50`, K `#E53935`, G `#2196F3`.
 - **Type scale:** page title 24/700 (phone) · 20/700 (iPad/desktop); card title 15–17/700; body 14–15; meta 12–13; overline 11/700 letter-spacing .5px uppercase; chip 11–13/600.
 - **Radii:** cards 16 (phone) / 20 (iPad/desktop); sheets 20 top; modals 20; pills 999; inputs 10–12.
-- **Shadows:** card `0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -1px rgba(0,0,0,.06)`; modal `0 24px 48px -12px rgba(0,0,0,.35)`; selected card = **inset** `0 0 0 2px #288bd5` (never outer — it gets clipped in scroll columns).
+- **Shadows:** card `0 1px 3px rgba(0,0,0,.12)` — the same elevation as the chat
+  composer's input pill, so the two surfaces stacked on the page background sit
+  level rather than the card floating above its own thread; modal `0 24px 48px -12px rgba(0,0,0,.35)`; selected card = **inset** `0 0 0 2px #288bd5` (never outer — it gets clipped in scroll columns).
 - **Motion:** sliding indicators `left .28s cubic-bezier(.4,0,.2,1)`; sheets `translateY(28px)→0 .25s cubic-bezier(.3,1.1,.5,1)`; toasts 2.6–2.8s; live agent "breathe" `box-shadow 0 0 0 0 → 7px, 1.8s infinite`.
 - **Layout rule:** scrolling card columns must not shrink cards — use `grid-auto-rows:max-content` (or `flex-shrink:0` on children).
 

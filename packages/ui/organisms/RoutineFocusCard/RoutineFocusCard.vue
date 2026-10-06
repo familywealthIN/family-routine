@@ -546,7 +546,12 @@ export default {
   height: 100%;
   background: #fff;
   border-radius: 16px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -2px rgba(0, 0, 0, .05);
+  /* The same shadow the chat composer's input pill carries
+     (`RoutineComposer.pillStyle`, phone): the card and the composer are the
+     two surfaces stacked on the page background, so they sit at one
+     elevation rather than the card floating above its own thread. If one
+     moves, move the other. */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   color: rgba(0, 0, 0, .87);
 }
