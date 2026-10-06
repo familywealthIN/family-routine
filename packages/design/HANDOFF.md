@@ -51,7 +51,10 @@ The `.dc.html` files are **design references built in HTML**: prototypes of inte
   - Collapses when the composer is focused (phone also collapses the checklist).
   - Chips: "What did I do last time?", "Plan from next steps".
   - Agent results post a preview card.
-- **Start sheet (Start Work):** "Type your task" input · routine (locked) · parent goal selector (week goals grouped by routine) · Related Goals timeline · Start Task / Start Agent. **A routine cannot start without at least one open goal item** (typed or existing) — the button greys out with an orange hint.
+- **Start sheet:** opened by the check circle of **any** startable routine — an unticked routine never ticks through, because ticking it directly banks the points with no way to start its agent and nothing on screen naming the item just completed. Contents: "Type your task" input (placeholder becomes "Add another task" once something is locked in) · **LOCKED IN** block · routine (locked) · parent goal selector (week goals grouped by routine) · Related Goals timeline · Start Task / Start Agent.
+  - **LOCKED IN** is the routine's **first** day goal item — body, contribution, struck through when complete. That first item is the one an agent's `{goalId}` resolves to, so when an agent is bound the overline reads `LOCKED IN · AGENT TARGET` and the lock tooltip says the agent runs against it. Absent on a routine with nothing on it yet, and the sheet is the plain create form.
+  - **A routine cannot start without at least one open goal item** (typed or existing) — the button greys out with an orange hint. *Shipped departure:* Home passes `allow-start-without-task`, because there the sheet is the **only** way to start a routine; refusing an empty input would strand a routine that has no checklist yet. The rule still holds wherever another tick path exists.
+  - **Redeem affordability is checked before the sheet opens**, not inside it: Start Task persists the goal item and only then redeems, so a failed redeem would strand an orphan item on an unticked routine. On a passed routine Start Task redeems rather than ticking.
 - **Past days (week selector < today):** read-only for additions — no Add task, no + in composer, no ticks, date locked; editing title/contribution/delete still allowed; chat queries allowed (per-day thread, no additions).
 - **Inbox sheet/modal:** quick-add input on top; rows with "Do now · <current routine>", "Move to routine" (routine chips), delete; empty state "Inbox zero".
 - **Skip day:** sheet with optional reason; once skipped, an orange banner on the card ("Today is skipped … Undo"), ticks blocked.
@@ -113,7 +116,7 @@ Add to the schema in `apps/server/src/schema/*` and resolvers, and update the fr
 8. **Routine context brief:** query `routineContext(taskRef)` returning, for each `area:`/`project:` tag: `{ tag, description, nextSteps[], recentActivity[] }`. Reuse the AreasTime/ProjectsTime resolvers and `NextStepsContainer` data.
 9. **Agent:** existing fields cover the page. Add mutation `testAgent(id)`, a dry run that fires start/end with a test `goal_id`.
 10. **Past-day rule (server-side guard):** reject `addGoalItem` for `period:'day'` with `date < today` (in user timezone), and reject `tickRoutine` for past dates. Edits and deletes stay allowed.
-11. **Start rule:** `startRoutine`/tick requires ≥1 open goal item under the routine for today (or a body passed to create one). Remove `allow-start-without-task`.
+11. **Start rule:** `startRoutine`/tick requires ≥1 open goal item under the routine for today (or a body passed to create one). ~~Remove `allow-start-without-task`.~~ **Kept on Home** — the sheet is the only start path there, so an empty-input refusal makes a routine with no checklist unstartable. The prop stays, defaulting to off for every other mount.
 
 ## State notes (client)
 - Per-routine chat threads keyed by `taskRef` (today) and `taskRef@date` (past days).
@@ -124,7 +127,7 @@ Add to the schema in `apps/server/src/schema/*` and resolvers, and update the fr
 
 ## Assets
 - `assets/icon-192.png`, `assets/logo.png`: app logo.
-- The avatar in the mocks is a remote placeholder; use `user.picture`.
+- `assets/avatar.svg`: a neutral illustrated placeholder avatar; use `user.picture`. It replaced a remote photo of a real person — fine in a mock, not shippable in a store screenshot.
 
 ## Files (`packages/design/`)
 `Routine Notes Final.dc.html`, `Priority.dc.html`, `Agents.dc.html`, `Goals.dc.html`, `Year Goals.dc.html`, `Routines.dc.html`, `Progress.dc.html`, `Groups.dc.html`, `Profile and About.dc.html`, `README.md`, plus the runtime (`support.js`, `android-frame.jsx`, `browser-window.jsx`).

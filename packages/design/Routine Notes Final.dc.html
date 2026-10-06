@@ -41,7 +41,7 @@ a{color:#288bd5}a:hover{color:#1f6fab}
 
 <section class="dv-turn" id="t5">
 <div class="dv-thd"><a class="dv-tid" href="#t5">Phone</a><span class="dv-tname">Android · 412×892 — focus card with checklist and routine chat</span></div>
-<p class="dv-notes"><b>Final phone design.</b> Checklist pinned at the top of the card, chat with the routine underneath (tap CHECKLIST to collapse it; it also collapses when the composer is focused). Tick the 120px ring → ring and title fly to the header centre; tap the small ring to undo. Avatar opens the drawer with D/K/G and streak. Grab bar under the header reveals the week strip. Today / Week / Month / Year tabs sit at the bottom of the card. <b>Try in chat:</b> "break it down", "add review analytics events", "done with the PR", "how am I doing?". <b>Agent flow:</b> tap the ring on Start Work → Build Agent → Create → Start Agent, then tick both tasks. Every frame on this page shares one live state.</p>
+<p class="dv-notes"><b>Final phone design.</b> Checklist pinned at the top of the card, chat with the routine underneath (tap CHECKLIST to collapse it; it also collapses when the composer is focused). Tick the 120px ring → ring and title fly to the header centre; tap the small ring to undo. Avatar opens the drawer with D/K/G and streak. Grab bar under the header reveals the week strip. Today / Week / Month / Year tabs sit at the bottom of the card. <b>Try in chat:</b> "break it down", "add review analytics events", "done with the PR", "how am I doing?". <b>Check circle:</b> an unticked routine always opens the Start sheet — it never ticks through. When the routine already has a day goal item the sheet names it under LOCKED IN (· AGENT TARGET once an agent is bound), because that first item is the one an agent’s <code>{goalId}</code> resolves to. <b>Agent flow:</b> tap the ring on Start Work → Build Agent → Create → Start Agent, then tick both tasks. Every frame on this page shares one live state.</p>
 <div class="dv-opts">
 
 <!-- 5a CHAT -->
@@ -58,7 +58,7 @@ a{color:#288bd5}a:hover{color:#1f6fab}
       <div ref="{{ nameTargetRef }}" style="font-size:12px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:170px;text-align:center">{{ focus.name }}</div>
     </div>
     <div ref="{{ chipRef }}" style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;margin-right:8px"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div>
-    <div onClick="{{ openDrawer }}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin:0 8px 0 6px;cursor:pointer"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:40px;height:40px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
+    <div onClick="{{ openDrawer }}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin:0 8px 0 6px;cursor:pointer"><img src="assets/avatar.svg" style="width:40px;height:40px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
   </div>
   <div style="flex-shrink:0;overflow:hidden;max-height:{{ weekMaxH }};opacity:{{ weekOpacity }};transition:max-height .35s cubic-bezier(.4,0,.2,1),opacity .25s">
   <div style="position:relative;display:flex;justify-content:space-between;align-items:center;margin:0 12px;flex-shrink:0">
@@ -235,7 +235,7 @@ a{color:#288bd5}a:hover{color:#1f6fab}
     <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div>
     <div style="position:absolute;left:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-drawer-in .28s cubic-bezier(.4,0,.2,1)">
       <div style="padding:24px 20px 16px;background:#f4f8fc;display:flex;align-items:center;gap:12px">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture">
+        <img src="assets/avatar.svg" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture">
         <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div>
         <span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.5);cursor:pointer">close</span>
       </div>
@@ -264,15 +264,37 @@ a{color:#288bd5}a:hover{color:#1f6fab}
   <sc-if value="{{ sheetAction }}" hint-placeholder-val="{{ false }}">
     <div style="position:absolute;left:0;right:0;bottom:0;z-index:21;background:#fff;border-radius:16px 16px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:0 16px 32px;max-height:90%;overflow-y:auto">
       <div style="display:flex;justify-content:center;padding:8px 0 4px"><div style="width:40px;height:4px;border-radius:2px;background:#ccc"></div></div>
-      <div style="font-size:20px;font-weight:700;margin-top:6px">Start Work</div>
-      <div style="font-size:13px;color:rgba(0,0,0,.54);margin-top:2px">09:00 – 12:30 · earns <b style="color:#288bd5">+12 pts</b></div>
+      <div style="font-size:20px;font-weight:700;margin-top:6px">{{ sheetRoutineName }}</div>
+      <div style="font-size:13px;color:rgba(0,0,0,.54);margin-top:2px">{{ sheetWindow }} · earns <b style="color:#288bd5">{{ sheetPts }}</b></div>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid {{ sheetInputLine }};padding:4px 0 6px;transition:border-color .15s">
           <span class="mi" style="font-size:22px;color:rgba(0,0,0,.45)">add_task</span>
-          <input value="{{ sheetTask }}" onChange="{{ setSheetTask }}" onKeyDown="{{ sheetTaskKey }}" placeholder="Type your task" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:#222;height:30px">
+          <input value="{{ sheetTask }}" onChange="{{ setSheetTask }}" onKeyDown="{{ sheetTaskKey }}" placeholder="{{ sheetTaskPlaceholder }}" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:#222;height:30px">
           <sc-if value="{{ hasSheetTask }}" hint-placeholder-val="{{ false }}"><span class="mi" onClick="{{ clearSheetTask }}" style="font-size:18px;color:rgba(0,0,0,.45);cursor:pointer;padding:4px">close</span></sc-if>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:12px;background:#f7f7f7;color:rgba(0,0,0,.6);font-size:13px"><span class="mi" style="font-size:18px">history</span><div style="flex:1;min-width:0"><b style="color:rgba(0,0,0,.8);font-weight:600">Start Work</b> · 09:00</div><span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)" title="Routine is fixed for this sheet">lock</span></div>
+        <div style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:12px;background:#f7f7f7;color:rgba(0,0,0,.6);font-size:13px"><span class="mi" style="font-size:18px">history</span><div style="flex:1;min-width:0"><b style="color:rgba(0,0,0,.8);font-weight:600">{{ sheetRoutineName }}</b> · {{ sheetRoutineTime }}</div><span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)" title="Routine is fixed for this sheet">lock</span></div>
+        <!--
+          LOCKED IN — the goal item this routine already has.
+
+          The sheet opens on EVERY startable routine, not only the current one,
+          so it has to answer "what am I about to complete?" before it asks for
+          something new. This is the routine's FIRST day goal item, which is the
+          one an agent's {goalId} resolves to — hence the AGENT TARGET suffix
+          once an agent is bound. Absent on a routine with nothing on it yet, and
+          the sheet is the plain create form it has always been.
+        -->
+        <sc-if value="{{ hasLockedItem }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:10px 12px;border:1px solid rgba(0,0,0,.08);border-radius:12px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="flex:1;min-width:0;font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ lockedItemLabel }}</span>
+              <span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)" title="{{ lockedItemLockTitle }}">lock</span>
+            </div>
+            <div style="margin-top:2px;font-size:14px;font-weight:600;line-height:1.35;color:{{ lockedItemFg }};text-decoration:{{ lockedItemDeco }}">{{ lockedItemBody }}</div>
+            <sc-if value="{{ hasLockedItemNote }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top:4px;font-size:12px;line-height:1.4;color:rgba(0,0,0,.54)">{{ lockedItemNote }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
         <div onClick="{{ toggleGoalPick }}" style="display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 12px;border-radius:12px;border:1px solid {{ goalPickBorder }};cursor:pointer;background:#fff">
           <span class="mi" style="font-size:20px;color:#FF9800">timeline</span>
           <div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">PARENT GOAL · WEEK OF 6 – 12 SEP</div><div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ sheetGoalColor }}">{{ sheetGoalLabel }}</div></div>
@@ -547,10 +569,10 @@ a{color:#288bd5}a:hover{color:#1f6fab}
           </div>
         </sc-for><div onClick="{{ toggleNavMore }}" title="More pages" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer"><div style="width:52px;height:30px;border-radius:15px;background:{{ navMoreBtnBg }};color:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;transition:background .2s"><span class="mi" style="font-size:21px">{{ navMoreIcon }}</span></div><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.6)">More</div></div><sc-if value="{{ navMoreOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0;border-radius:16px;background:#f7f7f7;animation:rn-fade .18s ease"><sc-for list="{{ navMore }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:inherit;text-decoration:none;margin-top:{{ n.gap }}"><div style="width:52px;height:30px;border-radius:15px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:21px">{{ n.icon }}</span></div><div style="font-size:10px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for></div></sc-if>
       <div style="flex:1"></div>
-      <img onClick="{{ openDrawer }}" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer" alt="Profile picture">
+      <img onClick="{{ openDrawer }}" src="assets/avatar.svg" style="width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer" alt="Profile picture">
     </div>
     <div style="flex:1;min-width:0;display:flex;flex-direction:column">
-      <div style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex-shrink:0"><span>9:30</span><span style="display:flex;gap:6px;align-items:center"><span class="mi" style="font-size:16px">wifi</span><span class="mi" style="font-size:16px">battery_full</span></span></div>
+      <div data-sim-status style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex-shrink:0"><span>9:30</span><span style="display:flex;gap:6px;align-items:center"><span class="mi" style="font-size:16px">wifi</span><span class="mi" style="font-size:16px">battery_full</span></span></div>
       <div style="display:flex;align-items:center;gap:16px;padding:4px 20px 8px;flex-shrink:0">
         <div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700">Saturday, 12 September</div><div style="font-size:13px;color:rgba(0,0,0,.54)">{{ routineLeft }} routines left · {{ goalDone }}/{{ goalTotal }} tasks</div></div>
         <div style="position:relative;display:flex;align-items:center;gap:2px">
@@ -728,7 +750,7 @@ a{color:#288bd5}a:hover{color:#1f6fab}
     <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div>
     <div style="position:absolute;left:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-drawer-in .28s cubic-bezier(.4,0,.2,1)">
       <div style="padding:24px 20px 16px;background:#f4f8fc;display:flex;align-items:center;gap:12px">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture">
+        <img src="assets/avatar.svg" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture">
         <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div>
         <span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.5);cursor:pointer">close</span>
       </div>
@@ -756,15 +778,37 @@ a{color:#288bd5}a:hover{color:#1f6fab}
   <sc-if value="{{ sheetAction }}" hint-placeholder-val="{{ false }}">
     <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:860px;max-width:94%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:18px 20px 32px;max-height:90%;overflow-y:auto">
       
-      <div style="font-size:20px;font-weight:700;margin-top:6px">Start Work</div>
-      <div style="font-size:13px;color:rgba(0,0,0,.54);margin-top:2px">09:00 – 12:30 · earns <b style="color:#288bd5">+12 pts</b></div>
+      <div style="font-size:20px;font-weight:700;margin-top:6px">{{ sheetRoutineName }}</div>
+      <div style="font-size:13px;color:rgba(0,0,0,.54);margin-top:2px">{{ sheetWindow }} · earns <b style="color:#288bd5">{{ sheetPts }}</b></div>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid {{ sheetInputLine }};padding:4px 0 6px;transition:border-color .15s">
           <span class="mi" style="font-size:22px;color:rgba(0,0,0,.45)">add_task</span>
-          <input value="{{ sheetTask }}" onChange="{{ setSheetTask }}" onKeyDown="{{ sheetTaskKey }}" placeholder="Type your task" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:#222;height:30px">
+          <input value="{{ sheetTask }}" onChange="{{ setSheetTask }}" onKeyDown="{{ sheetTaskKey }}" placeholder="{{ sheetTaskPlaceholder }}" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:#222;height:30px">
           <sc-if value="{{ hasSheetTask }}" hint-placeholder-val="{{ false }}"><span class="mi" onClick="{{ clearSheetTask }}" style="font-size:18px;color:rgba(0,0,0,.45);cursor:pointer;padding:4px">close</span></sc-if>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:12px;background:#f7f7f7;color:rgba(0,0,0,.6);font-size:13px"><span class="mi" style="font-size:18px">history</span><div style="flex:1;min-width:0"><b style="color:rgba(0,0,0,.8);font-weight:600">Start Work</b> · 09:00</div><span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)" title="Routine is fixed for this sheet">lock</span></div>
+        <div style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:12px;background:#f7f7f7;color:rgba(0,0,0,.6);font-size:13px"><span class="mi" style="font-size:18px">history</span><div style="flex:1;min-width:0"><b style="color:rgba(0,0,0,.8);font-weight:600">{{ sheetRoutineName }}</b> · {{ sheetRoutineTime }}</div><span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)" title="Routine is fixed for this sheet">lock</span></div>
+        <!--
+          LOCKED IN — the goal item this routine already has.
+
+          The sheet opens on EVERY startable routine, not only the current one,
+          so it has to answer "what am I about to complete?" before it asks for
+          something new. This is the routine's FIRST day goal item, which is the
+          one an agent's {goalId} resolves to — hence the AGENT TARGET suffix
+          once an agent is bound. Absent on a routine with nothing on it yet, and
+          the sheet is the plain create form it has always been.
+        -->
+        <sc-if value="{{ hasLockedItem }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:10px 12px;border:1px solid rgba(0,0,0,.08);border-radius:12px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="flex:1;min-width:0;font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ lockedItemLabel }}</span>
+              <span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)" title="{{ lockedItemLockTitle }}">lock</span>
+            </div>
+            <div style="margin-top:2px;font-size:14px;font-weight:600;line-height:1.35;color:{{ lockedItemFg }};text-decoration:{{ lockedItemDeco }}">{{ lockedItemBody }}</div>
+            <sc-if value="{{ hasLockedItemNote }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top:4px;font-size:12px;line-height:1.4;color:rgba(0,0,0,.54)">{{ lockedItemNote }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
         <div onClick="{{ toggleGoalPick }}" style="display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 12px;border-radius:12px;border:1px solid {{ goalPickBorder }};cursor:pointer;background:#fff">
           <span class="mi" style="font-size:20px;color:#FF9800">timeline</span>
           <div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">PARENT GOAL · WEEK OF 6 – 12 SEP</div><div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ sheetGoalColor }}">{{ sheetGoalLabel }}</div></div>
@@ -1028,7 +1072,7 @@ a{color:#288bd5}a:hover{color:#1f6fab}
         </sc-for>
       </div>
       <div onClick="{{ openDrawer }}" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-top:1px solid rgba(0,0,0,.06);cursor:pointer" style-hover="background:#fafafa">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:36px;height:36px;border-radius:50%;object-fit:cover" alt="Profile picture">
+        <img src="assets/avatar.svg" style="width:36px;height:36px;border-radius:50%;object-fit:cover" alt="Profile picture">
         <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.5)">{{ streakDays }}-day streak · D/K/G</div></div>
         <span class="mi" style="font-size:20px;color:rgba(0,0,0,.4)">chevron_right</span>
       </div>
@@ -1206,7 +1250,7 @@ a{color:#288bd5}a:hover{color:#1f6fab}
     <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div>
     <div style="position:absolute;left:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-drawer-in .28s cubic-bezier(.4,0,.2,1)">
       <div style="padding:24px 20px 16px;background:#f4f8fc;display:flex;align-items:center;gap:12px">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture">
+        <img src="assets/avatar.svg" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture">
         <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div>
         <span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.5);cursor:pointer">close</span>
       </div>
@@ -1234,15 +1278,37 @@ a{color:#288bd5}a:hover{color:#1f6fab}
   <sc-if value="{{ sheetAction }}" hint-placeholder-val="{{ false }}">
     <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:720px;max-width:94%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:18px 20px 32px;max-height:90%;overflow-y:auto">
       
-      <div style="font-size:20px;font-weight:700;margin-top:6px">Start Work</div>
-      <div style="font-size:13px;color:rgba(0,0,0,.54);margin-top:2px">09:00 – 12:30 · earns <b style="color:#288bd5">+12 pts</b></div>
+      <div style="font-size:20px;font-weight:700;margin-top:6px">{{ sheetRoutineName }}</div>
+      <div style="font-size:13px;color:rgba(0,0,0,.54);margin-top:2px">{{ sheetWindow }} · earns <b style="color:#288bd5">{{ sheetPts }}</b></div>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid {{ sheetInputLine }};padding:4px 0 6px;transition:border-color .15s">
           <span class="mi" style="font-size:22px;color:rgba(0,0,0,.45)">add_task</span>
-          <input value="{{ sheetTask }}" onChange="{{ setSheetTask }}" onKeyDown="{{ sheetTaskKey }}" placeholder="Type your task" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:#222;height:30px">
+          <input value="{{ sheetTask }}" onChange="{{ setSheetTask }}" onKeyDown="{{ sheetTaskKey }}" placeholder="{{ sheetTaskPlaceholder }}" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:#222;height:30px">
           <sc-if value="{{ hasSheetTask }}" hint-placeholder-val="{{ false }}"><span class="mi" onClick="{{ clearSheetTask }}" style="font-size:18px;color:rgba(0,0,0,.45);cursor:pointer;padding:4px">close</span></sc-if>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:12px;background:#f7f7f7;color:rgba(0,0,0,.6);font-size:13px"><span class="mi" style="font-size:18px">history</span><div style="flex:1;min-width:0"><b style="color:rgba(0,0,0,.8);font-weight:600">Start Work</b> · 09:00</div><span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)" title="Routine is fixed for this sheet">lock</span></div>
+        <div style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:12px;background:#f7f7f7;color:rgba(0,0,0,.6);font-size:13px"><span class="mi" style="font-size:18px">history</span><div style="flex:1;min-width:0"><b style="color:rgba(0,0,0,.8);font-weight:600">{{ sheetRoutineName }}</b> · {{ sheetRoutineTime }}</div><span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)" title="Routine is fixed for this sheet">lock</span></div>
+        <!--
+          LOCKED IN — the goal item this routine already has.
+
+          The sheet opens on EVERY startable routine, not only the current one,
+          so it has to answer "what am I about to complete?" before it asks for
+          something new. This is the routine's FIRST day goal item, which is the
+          one an agent's {goalId} resolves to — hence the AGENT TARGET suffix
+          once an agent is bound. Absent on a routine with nothing on it yet, and
+          the sheet is the plain create form it has always been.
+        -->
+        <sc-if value="{{ hasLockedItem }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:10px 12px;border:1px solid rgba(0,0,0,.08);border-radius:12px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="flex:1;min-width:0;font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ lockedItemLabel }}</span>
+              <span class="mi" style="font-size:16px;color:rgba(0,0,0,.35)" title="{{ lockedItemLockTitle }}">lock</span>
+            </div>
+            <div style="margin-top:2px;font-size:14px;font-weight:600;line-height:1.35;color:{{ lockedItemFg }};text-decoration:{{ lockedItemDeco }}">{{ lockedItemBody }}</div>
+            <sc-if value="{{ hasLockedItemNote }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top:4px;font-size:12px;line-height:1.4;color:rgba(0,0,0,.54)">{{ lockedItemNote }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
         <div onClick="{{ toggleGoalPick }}" style="display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 12px;border-radius:12px;border:1px solid {{ goalPickBorder }};cursor:pointer;background:#fff">
           <span class="mi" style="font-size:20px;color:#FF9800">timeline</span>
           <div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">PARENT GOAL · WEEK OF 6 – 12 SEP</div><div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ sheetGoalColor }}">{{ sheetGoalLabel }}</div></div>
@@ -2065,7 +2131,12 @@ class Component extends DCLogic {
       agentSummary: stage === 'none' ? (s.agentAssigned ? `${s.agentName} assigned · runs when you tick` : 'No agent on this routine') : (badge ? badge.desc : ''),
       agentName: s.agentName, agentAssigned: s.agentAssigned, agentBtnLabel: s.agentAssigned ? 'Start Agent' : 'Build Agent',
       tickOpacity: pastMode || (s.skipped[6] && s.dayIdx === 6) ? 0.4 : 1, tickCursor: pastMode ? 'not-allowed' : 'pointer', tickTitle: pastMode ? 'Routine ticks are for today only' : 'Tick routine',
-      onFocusAction: (e) => { e.stopPropagation(); if (pastMode) { this.tick(focus); return; } if (focus.id === 'sw' && !focus.ticked) this.setState({ sheet: 'action' }); else this.tick(focus); },
+      /*
+         An unticked routine ALWAYS opens the sheet — it never ticks through.
+         Ticking straight past it banked the points with no way to say "start the
+         agent too", and nothing on screen naming the goal item just completed.
+      */
+      onFocusAction: (e) => { e.stopPropagation(); if (pastMode) { this.tick(focus); return; } if (!focus.ticked) this.setState({ sheet: 'action' }); else this.tick(focus); },
       ...(() => { const gid = s.resultGoalId || 'g_sw1', rw = s.rewards[gid], gi = ROUTINES.flatMap(x => x.goals).find(x => x.id === gid), ed = (s.edits[gid] || {});
         const has = !!(rw && rw.html);
         return { resultHasHtml: has, resultIsLegacy: !has, resultAgent: has ? rw.agent : s.agentName, resultTitle: ed.body || (gi && gi.body) || 'Goal item', resultMeta: has ? `${rw.agent} · end event · ${rw.at}` : '',
@@ -2088,27 +2159,48 @@ class Component extends DCLogic {
             this.setState(st => ({ skipped: { ...st.skipped, 6: { note: st.skipNote.trim() } }, sheet: null, skipNote: '', dayIdx: 6 })); this.showToast({ icon: 'pause_circle', color: '#ffb74d', title: 'Today skipped', sub: 'Streak safe · long-press today to undo' }); } }; })(),
       sheetAction: s.sheet === 'action', sheetBuild: s.sheet === 'build', sheetResult: s.sheet === 'result', hasSheet: !!s.sheet,
       closeSheet: () => this.setState({ sheet: null }),
+      /*
+         The Start sheet. It belongs to the FOCUSED routine, not to Start Work:
+         the ring opens it on every startable routine, so every value in it reads
+         off `focus`. It used to be hard-wired to 'sw' back when only that one
+         circle opened a sheet.
+      */
       ...(() => {
-        const swG = this.goalsOf('sw', s), swOpen = swG.filter(g => !s.done[g.id]).length;
-        const txt = s.sheetTask.trim(), blocked = !txt && !swOpen;
-        const ref = s.sheetGoalRef === undefined ? 'wg_sw' : s.sheetGoalRef, goal = WEEK_GOALS.find(g => g.id === ref);
-        const addItem = () => { if (!txt) return; const id = 'q' + Date.now(); this.setState(st => ({ extra: [...st.extra, { id, body: txt, taskRef: 'sw', goalRef: ref }], sheetTask: '', goalPickOpen: false })); };
-        const order = ['sw', ...ROUTINES.map(r => r.id).filter(x => x !== 'sw')], opts = [];
+        const fG = this.goalsOf(focus.id, s), fOpen = fG.filter(g => !s.done[g.id]).length;
+        const txt = s.sheetTask.trim(), blocked = !txt && !fOpen;
+        // The locked-in item: the routine's FIRST day goal item, which is the one
+        // an agent's {goalId} resolves to.
+        const locked = fG[0] || null;
+        const defaultRef = (WEEK_GOALS.find(g => g.taskRef === focus.id) || {}).id || null;
+        const ref = s.sheetGoalRef === undefined ? defaultRef : s.sheetGoalRef, goal = WEEK_GOALS.find(g => g.id === ref);
+        const addItem = () => { if (!txt) return; const id = 'q' + Date.now(); this.setState(st => ({ extra: [...st.extra, { id, body: txt, taskRef: focus.id, goalRef: ref }], sheetTask: '', goalPickOpen: false })); };
+        const order = [focus.id, ...ROUTINES.map(r => r.id).filter(x => x !== focus.id)], opts = [];
         order.forEach(rid => { const r = ROUTINES.find(x => x.id === rid), items = WEEK_GOALS.filter(g => g.taskRef === rid); if (!r || !items.length) return; opts.push({ key: 'h' + rid, isHeader: true, isItem: false, text: `${r.name.toUpperCase()} · ${r.time}` }); items.forEach(g => opts.push({ key: g.id, isHeader: false, isItem: true, text: g.body, sel: g.id === ref, bg: g.id === ref ? 'rgba(40,139,213,.08)' : 'transparent', fg: 'rgba(0,0,0,.87)', pick: (e) => { e.stopPropagation(); this.setState({ sheetGoalRef: g.id, goalPickOpen: false }); } })); });
         opts.push({ key: 'none', isHeader: false, isItem: true, text: 'No parent goal', sel: !ref, bg: !ref ? 'rgba(40,139,213,.08)' : 'transparent', fg: 'rgba(0,0,0,.5)', pick: (e) => { e.stopPropagation(); this.setState({ sheetGoalRef: null, goalPickOpen: false }); } });
         const rel = (goal && RELATED[goal.id]) || [];
         const go = (fn) => { if (blocked) { this.showToast({ icon: 'error_outline', color: '#ffb74d', title: 'Add a goal item first', sub: 'A routine can’t start without one' }); return; } addItem(); fn(); };
         return {
+          sheetRoutineName: focus.name, sheetRoutineTime: focus.time,
+          sheetWindow: `${focus.time} – ${endTime}`, sheetPts: `+${focus.pts} pts`,
+          // "Type your task" is wrong once something is already locked in.
+          sheetTaskPlaceholder: locked ? 'Add another task' : 'Type your task',
+          hasLockedItem: !!locked,
+          lockedItemLabel: s.agentAssigned ? 'LOCKED IN · AGENT TARGET' : 'LOCKED IN',
+          lockedItemLockTitle: s.agentAssigned ? 'The agent runs against this goal item' : 'Already on this routine',
+          lockedItemBody: locked ? locked.body : '',
+          lockedItemFg: locked && s.done[locked.id] ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.87)',
+          lockedItemDeco: locked && s.done[locked.id] ? 'line-through' : 'none',
+          hasLockedItemNote: !!(locked && locked.contribution), lockedItemNote: locked ? (locked.contribution || '') : '',
           sheetTask: s.sheetTask, hasSheetTask: !!s.sheetTask, setSheetTask: (e) => this.setState({ sheetTask: e.target.value }), clearSheetTask: () => this.setState({ sheetTask: '' }),
           sheetInputLine: txt ? '#288bd5' : (blocked ? '#FF9800' : 'rgba(0,0,0,.2)'),
-          sheetTaskKey: (e) => { if (e.key === 'Enter' && txt) { e.preventDefault(); addItem(); this.showToast({ icon: 'add_task', color: '#81c784', title: 'Goal item added', sub: `${txt} · Start Work${goal ? ' → ' + goal.body : ''}` }); } },
+          sheetTaskKey: (e) => { if (e.key === 'Enter' && txt) { e.preventDefault(); addItem(); this.showToast({ icon: 'add_task', color: '#81c784', title: 'Goal item added', sub: `${txt} · ${focus.name}${goal ? ' → ' + goal.body : ''}` }); } },
           toggleGoalPick: () => this.setState(st => ({ goalPickOpen: !st.goalPickOpen })), goalPickOpen: s.goalPickOpen, goalPickChevron: s.goalPickOpen ? 'expand_less' : 'expand_more', goalPickBorder: s.goalPickOpen ? '#288bd5' : 'rgba(0,0,0,.15)',
           sheetGoalLabel: goal ? goal.body : 'No parent goal', sheetGoalColor: goal ? 'rgba(0,0,0,.87)' : 'rgba(0,0,0,.5)', sheetGoalOpts: opts,
           hasRelated: rel.length > 0 && !s.goalPickOpen, relatedCount: rel.length,
           relatedTasks: rel.map((r, i) => ({ key: i + r[2], date: r[0], time: r[1], body: r[2], dot: r[3] ? '#4CAF50' : '#bdbdbd', line: i < rel.length - 1 ? 'rgba(0,0,0,.1)' : 'transparent', fg: r[3] ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.87)', deco: r[3] ? 'line-through' : 'none' })),
-          sheetHint: txt ? `Start adds “${txt}” to the checklist${goal ? ' under ' + goal.body : ''}, then starts the routine.` : (blocked ? 'Type a goal item to start — a routine can’t start without one.' : `${swOpen} open item${swOpen === 1 ? '' : 's'} on the checklist · type to add another, or just start.`),
+          sheetHint: txt ? `Start adds “${txt}” to the checklist${goal ? ' under ' + goal.body : ''}, then starts the routine.` : (blocked ? 'Type a goal item to start — a routine can’t start without one.' : `${fOpen} open item${fOpen === 1 ? '' : 's'} on the checklist · type to add another, or just start.`),
           sheetHintColor: blocked ? '#e68900' : 'rgba(0,0,0,.5)', sheetStartBg: blocked ? 'rgba(0,0,0,.2)' : '#4CAF50',
-          startTask: () => go(() => { this.setState({ sheet: null }); this.tick(swRow); }),
+          startTask: () => go(() => { this.setState({ sheet: null }); this.tick(focus); }),
           agentBtn: () => { if (!s.agentAssigned) { this.setState({ sheet: 'build' }); return; } go(() => this.startAgent()); },
         };
       })(),

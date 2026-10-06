@@ -19,9 +19,12 @@ const [w, h] = p.canvas;
 
 const results = [];
 for (const s of slides) {
-  // JPEG first: that is what the capture step writes, because Chrome's PNG
-  // encode of a retina frame times out over CDP.
-  const shot = ['jpeg', 'jpg', 'png']
+  // PNG first: capture-design.js writes PNG, and it is the current capture step.
+  // The jpeg/jpg fallbacks are the older real-app captures taken over CDP, where
+  // Chrome's PNG encode of a retina frame regularly timed out. Those files are
+  // still on disk; leaving them LAST means a stale jpeg can never shadow a fresh
+  // png, while a platform that has not been re-captured still renders.
+  const shot = ['png', 'jpeg', 'jpg']
     .map((ext) => path.join(root, 'raw', name, `${s.key}.${ext}`))
     .find((f) => fs.existsSync(f));
   if (!shot) { results.push({ key: s.key, skipped: 'no capture' }); continue; }

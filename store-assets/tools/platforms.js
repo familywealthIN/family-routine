@@ -20,11 +20,19 @@ module.exports = {
     canvas: [1080, 1920],
     label: 'Play Store - phone',
   },
+  // Landscape, not portrait. The slides are now sourced from packages/design
+  // (see capture-design.js), and the design's only tablet layout is iPad mini
+  // LANDSCAPE - there is no portrait tablet mock to capture. The App Store
+  // accepts a 13" set in either orientation (2752x2064 / 2732x2048 landscape,
+  // 2064x2752 / 2048x2732 portrait) as long as every slide in the set agrees,
+  // which they do.
   ipad: {
     device: 'ipad13',
-    capture: '1024x1366x2,touch',
-    canvas: [2048, 2732],
-    label: 'App Store - iPad 13"',
+    capture: '1133x744x2,touch',
+    canvas: [2732, 2048],
+    // A landscape canvas has room for one line, so captions are flattened.
+    singleLineCaption: true,
+    label: 'App Store - iPad 13" (landscape)',
   },
   mac: {
     device: 'mac',
