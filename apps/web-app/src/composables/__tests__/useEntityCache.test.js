@@ -106,3 +106,54 @@ describe('useEntityCache', () => {
     });
   });
 });
+
+describe('appendSubTaskItem — optimistic subtask add', () => {
+  /* eslint-disable global-require */
+  const { InMemoryCache } = require('apollo-cache-inmemory');
+  const gql = require('graphql-tag');
+  const { appendSubTaskItem } = require('../useEntityCache');
+  /* eslint-enable global-require */
+
+  const ITEM = gql`
+    fragment Item on GoalItem {
+      id
+      body
+      subTasks { id body isComplete }
+    }
+  `;
+  const seed = () => {
+    const cache = new InMemoryCache();
+    cache.writeFragment({
+      id: 'GoalItem:g1',
+      fragment: ITEM,
+      data: {
+        __typename: 'GoalItem',
+        id: 'g1',
+        body: 'Some Task',
+        subTasks: [{
+          __typename: 'SubTaskItem', id: 's1', body: 'a', isComplete: true,
+        }],
+      },
+    });
+    return cache;
+  };
+  const subTasks = (cache) => cache.readFragment({ id: 'GoalItem:g1', fragment: ITEM }).subTasks
+    .map((st) => [st.id, st.body, st.isComplete]);
+
+  it('appends to the parent entity, keeping the existing rows', () => {
+    const cache = seed();
+    expect(appendSubTaskItem(cache, 'g1', { id: 'temp-subtask-1', body: 'b' })).toBe(true);
+    expect(subTasks(cache)).toEqual([['s1', 'a', true], ['temp-subtask-1', 'b', false]]);
+  });
+
+  it('does not add an id that is already there', () => {
+    const cache = seed();
+    appendSubTaskItem(cache, 'g1', { id: 's1', body: 'a', isComplete: true });
+    expect(subTasks(cache)).toHaveLength(1);
+  });
+
+  it('is a harmless no-op when the parent is not cached', () => {
+    const cache = new InMemoryCache();
+    expect(appendSubTaskItem(cache, 'missing', { id: 's9', body: 'x' })).toBe(false);
+  });
+});

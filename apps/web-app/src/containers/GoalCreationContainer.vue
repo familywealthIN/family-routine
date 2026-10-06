@@ -8,6 +8,7 @@
     :autoSaveLoading="autoSaveLoading"
     @add-goal-item="handleAddGoalItem"
     @update-goal-item="handleUpdateGoalItem"
+    @mark-goal-item-missed="handleMarkGoalItemMissed"
     @auto-save-contribution="handleAutoSaveContribution"
     @add-sub-task-item="handleAddSubTaskItem"
     @delete-sub-task-item="handleDeleteSubTaskItem"
@@ -23,6 +24,7 @@ import GoalCreation from '@routine-notes/ui/organisms/GoalCreation/GoalCreation.
 import { stepupMilestonePeriodDate } from '../utils/getDates';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import { ROUTINE_DATE_QUERY, GOAL_DATE_PERIOD_QUERY } from '../composables/graphql/queries';
+import { MARK_GOAL_ITEM_MISSED_MUTATION } from '../composables/useGoalMutations';
 
 export default {
   name: 'GoalCreationContainer',
@@ -106,6 +108,10 @@ export default {
       // Track previous values to avoid redundant fetches
       lastFetchedPeriod: null,
       lastFetchedDate: null,
+      // The period the item was loaded under. The dialog edits newGoalItem in
+      // place, so by the time a save arrives the period tab has already
+      // overwritten it and there is nothing left to compare a move against.
+      savedPeriod: null,
     };
   },
   computed: {
@@ -128,6 +134,14 @@ export default {
       if ((!oldEmail && newEmail) || (oldEmail && newEmail && oldEmail !== newEmail)) {
         this.refreshApolloQueries();
       }
+    },
+    // Parents always reassign newGoalItem when the dialog opens, so this fires
+    // once per open — before the user can touch the period tab.
+    newGoalItem: {
+      immediate: true,
+      handler(goalItem) {
+        this.savedPeriod = goalItem && goalItem.id ? goalItem.period : null;
+      },
     },
     // Watch newGoalItem period and date to auto-fetch goalItemsRef
     'newGoalItem.period': function watchPeriod(newVal) {
@@ -278,6 +292,48 @@ export default {
         return;
       }
 
+      // Date and period address the goal the item is stored under, and changing
+      // the period clears the date. Saving with it empty would file the item
+      // under no day at all, so ask for one instead.
+      if (!date || !period) {
+        this.$notify({
+          title: 'Pick a date',
+          text: 'Choose a date before saving this task',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+        return;
+      }
+
+      // Switching to Lifetime does not clear the date, it stamps '01-01-1970'
+      // — the stand-in for "no date" this container already skips over when it
+      // fetches milestone parents. Saving a dated task with it files it under
+      // no day at all, so refuse that switch too.
+      if (date === '01-01-1970' && this.savedPeriod !== 'lifetime') {
+        this.$notify({
+          title: 'Lifetime goals have no date',
+          text: 'A dated task cannot move to Lifetime. Pick a date instead',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+        return;
+      }
+
+      // A milestone hangs off a goal of the period above it, so a period
+      // switch unroots the link rather than moving it with the task.
+      if (goalRef && this.savedPeriod && period !== this.savedPeriod) {
+        this.$notify({
+          title: 'Clear the goal task first',
+          text: `A milestone of a goal cannot move from ${this.savedPeriod} to ${period}`,
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+        return;
+      }
+
       this.buttonLoading = true;
 
       try {
@@ -313,6 +369,35 @@ export default {
         if (callbacks.onError) callbacks.onError(error);
       } finally {
         this.buttonLoading = false;
+      }
+    },
+
+    /**
+     * Record (or clear) a miss on an existing item. The dialog has already
+     * flipped its own chip, so an error has to hand the previous status back.
+     */
+    async handleMarkGoalItemMissed(payload, callbacks = {}) {
+      const { id, isMissed } = payload;
+
+      if (!id) {
+        return;
+      }
+
+      try {
+        await this.$apollo.mutate({
+          mutation: MARK_GOAL_ITEM_MISSED_MUTATION,
+          variables: { id, isMissed },
+        });
+      } catch (error) {
+        console.error('Error marking goal item missed:', error);
+        this.$notify({
+          title: 'Error',
+          text: 'An unexpected error occurred',
+          group: 'notify',
+          type: 'error',
+          duration: 3000,
+        });
+        if (callbacks.onError) callbacks.onError(error);
       }
     },
 

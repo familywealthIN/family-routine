@@ -62,25 +62,81 @@ const RoutineItemSchema = new mongoose.Schema({
   passedPoints: Number,
 });
 
-// Encryption middleware for StepItemSchema
-const encryptStepData = function encryptStep(next) {
-  const encryptedData = encryption.encryptObject(this.toObject(), ['name']);
-  Object.assign(this, encryptedData);
-  next();
+// Field encryption at rest.
+//
+// Steps are encrypted by the parent hook only. A StepItemSchema pre('save')
+// used to encrypt them as well, so every step written through save() was
+// stored double-encrypted and read back (decrypted once) as ciphertext.
+//
+// Both helpers are tolerant of the mixed states already in the database:
+// `encryptOnce` leaves a value that already decrypts with our key alone, and
+// `decryptFully` peels up to MAX_LAYERS of encryption (legacy double-encrypted
+// steps) while returning plaintext untouched.
+const MAX_LAYERS = 3;
+
+const encryptOnce = (value) => {
+  if (!value || typeof value !== 'string') return value;
+  return encryption.decrypt(value) !== value ? value : encryption.encrypt(value);
 };
 
-StepItemSchema.pre('save', encryptStepData);
+const decryptFully = (value) => {
+  let current = value;
+  for (let i = 0; i < MAX_LAYERS; i += 1) {
+    const next = encryption.decrypt(current);
+    if (next === current) break;
+    current = next;
+  }
+  return current;
+};
+
+const STEP_FIELDS = ['name'];
+
+const mapFields = (obj, fields, fn) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  const out = { ...obj };
+  fields.forEach((field) => {
+    if (out[field]) out[field] = fn(out[field]);
+  });
+  return out;
+};
+
+const toPlain = (doc) => (doc && doc.toObject ? doc.toObject() : doc);
+
+const encryptSteps = (steps) => (Array.isArray(steps)
+  ? steps.map((step) => mapFields(toPlain(step), STEP_FIELDS, encryptOnce))
+  : steps);
+
+const decryptSteps = (steps) => (Array.isArray(steps)
+  ? steps.map((step) => mapFields(toPlain(step), STEP_FIELDS, decryptFully))
+  : steps);
 
 // Encryption middleware for RoutineItemSchema
 const encryptRoutineItemData = function encryptRoutineItem(next) {
-  const encryptedData = encryption.encryptObject(this.toObject(), ENCRYPTION_FIELDS.routineItem);
+  const encryptedData = mapFields(this.toObject(), ENCRYPTION_FIELDS.routineItem, encryptOnce);
   Object.assign(this, encryptedData);
 
-  // Encrypt steps
   if (this.steps && this.steps.length > 0) {
-    this.steps = this.steps.map((step) => encryption.encryptObject(step.toObject ? step.toObject() : step, ['name']));
+    this.steps = encryptSteps(this.steps);
   }
 
+  next();
+};
+
+// findOneAndUpdate (updateRoutineItem) skips save hooks, so without this the
+// edited name/description/steps were written in plaintext. Handles both a
+// bare update object and one wrapped in $set.
+const encryptUpdate = (update) => {
+  if (!update || typeof update !== 'object') return;
+  ENCRYPTION_FIELDS.routineItem.forEach((field) => {
+    if (update[field]) update[field] = encryptOnce(update[field]);
+  });
+  if (update.steps) update.steps = encryptSteps(update.steps);
+};
+
+const encryptRoutineItemUpdate = function encryptRoutineItemUpdateHook(next) {
+  const update = this.getUpdate();
+  encryptUpdate(update);
+  if (update) encryptUpdate(update.$set);
   next();
 };
 
@@ -101,11 +157,10 @@ const decryptRoutineItemData = function decryptRoutineItem(docs) {
   if (!docs) return;
 
   const decrypt = (doc) => {
-    const decrypted = encryption.decryptObject(doc.toObject ? doc.toObject() : doc, ENCRYPTION_FIELDS.routineItem);
+    const decrypted = mapFields(toPlain(doc), ENCRYPTION_FIELDS.routineItem, decryptFully);
 
-    // Decrypt steps
     if (decrypted.steps && decrypted.steps.length > 0) {
-      decrypted.steps = decrypted.steps.map((step) => encryption.decryptObject(step, ['name']));
+      decrypted.steps = decryptSteps(decrypted.steps);
     }
 
     Object.assign(doc, decrypted);
@@ -121,7 +176,14 @@ const decryptRoutineItemData = function decryptRoutineItem(docs) {
 };
 
 RoutineItemSchema.pre('save', encryptRoutineItemData);
-RoutineItemSchema.post(['find', 'findOne', 'findOneAndUpdate'], decryptRoutineItemData);
+RoutineItemSchema.pre('findOneAndUpdate', encryptRoutineItemUpdate);
+RoutineItemSchema.post(
+  ['find', 'findOne', 'findOneAndUpdate', 'findOneAndRemove', 'findOneAndDelete'],
+  decryptRoutineItemData,
+);
+// save() leaves the in-memory doc encrypted; decrypt it so addRoutineItem /
+// bulkAddRoutineItems return (and the create toast shows) plaintext.
+RoutineItemSchema.post('save', decryptRoutineItemData);
 
 const RoutineItemType = new GraphQLObjectType({
   name: 'RoutineItem',
@@ -151,4 +213,11 @@ const RoutineItemType = new GraphQLObjectType({
 
 const RoutineItemModel = mongoose.model('routineItem', RoutineItemSchema);
 
-module.exports = { RoutineItemSchema, RoutineItemModel, RoutineItemType };
+module.exports = {
+  RoutineItemSchema,
+  RoutineItemModel,
+  RoutineItemType,
+  encryptRoutineItemData,
+  encryptRoutineItemUpdate,
+  decryptRoutineItemData,
+};

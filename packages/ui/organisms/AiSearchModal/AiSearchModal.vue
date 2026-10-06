@@ -207,6 +207,16 @@
             {{ error }}
           </AtomAlert>
 
+          <!-- Dropped parent goal notice -->
+          <AtomAlert
+            v-if="goalRefNotice && !isSearchMode"
+            type="warning"
+            dismissible
+            @input="goalRefNotice = ''"
+          >
+            {{ goalRefNotice }}
+          </AtomAlert>
+
           <!-- Task Creation Form (Task Mode) -->
           <component
             :is="resolvedTaskFormComponent"
@@ -478,6 +488,16 @@
             {{ error }}
           </AtomAlert>
 
+          <!-- Dropped parent goal notice -->
+          <AtomAlert
+            v-if="goalRefNotice && !isSearchMode"
+            type="warning"
+            dismissible
+            @input="goalRefNotice = ''"
+          >
+            {{ goalRefNotice }}
+          </AtomAlert>
+
           <!-- Task Creation Form (Task Mode) -->
           <component
             :is="resolvedTaskFormComponent"
@@ -711,6 +731,14 @@ export default {
       default: 'add',
     },
     /**
+     * Routine to preselect on open — the one the opener is showing (e.g. the
+     * focused Routine Focus card). Empty falls back to the clock-current one.
+     */
+    preselectTaskRef: {
+      type: String,
+      default: '',
+    },
+    /**
      * Override components for the task / goal forms so the consumer (e.g. web-app)
      * can inject a data-connected container while the UI package keeps the bare
      * presentational defaults.
@@ -748,6 +776,7 @@ export default {
       toolbarDate: '',
       toolbarTaskRef: null,
       toolbarGoalRef: null,
+      goalRefNotice: '', // Shown when a parent goal is dropped as out of period
       // Tags
       promptTags: [],
       routineTagsSet: [], // Tags auto-added from current routine (for auto-removal)
@@ -1096,13 +1125,32 @@ export default {
     toolbarGoalRef(newVal) {
       if (!newVal) {
         this.associateParentGoal = false;
+      } else {
+        // A parent is selected again — the dropped-parent notice is spent
+        this.goalRefNotice = '';
       }
     },
 
     // Auto-select goal in toolbar when goalItemsRef changes
     // Prioritizes goals matching the current task's taskRef
     goalItemsRef: {
-      handler(newVal) {
+      handler(newVal, oldVal) {
+        // goalItemsRef is refetched for the period above whenever the period or
+        // date changes, so a goal picked against the previous list survives into
+        // one it is not part of. GoalRefSelector falls back to the placeholder
+        // for a ref it cannot find, but that ref is still what the forms save as
+        // goalRef — which is how a month plan ended up parented to a week goal.
+        // Drop it, and say so, because a cleared chip tells the user nothing.
+        const goals = newVal || [];
+        if (this.toolbarGoalRef && !goals.some((goal) => goal.id === this.toolbarGoalRef)) {
+          const dropped = (oldVal || []).find((goal) => goal.id === this.toolbarGoalRef);
+          this.goalRefNotice = `Parent goal ${dropped ? `"${dropped.body}" ` : ''}is not in the `
+            + 'period above this one, so it has been cleared. Pick a parent goal from the toolbar, '
+            + 'or this will be saved without one.';
+          this.toolbarGoalRef = null;
+          return;
+        }
+
         if (newVal && newVal.length > 0 && !this.toolbarGoalRef) {
           // If there's a current task, try to find a goal that matches its taskRef
           if (this.$currentTaskData && this.$currentTaskData.id) {
@@ -1192,8 +1240,10 @@ export default {
       this.toolbarDate = this.todayFormatted;
       this.toolbarPeriod = 'day';
 
-      // Auto-select current routine if available
-      if (this.$currentTaskData && this.$currentTaskData.id) {
+      // Preselect the routine the opener is showing, else the current one
+      if (this.preselectTaskRef) {
+        this.toolbarTaskRef = this.preselectTaskRef;
+      } else if (this.$currentTaskData && this.$currentTaskData.id) {
         this.toolbarTaskRef = this.$currentTaskData.id;
       }
 
@@ -1550,15 +1600,15 @@ export default {
 
     /**
      * Navigate to search page with current filters when in search mode.
+     * The toolbar's routine is auto-selected from the current task, so it is
+     * deliberately NOT carried over — search starts unscoped and the search
+     * page's own Routine filter is where a scope is chosen.
      */
     handleSearchNavigate() {
       const query = (this.searchQuery || '').trim();
       if (!query) return;
 
       const routeQuery = { q: query };
-      if (this.toolbarTaskRef) {
-        routeQuery.taskRef = this.toolbarTaskRef;
-      }
       const tagString = this.promptTags.join(',');
       if (tagString) {
         routeQuery.tags = tagString;
@@ -1748,6 +1798,7 @@ export default {
     resetForm() {
       this.searchQuery = '';
       this.error = '';
+      this.goalRefNotice = '';
       this.loading = false;
       this.saving = false;
       this.hasSubmitted = false;

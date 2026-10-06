@@ -15,7 +15,7 @@
         {{ error }}
       </div>
       <div v-else class="next-steps-content">
-        <vue-markdown :source="nextSteps"></vue-markdown>
+        <vue-markdown class="rn-markdown" :source="nextSteps" :html="false"></vue-markdown>
       </div>
     </v-card-text>
   </v-card>
@@ -23,6 +23,7 @@
 
 <script>
 import VueMarkdown from 'vue-markdown';
+import '@routine-notes/markdown-editor/styles/markdown-content.css';
 
 export default {
   name: 'NextSteps',

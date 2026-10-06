@@ -82,10 +82,6 @@
               <v-list-tile-title>{{ item.title }}</v-list-tile-title>
             </v-list-tile-content>
           </v-list-tile>
-          <template v-if="drawerItem.header === 'App'">
-            <area-sidebar :areaTags="areaTags" />
-            <project-sidebar :projectTags="projectTags" />
-          </template>
         </v-list>
       </template>
 
@@ -110,6 +106,7 @@
         :available="(xpBalance && xpBalance.available) || 0"
         :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
         :entitled="!!(xpBalance && xpBalance.entitled)"
+        :error="xpBalanceError && !xpBalance"
         :loading="$apollo.queries.xpBalance.loading"
       />
       <v-btn icon @click="openAiSearch">
@@ -171,14 +168,9 @@
 </template>
 
 <script>
-import localforage from 'localforage';
 import moment from 'moment';
-import gql from 'graphql-tag';
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
 import TaskTimingBar from '@routine-notes/ui/atoms/TaskTimingBar/TaskTimingBar.vue';
-import AreaSidebar from '@routine-notes/ui/molecules/AreaSidebar/AreaSidebar.vue';
-import ProjectSidebar from '@routine-notes/ui/molecules/ProjectSidebar/ProjectSidebar.vue';
 import PointsChip from '@routine-notes/ui/molecules/PointsChip/PointsChip.vue';
 import PendingList from '../containers/PendingListContainer.vue';
 import { taskTimingMixin } from '../mixins/taskTimingMixin';
@@ -186,17 +178,15 @@ import eventBus, { EVENTS } from '../utils/eventBus';
 import { threshold } from '../utils/getDates';
 import { AGENDA_GOALS_QUERY, ROUTINE_DATE_QUERY, XP_BALANCE_QUERY } from '../composables/graphql/queries';
 import {
-  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
+  GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL,
 } from '../constants/settings';
-import { clearData, getSessionItem } from '../token';
-import { gauthOption } from '../blob/config';
+import { getSessionItem } from '../token';
+import { signOut } from '../utils/signOut';
 
 export default {
   components: {
     PendingList,
     TaskTimingBar,
-    AreaSidebar,
-    ProjectSidebar,
     PointsChip,
   },
   mixins: [taskTimingMixin],
@@ -212,18 +202,6 @@ export default {
     },
   },
   apollo: {
-    areaTags: {
-      query: gql`query areaTags { areaTags }`,
-      skip() {
-        return !this.$root.$data.email;
-      },
-    },
-    projectTags: {
-      query: gql`query projectTags { projectTags }`,
-      skip() {
-        return !this.$root.$data.email;
-      },
-    },
     timingGoals: {
       query: AGENDA_GOALS_QUERY,
       variables() {
@@ -256,14 +234,22 @@ export default {
       skip() {
         return !this.$root.$data.email;
       },
+      result({ data }) {
+        if (data) this.xpBalanceError = false;
+      },
+      // A failed load leaves xpBalance undefined, which the chip would paint as
+      // `0` — a balance the app does not actually know.
+      error(error) {
+        console.error('[MobileLayout] xpBalance query failed:', error);
+        this.xpBalanceError = true;
+      },
     },
   },
   data() {
     return {
       drawer: null,
       pendingDialog: false,
-      areaTags: [],
-      projectTags: [],
+      xpBalanceError: false,
       drawerItems: [
         {
           header: 'App',
@@ -374,40 +360,12 @@ export default {
       eventBus.$emit(EVENTS.OPEN_AI_SEARCH, { mode: 'search' });
     },
     async handleClickSignOut() {
-      try {
-        if (Capacitor.isNativePlatform()) {
-          // Initialize before signOut to prevent nil error
-          const platform = Capacitor.getPlatform();
-          const clientId = platform === 'ios'
-            ? gauthOption.iosClientId
-            : gauthOption.androidClientId;
-
-          await GoogleAuth.initialize({
-            clientId,
-            scopes: ['profile', 'email'],
-          });
-
-          await GoogleAuth.signOut();
-        } else {
-          await this.$gAuth.signOut();
-        }
-
-        this.drawer = false;
-        await clearData();
-        await localforage.clear();
-        localStorage.removeItem(USER_TAGS);
-        this.$root.$data.userName = getSessionItem(GC_USER_NAME);
-        this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
-        this.$root.$data.picture = getSessionItem(GC_PICTURE);
-        this.$router.push('/').catch(() => { });
-      } catch (error) {
-        console.log(error);
-        // Just clear local data and redirect on error
-        await clearData();
-        await localforage.clear();
-        localStorage.removeItem(USER_TAGS);
-        this.$router.push('/').catch(() => { });
-      }
+      this.drawer = false;
+      // Shared with the Routine Focus user drawer — see utils/signOut.js.
+      await signOut(this);
+      this.$root.$data.userName = getSessionItem(GC_USER_NAME);
+      this.$root.$data.userEmail = getSessionItem(GC_USER_EMAIL);
+      this.$root.$data.picture = getSessionItem(GC_PICTURE);
     },
   },
   mounted() {
@@ -451,6 +409,7 @@ export default {
 <style>
 #mobileLayout {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -490,6 +449,16 @@ body.android15 .safe-area-top {
 
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mobile web / installed PWA (iOS standalone): `.fixed-bottom-nav` zeroes the
+   padding with !important and Vuetify sizes the nav with an inline 56px, so the
+   buttons sat under the iPhone home indicator. Grow the bar by the inset and pad
+   the buttons above it. The native WebView keeps its own rules
+   (android-safe-area.css), hence :not(.capacitor-native). */
+body:not(.capacitor-native) #mobileLayout .fixed-bottom-nav.safe-area-bottom {
+  height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
 }
 
 /* Android 14+ specific safe area handling */
@@ -598,6 +567,7 @@ body.android15 .safe-area-content {
 
 .login-content-wrapper {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #fff;
   display: flex;
   flex-direction: column;

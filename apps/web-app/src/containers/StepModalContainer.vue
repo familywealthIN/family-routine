@@ -10,10 +10,11 @@
         Routine Steps
       </AtomCardTitle>
 
-      <AtomCardText v-if="task && task.steps">
-        <ul>
-          <li v-for="step in task.steps" :key="step.name">{{ step.name }}</li>
+      <AtomCardText>
+        <ul v-if="steps.length">
+          <li v-for="(step, index) in steps" :key="index">{{ step.name }}</li>
         </ul>
+        <span v-else class="step-modal-container__empty">This item has no steps yet.</span>
       </AtomCardText>
 
       <AtomDivider />
@@ -55,6 +56,14 @@ export default {
       isOpen: false,
       task: null,
     };
+  },
+  computed: {
+    // A step's id is optional and two steps can share a name, so the list is
+    // keyed by position — keyed by name, repeated steps collide on one key and
+    // the item's own steps stop rendering one row each.
+    steps() {
+      return (this.task && this.task.steps) || [];
+    },
   },
   methods: {
     open(task) {

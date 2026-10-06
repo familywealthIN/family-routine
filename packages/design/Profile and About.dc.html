@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Material+Icons&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#288bd5;text-decoration:none}a:hover{color:#1f6fab}
+.mi{font-family:'Material Icons';font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-notes{max-width:640px;font:13px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.7);margin:0 0 24px}
+.dv-notes b{color:#1a1a1a}
+.rn-hscroll::-webkit-scrollbar{display:none}
+@keyframes rn-toast{0%{opacity:0;transform:translateY(12px)}12%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+@keyframes rn-fade{from{opacity:0}to{opacity:1}}
+@keyframes rn-sheet-in{from{transform:translateY(28px);opacity:0}to{transform:none;opacity:1}}
+@keyframes rn-in0{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes rn-in1{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">About</a><span class="dv-tname">About page: the belief, five features as sliding tabs, and a three-step start</span></div>
+<p class="dv-notes"><b>From AboutTime.vue:</b> the copy is kept as written. The belief becomes the hero. The five feature tabs (Routines · Goals · Priority · Agents · Evolution) get the same sliding indicator as the rest of the app, and each point leads with its term. "Getting started" becomes three numbered steps, each linking to the page where you do it.</p>
+<div class="dv-opts">
+<!-- AP PHONE -->
+<div class="dv-opt" id="ap"><div class="dv-olabel"><a class="dv-oid" href="#ap">Phone</a>Android · 412×892</div>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+<div style="height:100%;display:flex;flex-direction:column;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+  <div style="display:flex;align-items:center;gap:6px;height:64px;padding:0 8px 0 16px;flex-shrink:0"><div style="flex:1;font-size:24px;font-weight:700">About</div><div onClick="{{ openDrawer }}" title="Menu" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="Profile picture"></div></div>
+  <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 16px;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:12px;align-content:start">
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:18px 18px 16px">
+      <div style="display:flex;align-items:center;gap:12px"><img src="assets/icon-192.png" alt="Routine Notes" style="width:44px;height:44px;object-fit:contain"><div><div style="font-size:20px;font-weight:700">Routine Notes</div><div style="font-size:12px;color:rgba(0,0,0,.5)">Version 2.0 · beta 3</div></div></div>
+      <div style="font-size:17px;font-weight:600;line-height:1.45;margin-top:14px;text-wrap:pretty">Incremental daily achievement compounds into outcomes that seemed impossible.</div>
+      <div style="font-size:14px;line-height:1.6;color:rgba(0,0,0,.7);margin-top:8px;text-wrap:pretty">Instead of another backlog to tidy, it measures whether you actually <i>moved</i> today, across Discipline, Kinetics and Geniuses, and rolls your daily wins up into week, month and year outcomes automatically.</div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);overflow:hidden">
+      <div style="position:relative;display:flex;border-bottom:1px solid rgba(0,0,0,.08)">
+        <sc-for list="{{ features }}" as="f" hint-placeholder-count="5"><div onClick="{{ f.onClick }}" style="flex:1 1 0;min-width:0;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:{{ f.color }};cursor:pointer;transition:color .2s;padding:0 2px;white-space:nowrap;overflow:hidden"><span class="mi" style="font-size:20px">{{ f.icon }}</span>{{ f.label }}</div></sc-for>
+        <div style="position:absolute;bottom:0;height:2px;background:#288bd5;left:{{ featLeft }};width:20%;transition:left .28s cubic-bezier(.4,0,.2,1)"></div>
+      </div>
+      <div style="padding:16px 18px 18px;animation:{{ featAnim }}">
+        <div style="font-size:17px;font-weight:700;line-height:1.3">{{ feat.title }}</div>
+        <div style="font-size:14px;line-height:1.55;color:rgba(0,0,0,.7);margin-top:6px;text-wrap:pretty">{{ feat.lead }}</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+          <sc-for list="{{ feat.points }}" as="p" hint-placeholder-count="4"><div style="display:flex;gap:10px"><span class="mi" style="font-size:18px;color:#288bd5;margin-top:1px">{{ p.icon }}</span><div style="flex:1;min-width:0;font-size:14px;line-height:1.5;color:rgba(0,0,0,.8)"><sc-if value="{{ p.hasTerm }}" hint-placeholder-val="{{ true }}"><b style="color:#1f6fab">{{ p.term }}</b> · </sc-if>{{ p.text }}</div></div></sc-for>
+        </div>
+        <sc-if value="{{ feat.hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ feat.link }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;margin-top:14px;font-size:14px;font-weight:600">{{ feat.linkLabel }}<span class="mi" style="font-size:16px">arrow_forward</span></a></sc-if>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:16px 18px 8px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">GETTING STARTED</div>
+      <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+        <a href="{{ s.href }}" style="display:flex;gap:12px;padding:12px 0;border-bottom:{{ s.border }};color:inherit">
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(40,139,213,.12);color:#1f6fab;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ s.n }}</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">{{ s.title }}</div><div style="font-size:13px;line-height:1.5;color:rgba(0,0,0,.62);margin-top:2px">{{ s.text }}</div></div>
+          <span class="mi" style="font-size:20px;color:rgba(0,0,0,.3);align-self:center">chevron_right</span>
+        </a>
+      </sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:-4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-fade .2s ease">
+      <div style="display:flex;align-items:center;gap:12px;padding:28px 16px 16px 20px"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div><span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px">close</span></div>
+      <div style="display:flex;gap:6px;padding:0 20px 14px"><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:#288bd5;color:#fff;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">diamond</span>128 points</div><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:rgba(255,152,0,.12);color:#b26a00;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">local_fire_department</span>6-day streak</div></div>
+      <div style="height:1px;background:rgba(0,0,0,.08);margin:0 0 6px"></div>
+      <sc-for list="{{ drawerItems }}" as="n" hint-placeholder-count="6"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:16px;height:48px;padding:0 20px;margin-top:{{ n.gap }};color:{{ n.color }};background:{{ n.bg }};font-size:14px;font-weight:600;text-decoration:none"><span class="mi" style="font-size:22px">{{ n.icon }}</span>{{ n.label }}</a></sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-import>
+</div>
+<div class="dv-opt" id="at"><div class="dv-olabel"><a class="dv-oid" href="#at">iPad mini</a>Landscape · 1133×744</div>
+<div style="width:1165px;height:776px;border-radius:40px;background:#121212;padding:16px;box-sizing:border-box;box-shadow:0 30px 60px -24px rgba(0,0,0,.4)">
+  <div style="width:100%;height:100%;border-radius:24px;overflow:hidden;position:relative;background:#f4f4f4;display:flex;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87)">
+    <div class="rn-hscroll" style="width:76px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 0 14px;overflow-y:auto;scrollbar-width:none;border-right:1px solid rgba(0,0,0,.06)">
+      <img src="assets/icon-192.png" alt="Routine Notes" style="width:38px;height:38px;object-fit:contain;margin-bottom:4px">
+      <sc-for list="{{ sideNavA }}" as="n" hint-placeholder-count="7"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:inherit"><div style="width:52px;height:30px;border-radius:15px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:22px">{{ n.icon }}</span></div><div style="font-size:10px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for><div onClick="{{ toggleNavMoreA }}" title="More pages" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer"><div style="width:52px;height:30px;border-radius:15px;background:{{ navMoreBtnBgA }};color:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;transition:background .2s"><span class="mi" style="font-size:21px">{{ navMoreIconA }}</span></div><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.6)">More</div></div><sc-if value="{{ navMoreOpenA }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0;border-radius:16px;background:#f7f7f7;animation:rn-fade .18s ease"><sc-for list="{{ navMoreA }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:inherit;text-decoration:none;margin-top:{{ n.gap }}"><div style="width:52px;height:30px;border-radius:15px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:21px">{{ n.icon }}</span></div><div style="font-size:10px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for></div></sc-if>
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex-shrink:0"><span>9:30</span><span style="display:flex;gap:6px;align-items:center"><span class="mi" style="font-size:16px">wifi</span><span class="mi" style="font-size:16px">battery_full</span></span></div>
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;padding:4px 20px 20px"><div style="display:flex;align-items:center;gap:16px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700">About</div><div style="font-size:13px;color:rgba(0,0,0,.54)">Why Routine Notes works the way it does</div></div></div><div class="rn-hscroll" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px;align-content:start"><div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:18px 18px 16px">
+      <div style="display:flex;align-items:center;gap:12px"><img src="assets/icon-192.png" alt="Routine Notes" style="width:44px;height:44px;object-fit:contain"><div><div style="font-size:20px;font-weight:700">Routine Notes</div><div style="font-size:12px;color:rgba(0,0,0,.5)">Version 2.0 · beta 3</div></div></div>
+      <div style="font-size:17px;font-weight:600;line-height:1.45;margin-top:14px;text-wrap:pretty">Incremental daily achievement compounds into outcomes that seemed impossible.</div>
+      <div style="font-size:14px;line-height:1.6;color:rgba(0,0,0,.7);margin-top:8px;text-wrap:pretty">Instead of another backlog to tidy, it measures whether you actually <i>moved</i> today, across Discipline, Kinetics and Geniuses, and rolls your daily wins up into week, month and year outcomes automatically.</div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);overflow:hidden">
+      <div style="position:relative;display:flex;border-bottom:1px solid rgba(0,0,0,.08)">
+        <sc-for list="{{ features }}" as="f" hint-placeholder-count="5"><div onClick="{{ f.onClick }}" style="flex:1 1 0;min-width:0;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:{{ f.color }};cursor:pointer;transition:color .2s;padding:0 2px;white-space:nowrap;overflow:hidden"><span class="mi" style="font-size:20px">{{ f.icon }}</span>{{ f.label }}</div></sc-for>
+        <div style="position:absolute;bottom:0;height:2px;background:#288bd5;left:{{ featLeft }};width:20%;transition:left .28s cubic-bezier(.4,0,.2,1)"></div>
+      </div>
+      <div style="padding:16px 18px 18px;animation:{{ featAnim }}">
+        <div style="font-size:17px;font-weight:700;line-height:1.3">{{ feat.title }}</div>
+        <div style="font-size:14px;line-height:1.55;color:rgba(0,0,0,.7);margin-top:6px;text-wrap:pretty">{{ feat.lead }}</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+          <sc-for list="{{ feat.points }}" as="p" hint-placeholder-count="4"><div style="display:flex;gap:10px"><span class="mi" style="font-size:18px;color:#288bd5;margin-top:1px">{{ p.icon }}</span><div style="flex:1;min-width:0;font-size:14px;line-height:1.5;color:rgba(0,0,0,.8)"><sc-if value="{{ p.hasTerm }}" hint-placeholder-val="{{ true }}"><b style="color:#1f6fab">{{ p.term }}</b> · </sc-if>{{ p.text }}</div></div></sc-for>
+        </div>
+        <sc-if value="{{ feat.hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ feat.link }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;margin-top:14px;font-size:14px;font-weight:600">{{ feat.linkLabel }}<span class="mi" style="font-size:16px">arrow_forward</span></a></sc-if>
+      </div>
+    </div>
+</div><div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:16px 18px 8px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">GETTING STARTED</div>
+      <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+        <a href="{{ s.href }}" style="display:flex;gap:12px;padding:12px 0;border-bottom:{{ s.border }};color:inherit">
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(40,139,213,.12);color:#1f6fab;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ s.n }}</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">{{ s.title }}</div><div style="font-size:13px;line-height:1.5;color:rgba(0,0,0,.62);margin-top:2px">{{ s.text }}</div></div>
+          <span class="mi" style="font-size:20px;color:rgba(0,0,0,.3);align-self:center">chevron_right</span>
+        </a>
+      </sc-for>
+    </div>
+</div></div></div>
+    </div>
+      <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.6s ease forwards;pointer-events:none"><span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div></div></sc-if>
+  
+  </div>
+</div>
+</div>
+
+<div class="dv-opt" id="ad"><div class="dv-olabel"><a class="dv-oid" href="#ad">Desktop</a>1440×900 · same layout and type sizes as iPad mini, capped at 1040px</div>
+<x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1440 }}" height="{{ 900 }}" url="app.routinenotes.com/about" tabs="{{ browserTabsA }}" hint-size="1440px,900px">
+  <div style="height:100%;display:flex;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+    <div style="width:264px;flex-shrink:0;background:#fff;border-right:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:10px;padding:20px 20px 16px"><img src="assets/icon-192.png" alt="Routine Notes" style="width:34px;height:34px;object-fit:contain"><div style="font-size:16px;font-weight:700">Routine Notes</div></div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:0 12px"><sc-for list="{{ sideNavA }}" as="n" hint-placeholder-count="7"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};font-size:14px;font-weight:600" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for><div onClick="{{ toggleNavMoreA }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;margin-top:6px;border-radius:10px;color:rgba(0,0,0,.6);font-size:14px;font-weight:600;cursor:pointer" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">more_horiz</span><div style="flex:1">More</div><span class="mi" style="font-size:20px;transition:transform .2s;transform:rotate({{ navMoreRotA }})">expand_more</span></div><sc-if value="{{ navMoreOpenA }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;animation:rn-fade .18s ease"><sc-for list="{{ navMoreA }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px 0 20px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};text-decoration:none;font-size:14px;font-weight:600;margin-top:{{ n.gap }}" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for></div></sc-if></div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-top:1px solid rgba(0,0,0,.06)"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:36px;height:36px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.5)">alex@routine.app</div></div></div>
+    </div>
+    <div style="max-width:1040px;margin:0 auto;width:100%;box-sizing:border-box;flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px"><div style="display:flex;align-items:center;gap:16px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700">About</div><div style="font-size:13px;color:rgba(0,0,0,.54)">Why Routine Notes works the way it does</div></div></div><div class="rn-hscroll" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px;align-content:start"><div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:18px 18px 16px">
+      <div style="display:flex;align-items:center;gap:12px"><img src="assets/icon-192.png" alt="Routine Notes" style="width:44px;height:44px;object-fit:contain"><div><div style="font-size:20px;font-weight:700">Routine Notes</div><div style="font-size:12px;color:rgba(0,0,0,.5)">Version 2.0 · beta 3</div></div></div>
+      <div style="font-size:17px;font-weight:600;line-height:1.45;margin-top:14px;text-wrap:pretty">Incremental daily achievement compounds into outcomes that seemed impossible.</div>
+      <div style="font-size:14px;line-height:1.6;color:rgba(0,0,0,.7);margin-top:8px;text-wrap:pretty">Instead of another backlog to tidy, it measures whether you actually <i>moved</i> today, across Discipline, Kinetics and Geniuses, and rolls your daily wins up into week, month and year outcomes automatically.</div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);overflow:hidden">
+      <div style="position:relative;display:flex;border-bottom:1px solid rgba(0,0,0,.08)">
+        <sc-for list="{{ features }}" as="f" hint-placeholder-count="5"><div onClick="{{ f.onClick }}" style="flex:1 1 0;min-width:0;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:{{ f.color }};cursor:pointer;transition:color .2s;padding:0 2px;white-space:nowrap;overflow:hidden"><span class="mi" style="font-size:20px">{{ f.icon }}</span>{{ f.label }}</div></sc-for>
+        <div style="position:absolute;bottom:0;height:2px;background:#288bd5;left:{{ featLeft }};width:20%;transition:left .28s cubic-bezier(.4,0,.2,1)"></div>
+      </div>
+      <div style="padding:16px 18px 18px;animation:{{ featAnim }}">
+        <div style="font-size:17px;font-weight:700;line-height:1.3">{{ feat.title }}</div>
+        <div style="font-size:14px;line-height:1.55;color:rgba(0,0,0,.7);margin-top:6px;text-wrap:pretty">{{ feat.lead }}</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+          <sc-for list="{{ feat.points }}" as="p" hint-placeholder-count="4"><div style="display:flex;gap:10px"><span class="mi" style="font-size:18px;color:#288bd5;margin-top:1px">{{ p.icon }}</span><div style="flex:1;min-width:0;font-size:14px;line-height:1.5;color:rgba(0,0,0,.8)"><sc-if value="{{ p.hasTerm }}" hint-placeholder-val="{{ true }}"><b style="color:#1f6fab">{{ p.term }}</b> · </sc-if>{{ p.text }}</div></div></sc-for>
+        </div>
+        <sc-if value="{{ feat.hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ feat.link }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;margin-top:14px;font-size:14px;font-weight:600">{{ feat.linkLabel }}<span class="mi" style="font-size:16px">arrow_forward</span></a></sc-if>
+      </div>
+    </div>
+</div><div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:16px 18px 8px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">GETTING STARTED</div>
+      <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+        <a href="{{ s.href }}" style="display:flex;gap:12px;padding:12px 0;border-bottom:{{ s.border }};color:inherit">
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(40,139,213,.12);color:#1f6fab;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ s.n }}</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">{{ s.title }}</div><div style="font-size:13px;line-height:1.5;color:rgba(0,0,0,.62);margin-top:2px">{{ s.text }}</div></div>
+          <span class="mi" style="font-size:20px;color:rgba(0,0,0,.3);align-self:center">chevron_right</span>
+        </a>
+      </sc-for>
+    </div>
+</div></div></div>
+      <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.6s ease forwards;pointer-events:none"><span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div></div></sc-if>
+  
+  </div>
+</x-import>
+</div>
+</div>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">Profile</a><span class="dv-tname">Profile page: you first, then the settings you can change, then what's fixed, then connections and the danger zone</span></div>
+<p class="dv-notes"><b>From ProfileTime.vue:</b> the yellow "most settings are read only" banner is gone; read-only rows carry a lock instead. <b>Time format</b> uses the sliding switch and previews 09:00 vs 9:00 AM. <b>Time zone</b> is a real select. The Rate values become the D/K/G cards. Goal auto-check thresholds become the <b>roll-up chain</b> (5 days → week, 3 weeks → month, 9 months → year). <b>Connect AI</b> keeps the MCP Server URL, Client ID and a masked secret, with copy buttons; the four platform guides become chips with numbered steps. The legacy API key generates in place. Delete account asks you to type DELETE in a modal.</p>
+<div class="dv-opts">
+<!-- PP PHONE -->
+<div class="dv-opt" id="pp"><div class="dv-olabel"><a class="dv-oid" href="#pp">Phone</a>Android · 412×892</div>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+<div style="height:100%;display:flex;flex-direction:column;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+  <div style="display:flex;align-items:center;gap:6px;height:64px;padding:0 8px 0 16px;flex-shrink:0"><div style="flex:1;font-size:24px;font-weight:700">Profile</div><div onClick="{{ openDrawer }}" title="Menu" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="Profile picture"></div></div>
+  <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 16px;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:12px;align-content:start">
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:16px;display:flex;align-items:center;gap:14px">
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:56px;height:56px;border-radius:50%;object-fit:cover" alt="Profile picture">
+      <div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:700">Alex Morgan</div><div style="font-size:13px;color:rgba(0,0,0,.54)">alex@routine.app</div><div style="display:flex;gap:6px;margin-top:8px"><div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:12px;background:#288bd5;color:#fff;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">diamond</span>128</div><div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:12px;background:rgba(255,152,0,.12);color:#b26a00;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">local_fire_department</span>6-day streak</div></div></div>
+      <div style="font-size:13px;font-weight:600;color:#288bd5;cursor:pointer;padding:8px">Sign out</div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:6px 16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);padding:10px 0 2px">TIME</div>
+      <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(0,0,0,.06)">
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Time format</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Home shows routines as <b style="color:rgba(0,0,0,.8)">{{ fmtPreview }}</b></div></div>
+        <div style="position:relative;display:flex;padding:3px;border-radius:10px;background:rgba(0,0,0,.06);width:112px;flex-shrink:0"><div style="position:absolute;top:3px;bottom:3px;left:{{ fmtLeft }};width:calc(50% - 3px);border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:left .28s cubic-bezier(.4,0,.2,1)"></div><sc-for list="{{ fmtOpts }}" as="o" hint-placeholder-count="2"><div onClick="{{ o.onClick }}" style="position:relative;flex:1;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:{{ o.fg }};cursor:pointer;transition:color .2s">{{ o.label }}</div></sc-for></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(0,0,0,.06)">
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Time zone</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Routine times and day changes follow this</div></div>
+        <select value="{{ tz }}" onChange="{{ setTz }}" style="max-width:170px;height:36px;border:1px solid rgba(0,0,0,.15);border-radius:10px;padding:0 8px;font:inherit;font-size:13px;color:#222;background:#fff;cursor:pointer"><sc-for list="{{ tzOpts }}" as="z" hint-placeholder-count="4"><option value="{{ z.v }}">{{ z.l }}</option></sc-for></select>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;min-height:60px">
+        <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600">Start of the week<span class="mi" style="font-size:14px;color:rgba(0,0,0,.35)">lock</span></div><div style="font-size:12px;color:rgba(0,0,0,.54)">Weeks run Sunday to Saturday</div></div>
+        <div style="display:flex;padding:3px;border-radius:10px;background:rgba(0,0,0,.04);width:112px;opacity:.7"><div style="flex:1;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)">Sun</div><div style="flex:1;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:rgba(0,0,0,.4)">Mon</div></div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:14px 16px 16px">
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">POINT RATES<span class="mi" style="font-size:13px">lock</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px">
+        <sc-for list="{{ rates }}" as="r" hint-placeholder-count="3"><div style="padding:10px 10px 12px;border-radius:12px;background:{{ r.tint }}"><div style="font-size:12px;font-weight:800;color:{{ r.color }}">{{ r.k }} · {{ r.name }}</div><div style="font-size:20px;font-weight:700;margin-top:4px">{{ r.v }}</div><div style="font-size:11px;line-height:1.35;color:rgba(0,0,0,.6);margin-top:2px">{{ r.d }}</div></div></sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin-top:18px">GOALS COMPLETE THEMSELVES<span class="mi" style="font-size:13px">lock</span></div>
+      <div style="display:flex;align-items:center;gap:2px;margin-top:10px">
+        <sc-for list="{{ chain }}" as="c" hint-placeholder-count="4"><div style="flex:1;min-width:0;display:flex;align-items:center;gap:2px"><div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:6px 2px;border-radius:10px;background:#f4f4f4"><div style="font-size:15px;font-weight:700">{{ c.n }}</div><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.5);white-space:nowrap">{{ c.unit }}</div></div><sc-if value="{{ c.hasArrow }}" hint-placeholder-val="{{ true }}"><span class="mi" style="font-size:14px;color:rgba(0,0,0,.35)">arrow_forward</span></sc-if></div></sc-for>
+      </div>
+      <div style="font-size:12px;line-height:1.45;color:rgba(0,0,0,.55);margin-top:8px">5 day wins tick the week goal, 3 weeks tick the month, 9 months tick the year.</div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:14px 16px 16px">
+      <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:15px;font-weight:700">Connect AI</div><div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:12px;background:rgba(76,175,80,.12);color:#2e7d32;font-size:11px;font-weight:700"><span class="mi" style="font-size:14px">check_circle</span>Connected</div></div>
+      <div style="font-size:13px;line-height:1.45;color:rgba(0,0,0,.6);margin-top:4px">Use these with any MCP client to read and add goals.</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+        <sc-for list="{{ creds }}" as="c" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px;min-height:48px;padding:4px 6px 4px 12px;border-radius:12px;background:#f7f7f7"><div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ c.k }}</div><div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">{{ c.v }}</div></div><sc-if value="{{ c.canReveal }}" hint-placeholder-val="{{ false }}"><span class="mi" onClick="{{ c.reveal }}" title="Show or hide" style="font-size:18px;color:rgba(0,0,0,.5);cursor:pointer;width:32px;height:32px;border-radius:50%" style-hover="background:rgba(0,0,0,.06)">{{ c.revealIcon }}</span></sc-if><span class="mi" onClick="{{ c.copy }}" title="Copy" style="font-size:18px;color:#288bd5;cursor:pointer;width:32px;height:32px;border-radius:50%" style-hover="background:rgba(40,139,213,.1)">{{ c.copyIcon }}</span></div></sc-for>
+      </div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin-top:16px">SET UP IN</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><sc-for list="{{ platforms }}" as="p" hint-placeholder-count="4"><div onClick="{{ p.onClick }}" style="height:32px;padding:0 14px;border-radius:16px;display:flex;align-items:center;font-size:13px;font-weight:600;background:{{ p.bg }};color:{{ p.fg }};border:1px solid {{ p.border }};cursor:pointer">{{ p.label }}</div></sc-for></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;animation:{{ platAnim }}"><sc-for list="{{ platSteps }}" as="s" hint-placeholder-count="5"><div style="display:flex;gap:10px;font-size:13px;line-height:1.45"><div style="width:20px;height:20px;border-radius:50%;background:#f4f4f4;font-size:11px;font-weight:700;color:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ s.n }}</div><div style="flex:1;min-width:0;color:rgba(0,0,0,.78)">{{ s.t }}</div></div></sc-for></div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:14px 16px 16px">
+      <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:15px;font-weight:700">Legacy API key</div><div style="font-size:11px;color:rgba(0,0,0,.45)">Optional</div></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px"><div style="flex:1;min-width:0;height:40px;display:flex;align-items:center;padding:0 12px;border-radius:10px;background:#f7f7f7;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:{{ keyColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ apiKey }}</div><sc-if value="{{ hasKey }}" hint-placeholder-val="{{ false }}"><span class="mi" onClick="{{ copyKey }}" title="Copy" style="font-size:18px;color:#288bd5;cursor:pointer;width:36px;height:36px;border-radius:50%" style-hover="background:rgba(40,139,213,.1)">content_copy</span></sc-if><div onClick="{{ genKey }}" style="height:40px;padding:0 14px;border-radius:20px;border:1px solid #288bd5;color:#288bd5;display:flex;align-items:center;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0">{{ keyBtn }}</div></div>
+      <sc-if value="{{ hasKey }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,.5);margin-top:6px">Regenerating breaks anything still using the old key.</div></sc-if>
+    </div>
+    <div onClick="{{ openDelete }}" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px;border-radius:16px;border:1px solid rgba(211,47,47,.25);background:#fff;cursor:pointer" style-hover="background:rgba(211,47,47,.04)"><span class="mi" style="font-size:22px;color:#d32f2f">delete_forever</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#d32f2f">Delete account</div><div style="font-size:12px;color:rgba(0,0,0,.55)">Removes routines, goals, agents and points for good</div></div><span class="mi" style="font-size:20px;color:rgba(0,0,0,.3)">chevron_right</span></div>
+  </div>
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:16px;right:16px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.6s ease forwards;pointer-events:none"><span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div></div></sc-if>
+  <sc-if value="{{ delOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDelete }}" style="position:absolute;inset:0;background:rgba(15,23,42,.42);z-index:20;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ delOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;bottom:0;z-index:21;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:20px 20px 24px;animation:rn-sheet-in .25s cubic-bezier(.3,1.1,.5,1)">
+      <div style="display:flex;align-items:center;gap:10px"><div style="width:40px;height:40px;border-radius:50%;background:rgba(211,47,47,.1);color:#d32f2f;display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:22px">warning</span></div><div style="font-size:19px;font-weight:700">Delete your account?</div></div>
+      <div style="font-size:14px;line-height:1.55;color:rgba(0,0,0,.68);margin-top:12px">This removes your routines, goals, agents, group membership and 128 points. <b>This can't be undone.</b></div>
+      <div style="font-size:12px;font-weight:600;color:rgba(0,0,0,.55);margin-top:16px">Type DELETE to confirm</div>
+      <input value="{{ delText }}" onChange="{{ setDelText }}" placeholder="DELETE" style="width:100%;box-sizing:border-box;height:44px;margin-top:6px;border:1px solid {{ delBorder }};border-radius:10px;padding:0 12px;outline:0;font:inherit;font-size:15px;letter-spacing:1px;color:#222">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><div onClick="{{ closeDelete }}" style="height:40px;padding:0 18px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Keep account</div><div onClick="{{ doDelete }}" style="height:40px;padding:0 20px;border-radius:20px;background:{{ delBg }};color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:{{ delCursor }}">Delete forever</div></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:-4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-fade .2s ease">
+      <div style="display:flex;align-items:center;gap:12px;padding:28px 16px 16px 20px"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div><span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px">close</span></div>
+      <div style="display:flex;gap:6px;padding:0 20px 14px"><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:#288bd5;color:#fff;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">diamond</span>128 points</div><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:rgba(255,152,0,.12);color:#b26a00;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">local_fire_department</span>6-day streak</div></div>
+      <div style="height:1px;background:rgba(0,0,0,.08);margin:0 0 6px"></div>
+      <sc-for list="{{ drawerItems }}" as="n" hint-placeholder-count="6"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:16px;height:48px;padding:0 20px;margin-top:{{ n.gap }};color:{{ n.color }};background:{{ n.bg }};font-size:14px;font-weight:600;text-decoration:none"><span class="mi" style="font-size:22px">{{ n.icon }}</span>{{ n.label }}</a></sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-import>
+</div>
+<div class="dv-opt" id="pt"><div class="dv-olabel"><a class="dv-oid" href="#pt">iPad mini</a>Landscape · 1133×744</div>
+<div style="width:1165px;height:776px;border-radius:40px;background:#121212;padding:16px;box-sizing:border-box;box-shadow:0 30px 60px -24px rgba(0,0,0,.4)">
+  <div style="width:100%;height:100%;border-radius:24px;overflow:hidden;position:relative;background:#f4f4f4;display:flex;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87)">
+    <div class="rn-hscroll" style="width:76px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 0 14px;overflow-y:auto;scrollbar-width:none;border-right:1px solid rgba(0,0,0,.06)">
+      <img src="assets/icon-192.png" alt="Routine Notes" style="width:38px;height:38px;object-fit:contain;margin-bottom:4px">
+      <sc-for list="{{ sideNavP }}" as="n" hint-placeholder-count="7"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:inherit"><div style="width:52px;height:30px;border-radius:15px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:22px">{{ n.icon }}</span></div><div style="font-size:10px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for><div onClick="{{ toggleNavMoreP }}" title="More pages" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer"><div style="width:52px;height:30px;border-radius:15px;background:{{ navMoreBtnBgP }};color:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;transition:background .2s"><span class="mi" style="font-size:21px">{{ navMoreIconP }}</span></div><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.6)">More</div></div><sc-if value="{{ navMoreOpenP }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0;border-radius:16px;background:#f7f7f7;animation:rn-fade .18s ease"><sc-for list="{{ navMoreP }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:inherit;text-decoration:none;margin-top:{{ n.gap }}"><div style="width:52px;height:30px;border-radius:15px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:21px">{{ n.icon }}</span></div><div style="font-size:10px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for></div></sc-if>
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex-shrink:0"><span>9:30</span><span style="display:flex;gap:6px;align-items:center"><span class="mi" style="font-size:16px">wifi</span><span class="mi" style="font-size:16px">battery_full</span></span></div>
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;padding:4px 20px 20px"><div style="display:flex;align-items:center;gap:16px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700">Profile</div><div style="font-size:13px;color:rgba(0,0,0,.54)">Settings, connections and your account</div></div></div><div class="rn-hscroll" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px;align-content:start"><div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:6px 16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);padding:10px 0 2px">TIME</div>
+      <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(0,0,0,.06)">
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Time format</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Home shows routines as <b style="color:rgba(0,0,0,.8)">{{ fmtPreview }}</b></div></div>
+        <div style="position:relative;display:flex;padding:3px;border-radius:10px;background:rgba(0,0,0,.06);width:112px;flex-shrink:0"><div style="position:absolute;top:3px;bottom:3px;left:{{ fmtLeft }};width:calc(50% - 3px);border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:left .28s cubic-bezier(.4,0,.2,1)"></div><sc-for list="{{ fmtOpts }}" as="o" hint-placeholder-count="2"><div onClick="{{ o.onClick }}" style="position:relative;flex:1;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:{{ o.fg }};cursor:pointer;transition:color .2s">{{ o.label }}</div></sc-for></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(0,0,0,.06)">
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Time zone</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Routine times and day changes follow this</div></div>
+        <select value="{{ tz }}" onChange="{{ setTz }}" style="max-width:170px;height:36px;border:1px solid rgba(0,0,0,.15);border-radius:10px;padding:0 8px;font:inherit;font-size:13px;color:#222;background:#fff;cursor:pointer"><sc-for list="{{ tzOpts }}" as="z" hint-placeholder-count="4"><option value="{{ z.v }}">{{ z.l }}</option></sc-for></select>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;min-height:60px">
+        <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600">Start of the week<span class="mi" style="font-size:14px;color:rgba(0,0,0,.35)">lock</span></div><div style="font-size:12px;color:rgba(0,0,0,.54)">Weeks run Sunday to Saturday</div></div>
+        <div style="display:flex;padding:3px;border-radius:10px;background:rgba(0,0,0,.04);width:112px;opacity:.7"><div style="flex:1;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)">Sun</div><div style="flex:1;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:rgba(0,0,0,.4)">Mon</div></div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px 16px">
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">POINT RATES<span class="mi" style="font-size:13px">lock</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px">
+        <sc-for list="{{ rates }}" as="r" hint-placeholder-count="3"><div style="padding:10px 10px 12px;border-radius:12px;background:{{ r.tint }}"><div style="font-size:12px;font-weight:800;color:{{ r.color }}">{{ r.k }} · {{ r.name }}</div><div style="font-size:20px;font-weight:700;margin-top:4px">{{ r.v }}</div><div style="font-size:11px;line-height:1.35;color:rgba(0,0,0,.6);margin-top:2px">{{ r.d }}</div></div></sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin-top:18px">GOALS COMPLETE THEMSELVES<span class="mi" style="font-size:13px">lock</span></div>
+      <div style="display:flex;align-items:center;gap:2px;margin-top:10px">
+        <sc-for list="{{ chain }}" as="c" hint-placeholder-count="4"><div style="flex:1;min-width:0;display:flex;align-items:center;gap:2px"><div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:6px 2px;border-radius:10px;background:#f4f4f4"><div style="font-size:15px;font-weight:700">{{ c.n }}</div><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.5);white-space:nowrap">{{ c.unit }}</div></div><sc-if value="{{ c.hasArrow }}" hint-placeholder-val="{{ true }}"><span class="mi" style="font-size:14px;color:rgba(0,0,0,.35)">arrow_forward</span></sc-if></div></sc-for>
+      </div>
+      <div style="font-size:12px;line-height:1.45;color:rgba(0,0,0,.55);margin-top:8px">5 day wins tick the week goal, 3 weeks tick the month, 9 months tick the year.</div>
+    </div>
+</div><div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:16px;display:flex;align-items:center;gap:14px">
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:56px;height:56px;border-radius:50%;object-fit:cover" alt="Profile picture">
+      <div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:700">Alex Morgan</div><div style="font-size:13px;color:rgba(0,0,0,.54)">alex@routine.app</div><div style="display:flex;gap:6px;margin-top:8px"><div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:12px;background:#288bd5;color:#fff;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">diamond</span>128</div><div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:12px;background:rgba(255,152,0,.12);color:#b26a00;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">local_fire_department</span>6-day streak</div></div></div>
+      <div style="font-size:13px;font-weight:600;color:#288bd5;cursor:pointer;padding:8px">Sign out</div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px 16px">
+      <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:15px;font-weight:700">Connect AI</div><div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:12px;background:rgba(76,175,80,.12);color:#2e7d32;font-size:11px;font-weight:700"><span class="mi" style="font-size:14px">check_circle</span>Connected</div></div>
+      <div style="font-size:13px;line-height:1.45;color:rgba(0,0,0,.6);margin-top:4px">Use these with any MCP client to read and add goals.</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+        <sc-for list="{{ creds }}" as="c" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px;min-height:48px;padding:4px 6px 4px 12px;border-radius:12px;background:#f7f7f7"><div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ c.k }}</div><div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">{{ c.v }}</div></div><sc-if value="{{ c.canReveal }}" hint-placeholder-val="{{ false }}"><span class="mi" onClick="{{ c.reveal }}" title="Show or hide" style="font-size:18px;color:rgba(0,0,0,.5);cursor:pointer;width:32px;height:32px;border-radius:50%" style-hover="background:rgba(0,0,0,.06)">{{ c.revealIcon }}</span></sc-if><span class="mi" onClick="{{ c.copy }}" title="Copy" style="font-size:18px;color:#288bd5;cursor:pointer;width:32px;height:32px;border-radius:50%" style-hover="background:rgba(40,139,213,.1)">{{ c.copyIcon }}</span></div></sc-for>
+      </div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin-top:16px">SET UP IN</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><sc-for list="{{ platforms }}" as="p" hint-placeholder-count="4"><div onClick="{{ p.onClick }}" style="height:32px;padding:0 14px;border-radius:16px;display:flex;align-items:center;font-size:13px;font-weight:600;background:{{ p.bg }};color:{{ p.fg }};border:1px solid {{ p.border }};cursor:pointer">{{ p.label }}</div></sc-for></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;animation:{{ platAnim }}"><sc-for list="{{ platSteps }}" as="s" hint-placeholder-count="5"><div style="display:flex;gap:10px;font-size:13px;line-height:1.45"><div style="width:20px;height:20px;border-radius:50%;background:#f4f4f4;font-size:11px;font-weight:700;color:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ s.n }}</div><div style="flex:1;min-width:0;color:rgba(0,0,0,.78)">{{ s.t }}</div></div></sc-for></div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px 16px">
+      <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:15px;font-weight:700">Legacy API key</div><div style="font-size:11px;color:rgba(0,0,0,.45)">Optional</div></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px"><div style="flex:1;min-width:0;height:40px;display:flex;align-items:center;padding:0 12px;border-radius:10px;background:#f7f7f7;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:{{ keyColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ apiKey }}</div><sc-if value="{{ hasKey }}" hint-placeholder-val="{{ false }}"><span class="mi" onClick="{{ copyKey }}" title="Copy" style="font-size:18px;color:#288bd5;cursor:pointer;width:36px;height:36px;border-radius:50%" style-hover="background:rgba(40,139,213,.1)">content_copy</span></sc-if><div onClick="{{ genKey }}" style="height:40px;padding:0 14px;border-radius:20px;border:1px solid #288bd5;color:#288bd5;display:flex;align-items:center;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0">{{ keyBtn }}</div></div>
+      <sc-if value="{{ hasKey }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,.5);margin-top:6px">Regenerating breaks anything still using the old key.</div></sc-if>
+    </div>
+    <div onClick="{{ openDelete }}" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px;border-radius:16px;border:1px solid rgba(211,47,47,.25);background:#fff;cursor:pointer" style-hover="background:rgba(211,47,47,.04)"><span class="mi" style="font-size:22px;color:#d32f2f">delete_forever</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#d32f2f">Delete account</div><div style="font-size:12px;color:rgba(0,0,0,.55)">Removes routines, goals, agents and points for good</div></div><span class="mi" style="font-size:20px;color:rgba(0,0,0,.3)">chevron_right</span></div>
+</div></div></div>
+    </div>
+      <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.6s ease forwards;pointer-events:none"><span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div></div></sc-if>
+  <sc-if value="{{ delOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDelete }}" style="position:absolute;inset:0;background:rgba(15,23,42,.42);z-index:20;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ delOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:520px;max-width:92%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.35);padding:24px;animation:rn-fade .2s ease">
+      <div style="display:flex;align-items:center;gap:10px"><div style="width:40px;height:40px;border-radius:50%;background:rgba(211,47,47,.1);color:#d32f2f;display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:22px">warning</span></div><div style="font-size:19px;font-weight:700">Delete your account?</div></div>
+      <div style="font-size:14px;line-height:1.55;color:rgba(0,0,0,.68);margin-top:12px">This removes your routines, goals, agents, group membership and 128 points. <b>This can't be undone.</b></div>
+      <div style="font-size:12px;font-weight:600;color:rgba(0,0,0,.55);margin-top:16px">Type DELETE to confirm</div>
+      <input value="{{ delText }}" onChange="{{ setDelText }}" placeholder="DELETE" style="width:100%;box-sizing:border-box;height:44px;margin-top:6px;border:1px solid {{ delBorder }};border-radius:10px;padding:0 12px;outline:0;font:inherit;font-size:15px;letter-spacing:1px;color:#222">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><div onClick="{{ closeDelete }}" style="height:40px;padding:0 18px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Keep account</div><div onClick="{{ doDelete }}" style="height:40px;padding:0 20px;border-radius:20px;background:{{ delBg }};color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:{{ delCursor }}">Delete forever</div></div>
+    </div>
+  </sc-if>
+
+  </div>
+</div>
+</div>
+
+<div class="dv-opt" id="pd"><div class="dv-olabel"><a class="dv-oid" href="#pd">Desktop</a>1440×900 · same layout and type sizes as iPad mini, capped at 1040px</div>
+<x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1440 }}" height="{{ 900 }}" url="app.routinenotes.com/profile" tabs="{{ browserTabsP }}" hint-size="1440px,900px">
+  <div style="height:100%;display:flex;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+    <div style="width:264px;flex-shrink:0;background:#fff;border-right:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:10px;padding:20px 20px 16px"><img src="assets/icon-192.png" alt="Routine Notes" style="width:34px;height:34px;object-fit:contain"><div style="font-size:16px;font-weight:700">Routine Notes</div></div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:0 12px"><sc-for list="{{ sideNavP }}" as="n" hint-placeholder-count="7"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};font-size:14px;font-weight:600" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for><div onClick="{{ toggleNavMoreP }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;margin-top:6px;border-radius:10px;color:rgba(0,0,0,.6);font-size:14px;font-weight:600;cursor:pointer" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">more_horiz</span><div style="flex:1">More</div><span class="mi" style="font-size:20px;transition:transform .2s;transform:rotate({{ navMoreRotP }})">expand_more</span></div><sc-if value="{{ navMoreOpenP }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;animation:rn-fade .18s ease"><sc-for list="{{ navMoreP }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px 0 20px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};text-decoration:none;font-size:14px;font-weight:600;margin-top:{{ n.gap }}" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for></div></sc-if></div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-top:1px solid rgba(0,0,0,.06)"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:36px;height:36px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.5)">alex@routine.app</div></div></div>
+    </div>
+    <div style="max-width:1040px;margin:0 auto;width:100%;box-sizing:border-box;flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px"><div style="display:flex;align-items:center;gap:16px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700">Profile</div><div style="font-size:13px;color:rgba(0,0,0,.54)">Settings, connections and your account</div></div></div><div class="rn-hscroll" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px;align-content:start"><div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:6px 16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);padding:10px 0 2px">TIME</div>
+      <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(0,0,0,.06)">
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Time format</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Home shows routines as <b style="color:rgba(0,0,0,.8)">{{ fmtPreview }}</b></div></div>
+        <div style="position:relative;display:flex;padding:3px;border-radius:10px;background:rgba(0,0,0,.06);width:112px;flex-shrink:0"><div style="position:absolute;top:3px;bottom:3px;left:{{ fmtLeft }};width:calc(50% - 3px);border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:left .28s cubic-bezier(.4,0,.2,1)"></div><sc-for list="{{ fmtOpts }}" as="o" hint-placeholder-count="2"><div onClick="{{ o.onClick }}" style="position:relative;flex:1;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:{{ o.fg }};cursor:pointer;transition:color .2s">{{ o.label }}</div></sc-for></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(0,0,0,.06)">
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Time zone</div><div style="font-size:12px;color:rgba(0,0,0,.54)">Routine times and day changes follow this</div></div>
+        <select value="{{ tz }}" onChange="{{ setTz }}" style="max-width:170px;height:36px;border:1px solid rgba(0,0,0,.15);border-radius:10px;padding:0 8px;font:inherit;font-size:13px;color:#222;background:#fff;cursor:pointer"><sc-for list="{{ tzOpts }}" as="z" hint-placeholder-count="4"><option value="{{ z.v }}">{{ z.l }}</option></sc-for></select>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;min-height:60px">
+        <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600">Start of the week<span class="mi" style="font-size:14px;color:rgba(0,0,0,.35)">lock</span></div><div style="font-size:12px;color:rgba(0,0,0,.54)">Weeks run Sunday to Saturday</div></div>
+        <div style="display:flex;padding:3px;border-radius:10px;background:rgba(0,0,0,.04);width:112px;opacity:.7"><div style="flex:1;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)">Sun</div><div style="flex:1;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:rgba(0,0,0,.4)">Mon</div></div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px 16px">
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">POINT RATES<span class="mi" style="font-size:13px">lock</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px">
+        <sc-for list="{{ rates }}" as="r" hint-placeholder-count="3"><div style="padding:10px 10px 12px;border-radius:12px;background:{{ r.tint }}"><div style="font-size:12px;font-weight:800;color:{{ r.color }}">{{ r.k }} · {{ r.name }}</div><div style="font-size:20px;font-weight:700;margin-top:4px">{{ r.v }}</div><div style="font-size:11px;line-height:1.35;color:rgba(0,0,0,.6);margin-top:2px">{{ r.d }}</div></div></sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin-top:18px">GOALS COMPLETE THEMSELVES<span class="mi" style="font-size:13px">lock</span></div>
+      <div style="display:flex;align-items:center;gap:2px;margin-top:10px">
+        <sc-for list="{{ chain }}" as="c" hint-placeholder-count="4"><div style="flex:1;min-width:0;display:flex;align-items:center;gap:2px"><div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:6px 2px;border-radius:10px;background:#f4f4f4"><div style="font-size:15px;font-weight:700">{{ c.n }}</div><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.5);white-space:nowrap">{{ c.unit }}</div></div><sc-if value="{{ c.hasArrow }}" hint-placeholder-val="{{ true }}"><span class="mi" style="font-size:14px;color:rgba(0,0,0,.35)">arrow_forward</span></sc-if></div></sc-for>
+      </div>
+      <div style="font-size:12px;line-height:1.45;color:rgba(0,0,0,.55);margin-top:8px">5 day wins tick the week goal, 3 weeks tick the month, 9 months tick the year.</div>
+    </div>
+</div><div style="display:flex;flex-direction:column;gap:12px;min-width:0">    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:16px;display:flex;align-items:center;gap:14px">
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:56px;height:56px;border-radius:50%;object-fit:cover" alt="Profile picture">
+      <div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:700">Alex Morgan</div><div style="font-size:13px;color:rgba(0,0,0,.54)">alex@routine.app</div><div style="display:flex;gap:6px;margin-top:8px"><div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:12px;background:#288bd5;color:#fff;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">diamond</span>128</div><div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:12px;background:rgba(255,152,0,.12);color:#b26a00;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">local_fire_department</span>6-day streak</div></div></div>
+      <div style="font-size:13px;font-weight:600;color:#288bd5;cursor:pointer;padding:8px">Sign out</div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px 16px">
+      <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:15px;font-weight:700">Connect AI</div><div style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:12px;background:rgba(76,175,80,.12);color:#2e7d32;font-size:11px;font-weight:700"><span class="mi" style="font-size:14px">check_circle</span>Connected</div></div>
+      <div style="font-size:13px;line-height:1.45;color:rgba(0,0,0,.6);margin-top:4px">Use these with any MCP client to read and add goals.</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+        <sc-for list="{{ creds }}" as="c" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px;min-height:48px;padding:4px 6px 4px 12px;border-radius:12px;background:#f7f7f7"><div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ c.k }}</div><div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">{{ c.v }}</div></div><sc-if value="{{ c.canReveal }}" hint-placeholder-val="{{ false }}"><span class="mi" onClick="{{ c.reveal }}" title="Show or hide" style="font-size:18px;color:rgba(0,0,0,.5);cursor:pointer;width:32px;height:32px;border-radius:50%" style-hover="background:rgba(0,0,0,.06)">{{ c.revealIcon }}</span></sc-if><span class="mi" onClick="{{ c.copy }}" title="Copy" style="font-size:18px;color:#288bd5;cursor:pointer;width:32px;height:32px;border-radius:50%" style-hover="background:rgba(40,139,213,.1)">{{ c.copyIcon }}</span></div></sc-for>
+      </div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin-top:16px">SET UP IN</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><sc-for list="{{ platforms }}" as="p" hint-placeholder-count="4"><div onClick="{{ p.onClick }}" style="height:32px;padding:0 14px;border-radius:16px;display:flex;align-items:center;font-size:13px;font-weight:600;background:{{ p.bg }};color:{{ p.fg }};border:1px solid {{ p.border }};cursor:pointer">{{ p.label }}</div></sc-for></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;animation:{{ platAnim }}"><sc-for list="{{ platSteps }}" as="s" hint-placeholder-count="5"><div style="display:flex;gap:10px;font-size:13px;line-height:1.45"><div style="width:20px;height:20px;border-radius:50%;background:#f4f4f4;font-size:11px;font-weight:700;color:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ s.n }}</div><div style="flex:1;min-width:0;color:rgba(0,0,0,.78)">{{ s.t }}</div></div></sc-for></div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px 16px">
+      <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:15px;font-weight:700">Legacy API key</div><div style="font-size:11px;color:rgba(0,0,0,.45)">Optional</div></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px"><div style="flex:1;min-width:0;height:40px;display:flex;align-items:center;padding:0 12px;border-radius:10px;background:#f7f7f7;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:{{ keyColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ apiKey }}</div><sc-if value="{{ hasKey }}" hint-placeholder-val="{{ false }}"><span class="mi" onClick="{{ copyKey }}" title="Copy" style="font-size:18px;color:#288bd5;cursor:pointer;width:36px;height:36px;border-radius:50%" style-hover="background:rgba(40,139,213,.1)">content_copy</span></sc-if><div onClick="{{ genKey }}" style="height:40px;padding:0 14px;border-radius:20px;border:1px solid #288bd5;color:#288bd5;display:flex;align-items:center;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0">{{ keyBtn }}</div></div>
+      <sc-if value="{{ hasKey }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,.5);margin-top:6px">Regenerating breaks anything still using the old key.</div></sc-if>
+    </div>
+    <div onClick="{{ openDelete }}" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px;border-radius:16px;border:1px solid rgba(211,47,47,.25);background:#fff;cursor:pointer" style-hover="background:rgba(211,47,47,.04)"><span class="mi" style="font-size:22px;color:#d32f2f">delete_forever</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#d32f2f">Delete account</div><div style="font-size:12px;color:rgba(0,0,0,.55)">Removes routines, goals, agents and points for good</div></div><span class="mi" style="font-size:20px;color:rgba(0,0,0,.3)">chevron_right</span></div>
+</div></div></div>
+      <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.6s ease forwards;pointer-events:none"><span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div></div></sc-if>
+  <sc-if value="{{ delOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDelete }}" style="position:absolute;inset:0;background:rgba(15,23,42,.42);z-index:20;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ delOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:520px;max-width:92%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.35);padding:24px;animation:rn-fade .2s ease">
+      <div style="display:flex;align-items:center;gap:10px"><div style="width:40px;height:40px;border-radius:50%;background:rgba(211,47,47,.1);color:#d32f2f;display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:22px">warning</span></div><div style="font-size:19px;font-weight:700">Delete your account?</div></div>
+      <div style="font-size:14px;line-height:1.55;color:rgba(0,0,0,.68);margin-top:12px">This removes your routines, goals, agents, group membership and 128 points. <b>This can't be undone.</b></div>
+      <div style="font-size:12px;font-weight:600;color:rgba(0,0,0,.55);margin-top:16px">Type DELETE to confirm</div>
+      <input value="{{ delText }}" onChange="{{ setDelText }}" placeholder="DELETE" style="width:100%;box-sizing:border-box;height:44px;margin-top:6px;border:1px solid {{ delBorder }};border-radius:10px;padding:0 12px;outline:0;font:inherit;font-size:15px;letter-spacing:1px;color:#222">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><div onClick="{{ closeDelete }}" style="height:40px;padding:0 18px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Keep account</div><div onClick="{{ doDelete }}" style="height:40px;padding:0 20px;border-radius:20px;background:{{ delBg }};color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:{{ delCursor }}">Delete forever</div></div>
+    </div>
+  </sc-if>
+
+  </div>
+</x-import>
+</div>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const FEATURES = [
+  { key: 'routines', label: 'Routines', icon: 'schedule', title: 'Your day, time-boxed', lead: 'Routine Notes lays your day on a timeline, keeps score on punctuality, and never lets a missed check-in silently disappear.', points: [['Punctuality window', 'each routine opens a window around its start time — tick inside it and the check-in counts as on time.'], ['Quick tasks', 'drop one-off work into the current routine slot, so improvised work still lands in a time box.'], ['Past, not gone', 'miss the window and the routine moves to Past with a redeem button — check in late with points, streak intact.'], ['Skip Day', 'pause the loop for travel or a sick day without wrecking your history.']] },
+  { key: 'goals', label: 'Goals', icon: 'assignment', title: 'The year → day cascade', lead: 'Turn one yearly ambition into month, week and day milestones — then let your daily wins roll back up.', points: [[null, 'Break a year goal into month and week milestones, each decomposing into schedulable day goals.'], ['Link days to routines', 'a day goal attached to a routine shows on the Home card, so the plan and the timeline are the same object.'], ['Wins roll up', 'five day wins complete a week, three weeks a month, nine months a year — you never mark a year done, you arrive at it.'], [null, 'A calendar view prints each day’s goal count, so gaps are visible before they become months.']] },
+  { key: 'priority', label: 'Priority', icon: 'view_module', title: 'A self-sorting Do / Plan / Delegate / Automate matrix', lead: 'You never pick a quadrant. How and where you create a task decides it, so the matrix mirrors the shape of your day on its own.', points: [['Do', 'anything you start — or create — for today.'], ['Plan', 'anything you schedule for a future day.'], ['Delegate', '@mention a person in the task and it hands off.'], ['Automate', 'kick a task off with an agent and it lands here.']] },
+  { key: 'agents', label: 'Agents', icon: 'smart_toy', title: 'Automation attached to routines', lead: 'An agent is a worker glued to a routine — start the task and it fires, work and it listens, finish and it reports success or failure.', points: [[null, 'Bind an agent to a routine; the routine’s schedule becomes the agent’s schedule.'], ['Wire the events', 'point a start event (and optional end event) at any URL — your webhook, n8n flow, or own endpoint — with the goal id substituted in.'], ['Auditable lifecycle', 'idle → listening → finished, with success and failure counts per agent.'], [null, 'Redeem a late check-in and its agents still fire — automation shouldn’t punish a late human.']] },
+  { key: 'evolution', label: 'Evolution', icon: 'military_tech', title: 'The point system — a soldier taking the mountain', lead: 'Three things decide whether he makes it — and they are the three ways you earn points: 100 each, 300 a day.', points: [['Discipline', 'be present. Tick routines inside their punctuality window.'], ['Kinetics', 'put in the work. Clear the steps and quick tasks in every slot.'], ['Geniuses', 'plan the campaign. Plan week, month and year milestones and link them to today.'], [null, 'Points settle overnight and fund your AI agents — show up daily and AI stays free.']], link: 'https://blog.familywealth.in/2022/01/point-system-of-family-routine.html', linkLabel: 'Read the full soldier analogy' },
+];
+const PLATFORMS = {
+  ChatGPT: ['Open ChatGPT → profile → Settings → Beta features', 'Find MCP Servers and click Add MCP Server', 'Paste the Server URL, Client ID and Client Secret', 'Click Authorize, then Authorize again here'],
+  n8n: ['Credentials → New credential → OAuth2 API', 'Grant type: Authorization Code', 'Auth URL …/oauth/authorize · Token URL …/oauth/token', 'Client ID, Client Secret, scope “read write”', 'Connect my account, then use an HTTP Request node'],
+  Gemini: ['Open Gemini → Settings → Extensions', 'Add Extension → Custom OAuth App / MCP Server', 'Paste the Server URL, Client ID and Client Secret', 'Click Connect'],
+  Perplexity: ['Settings → Integrations → Add Integration', 'Choose OAuth 2.0, name it Routine Notes', 'Paste the Server URL, Client ID and Client Secret', 'Click Connect'],
+};
+const TZ = [['Asia/Kolkata', 'India (GMT+5:30)'], ['Europe/London', 'London (GMT+1)'], ['America/New_York', 'New York (GMT−4)'], ['America/Los_Angeles', 'Los Angeles (GMT−7)'], ['Asia/Singapore', 'Singapore (GMT+8)']];
+const SERVER = 'https://mcp.routinenotes.com', SECRET = 'rn_sec_4b9c1e77a03d8f2a';
+const NAV_MORE = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2']];
+const navMoreFor = (active) => NAV_MORE.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' ? '10px' : '0px', bg: label === active ? 'rgba(40,139,213,.12)' : 'transparent', fg: label === active ? '#1f6fab' : 'rgba(0,0,0,.6)' }));
+const DRAWER_ITEMS = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2'], ['logout', 'Log out', '#']];
+const drawerFor = (active) => DRAWER_ITEMS.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' || label === 'Log out' ? '8px' : '0px', color: label === 'Log out' ? '#d32f2f' : (label === active ? '#1f6fab' : 'rgba(0,0,0,.75)'), bg: label === active ? 'rgba(40,139,213,.08)' : 'transparent' }));
+const NAV_HREF = { Home: 'Routine Notes Final.dc.html', Priority: 'Priority.dc.html', Agents: 'Agents.dc.html', Goals: 'Goals.dc.html', Routines: 'Routines.dc.html', Progress: 'Progress.dc.html', Groups: 'Groups.dc.html', Profile: 'Profile and About.dc.html#t1', Settings: 'Profile and About.dc.html#t1', About: 'Profile and About.dc.html#t2' };
+const fixNav = (v) => { ['navItems', 'lgNav', 'drawerNav'].forEach(k => { if (Array.isArray(v[k])) v[k] = v[k].map(n => { const href = n.href && n.href !== '#' ? n.href : NAV_HREF[n.label]; const go = () => { if (href) window.location.href = href; }; return { ...n, href: href || '#', go, onClick: n.onClick || go, onPhone: n.onPhone || go, onTab: n.onTab || go }; }); }); return v; };
+class Component extends DCLogic {
+  state = { feat: 0, fk: 0, fmt: '24', tz: 'Asia/Kolkata', reveal: false, copied: null, plat: 'ChatGPT', pk: 0, key: null, del: false, delText: '', toast: null };
+  componentWillUnmount() { clearTimeout(this.tt); clearTimeout(this.ct); }
+  toast(t) { clearTimeout(this.tt); this.setState({ toast: { ...t, id: Date.now() } }); this.tt = setTimeout(() => this.setState({ toast: null }), 2600); }
+  copy(id, v, label) { try { navigator.clipboard && navigator.clipboard.writeText(v); } catch (e) {} clearTimeout(this.ct); this.setState({ copied: id }); this.ct = setTimeout(() => this.setState({ copied: null }), 1500); this.toast({ icon: 'content_copy', color: '#64b5f6', title: `${label} copied`, sub: '' }); }
+  renderVals() { return { ...fixNav(this.__rv()), drawerOpen: !!this.state.__dr, openDrawer: () => this.setState({ __dr: true }), closeDrawer: () => this.setState({ __dr: false }), drawerItems: drawerFor(''), navMoreP: navMoreFor('Profile'), navMoreA: navMoreFor('About'), navMoreOpenP: this.state.navMoreP ?? true, toggleNavMoreP: () => this.setState(st => ({ navMoreP: !(st.navMoreP ?? true) })), navMoreRotP: (this.state.navMoreP ?? true) ? '180deg' : '0deg', navMoreIconP: (this.state.navMoreP ?? true) ? 'expand_less' : 'more_horiz', navMoreBtnBgP: (this.state.navMoreP ?? true) ? 'rgba(0,0,0,.06)' : 'transparent', navMoreOpenA: this.state.navMoreA ?? true, toggleNavMoreA: () => this.setState(st => ({ navMoreA: !(st.navMoreA ?? true) })), navMoreRotA: (this.state.navMoreA ?? true) ? '180deg' : '0deg', navMoreIconA: (this.state.navMoreA ?? true) ? 'expand_less' : 'more_horiz', navMoreBtnBgA: (this.state.navMoreA ?? true) ? 'rgba(0,0,0,.06)' : 'transparent' }; }
+  __rv() {
+    const st = this.state, F = FEATURES[st.feat], t = st.toast;
+    const credRow = (id, k, v, secret) => ({ key: id, k, v: secret && !st.reveal ? 'rn_sec_••••••••••••8f2a' : v, canReveal: !!secret, revealIcon: st.reveal ? 'visibility_off' : 'visibility', reveal: () => this.setState(s => ({ reveal: !s.reveal })), copyIcon: st.copied === id ? 'check' : 'content_copy', copy: () => this.copy(id, v, k.charAt(0) + k.slice(1).toLowerCase()) });
+    const delOk = st.delText.trim() === 'DELETE';
+    return {
+      features: FEATURES.map((f, i) => ({ key: f.key, label: f.label, icon: f.icon, color: i === st.feat ? '#288bd5' : 'rgba(0,0,0,.5)', onClick: () => this.setState(s => ({ feat: i, fk: s.fk + 1 })) })),
+      featLeft: `${st.feat * 20}%`, featAnim: `rn-in${st.fk % 2} .25s ease`,
+      feat: { title: F.title, lead: F.lead, hasLink: !!F.link, link: F.link || '#', linkLabel: F.linkLabel || '', points: F.points.map(([term, text], i) => ({ key: i, term, text, hasTerm: !!term, icon: term ? 'check_circle' : 'arrow_right' })) },
+      steps: [['Set honest start times', 'Morning first, where Discipline is cheapest.', 'Routines.dc.html'], ['Write one year goal', 'Cascade it down to a day goal you can schedule.', 'Year Goals.dc.html'], ['Link it to a routine and show up', 'Earn your points on time and watch the loop compound.', 'Routine Notes Final.dc.html']].map(([title, text, href], i) => ({ key: i, n: i + 1, title, text, href, border: i < 2 ? '1px solid rgba(0,0,0,.06)' : '0' })),
+      fmtPreview: st.fmt === '24' ? '09:00 · 18:30' : '9:00 AM · 6:30 PM', fmtLeft: st.fmt === '12' ? '3px' : '50%',
+      fmtOpts: [['12', '12h'], ['24', '24h']].map(([v, label]) => ({ key: v, label, fg: st.fmt === v ? 'rgba(0,0,0,.87)' : 'rgba(0,0,0,.5)', onClick: () => { if (st.fmt === v) return; this.setState({ fmt: v }); this.toast({ icon: 'schedule', color: '#64b5f6', title: 'Time format updated', sub: v === '24' ? '24-hour · 18:30' : '12-hour · 6:30 PM' }); } })),
+      tz: st.tz, tzOpts: TZ.map(([v, l]) => ({ key: v, v, l })), setTz: (e) => { const v = e.target.value; this.setState({ tz: v }); this.toast({ icon: 'public', color: '#64b5f6', title: 'Time zone updated', sub: (TZ.find(x => x[0] === v) || [])[1] }); },
+      rates: [['D', 'Discipline', '3 h', 'Longest a routine item can run', '#4CAF50', 'rgba(76,175,80,.1)'], ['K', 'Kinetics', '1 h', 'Rate a task can be done', '#E53935', 'rgba(229,57,53,.08)'], ['G', 'Geniuses', '25%', 'Share of a period that awards points', '#2196F3', 'rgba(33,150,243,.1)']].map(([k, name, v, d, color, tint]) => ({ key: k, k, name, v, d, color, tint })),
+      chain: [['1', 'day'], ['5', 'days = wk'], ['3', 'wks = mo'], ['9', 'mos = yr']].map(([n, unit], i) => ({ key: i, n, unit, hasArrow: i < 3 })),
+      creds: [credRow('url', 'SERVER URL', SERVER), credRow('cid', 'CLIENT ID', 'routine-notes-mcp'), credRow('sec', 'CLIENT SECRET', SECRET, true)],
+      platforms: Object.keys(PLATFORMS).map(p => ({ key: p, label: p, bg: st.plat === p ? 'rgba(40,139,213,.12)' : '#fff', fg: st.plat === p ? '#1f6fab' : 'rgba(0,0,0,.65)', border: st.plat === p ? 'rgba(40,139,213,.45)' : 'rgba(0,0,0,.12)', onClick: () => this.setState(s => ({ plat: p, pk: s.pk + 1 })) })),
+      platSteps: PLATFORMS[st.plat].map((t2, i) => ({ key: st.plat + i, n: i + 1, t: t2 })), platAnim: `rn-in${st.pk % 2} .25s ease`,
+      hasKey: !!st.key, apiKey: st.key || 'No API key yet', keyColor: st.key ? '#222' : 'rgba(0,0,0,.4)', keyBtn: st.key ? 'Regenerate' : 'Generate',
+      genKey: () => { const k = 'rn_' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10); const had = !!st.key; this.setState({ key: k }); this.toast({ icon: 'vpn_key', color: '#81c784', title: had ? 'API key regenerated' : 'API key generated', sub: 'Copy it now and store it safely' }); },
+      copyKey: () => this.copy('key', st.key, 'API key'),
+      delOpen: st.del, openDelete: () => this.setState({ del: true, delText: '' }), closeDelete: () => this.setState({ del: false }), delText: st.delText, setDelText: (e) => this.setState({ delText: e.target.value }),
+      delBorder: delOk ? '#d32f2f' : 'rgba(0,0,0,.15)', delBg: delOk ? '#d32f2f' : 'rgba(211,47,47,.35)', delCursor: delOk ? 'pointer' : 'not-allowed',
+      doDelete: () => { if (!delOk) return; this.setState({ del: false }); this.toast({ icon: 'delete_forever', color: '#ef9a9a', title: 'Account deleted', sub: 'Prototype only — nothing was removed' }); },
+      sideNavP: this.nav('Profile'), sideNavA: this.nav('About'),
+      browserTabsP: [{ title: 'Routine Notes — Profile' }], browserTabsA: [{ title: 'Routine Notes — About' }],
+      hasToast: !!t, toastIcon: t && t.icon, toastColor: t && t.color, toastTitle: t && t.title, toastSub: t && t.sub,
+    };
+  }
+  nav(active) { return [['home', 'Home', 'Routine Notes Final.dc.html'], ['dashboard', 'Priority', 'Priority.dc.html'], ['smart_toy', 'Agents', 'Agents.dc.html'], ['assignment', 'Goals', 'Goals.dc.html']].map(([icon, label, href]) => ({ key: label, icon, label, href, bg: label === active ? 'rgba(40,139,213,.12)' : 'transparent', fg: label === active ? '#1f6fab' : 'rgba(0,0,0,.6)' })); }
+}
+</script>
+</body>
+</html>

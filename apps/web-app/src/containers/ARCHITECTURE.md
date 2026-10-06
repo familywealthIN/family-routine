@@ -293,6 +293,7 @@ this provider approach deliberately avoids.)
 | `WeekGoalStreakContainer` | `WeekGoalStreak` | **derives** week-goal read + show/hide via inject | built + wired (DashBoard) |
 | `AgendaTaskListContainer` | `AgendaTaskList` | **derives** grouped goals via inject (`mode`); **owns** agenda-mode goal writes (emits `changed`), forwards today-mode writes | built + wired (DashBoard, both views) |
 | `StimulusSummaryContainer` | `StimulusSummary` (new organism) | **derives** D/K/G totals via inject (utils/stimulusTotals) | built + wired (DashBoard) |
+| `MissedDayRecoveryContainer` | `MissedDayRecovery` | week-strip read (`weekStimuli`, same variables as `WeekdaySelectorContainer` → one cache entry) + missed-day derivation (utils/missedDay) | built + wired (DashBoard) |
 | `AgentEditModalContainer` | `AgentEditModal` | **agent domain** (routine options + save refetch); imperative `open(taskRef)` | built + wired |
 | `PaywallDrawerContainer` | `PaywallDrawer` | drawer open/cost state; imperative `open(cost)` | built + wired |
 | `StepModalContainer` | (routine-steps dialog) | modal home (no GraphQL); `open(task)` | built + wired |

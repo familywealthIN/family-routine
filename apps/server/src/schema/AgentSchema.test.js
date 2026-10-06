@@ -70,3 +70,78 @@ describe('AgentSchema definition', () => {
     expect(AgentSchema.path('failureCount').defaultValue).toEqual(0);
   });
 });
+
+describe('AgentSchema at-rest encryption hooks', () => {
+  let AgentModel;
+  let encryptAgentUpdate;
+  let enc;
+  let stored;
+
+  beforeAll(() => {
+    jest.resetModules();
+    process.env.ENCRYPTION_KEY = 'agent-schema-test-key';
+    ({ AgentModel, encryptAgentUpdate } = require('./AgentSchema'));
+    enc = require('../utils/encryption').encryption;
+  });
+
+  beforeEach(() => {
+    stored = null;
+    // Stand-in for the Mongo write: record what would be persisted, succeed.
+    // eslint-disable-next-line func-names
+    jest.spyOn(AgentModel.prototype, '$__handleSave').mockImplementation(function (options, cb) {
+      stored = this.toObject({ depopulate: true });
+      cb(null, { n: 1 });
+    });
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  const newAgent = () => new AgentModel({
+    name: 'Deploy bot',
+    email: 'u@example.com',
+    taskRef: 't1',
+    startEvent: { kind: 'url', value: 'https://example.com/start' },
+    endEvent: { kind: 'curl', value: 'curl https://example.com/end' },
+  });
+
+  it('save() (addAgent) persists ciphertext but returns plaintext', async () => {
+    const saved = await newAgent().save();
+    expect(enc.decrypt(stored.name)).toBe('Deploy bot');
+    expect(stored.name).not.toBe('Deploy bot');
+    expect(enc.decrypt(stored.startEvent.value)).toBe('https://example.com/start');
+    expect(enc.decrypt(stored.endEvent.value)).toBe('curl https://example.com/end');
+
+    expect(saved.name).toBe('Deploy bot');
+    expect(saved.startEvent.value).toBe('https://example.com/start');
+    expect(saved.endEvent.value).toBe('curl https://example.com/end');
+  });
+
+  it('re-save (updateAgent) returns plaintext and never double-encrypts', async () => {
+    const saved = await newAgent().save();
+    saved.name = 'Renamed';
+    const updated = await saved.save();
+    expect(updated.name).toBe('Renamed');
+    expect(updated.startEvent.value).toBe('https://example.com/start');
+    expect(enc.decrypt(stored.name)).toBe('Renamed');
+    expect(enc.decrypt(stored.startEvent.value)).toBe('https://example.com/start');
+  });
+
+  it('encrypts findOneAndUpdate payloads (recordAgentExecution)', () => {
+    const update = {
+      $set: { executionStatus: 'failed', lastResultBody: '<p>ok</p>', lastError: 'boom' },
+      $inc: { failureCount: 1 },
+    };
+    encryptAgentUpdate.call({ getUpdate: () => update }, () => {});
+    expect(update.$set.executionStatus).toBe('failed');
+    expect(update.$set.lastResultBody).not.toBe('<p>ok</p>');
+    expect(enc.decrypt(update.$set.lastResultBody)).toBe('<p>ok</p>');
+    expect(enc.decrypt(update.$set.lastError)).toBe('boom');
+  });
+
+  it('reads tolerate plaintext rows left by older writes', async () => {
+    const { decryptAgentDocs } = require('./AgentSchema');
+    const doc = { name: enc.encrypt('N'), lastResultBody: 'plain body', startEvent: { kind: 'url', value: 'https://x.y' } };
+    decryptAgentDocs(doc);
+    expect(doc).toMatchObject({ name: 'N', lastResultBody: 'plain body', startEvent: { value: 'https://x.y' } });
+  });
+});

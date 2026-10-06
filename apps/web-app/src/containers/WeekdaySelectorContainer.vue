@@ -4,7 +4,11 @@
     :weekStimuliMap="weekStimuliMap"
     :loadingDay="loadingDay"
     :isLoading="isLoading"
+    :ringSize="ringSize"
+    :skippedDates="allSkippedDates"
+    :todayDate="todayDate"
     @date-selected="$emit('date-selected', $event)"
+    @long-press="$emit('long-press', $event)"
   />
 </template>
 
@@ -34,6 +38,26 @@ export default {
       type: Boolean,
       default: false,
     },
+    // Forwarded to the strip; null keeps its responsive default.
+    ringSize: {
+      type: Number,
+      default: null,
+    },
+    /**
+     * Days the host already knows are skipped — the optimistic value for the day
+     * it is looking at. Merged with what `weekStimuli` reports, so the pause
+     * overlay appears the moment the skip is confirmed locally instead of a round
+     * trip later.
+     */
+    skippedDates: {
+      type: Array,
+      default: () => [],
+    },
+    /** Which cell may be long-pressed to open the skip sheet. */
+    todayDate: {
+      type: String,
+      default: null,
+    },
   },
 
   data() {
@@ -45,6 +69,17 @@ export default {
   computed: {
     currentWeekStart() {
       return moment(this.selectedDate, 'DD-MM-YYYY').startOf('week').format('DD-MM-YYYY');
+    },
+    /**
+     * `weekStimuli.skipped` is why the strip can tell a rest day from a day that
+     * got away — both score zero (see DayStimuliType in resolvers/routine.js).
+     */
+    allSkippedDates() {
+      const fromServer = (this.weekStimuli || [])
+        .filter((day) => day && day.skipped)
+        .map((day) => day.date);
+      const merged = fromServer.concat(this.skippedDates || []);
+      return merged.filter((date, i) => !!date && merged.indexOf(date) === i);
     },
     weekStimuliMap() {
       if (!this.weekStimuli || !this.weekStimuli.length) {

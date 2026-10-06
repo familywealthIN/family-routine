@@ -30,6 +30,9 @@ const ProgressItemTypeFields = {
   name: { type: GraphQLString },
   value: { type: GraphQLString },
   total: { type: GraphQLString },
+  // How the card's number is worked out, so the screens showing it can offer
+  // the formula instead of each inventing its own wording.
+  description: { type: GraphQLString },
 };
 
 const ProgressItemValuesType = new GraphQLObjectType({

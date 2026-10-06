@@ -22,7 +22,7 @@ import gql from 'graphql-tag';
 
 /**
  * Get routine for a specific date - full version with all task fields
- * Used in: DashBoard.vue, AgendaTime.vue
+ * Used in: AgendaTime.vue
  */
 export const ROUTINE_DATE_QUERY = gql`
   query getRoutineDate($date: String!) {
@@ -68,6 +68,7 @@ export const WEEK_STIMULI_QUERY = gql`
       D
       K
       G
+      skipped
     }
   }
 `;
@@ -79,7 +80,7 @@ export const WEEK_STIMULI_QUERY = gql`
 /**
  * Current points balance. Settled server-side (lazy) on every call —
  * today's earnings show as pendingToday and become available tomorrow.
- * Used in: DesktopLayout.vue, MobileLayout.vue, DashBoard.vue
+ * Used in: DesktopLayout.vue, MobileLayout.vue
  */
 export const XP_BALANCE_QUERY = gql`
   query xpBalance {
@@ -96,7 +97,7 @@ export const XP_BALANCE_QUERY = gql`
 /**
  * Redeem a passed (missed) routine task from today using points.
  * Server validates the day window, the frozen price and the balance.
- * Used in: DashBoard.vue
+ * Used in: RoutineFocus.vue
  */
 export const REDEEM_ROUTINE_ITEM_MUTATION = gql`
   mutation redeemRoutineItem($id: ID!, $taskId: String!, $date: String!) {
@@ -146,7 +147,7 @@ export const REDEEM_ROUTINE_ITEM_MUTATION = gql`
 
 /**
  * Get agenda goals for a specific date - all periods (day, week, month, year, lifetime)
- * Used in: DashBoard.vue, AgendaTime.vue
+ * Used in: AgendaTime.vue
  */
 export const AGENDA_GOALS_QUERY = gql`
   query agendaGoals($date: String!) {
@@ -179,7 +180,8 @@ export const AGENDA_GOALS_QUERY = gql`
 
 /**
  * Get daily goals with full details (optimized: scoped fetch + parallel queries)
- * Used in: DashBoard.vue
+ * Used in: RoutineFocus.vue, useApolloCacheUpdates.js, goalItemQueries.js,
+ * priorityQueries.js
  */
 export const DAILY_GOALS_QUERY = gql`
   query optimizedDailyGoals($date: String!) {
@@ -191,6 +193,12 @@ export const DAILY_GOALS_QUERY = gql`
         id
         body
         progress
+        milestonesTotal
+        milestonesComplete
+        milestoneDays {
+          date
+          status
+        }
         isComplete
         taskRef
         goalRef
@@ -268,37 +276,6 @@ export const GOALS_BY_GOAL_REF_QUERY = gql`
         taskRef
         tags
         isMilestone
-      }
-    }
-  }
-`;
-
-/**
- * Get optimized goals for calendar view
- * Used in: GoalsTime.vue
- */
-export const GOALS_OPTIMIZED_QUERY = gql`
-  query goalsOptimized($currentMonth: String) {
-    goalsOptimized(currentMonth: $currentMonth) {
-      id
-      date
-      period
-      goalItems {
-        id
-        body
-        progress
-        isComplete
-        isMilestone
-        tags
-        status
-        completedAt
-        taskRef
-        goalRef
-        subTasks {
-          id
-          body
-          isComplete
-        }
       }
     }
   }

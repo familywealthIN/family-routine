@@ -13,7 +13,7 @@
 </template>
 
 <script>
-import { TASK_STATUS_CONFIG } from '../../utils/taskStatus';
+import { TASK_STATUS_CONFIG, resolveDisplayStatus } from '../../utils/taskStatus';
 
 export default {
   name: 'TaskStatusTag',
@@ -22,6 +22,10 @@ export default {
       type: String,
       required: true,
     },
+    isComplete: {
+      type: Boolean,
+      default: false,
+    },
     showStatus: {
       type: Boolean,
       default: true,
@@ -29,12 +33,12 @@ export default {
   },
   computed: {
     statusConfig() {
-      return TASK_STATUS_CONFIG[this.status] || {
-        color: 'grey',
-        icon: 'help',
-        label: 'Unknown',
-        description: 'Unknown status',
-      };
+      // resolveDisplayStatus only ever returns a labelled status, so there is no
+      // "Unknown" chip to fall into and a ticked item can never read as missed.
+      return TASK_STATUS_CONFIG[resolveDisplayStatus({
+        status: this.status,
+        isComplete: this.isComplete,
+      })];
     },
   },
 };

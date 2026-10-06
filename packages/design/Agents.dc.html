@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Material+Icons&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#288bd5;text-decoration:none}a:hover{color:#1f6fab}
+.mi{font-family:'Material Icons';font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-notes{max-width:640px;font:13px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.7);margin:0 0 24px}
+.dv-notes b{color:#1a1a1a}
+.rn-hscroll::-webkit-scrollbar{display:none}
+@keyframes rn-toast{0%{opacity:0;transform:translateY(12px)}12%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+@keyframes rn-fade{from{opacity:0}to{opacity:1}}
+@keyframes rn-sheet-in{from{transform:translateY(28px);opacity:0}to{transform:none;opacity:1}}
+@keyframes rn-breathe{0%,100%{box-shadow:0 0 0 0 rgba(25,118,210,.35)}50%{box-shadow:0 0 0 7px rgba(25,118,210,0)}}
+@keyframes rn-in0{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes rn-in1{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">Agents</a><span class="dv-tname">Agents page: every worker glued to a routine, its live lifecycle, and its last result, one tap from editing</span></div>
+<p class="dv-notes"><b>Built from the Agent schema:</b> name, the bound routine (taskRef), start and end events (URL or cURL, with the <code>goal_id</code> placeholder substituted), executionStatus, success and failure counts, and last run with its result or error. List cards show the lifecycle as a status ring, which breathes while listening, the same signal as the tick button on Home. The detail view shows the four-step lifecycle, both events, and the <b>last result</b> rendered the way the goal item shows its reward (or the error). <b>Run test</b> walks the lifecycle. New and Edit share one form with the event-kind switch from the Build agent sheet. On iPad mini and desktop the detail sits beside the list.</p>
+<div style="display:flex;align-items:center;gap:8px;margin:-8px 0 20px;font:12px system-ui,sans-serif;color:rgba(0,0,0,.55)">Jump to <a class="dv-oid" href="#ap">Phone</a><a class="dv-oid" href="#at">iPad mini</a><a class="dv-oid" href="#ad">Desktop</a></div>
+<div class="dv-opts">
+
+<!-- AP PHONE -->
+<div class="dv-opt" id="ap"><div class="dv-olabel"><a class="dv-oid" href="#ap">Phone</a>Android · 412×892</div>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+<div style="height:100%;display:flex;flex-direction:column;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+  <div style="display:flex;align-items:center;gap:6px;height:64px;padding:0 8px 0 16px;flex-shrink:0">
+    <div style="flex:1;min-width:0"><div style="font-size:24px;font-weight:700;line-height:1.1">Agents</div><div style="font-size:12px;color:rgba(0,0,0,.54)">{{ subLabel }}</div></div>
+    <div onClick="{{ openNew }}" style="display:flex;align-items:center;gap:4px;height:36px;padding:0 14px 0 10px;border-radius:18px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">add</span>New agent</div>
+    <div onClick="{{ openDrawer }}" title="Menu" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
+  </div>
+  <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 16px;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:12px;align-content:start">
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+      <sc-for list="{{ stats }}" as="x" hint-placeholder-count="3"><div style="background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:10px 12px"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ x.k }}</div><div style="font-size:20px;font-weight:700;margin-top:2px;color:{{ x.color }}">{{ x.v }}</div></div></sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:10px">
+      <sc-for list="{{ agents }}" as="a" hint-placeholder-count="4">
+        <div onClick="{{ a.onOpen }}" style="background:#fff;border-radius:16px;box-shadow:{{ a.shadow }};padding:14px;cursor:pointer;display:flex;gap:12px;align-items:flex-start;transition:box-shadow .2s">
+          <div style="width:42px;height:42px;border-radius:50%;flex-shrink:0;background:{{ a.tint }};color:{{ a.color }};display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px {{ a.color }};animation:{{ a.anim }}"><span class="mi" style="font-size:22px">smart_toy</span></div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</div><div style="display:flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:11px;background:{{ a.tint }};color:{{ a.color }};font-size:11px;font-weight:700;white-space:nowrap"><span class="mi" style="font-size:13px">{{ a.statusIcon }}</span>{{ a.status }}</div></div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(0,0,0,.6);margin-top:3px"><span class="mi" style="font-size:14px">history</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{ a.time }}</span>{{ a.routine }}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:10px"><div style="flex:1;height:5px;border-radius:3px;background:rgba(229,57,53,.25);overflow:hidden"><div style="height:100%;width:{{ a.okPct }};background:#4CAF50;border-radius:3px"></div></div><div style="font-size:11px;color:rgba(0,0,0,.55);white-space:nowrap"><b style="color:#2e7d32">{{ a.ok }}</b> ok · <b style="color:{{ a.failColor }}">{{ a.fail }}</b> failed</div></div>
+            <div style="font-size:11px;color:{{ a.lastColor }};margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.last }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <div style="height:64px;box-sizing:border-box;background:#fff;box-shadow:0 -1px 3px rgba(0,0,0,.08);display:flex;padding-bottom:4px;flex-shrink:0;z-index:5">
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4"><a href="{{ n.href }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ n.color }};font-size:12px;font-weight:500;text-decoration:none"><span class="mi">{{ n.icon }}</span><span>{{ n.label }}</span></a></sc-for>
+  </div>
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:16px;right:16px;bottom:80px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none"><span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div></div></sc-if>
+  <sc-if value="{{ formOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeForm }}" style="position:absolute;inset:0;background:rgba(15,23,42,.42);z-index:22;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ formOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;bottom:0;max-height:90%;z-index:23;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;animation:rn-sheet-in .25s cubic-bezier(.3,1.1,.5,1)">
+      <div style="display:flex;align-items:center;gap:4px;padding:10px 10px 10px 20px;border-bottom:1px solid rgba(0,0,0,.06);flex-shrink:0"><div style="flex:1;font-size:18px;font-weight:700">{{ formTitle }}</div><span class="mi" onClick="{{ closeForm }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:8px">close</span></div>
+      <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:16px 20px 8px;scrollbar-width:none">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">NAME</div>
+        <input value="{{ f.name }}" onChange="{{ setName }}" placeholder="e.g. PR Summarizer" style="width:100%;box-sizing:border-box;border:0;border-bottom:2px solid #288bd5;outline:0;font:inherit;font-size:18px;font-weight:600;color:#222;padding:6px 0 8px;background:transparent">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin-top:16px">RUNS WITH ROUTINE</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><sc-for list="{{ routineOpts }}" as="r" hint-placeholder-count="7"><div onClick="{{ r.pick }}" style="display:flex;align-items:center;gap:5px;height:32px;padding:0 10px;border-radius:16px;font-size:12px;font-weight:600;background:{{ r.bg }};color:{{ r.fg }};border:1px solid {{ r.border }};cursor:pointer"><span style="font-variant-numeric:tabular-nums;opacity:.7">{{ r.time }}</span>{{ r.name }}</div></sc-for></div>
+        <sc-for list="{{ formEvents }}" as="ev" hint-placeholder-count="2">
+          <div style="margin-top:18px">
+            <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ ev.label }}</div><div style="position:relative;display:flex;padding:3px;border-radius:10px;background:rgba(0,0,0,.06);width:120px"><div style="position:absolute;top:3px;bottom:3px;left:{{ ev.thumb }};width:calc(50% - 3px);border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:left .28s cubic-bezier(.4,0,.2,1)"></div><sc-for list="{{ ev.kinds }}" as="k" hint-placeholder-count="2"><div onClick="{{ k.pick }}" style="position:relative;flex:1;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:{{ k.fg }};cursor:pointer">{{ k.label }}</div></sc-for></div></div>
+            <textarea value="{{ ev.value }}" onChange="{{ ev.set }}" rows="{{ ev.rows }}" placeholder="{{ ev.ph }}" style="width:100%;box-sizing:border-box;margin-top:8px;border:1px solid rgba(0,0,0,.14);border-radius:10px;outline:0;padding:10px 12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.6;color:#222;resize:none;background:#fafafa"></textarea>
+            <div style="font-size:11px;color:rgba(0,0,0,.5);margin-top:4px">{{ ev.hint }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 20px 18px;border-top:1px solid rgba(0,0,0,.06);flex-shrink:0"><sc-if value="{{ canDelete }}" hint-placeholder-val="{{ false }}"><div onClick="{{ deleteAgent }}" style="height:40px;padding:0 14px;border-radius:20px;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:#d32f2f;cursor:pointer"><span class="mi" style="font-size:18px">delete</span>Delete</div></sc-if><div style="flex:1"></div><div onClick="{{ closeForm }}" style="height:40px;padding:0 16px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Cancel</div><div onClick="{{ saveForm }}" style="height:40px;padding:0 20px;border-radius:20px;background:{{ saveBg }};color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:pointer">{{ saveLabel }}</div></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ detailSheet }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDetail }}" style="position:absolute;inset:0;background:rgba(15,23,42,.38);z-index:20;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ detailSheet }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;bottom:0;top:56px;z-index:21;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;animation:rn-sheet-in .25s cubic-bezier(.3,1.1,.5,1)">
+      <div style="display:flex;justify-content:center;padding:8px 0 0"><div style="width:40px;height:4px;border-radius:2px;background:#ccc"></div></div>
+      <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:4px 16px 20px;scrollbar-width:none">
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 0 12px">
+          <div style="width:48px;height:48px;border-radius:50%;flex-shrink:0;background:{{ sel.tint }};color:{{ sel.color }};display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px {{ sel.color }};animation:{{ sel.anim }}"><span class="mi" style="font-size:24px">smart_toy</span></div>
+          <div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700;line-height:1.2">{{ sel.name }}</div><div style="font-size:13px;color:rgba(0,0,0,.54)">Runs with {{ sel.time }} {{ sel.routine }}</div></div>
+          <span class="mi" onClick="{{ openEdit }}" title="Edit" style="font-size:20px;color:rgba(0,0,0,.55);cursor:pointer;width:36px;height:36px;border-radius:50%" style-hover="background:rgba(0,0,0,.05)">edit</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0;padding:12px;border-radius:14px;background:#f7f7f7">
+          <sc-for list="{{ lifecycle }}" as="l" hint-placeholder-count="4"><div style="flex:1;min-width:0;display:flex;align-items:center"><div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;flex:1"><div style="width:26px;height:26px;border-radius:50%;background:{{ l.bg }};color:{{ l.fg }};display:flex;align-items:center;justify-content:center;animation:{{ l.anim }}"><span class="mi" style="font-size:15px">{{ l.icon }}</span></div><div style="font-size:10px;font-weight:700;color:{{ l.label }};white-space:nowrap">{{ l.t }}</div></div></div></sc-for>
+        </div>
+        <div style="font-size:12px;color:{{ sel.statusColor }};margin-top:8px;line-height:1.45">{{ sel.statusDesc }}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px">
+          <sc-for list="{{ selStats }}" as="x" hint-placeholder-count="3"><div style="padding:10px 12px;border-radius:12px;background:#f7f7f7"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ x.k }}</div><div style="font-size:17px;font-weight:700;margin-top:2px;color:{{ x.color }}">{{ x.v }}</div></div></sc-for>
+        </div>
+        <sc-for list="{{ selEvents }}" as="ev" hint-placeholder-count="2">
+          <div style="margin-top:16px"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ ev.label }}</div><div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.06);color:rgba(0,0,0,.6)">{{ ev.kind }}</div></div><div style="margin-top:6px;padding:10px 12px;border-radius:10px;background:#1e2430;color:#e6edf3;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.6;word-break:break-all">{{ ev.value }}</div></div>
+        </sc-for>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:18px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">LAST RESULT</div><div style="font-size:11px;color:rgba(0,0,0,.5)">{{ sel.lastMeta }}</div></div>
+        <sc-if value="{{ sel.hasError }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px;padding:12px;border-radius:12px;background:rgba(229,57,53,.06);border:1px solid rgba(229,57,53,.2);display:flex;gap:10px"><span class="mi" style="font-size:20px;color:#d32f2f">error_outline</span><div style="flex:1;min-width:0;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.55;color:#b71c1c;word-break:break-word">{{ sel.error }}</div></div></sc-if>
+        <sc-if value="{{ sel.hasResult }}" hint-placeholder-val="{{ true }}"><div style="margin-top:6px;padding:12px 14px;border-radius:12px;background:#f6f9fc;border:1px solid rgba(40,139,213,.18)">{{ sel.result }}</div></sc-if>
+        <div style="display:flex;gap:8px;margin-top:18px"><div onClick="{{ runTest }}" style="flex:1;height:44px;border-radius:16px;background:{{ runBg }};color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">{{ runIcon }}</span>{{ runLabel }}</div><a href="Routine Notes Final.dc.html" style="flex:1;height:44px;border-radius:16px;border:1px solid #288bd5;color:#288bd5;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600;text-decoration:none"><span class="mi" style="font-size:18px">open_in_new</span>Open routine</a></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:-4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-fade .2s ease">
+      <div style="display:flex;align-items:center;gap:12px;padding:28px 16px 16px 20px"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div><span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px">close</span></div>
+      <div style="display:flex;gap:6px;padding:0 20px 14px"><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:#288bd5;color:#fff;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">diamond</span>128 points</div><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:rgba(255,152,0,.12);color:#b26a00;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">local_fire_department</span>6-day streak</div></div>
+      <div style="height:1px;background:rgba(0,0,0,.08);margin:0 0 6px"></div>
+      <sc-for list="{{ drawerItems }}" as="n" hint-placeholder-count="6"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:16px;height:48px;padding:0 20px;margin-top:{{ n.gap }};color:{{ n.color }};background:{{ n.bg }};font-size:14px;font-weight:600;text-decoration:none"><span class="mi" style="font-size:22px">{{ n.icon }}</span>{{ n.label }}</a></sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-import>
+</div>
+
+<!-- AT TABLET -->
+<div class="dv-opt" id="at"><div class="dv-olabel"><a class="dv-oid" href="#at">iPad mini</a>Landscape · 1133×744 · detail beside the list</div>
+<div style="width:1165px;height:776px;border-radius:40px;background:#121212;padding:16px;box-sizing:border-box;box-shadow:0 30px 60px -24px rgba(0,0,0,.4)">
+  <div style="width:100%;height:100%;border-radius:24px;overflow:hidden;position:relative;background:#f4f4f4;display:flex;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87)">
+    <div class="rn-hscroll" style="width:76px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 0 14px;overflow-y:auto;scrollbar-width:none;border-right:1px solid rgba(0,0,0,.06)">
+      <img src="assets/icon-192.png" alt="Routine Notes" style="width:38px;height:38px;object-fit:contain;margin-bottom:4px">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:inherit;text-decoration:none"><div style="width:52px;height:30px;border-radius:15px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:21px">{{ n.icon }}</span></div><div style="font-size:10px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for><div onClick="{{ toggleNavMore }}" title="More pages" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer"><div style="width:52px;height:30px;border-radius:15px;background:{{ navMoreBtnBg }};color:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;transition:background .2s"><span class="mi" style="font-size:21px">{{ navMoreIcon }}</span></div><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.6)">More</div></div><sc-if value="{{ navMoreOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0;border-radius:16px;background:#f7f7f7;animation:rn-fade .18s ease"><sc-for list="{{ navMore }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:inherit;text-decoration:none;margin-top:{{ n.gap }}"><div style="width:52px;height:30px;border-radius:15px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:21px">{{ n.icon }}</span></div><div style="font-size:10px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for></div></sc-if>
+      <div style="flex:1"></div>
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:40px;height:40px;border-radius:50%;object-fit:cover" alt="Profile picture">
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex-shrink:0"><span>9:30</span><span style="display:flex;gap:6px;align-items:center"><span class="mi" style="font-size:16px">wifi</span><span class="mi" style="font-size:16px">battery_full</span></span></div>
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;padding:4px 20px 20px"><div style="display:flex;align-items:center;gap:16px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700">Agents</div><div style="font-size:13px;color:rgba(0,0,0,.54)">{{ subLabel }}</div></div><div onClick="{{ openNew }}" style="display:flex;align-items:center;gap:4px;height:36px;padding:0 16px 0 12px;border-radius:18px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">add</span>New agent</div></div><div style="flex:1;min-height:0;display:flex;gap:12px">
+          <div class="rn-hscroll" style="flex:2 1 0;min-width:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:12px;align-content:start;padding:2px 4px 10px;margin:-2px -4px 0">    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+      <sc-for list="{{ stats }}" as="x" hint-placeholder-count="3"><div style="background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:10px 12px"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ x.k }}</div><div style="font-size:20px;font-weight:700;margin-top:2px;color:{{ x.color }}">{{ x.v }}</div></div></sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:10px">
+      <sc-for list="{{ agents }}" as="a" hint-placeholder-count="4">
+        <div onClick="{{ a.onOpen }}" style="background:#fff;border-radius:20px;box-shadow:{{ a.shadow }};padding:14px;cursor:pointer;display:flex;gap:12px;align-items:flex-start;transition:box-shadow .2s">
+          <div style="width:42px;height:42px;border-radius:50%;flex-shrink:0;background:{{ a.tint }};color:{{ a.color }};display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px {{ a.color }};animation:{{ a.anim }}"><span class="mi" style="font-size:22px">smart_toy</span></div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</div><div style="display:flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:11px;background:{{ a.tint }};color:{{ a.color }};font-size:11px;font-weight:700;white-space:nowrap"><span class="mi" style="font-size:13px">{{ a.statusIcon }}</span>{{ a.status }}</div></div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(0,0,0,.6);margin-top:3px"><span class="mi" style="font-size:14px">history</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{ a.time }}</span>{{ a.routine }}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:10px"><div style="flex:1;height:5px;border-radius:3px;background:rgba(229,57,53,.25);overflow:hidden"><div style="height:100%;width:{{ a.okPct }};background:#4CAF50;border-radius:3px"></div></div><div style="font-size:11px;color:rgba(0,0,0,.55);white-space:nowrap"><b style="color:#2e7d32">{{ a.ok }}</b> ok · <b style="color:{{ a.failColor }}">{{ a.fail }}</b> failed</div></div>
+            <div style="font-size:11px;color:{{ a.lastColor }};margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.last }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+</div>
+          <div style="flex:3 1 0;min-width:0;display:flex;flex-direction:column;min-height:0"><div class="rn-hscroll" style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:8px 20px 20px;min-height:0;overflow-y:auto;scrollbar-width:none;flex:1;animation:rn-in{{ kMod }} .25s ease">        <div style="display:flex;align-items:center;gap:12px;padding:8px 0 12px">
+          <div style="width:48px;height:48px;border-radius:50%;flex-shrink:0;background:{{ sel.tint }};color:{{ sel.color }};display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px {{ sel.color }};animation:{{ sel.anim }}"><span class="mi" style="font-size:24px">smart_toy</span></div>
+          <div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700;line-height:1.2">{{ sel.name }}</div><div style="font-size:13px;color:rgba(0,0,0,.54)">Runs with {{ sel.time }} {{ sel.routine }}</div></div>
+          <span class="mi" onClick="{{ openEdit }}" title="Edit" style="font-size:20px;color:rgba(0,0,0,.55);cursor:pointer;width:36px;height:36px;border-radius:50%" style-hover="background:rgba(0,0,0,.05)">edit</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0;padding:12px;border-radius:14px;background:#f7f7f7">
+          <sc-for list="{{ lifecycle }}" as="l" hint-placeholder-count="4"><div style="flex:1;min-width:0;display:flex;align-items:center"><div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;flex:1"><div style="width:26px;height:26px;border-radius:50%;background:{{ l.bg }};color:{{ l.fg }};display:flex;align-items:center;justify-content:center;animation:{{ l.anim }}"><span class="mi" style="font-size:15px">{{ l.icon }}</span></div><div style="font-size:10px;font-weight:700;color:{{ l.label }};white-space:nowrap">{{ l.t }}</div></div></div></sc-for>
+        </div>
+        <div style="font-size:12px;color:{{ sel.statusColor }};margin-top:8px;line-height:1.45">{{ sel.statusDesc }}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px">
+          <sc-for list="{{ selStats }}" as="x" hint-placeholder-count="3"><div style="padding:10px 12px;border-radius:12px;background:#f7f7f7"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ x.k }}</div><div style="font-size:17px;font-weight:700;margin-top:2px;color:{{ x.color }}">{{ x.v }}</div></div></sc-for>
+        </div>
+        <sc-for list="{{ selEvents }}" as="ev" hint-placeholder-count="2">
+          <div style="margin-top:16px"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ ev.label }}</div><div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.06);color:rgba(0,0,0,.6)">{{ ev.kind }}</div></div><div style="margin-top:6px;padding:10px 12px;border-radius:10px;background:#1e2430;color:#e6edf3;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.6;word-break:break-all">{{ ev.value }}</div></div>
+        </sc-for>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:18px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">LAST RESULT</div><div style="font-size:11px;color:rgba(0,0,0,.5)">{{ sel.lastMeta }}</div></div>
+        <sc-if value="{{ sel.hasError }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px;padding:12px;border-radius:12px;background:rgba(229,57,53,.06);border:1px solid rgba(229,57,53,.2);display:flex;gap:10px"><span class="mi" style="font-size:20px;color:#d32f2f">error_outline</span><div style="flex:1;min-width:0;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.55;color:#b71c1c;word-break:break-word">{{ sel.error }}</div></div></sc-if>
+        <sc-if value="{{ sel.hasResult }}" hint-placeholder-val="{{ true }}"><div style="margin-top:6px;padding:12px 14px;border-radius:12px;background:#f6f9fc;border:1px solid rgba(40,139,213,.18)">{{ sel.result }}</div></sc-if>
+        <div style="display:flex;gap:8px;margin-top:18px"><div onClick="{{ runTest }}" style="flex:1;height:44px;border-radius:16px;background:{{ runBg }};color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">{{ runIcon }}</span>{{ runLabel }}</div><a href="Routine Notes Final.dc.html" style="flex:1;height:44px;border-radius:16px;border:1px solid #288bd5;color:#288bd5;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600;text-decoration:none"><span class="mi" style="font-size:18px">open_in_new</span>Open routine</a></div>
+</div></div>
+        </div></div>
+    </div>
+      <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none"><span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div></div></sc-if>
+  <sc-if value="{{ formOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeForm }}" style="position:absolute;inset:0;background:rgba(15,23,42,.42);z-index:22;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ formOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:860px;max-width:94%;max-height:88%;z-index:23;background:#fff;border-radius:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.35);display:flex;flex-direction:column;animation:rn-fade .2s ease">
+      <div style="display:flex;align-items:center;gap:4px;padding:10px 10px 10px 20px;border-bottom:1px solid rgba(0,0,0,.06);flex-shrink:0"><div style="flex:1;font-size:18px;font-weight:700">{{ formTitle }}</div><span class="mi" onClick="{{ closeForm }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:8px">close</span></div>
+      <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:16px 20px 8px;scrollbar-width:none">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">NAME</div>
+        <input value="{{ f.name }}" onChange="{{ setName }}" placeholder="e.g. PR Summarizer" style="width:100%;box-sizing:border-box;border:0;border-bottom:2px solid #288bd5;outline:0;font:inherit;font-size:18px;font-weight:600;color:#222;padding:6px 0 8px;background:transparent">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin-top:16px">RUNS WITH ROUTINE</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><sc-for list="{{ routineOpts }}" as="r" hint-placeholder-count="7"><div onClick="{{ r.pick }}" style="display:flex;align-items:center;gap:5px;height:32px;padding:0 10px;border-radius:16px;font-size:12px;font-weight:600;background:{{ r.bg }};color:{{ r.fg }};border:1px solid {{ r.border }};cursor:pointer"><span style="font-variant-numeric:tabular-nums;opacity:.7">{{ r.time }}</span>{{ r.name }}</div></sc-for></div>
+        <sc-for list="{{ formEvents }}" as="ev" hint-placeholder-count="2">
+          <div style="margin-top:18px">
+            <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ ev.label }}</div><div style="position:relative;display:flex;padding:3px;border-radius:10px;background:rgba(0,0,0,.06);width:120px"><div style="position:absolute;top:3px;bottom:3px;left:{{ ev.thumb }};width:calc(50% - 3px);border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:left .28s cubic-bezier(.4,0,.2,1)"></div><sc-for list="{{ ev.kinds }}" as="k" hint-placeholder-count="2"><div onClick="{{ k.pick }}" style="position:relative;flex:1;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:{{ k.fg }};cursor:pointer">{{ k.label }}</div></sc-for></div></div>
+            <textarea value="{{ ev.value }}" onChange="{{ ev.set }}" rows="{{ ev.rows }}" placeholder="{{ ev.ph }}" style="width:100%;box-sizing:border-box;margin-top:8px;border:1px solid rgba(0,0,0,.14);border-radius:10px;outline:0;padding:10px 12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.6;color:#222;resize:none;background:#fafafa"></textarea>
+            <div style="font-size:11px;color:rgba(0,0,0,.5);margin-top:4px">{{ ev.hint }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 20px 18px;border-top:1px solid rgba(0,0,0,.06);flex-shrink:0"><sc-if value="{{ canDelete }}" hint-placeholder-val="{{ false }}"><div onClick="{{ deleteAgent }}" style="height:40px;padding:0 14px;border-radius:20px;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:#d32f2f;cursor:pointer"><span class="mi" style="font-size:18px">delete</span>Delete</div></sc-if><div style="flex:1"></div><div onClick="{{ closeForm }}" style="height:40px;padding:0 16px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Cancel</div><div onClick="{{ saveForm }}" style="height:40px;padding:0 20px;border-radius:20px;background:{{ saveBg }};color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:pointer">{{ saveLabel }}</div></div>
+    </div>
+  </sc-if>
+
+  </div>
+</div>
+</div>
+
+<!-- AD DESKTOP -->
+<div class="dv-opt" id="ad"><div class="dv-olabel"><a class="dv-oid" href="#ad">Desktop</a>1440×900 · same layout and type sizes as iPad mini, capped at 1040px</div>
+<x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1440 }}" height="{{ 900 }}" url="app.routinenotes.com/agents" tabs="{{ browserTabs }}" hint-size="1440px,900px">
+  <div style="height:100%;display:flex;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+    <div style="width:264px;flex-shrink:0;background:#fff;border-right:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:10px;padding:20px 20px 16px"><img src="assets/icon-192.png" alt="Routine Notes" style="width:34px;height:34px;object-fit:contain"><div style="font-size:16px;font-weight:700">Routine Notes</div></div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:0 12px"><sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};font-size:14px;font-weight:600;text-decoration:none" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for><div onClick="{{ toggleNavMore }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;margin-top:6px;border-radius:10px;color:rgba(0,0,0,.6);font-size:14px;font-weight:600;cursor:pointer" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">more_horiz</span><div style="flex:1">More</div><span class="mi" style="font-size:20px;transition:transform .2s;transform:rotate({{ navMoreRot }})">expand_more</span></div><sc-if value="{{ navMoreOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;animation:rn-fade .18s ease"><sc-for list="{{ navMore }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px 0 20px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};text-decoration:none;font-size:14px;font-weight:600;margin-top:{{ n.gap }}" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for></div></sc-if></div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-top:1px solid rgba(0,0,0,.06)"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:36px;height:36px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.5)">alex@routine.app</div></div></div>
+    </div>
+    <div style="max-width:1040px;margin:0 auto;width:100%;box-sizing:border-box;flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px"><div style="display:flex;align-items:center;gap:16px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700">Agents</div><div style="font-size:13px;color:rgba(0,0,0,.54)">{{ subLabel }}</div></div><div onClick="{{ openNew }}" style="display:flex;align-items:center;gap:4px;height:36px;padding:0 16px 0 12px;border-radius:18px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">add</span>New agent</div></div><div style="flex:1;min-height:0;display:flex;gap:12px">
+          <div class="rn-hscroll" style="flex:2 1 0;min-width:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:12px;align-content:start;padding:2px 4px 10px;margin:-2px -4px 0">    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+      <sc-for list="{{ stats }}" as="x" hint-placeholder-count="3"><div style="background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:10px 12px"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ x.k }}</div><div style="font-size:20px;font-weight:700;margin-top:2px;color:{{ x.color }}">{{ x.v }}</div></div></sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:10px">
+      <sc-for list="{{ agents }}" as="a" hint-placeholder-count="4">
+        <div onClick="{{ a.onOpen }}" style="background:#fff;border-radius:20px;box-shadow:{{ a.shadow }};padding:14px;cursor:pointer;display:flex;gap:12px;align-items:flex-start;transition:box-shadow .2s">
+          <div style="width:42px;height:42px;border-radius:50%;flex-shrink:0;background:{{ a.tint }};color:{{ a.color }};display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px {{ a.color }};animation:{{ a.anim }}"><span class="mi" style="font-size:22px">smart_toy</span></div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</div><div style="display:flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:11px;background:{{ a.tint }};color:{{ a.color }};font-size:11px;font-weight:700;white-space:nowrap"><span class="mi" style="font-size:13px">{{ a.statusIcon }}</span>{{ a.status }}</div></div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(0,0,0,.6);margin-top:3px"><span class="mi" style="font-size:14px">history</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{ a.time }}</span>{{ a.routine }}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:10px"><div style="flex:1;height:5px;border-radius:3px;background:rgba(229,57,53,.25);overflow:hidden"><div style="height:100%;width:{{ a.okPct }};background:#4CAF50;border-radius:3px"></div></div><div style="font-size:11px;color:rgba(0,0,0,.55);white-space:nowrap"><b style="color:#2e7d32">{{ a.ok }}</b> ok · <b style="color:{{ a.failColor }}">{{ a.fail }}</b> failed</div></div>
+            <div style="font-size:11px;color:{{ a.lastColor }};margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.last }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+</div>
+          <div style="flex:3 1 0;min-width:0;display:flex;flex-direction:column;min-height:0"><div class="rn-hscroll" style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:8px 20px 20px;min-height:0;overflow-y:auto;scrollbar-width:none;flex:1;animation:rn-in{{ kMod }} .25s ease">        <div style="display:flex;align-items:center;gap:12px;padding:8px 0 12px">
+          <div style="width:48px;height:48px;border-radius:50%;flex-shrink:0;background:{{ sel.tint }};color:{{ sel.color }};display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px {{ sel.color }};animation:{{ sel.anim }}"><span class="mi" style="font-size:24px">smart_toy</span></div>
+          <div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700;line-height:1.2">{{ sel.name }}</div><div style="font-size:13px;color:rgba(0,0,0,.54)">Runs with {{ sel.time }} {{ sel.routine }}</div></div>
+          <span class="mi" onClick="{{ openEdit }}" title="Edit" style="font-size:20px;color:rgba(0,0,0,.55);cursor:pointer;width:36px;height:36px;border-radius:50%" style-hover="background:rgba(0,0,0,.05)">edit</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0;padding:12px;border-radius:14px;background:#f7f7f7">
+          <sc-for list="{{ lifecycle }}" as="l" hint-placeholder-count="4"><div style="flex:1;min-width:0;display:flex;align-items:center"><div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;flex:1"><div style="width:26px;height:26px;border-radius:50%;background:{{ l.bg }};color:{{ l.fg }};display:flex;align-items:center;justify-content:center;animation:{{ l.anim }}"><span class="mi" style="font-size:15px">{{ l.icon }}</span></div><div style="font-size:10px;font-weight:700;color:{{ l.label }};white-space:nowrap">{{ l.t }}</div></div></div></sc-for>
+        </div>
+        <div style="font-size:12px;color:{{ sel.statusColor }};margin-top:8px;line-height:1.45">{{ sel.statusDesc }}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px">
+          <sc-for list="{{ selStats }}" as="x" hint-placeholder-count="3"><div style="padding:10px 12px;border-radius:12px;background:#f7f7f7"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ x.k }}</div><div style="font-size:17px;font-weight:700;margin-top:2px;color:{{ x.color }}">{{ x.v }}</div></div></sc-for>
+        </div>
+        <sc-for list="{{ selEvents }}" as="ev" hint-placeholder-count="2">
+          <div style="margin-top:16px"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ ev.label }}</div><div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.06);color:rgba(0,0,0,.6)">{{ ev.kind }}</div></div><div style="margin-top:6px;padding:10px 12px;border-radius:10px;background:#1e2430;color:#e6edf3;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.6;word-break:break-all">{{ ev.value }}</div></div>
+        </sc-for>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:18px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">LAST RESULT</div><div style="font-size:11px;color:rgba(0,0,0,.5)">{{ sel.lastMeta }}</div></div>
+        <sc-if value="{{ sel.hasError }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px;padding:12px;border-radius:12px;background:rgba(229,57,53,.06);border:1px solid rgba(229,57,53,.2);display:flex;gap:10px"><span class="mi" style="font-size:20px;color:#d32f2f">error_outline</span><div style="flex:1;min-width:0;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.55;color:#b71c1c;word-break:break-word">{{ sel.error }}</div></div></sc-if>
+        <sc-if value="{{ sel.hasResult }}" hint-placeholder-val="{{ true }}"><div style="margin-top:6px;padding:12px 14px;border-radius:12px;background:#f6f9fc;border:1px solid rgba(40,139,213,.18)">{{ sel.result }}</div></sc-if>
+        <div style="display:flex;gap:8px;margin-top:18px"><div onClick="{{ runTest }}" style="flex:1;height:44px;border-radius:16px;background:{{ runBg }};color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">{{ runIcon }}</span>{{ runLabel }}</div><a href="Routine Notes Final.dc.html" style="flex:1;height:44px;border-radius:16px;border:1px solid #288bd5;color:#288bd5;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600;text-decoration:none"><span class="mi" style="font-size:18px">open_in_new</span>Open routine</a></div>
+</div></div>
+        </div></div>
+      <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none"><span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div></div></sc-if>
+  <sc-if value="{{ formOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeForm }}" style="position:absolute;inset:0;background:rgba(15,23,42,.42);z-index:22;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ formOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:720px;max-width:94%;max-height:88%;z-index:23;background:#fff;border-radius:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.35);display:flex;flex-direction:column;animation:rn-fade .2s ease">
+      <div style="display:flex;align-items:center;gap:4px;padding:10px 10px 10px 20px;border-bottom:1px solid rgba(0,0,0,.06);flex-shrink:0"><div style="flex:1;font-size:18px;font-weight:700">{{ formTitle }}</div><span class="mi" onClick="{{ closeForm }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:8px">close</span></div>
+      <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:16px 20px 8px;scrollbar-width:none">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">NAME</div>
+        <input value="{{ f.name }}" onChange="{{ setName }}" placeholder="e.g. PR Summarizer" style="width:100%;box-sizing:border-box;border:0;border-bottom:2px solid #288bd5;outline:0;font:inherit;font-size:18px;font-weight:600;color:#222;padding:6px 0 8px;background:transparent">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45);margin-top:16px">RUNS WITH ROUTINE</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><sc-for list="{{ routineOpts }}" as="r" hint-placeholder-count="7"><div onClick="{{ r.pick }}" style="display:flex;align-items:center;gap:5px;height:32px;padding:0 10px;border-radius:16px;font-size:12px;font-weight:600;background:{{ r.bg }};color:{{ r.fg }};border:1px solid {{ r.border }};cursor:pointer"><span style="font-variant-numeric:tabular-nums;opacity:.7">{{ r.time }}</span>{{ r.name }}</div></sc-for></div>
+        <sc-for list="{{ formEvents }}" as="ev" hint-placeholder-count="2">
+          <div style="margin-top:18px">
+            <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ ev.label }}</div><div style="position:relative;display:flex;padding:3px;border-radius:10px;background:rgba(0,0,0,.06);width:120px"><div style="position:absolute;top:3px;bottom:3px;left:{{ ev.thumb }};width:calc(50% - 3px);border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:left .28s cubic-bezier(.4,0,.2,1)"></div><sc-for list="{{ ev.kinds }}" as="k" hint-placeholder-count="2"><div onClick="{{ k.pick }}" style="position:relative;flex:1;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:{{ k.fg }};cursor:pointer">{{ k.label }}</div></sc-for></div></div>
+            <textarea value="{{ ev.value }}" onChange="{{ ev.set }}" rows="{{ ev.rows }}" placeholder="{{ ev.ph }}" style="width:100%;box-sizing:border-box;margin-top:8px;border:1px solid rgba(0,0,0,.14);border-radius:10px;outline:0;padding:10px 12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.6;color:#222;resize:none;background:#fafafa"></textarea>
+            <div style="font-size:11px;color:rgba(0,0,0,.5);margin-top:4px">{{ ev.hint }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 20px 18px;border-top:1px solid rgba(0,0,0,.06);flex-shrink:0"><sc-if value="{{ canDelete }}" hint-placeholder-val="{{ false }}"><div onClick="{{ deleteAgent }}" style="height:40px;padding:0 14px;border-radius:20px;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:#d32f2f;cursor:pointer"><span class="mi" style="font-size:18px">delete</span>Delete</div></sc-if><div style="flex:1"></div><div onClick="{{ closeForm }}" style="height:40px;padding:0 16px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Cancel</div><div onClick="{{ saveForm }}" style="height:40px;padding:0 20px;border-radius:20px;background:{{ saveBg }};color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:pointer">{{ saveLabel }}</div></div>
+    </div>
+  </sc-if>
+
+  </div>
+</x-import>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const R = { mp: ['06:30', 'Morning Pages'], wo: ['07:15', 'Workout'], sw: ['09:00', 'Start Work'], lw: ['12:30', 'Lunch Walk'], dw: ['15:00', 'Deep Work'], fd: ['18:00', 'Family Dinner'], wd: ['21:30', 'Wind Down'] };
+const ST = {
+  idle: { label: 'Idle', icon: 'pause', color: 'rgba(0,0,0,.55)', tint: 'rgba(0,0,0,.05)', desc: 'Waiting for the routine to start. Ticking the routine fires the start event.' },
+  running: { label: 'Running', icon: 'bolt', color: '#1976d2', tint: 'rgba(25,118,210,.1)', desc: 'Start event sent. Waiting for a 200 response.' },
+  listening: { label: 'Listening', icon: 'hearing', color: '#1976d2', tint: 'rgba(25,118,210,.1)', desc: 'Start returned 200. The end event fires when every task under the routine is ticked.' },
+  finished: { label: 'Finished', icon: 'check', color: '#2e7d32', tint: 'rgba(76,175,80,.12)', desc: 'End event returned 200 and the result was saved to the goal item.' },
+  failed: { label: 'Failed', icon: 'error_outline', color: '#d32f2f', tint: 'rgba(229,57,53,.1)', desc: 'An event returned a non-200 response. The routine tick still counts.' },
+};
+const SEED = [
+  { id: 'a1', name: 'PR Summarizer', taskRef: 'sw', status: 'listening', ok: 18, fail: 1, lastRunAt: 'Today 09:02', resultType: 'html', start: { kind: 'url', value: 'https://hooks.n8n.io/start?goal={{ goal_id }}' }, end: { kind: 'url', value: 'https://hooks.n8n.io/pr-summary/end?goal={{ goal_id }}' }, result: '<p style="margin:0 0 6px"><b>PR #482 · Dashboard ring offsets</b></p><ul style="margin:0 0 6px;padding-left:18px"><li>+312 / −88 across 9 files</li><li>Tests: 41 passed, 0 failed</li><li>Review requested from Ana</li></ul><p style="margin:0">Next: merge after approval.</p>' },
+  { id: 'a2', name: 'Ticket Triage', taskRef: 'dw', status: 'finished', ok: 31, fail: 0, lastRunAt: 'Fri 15:48', resultType: 'html', start: { kind: 'curl', value: "curl -X POST https://api.example.com/triage \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"goal\":\"{{ goal_id }}\"}'" }, end: null, result: '<p style="margin:0 0 6px"><b>Triaged 14 beta tickets</b> in 3 min</p><ul style="margin:0;padding-left:18px"><li>9 labeled · 3 assigned to Ana</li><li>2 duplicates closed</li></ul>' },
+  { id: 'a3', name: 'Workout Logger', taskRef: 'wo', status: 'idle', ok: 24, fail: 0, lastRunAt: 'Fri 07:40', resultType: 'json', start: { kind: 'url', value: 'https://strava-bridge.app/log?goal={{ goal_id }}' }, end: null, result: '<pre style="margin:0;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.6">{\n  "km": 5.1,\n  "pace": "5:24 /km",\n  "hr_avg": 148\n}</pre>' },
+  { id: 'a4', name: 'Grocery Order', taskRef: 'fd', status: 'failed', ok: 9, fail: 2, lastRunAt: 'Thu 18:05', resultType: 'error', start: { kind: 'url', value: 'https://hooks.zapier.com/grocery?goal={{ goal_id }}' }, end: { kind: 'url', value: 'https://hooks.zapier.com/grocery/done?goal={{ goal_id }}' }, error: 'POST https://hooks.zapier.com/grocery returned 500 Internal Server Error after 2.4 s' },
+];
+const STEPS = [['Start event', 'bolt'], ['Running', 'autorenew'], ['Listening', 'hearing'], ['End event', 'flag']];
+const STEP_OF = { idle: -1, running: 1, listening: 2, finished: 4, failed: 1 };
+const NAV_MORE = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2']];
+const hl = (v) => v;
+const DRAWER_ITEMS = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2'], ['logout', 'Log out', '#']];
+const drawerFor = (active) => DRAWER_ITEMS.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' || label === 'Log out' ? '8px' : '0px', color: label === 'Log out' ? '#d32f2f' : (label === active ? '#1f6fab' : 'rgba(0,0,0,.75)'), bg: label === active ? 'rgba(40,139,213,.08)' : 'transparent' }));
+const NAV_HREF = { Home: 'Routine Notes Final.dc.html', Priority: 'Priority.dc.html', Agents: 'Agents.dc.html', Goals: 'Goals.dc.html', Routines: 'Routines.dc.html', Progress: 'Progress.dc.html', Groups: 'Groups.dc.html', Profile: 'Profile and About.dc.html#t1', Settings: 'Profile and About.dc.html#t1', About: 'Profile and About.dc.html#t2' };
+const fixNav = (v) => { ['navItems', 'lgNav', 'drawerNav'].forEach(k => { if (Array.isArray(v[k])) v[k] = v[k].map(n => { const href = n.href && n.href !== '#' ? n.href : NAV_HREF[n.label]; const go = () => { if (href) window.location.href = href; }; return { ...n, href: href || '#', go, onClick: n.onClick || go, onPhone: n.onPhone || go, onTab: n.onTab || go }; }); }); return v; };
+class Component extends DCLogic {
+  state = { list: SEED.map(x => ({ ...x })), sel: 'a1', detail: false, form: null, toast: null, navMore: undefined, k: 0 };
+  timers = [];
+  later(ms, fn) { this.timers.push(setTimeout(fn, ms)); }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); clearTimeout(this.tt); }
+  toast(t) { clearTimeout(this.tt); this.setState({ toast: { ...t, id: Date.now() } }); this.tt = setTimeout(() => this.setState({ toast: null }), 2800); }
+  setAgent(id, p) { this.setState(s => ({ list: s.list.map(a => a.id === id ? { ...a, ...p } : a) })); }
+  runTest(a) {
+    if (a.status === 'running' || a.status === 'listening' && this.state.testing === a.id) return;
+    this.setState({ testing: a.id }); this.setAgent(a.id, { status: 'running' });
+    this.toast({ icon: 'bolt', color: '#64b5f6', title: 'Test run started', sub: `${a.name} · start event sent` });
+    this.later(1400, () => this.setAgent(a.id, { status: 'listening' }));
+    this.later(3200, () => { const cur = this.state.list.find(x => x.id === a.id); if (!cur) return; const fail = a.id === 'a4' && !this.state.fixed;
+      this.setAgent(a.id, fail ? { status: 'failed', fail: cur.fail + 1, lastRunAt: 'Just now', error: 'POST https://hooks.zapier.com/grocery returned 500 Internal Server Error after 2.1 s' } : { status: 'finished', ok: cur.ok + 1, lastRunAt: 'Just now', error: null, resultType: cur.resultType === 'error' ? 'html' : cur.resultType, result: cur.result || '<p style="margin:0"><b>Order placed</b> · 14 items · delivery 19:30</p>' });
+      this.setState({ testing: null }); this.toast(fail ? { icon: 'error_outline', color: '#ef9a9a', title: 'Test failed', sub: 'Endpoint returned 500' } : { icon: 'check_circle', color: '#81c784', title: 'Test passed', sub: `${a.name} · result saved` }); });
+  }
+  renderVals() { return { ...fixNav(this.__rv()), drawerOpen: !!this.state.__dr, openDrawer: () => this.setState({ __dr: true }), closeDrawer: () => this.setState({ __dr: false }), drawerItems: drawerFor('') }; }
+  __rv() {
+    const st = this.state, list = st.list, S = list.find(a => a.id === st.sel) || list[0];
+    const view = (a) => { const s = ST[a.status], tot = a.ok + a.fail; return { key: a.id, name: a.name, time: R[a.taskRef][0], routine: R[a.taskRef][1], status: s.label, statusIcon: s.icon, color: s.color, tint: s.tint, anim: a.status === 'listening' || a.status === 'running' ? 'rn-breathe 1.8s ease-in-out infinite' : 'none',
+      ok: a.ok, fail: a.fail, okPct: tot ? Math.round(a.ok / tot * 100) + '%' : '0%', failColor: a.fail ? '#d32f2f' : 'rgba(0,0,0,.55)',
+      last: a.status === 'failed' ? `Last run ${a.lastRunAt} · failed` : `Last run ${a.lastRunAt} · ${a.resultType}`, lastColor: a.status === 'failed' ? '#d32f2f' : 'rgba(0,0,0,.45)',
+      shadow: S && S.id === a.id ? 'inset 0 0 0 2px #288bd5, 0 2px 6px rgba(40,139,213,.12)' : '0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06)',
+      onOpen: () => this.setState(s => ({ sel: a.id, detail: true, k: s.k + 1 })) }; };
+    const runs = list.reduce((x, a) => x + a.ok + a.fail, 0), oks = list.reduce((x, a) => x + a.ok, 0), live = list.filter(a => a.status === 'listening' || a.status === 'running').length;
+    const f = st.form, step = S ? STEP_OF[S.status] : -1, failed = S && S.status === 'failed';
+    const evView = (e, label) => ({ key: label, label, kind: e ? e.kind.toUpperCase() : 'NONE', value: e ? e.value : 'No end event — the agent finishes when the start returns 200.' });
+    const t = st.toast, more = st.navMore ?? false;
+    const formEv = (k, label, optional) => { const e = f ? f[k] : { kind: 'url', value: '' };
+      return { key: k, label, thumb: e.kind === 'url' ? '3px' : '50%', value: e.value, rows: e.kind === 'curl' ? 4 : 2, ph: e.kind === 'url' ? 'https://… use {{ goal_id }} for the goal' : "curl -X POST https://… -d '{\"goal\":\"{{ goal_id }}\"}'", hint: optional ? 'Optional. Leave empty and the agent finishes once start returns 200.' : 'Fires when the routine is ticked.',
+        set: (ev) => this.setState(s => ({ form: { ...s.form, [k]: { ...s.form[k], value: ev.target.value } } })),
+        kinds: [['url', 'URL'], ['curl', 'cURL']].map(([v, l]) => ({ key: v, label: l, fg: e.kind === v ? 'rgba(0,0,0,.87)' : 'rgba(0,0,0,.5)', pick: () => this.setState(s => ({ form: { ...s.form, [k]: { ...s.form[k], kind: v } } })) })) }; };
+    const canSave = f && f.name.trim() && f.start.value.trim();
+    return {
+      subLabel: `${list.length} agents · ${live} live now`,
+      stats: [{ key: 'r', k: 'RUNS', v: runs, color: 'rgba(0,0,0,.87)' }, { key: 's', k: 'SUCCESS', v: Math.round(oks / Math.max(1, runs) * 100) + '%', color: '#2e7d32' }, { key: 'l', k: 'LIVE NOW', v: live, color: '#1976d2' }],
+      agents: list.map(view),
+      sel: S ? { ...view(S), statusColor: ST[S.status].color, statusDesc: ST[S.status].desc, lastMeta: `${S.lastRunAt} · ${S.status === 'failed' ? 'error' : S.resultType}`, hasError: failed && !!S.error, error: S.error || '', hasResult: !failed && !!S.result,
+        result: S.result ? React.createElement('div', { style: { fontSize: 14, lineHeight: 1.55, color: 'rgba(0,0,0,.82)' }, dangerouslySetInnerHTML: { __html: S.result } }) : null } : {},
+      lifecycle: STEPS.map(([tl, icon], i) => { const done = step > i, cur = step === i, bad = failed && i === 1; return { key: tl, t: tl, icon: bad ? 'close' : (done ? 'check' : icon), bg: bad ? '#e53935' : (done ? '#4CAF50' : (cur ? '#1976d2' : 'rgba(0,0,0,.08)')), fg: done || cur || bad ? '#fff' : 'rgba(0,0,0,.4)', label: bad ? '#d32f2f' : (cur ? '#1976d2' : (done ? '#2e7d32' : 'rgba(0,0,0,.45)')), anim: cur && !bad ? 'rn-breathe 1.8s ease-in-out infinite' : 'none' }; }),
+      selStats: S ? [{ key: 'o', k: 'SUCCEEDED', v: S.ok, color: '#2e7d32' }, { key: 'f', k: 'FAILED', v: S.fail, color: S.fail ? '#d32f2f' : 'rgba(0,0,0,.87)' }, { key: 'r', k: 'RATE', v: Math.round(S.ok / Math.max(1, S.ok + S.fail) * 100) + '%', color: 'rgba(0,0,0,.87)' }] : [],
+      selEvents: S ? [evView(S.start, 'START EVENT'), evView(S.end, 'END EVENT')] : [],
+      runTest: () => S && this.runTest(S), runLabel: S && (S.status === 'running' || S.status === 'listening') && st.testing === S.id ? 'Running…' : (failed ? 'Retry test' : 'Run test'), runIcon: failed ? 'replay' : 'play_arrow', runBg: failed ? '#e68900' : '#4CAF50',
+      detailSheet: st.detail, closeDetail: () => this.setState({ detail: false }),
+      openNew: () => this.setState({ form: { id: null, name: '', taskRef: 'lw', start: { kind: 'url', value: '' }, end: { kind: 'url', value: '' } } }),
+      openEdit: () => S && this.setState({ form: { id: S.id, name: S.name, taskRef: S.taskRef, start: { ...S.start }, end: S.end ? { ...S.end } : { kind: 'url', value: '' } } }),
+      formOpen: !!f, closeForm: () => this.setState({ form: null }), formTitle: f && f.id ? 'Edit agent' : 'New agent', f: f || { name: '' }, setName: (e) => this.setState(s => ({ form: { ...s.form, name: e.target.value } })),
+      routineOpts: Object.entries(R).map(([id, [time, name]]) => { const on = f && f.taskRef === id; return { key: id, time, name, bg: on ? 'rgba(40,139,213,.12)' : '#fff', fg: on ? '#1f6fab' : 'rgba(0,0,0,.65)', border: on ? 'rgba(40,139,213,.45)' : 'rgba(0,0,0,.12)', pick: () => this.setState(s => ({ form: { ...s.form, taskRef: id } })) }; }),
+      formEvents: [formEv('start', 'START EVENT', false), formEv('end', 'END EVENT · OPTIONAL', true)],
+      canDelete: !!(f && f.id), saveBg: canSave ? '#288bd5' : 'rgba(0,0,0,.2)', saveLabel: f && f.id ? 'Save' : 'Create agent',
+      saveForm: () => { if (!canSave) return; const end = f.end.value.trim() ? f.end : null;
+        if (f.id) { this.setAgent(f.id, { name: f.name.trim(), taskRef: f.taskRef, start: f.start, end }); this.toast({ icon: 'check_circle', color: '#81c784', title: 'Agent saved', sub: f.name.trim() }); if (f.id === 'a4') this.setState({ fixed: true }); }
+        else { const id = 'a' + Date.now(); this.setState(s => ({ list: [...s.list, { id, name: f.name.trim(), taskRef: f.taskRef, status: 'idle', ok: 0, fail: 0, lastRunAt: 'never', resultType: '—', start: f.start, end }], sel: id })); this.toast({ icon: 'smart_toy', color: '#64b5f6', title: 'Agent created', sub: `Runs with ${R[f.taskRef][1]}` }); }
+        this.setState({ form: null }); },
+      deleteAgent: () => { const id = f.id; this.setState(s => { const l = s.list.filter(a => a.id !== id); return { list: l, form: null, detail: false, sel: l[0] && l[0].id }; }); this.toast({ icon: 'delete', color: '#ef9a9a', title: 'Agent deleted', sub: f.name }); },
+      navItems: [['home', 'Home', 'Routine Notes Final.dc.html'], ['dashboard', 'Priority', 'Priority.dc.html'], ['smart_toy', 'Agents', '#'], ['assignment', 'Goals', 'Goals.dc.html']].map(([icon, label, href]) => ({ key: label, icon, label, href, color: label === 'Agents' ? '#288bd5' : 'rgba(0,0,0,.54)', bg: label === 'Agents' ? 'rgba(40,139,213,.12)' : 'transparent', fg: label === 'Agents' ? '#1f6fab' : 'rgba(0,0,0,.6)' })),
+      navMore: NAV_MORE.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' ? '10px' : '0px', bg: 'transparent', fg: 'rgba(0,0,0,.6)' })),
+      navMoreOpen: more, toggleNavMore: () => this.setState(s => ({ navMore: !(s.navMore ?? false) })), navMoreRot: more ? '180deg' : '0deg', navMoreIcon: more ? 'expand_less' : 'more_horiz', navMoreBtnBg: more ? 'rgba(0,0,0,.06)' : 'transparent',
+      browserTabs: [{ title: 'Routine Notes — Agents' }], kMod: st.k % 2,
+      hasToast: !!t, toastIcon: t && t.icon, toastColor: t && t.color, toastTitle: t && t.title, toastSub: t && t.sub,
+    };
+  }
+}
+</script>
+</body>
+</html>

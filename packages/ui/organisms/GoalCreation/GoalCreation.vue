@@ -5,7 +5,7 @@
         <AtomFlex xs12 v-if="shouldShowStatus(localGoalItem.period) && localGoalItem.body" class="status-row pb-0">
           <div class="d-flex align-center status-container">
             <task-status-tag
-              :status="getNewTaskStatus(localGoalItem.taskRef, localGoalItem.originalDate, localGoalItem)"
+              :status="statusChip"
               class="status-chip"
             />
           </div>
@@ -31,7 +31,6 @@
             :is-milestone="localGoalItem.isMilestone"
             :tasklist="tasklist"
             :goal-items-ref="goalItemsRef"
-            :disabled="newItemLoaded"
             :min-date="todayISO"
             @date-change="handleDateChange"
             @period-change="handlePeriodChange"
@@ -46,7 +45,7 @@
           ></goal-tags-input>
         </AtomFlex>
         <AtomLayout row wrap>
-        <AtomFlex sm8>
+        <AtomFlex xs12 sm8>
           <AtomCard flat>
             <AtomCardText class="pt-2 pr-0 pb-0 pl-0">
               <markdown-editor
@@ -74,7 +73,7 @@
                   Auto-saving...
                 </div>
                 <div
-                  v-else-if="localGoalItem.contribution !== lastSavedContribution"
+                  v-else-if="hasUnsavedContribution"
                   small
                   color="orange"
                   outlined
@@ -97,7 +96,7 @@
             </AtomCardText>
           </AtomCard>
         </AtomFlex>
-        <AtomFlex sm4  d-flex v-if="localGoalItem.period === 'day' && localGoalItem.id">
+        <AtomFlex xs12 sm4  d-flex v-if="localGoalItem.period === 'day' && localGoalItem.id">
           <sub-task-item-list
             :subTasks="localGoalItem.subTasks"
             :taskId="localGoalItem.id"
@@ -112,6 +111,17 @@
       </AtomLayout>
     </AtomCardText>
         <AtomFlex xs12>
+          <!-- Off-ramps for a day that did not go to plan. Without them the
+               only ways to clear an item were completing it, which is a lie,
+               and deleting it, which loses the record. -->
+          <div v-if="canDeferOrMiss" style="float: left;" class="ml-1">
+            <AtomButton flat color="primary" :loading="buttonLoading" @click="deferGoalItem" class="mr-2">
+              Tomorrow
+            </AtomButton>
+            <AtomButton flat :color="isMissed ? 'grey' : 'error'" @click="toggleGoalItemMissed">
+              {{ isMissed ? 'Unmark Missed' : 'Mark Missed' }}
+            </AtomButton>
+          </div>
           <div style="float: right;" class="mr-1">
             <AtomButton color="primary" :disabled="!valid" :loading="buttonLoading" @click="saveGoalItem" class="mr-3">
               Save
@@ -126,6 +136,7 @@
 </template>
 
 <script>
+import moment from 'moment';
 import { MarkdownEditor } from '@routine-notes/markdown-editor';
 
 import taskStatusMixin from '../../composables/useTaskStatus';
@@ -134,6 +145,7 @@ import GoalTagsInput from '../../molecules/GoalTagsInput/GoalTagsInput.vue';
 import GoalTaskToolbar from '../GoalTaskToolbar/GoalTaskToolbar.vue';
 import TaskStatusTag from '../../atoms/TaskStatusTag/TaskStatusTag.vue';
 import getJSON from '../../utils/getJSON';
+import { resolveDisplayStatus } from '../../utils/taskStatus';
 import { USER_TAGS } from '../../constants/settings';
 import {
   AtomButton,
@@ -169,9 +181,11 @@ export default {
   },
   mixins: [taskStatusMixin],
   props: {
+    // Hosts can mount the editor before an item is picked (null); every read
+    // goes through `localGoalItem`, which falls back to an empty object.
     newGoalItem: {
       type: Object,
-      required: true,
+      default: null,
     },
     tasklist: {
       type: Array,
@@ -197,7 +211,6 @@ export default {
   data() {
     return {
       valid: false,
-      newItemLoaded: false,
       formRules: {
         body: [
           (v) => !!v || 'Task Name is required',
@@ -253,9 +266,45 @@ export default {
       const day = String(today.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     },
+    // An existing item's status is server state — `missed` and `rescheduled`
+    // are both written there — so it is read off the item, but through the
+    // resolver the chip itself uses: a stored status can outlive the tick, and
+    // a ticked item still carrying `missed` has to read the same here as it
+    // does on /search. Only a brand-new one has to be derived from the current
+    // routine task, where getInitialTaskStatus' originalDate rule would
+    // otherwise outrank it.
+    statusChip() {
+      if (this.localGoalItem.id && this.localGoalItem.status) {
+        return resolveDisplayStatus({
+          status: this.localGoalItem.status,
+          isComplete: this.localGoalItem.isComplete,
+        });
+      }
+      return this.getNewTaskStatus(
+        this.localGoalItem.taskRef,
+        this.localGoalItem.originalDate,
+        this.localGoalItem,
+      );
+    },
+    // Deferring or recording a miss only means anything for a saved day item
+    // that has not been ticked.
+    canDeferOrMiss() {
+      return !!this.localGoalItem.id
+        && this.localGoalItem.period === 'day'
+        && !this.localGoalItem.isComplete;
+    },
+    isMissed() {
+      return this.localGoalItem.status === 'missed';
+    },
+    // A goal with no notes carries `contribution: null`, while
+    // lastSavedContribution is normalised to '' — compare like with like or a
+    // freshly opened editor reports "Unsaved changes".
+    hasUnsavedContribution() {
+      return (this.localGoalItem.contribution || '') !== this.lastSavedContribution;
+    },
     localGoalItem: {
       get() {
-        return this.newGoalItem;
+        return this.newGoalItem || {};
       },
       set(val) {
         this.$emit('update:newGoalItem', val);
@@ -310,6 +359,34 @@ export default {
       }
     },
 
+    /**
+     * Push the item to the next day. `updateGoalItem` already relocates the
+     * subdocument between date documents and stamps originalDate / rescheduled
+     * (server resolvers/goal.js moveGoalItem), so a defer is just a save with
+     * tomorrow's date — no second code path to keep in step.
+     */
+    deferGoalItem() {
+      if (!this.localGoalItem.date) return;
+      this.localGoalItem.date = moment(this.localGoalItem.date, 'DD-MM-YYYY')
+        .add(1, 'days')
+        .format('DD-MM-YYYY');
+      this.saveGoalItem();
+    },
+
+    toggleGoalItemMissed() {
+      const isMissed = !this.isMissed;
+      const previousStatus = this.localGoalItem.status;
+      // Flip the chip now and hand the old status back on failure: the dialog
+      // stays open so the user can see the miss was recorded.
+      this.$set(this.localGoalItem, 'status', isMissed ? 'missed' : 'todo');
+      this.$emit('mark-goal-item-missed', {
+        id: this.localGoalItem.id,
+        isMissed,
+      }, {
+        onError: () => this.$set(this.localGoalItem, 'status', previousStatus),
+      });
+    },
+
     updateNewTagItems(tags) {
       this.localGoalItem.tags = tags;
     },
@@ -345,8 +422,9 @@ export default {
       immediate: true,
     },
 
-    newGoalItem(newVal, oldVal) {
-      this.newItemLoaded = !!newVal.id && (oldVal.date === '' || typeof oldVal.date === 'undefined');
+    newGoalItem(nextVal, prevVal) {
+      const newVal = nextVal || {};
+      const oldVal = prevVal || {};
       if (
         newVal.date !== oldVal.date
         && (oldVal.date === '' || typeof oldVal.date === 'undefined')
@@ -380,7 +458,7 @@ export default {
       }
 
       // Initialize lastSavedContribution when newGoalItem loads
-      if (newVal.id && newVal.contribution !== this.lastSavedContribution) {
+      if (newVal.id && (newVal.contribution || '') !== this.lastSavedContribution) {
         this.lastSavedContribution = newVal.contribution || '';
       }
 
@@ -395,7 +473,7 @@ export default {
     // Auto-save contribution field when user stops typing
     'newGoalItem.contribution': function watchContribution(newValue) {
       // Only auto-save if the item has an ID (exists in database) and it's not the initial load
-      if (!this.newGoalItem.id || newValue === this.lastSavedContribution || this.isInitialLoad) {
+      if (!this.localGoalItem.id || (newValue || '') === this.lastSavedContribution || this.isInitialLoad) {
         return;
       }
 
@@ -406,8 +484,8 @@ export default {
 
       // Set new timeout for auto-save (2 seconds after user stops typing)
       this.autoSaveTimeout = setTimeout(() => {
-        this.$emit('auto-save-contribution', this.newGoalItem.id, this.newGoalItem.contribution);
-        this.lastSavedContribution = this.newGoalItem.contribution || '';
+        this.$emit('auto-save-contribution', this.localGoalItem.id, this.localGoalItem.contribution);
+        this.lastSavedContribution = this.localGoalItem.contribution || '';
       }, 2000);
     },
 
@@ -504,12 +582,22 @@ export default {
     padding-top: 0;
   }
 
-  /* Mobile: full-bleed EasyMDE editor inside the goal creation dialog */
+  /* Mobile: the dialog has to fit the viewport, nothing may sit outside it */
   @media (max-width: 600px) {
+    /* A 36px title only shows about 25 characters of a narrow dialog. */
+    .goal-creation #newGoalItemBody {
+      font-size: 24px;
+    }
+
+    /* Editor fills its column rather than the viewport. The 100vw + negative
+       margin full bleed only lines up when the containing block is centred on
+       the viewport; here it is the narrower goal column, so it pulled the
+       editor and its toolbar off the left edge, where nothing can scroll
+       them back — left overflow is not part of scrollWidth. */
     .goal-creation .markdown-editor {
-      width: 100vw;
-      margin-left: calc(50% - 50vw);
-      margin-right: calc(50% - 50vw);
+      width: 100%;
+      margin-left: 0;
+      margin-right: 0;
     }
     .goal-creation .markdown-editor .EasyMDEContainer .CodeMirror,
     .goal-creation .markdown-editor .EasyMDEContainer .editor-toolbar,

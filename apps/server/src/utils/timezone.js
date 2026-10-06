@@ -76,9 +76,26 @@ function getLocalDate(timezone, now = new Date()) {
   return `${lookup.day}-${lookup.month}-${lookup.year}`;
 }
 
+// Whether a routine task's start (its day `DD-MM-YYYY` + `HH:mm`) has arrived
+// in the user's timezone. Compared as sortable YYYYMMDDHHmm keys so a task on a
+// later day is never "arrived" just because its time of day is earlier than now.
+function hasTaskStarted(routineDate, taskTime, timezone, now = new Date()) {
+  const toKey = (date, time) => {
+    const [dd, mm, yyyy] = String(date || '').split('-');
+    const [hh = '00', min = '00'] = String(time || '').split(':');
+    if (!dd || !mm || !yyyy) return null;
+    return `${yyyy}${mm.padStart(2, '0')}${dd.padStart(2, '0')}${hh.padStart(2, '0')}${min.padStart(2, '0')}`;
+  };
+  const taskKey = toKey(routineDate, taskTime);
+  if (!taskKey) return false;
+  const nowKey = toKey(getLocalDate(timezone, now), getLocalTime(timezone, now));
+  return nowKey >= taskKey;
+}
+
 module.exports = {
   DEFAULT_TIMEZONE,
   resolveTimezone,
   getLocalTime,
   getLocalDate,
+  hasTaskStarted,
 };

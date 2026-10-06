@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Material+Icons&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#288bd5;text-decoration:none}a:hover{color:#1f6fab}
+.mi{font-family:'Material Icons';font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-notes{max-width:640px;font:13px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.7);margin:0 0 24px}
+.dv-notes b{color:#1a1a1a}
+.rn-hscroll::-webkit-scrollbar{display:none}
+@keyframes rn-toast{0%{opacity:0;transform:translateY(12px)}12%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+@keyframes rn-fade{from{opacity:0}to{opacity:1}}
+@keyframes rn-sheet-in{from{transform:translateY(28px);opacity:0}to{transform:none;opacity:1}}
+@keyframes rn-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes rn-in0{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes rn-in1{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">Groups</a><span class="dv-tname">Groups page, transformed: a live "today together" view of the people you share routines with, each member's week one tap away</span></div>
+<p class="dv-notes"><b>What changed from FamilyRoutine.vue:</b> the forest photo with a member count becomes a <b>group pulse</b>: this week's average and who's done today. Member rows keep the 7-day score dots from getGroupUserSevenDayScore, and add today's ring and the routine each person is in right now. Tapping a member opens their <b>week grid</b> (the FamilyUserHistory data: routines × days). On phone it opens in a sheet; on iPad mini and desktop it sits beside the list. Invite keeps the email form with validation and the 10-member cap; sent invites show as pending rows. Join requests show as a card with Accept / Decline. Leave group asks for confirmation in a sheet instead of a browser confirm(). <b>Try:</b> tap Priya; invite "jo@" (invalid), then "jo@family.com".</p>
+<div style="display:flex;align-items:center;gap:8px;margin:-8px 0 20px;font:12px system-ui,sans-serif;color:rgba(0,0,0,.55)">Jump to <a class="dv-oid" href="#fp">Phone</a><a class="dv-oid" href="#ft">iPad mini</a><a class="dv-oid" href="#fd">Desktop</a></div>
+<div class="dv-opts">
+
+<!-- FP PHONE -->
+<div class="dv-opt" id="fp"><div class="dv-olabel"><a class="dv-oid" href="#fp">Phone</a>Android · 412×892</div>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+<div style="height:100%;display:flex;flex-direction:column;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+  <div style="display:flex;align-items:center;gap:6px;height:64px;padding:0 8px 0 16px;flex-shrink:0">
+    <div style="flex:1;min-width:0"><div style="font-size:24px;font-weight:700;line-height:1.1">Group</div><div style="font-size:12px;color:rgba(0,0,0,.54)">{{ subLabel }}</div></div>
+    <div onClick="{{ openInvite }}" title="Invite member" style="display:flex;align-items:center;gap:4px;height:36px;padding:0 14px 0 10px;border-radius:18px;background:{{ inviteBg }};color:#fff;font-size:13px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">person_add</span>Invite</div>
+    <div onClick="{{ openDrawer }}" title="Menu" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
+  </div>
+  <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 16px;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:12px;align-content:start">
+    <sc-if value="{{ hasIncoming }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:50%;background:rgba(40,139,213,.12);color:#1f6fab;display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:20px">mail</span></div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Join request</div><div style="font-size:13px;color:rgba(0,0,0,.6)">nina@studio.co invited you to their group</div></div></div>
+        <div style="display:flex;gap:8px"><div onClick="{{ declineInvite }}" style="flex:1;height:40px;border-radius:14px;border:1px solid rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:rgba(0,0,0,.7);cursor:pointer">Decline</div><div onClick="{{ acceptInvite }}" style="flex:1;height:40px;border-radius:14px;background:#288bd5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;cursor:pointer">Accept</div></div>
+        <div style="font-size:11px;color:rgba(0,0,0,.45)">Accepting leaves your current group.</div>
+      </div>
+    </sc-if>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">GROUP PULSE · THIS WEEK</div>
+      <div style="display:flex;align-items:flex-end;gap:12px;margin-top:8px">
+        <div style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-1px;color:#288bd5">{{ groupAvg }}<span style="font-size:20px">%</span></div>
+        <div style="flex:1;min-width:0;padding-bottom:3px;font-size:13px;color:rgba(0,0,0,.6);line-height:1.35">{{ pulseLine }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,.06)">
+        <div style="display:flex">
+          <sc-for list="{{ doneFaces }}" as="f" hint-placeholder-count="3"><div title="{{ f.name }}" style="width:28px;height:28px;border-radius:50%;margin-left:{{ f.ml }};box-shadow:0 0 0 2px #fff;background:{{ f.bg }};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden">{{ f.initials }}</div></sc-for>
+        </div>
+        <div style="flex:1;min-width:0;font-size:13px"><b>{{ doneCount }}</b> of {{ memberCount }} finished a routine in the last hour</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);padding:6px 8px">
+      <div style="display:flex;align-items:center;padding:8px 8px 4px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">MEMBERS · TODAY</div><div style="font-size:11px;color:rgba(0,0,0,.45)">Last 7 days</div></div>
+      <sc-for list="{{ members }}" as="m" hint-placeholder-count="4">
+        <div onClick="{{ m.onOpen }}" style="display:flex;align-items:center;gap:12px;min-height:68px;padding:6px 8px;border-radius:12px;background:{{ m.bg }};cursor:{{ m.cursor }};border-top:{{ m.border }}" style-hover="background:{{ m.hover }}">
+          <div style="position:relative;width:44px;height:44px;flex-shrink:0">
+            <svg viewBox="0 0 48 48" style="position:absolute;inset:0;width:44px;height:44px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="22" fill="none" stroke="rgba(0,0,0,.07)" stroke-width="3"></circle><circle cx="24" cy="24" r="22" fill="none" stroke="{{ m.ringColor }}" stroke-width="3" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="{{ m.ringOff }}"></circle></svg>
+            <div style="position:absolute;inset:5px;border-radius:50%;background:{{ m.avBg }};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden">{{ m.initials }}<sc-if value="{{ m.hasPic }}" hint-placeholder-val="{{ false }}"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="{{ m.name }}"></sc-if></div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px"><div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.name }}</div><sc-if value="{{ m.isYou }}" hint-placeholder-val="{{ false }}"><div style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:rgba(0,0,0,.06);color:rgba(0,0,0,.55)">YOU</div></sc-if></div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:{{ m.nowColor }};margin-top:2px;white-space:nowrap;overflow:hidden"><sc-if value="{{ m.isLive }}" hint-placeholder-val="{{ false }}"><div style="width:6px;height:6px;border-radius:50%;background:#FF9800;animation:rn-pulse 1.4s ease-in-out infinite;flex-shrink:0"></div></sc-if><span style="overflow:hidden;text-overflow:ellipsis">{{ m.now }}</span></div>
+            <sc-if value="{{ m.hasDots }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:4px;margin-top:6px"><sc-for list="{{ m.dots }}" as="d" hint-placeholder-count="7"><div title="{{ d.title }}" style="width:16px;height:16px;border-radius:50%;background:{{ d.bg }};color:#fff;display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:11px">{{ d.icon }}</span></div></sc-for></div></sc-if>
+          </div>
+          <sc-if value="{{ m.hasScore }}" hint-placeholder-val="{{ true }}"><div style="text-align:right"><div style="font-size:15px;font-weight:700">{{ m.today }}</div><div style="font-size:11px;color:rgba(0,0,0,.45)">today</div></div></sc-if>
+          <sc-if value="{{ m.isPending }}" hint-placeholder-val="{{ false }}"><div onClick="{{ m.onCancel }}" style="font-size:12px;font-weight:600;color:rgba(0,0,0,.55);padding:6px 10px;border-radius:14px;border:1px solid rgba(0,0,0,.12);cursor:pointer">Cancel</div></sc-if>
+        </div>
+      </sc-for>
+      <div onClick="{{ openInvite }}" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 8px 0 18px;border-top:1px solid rgba(0,0,0,.06);color:{{ inviteRowColor }};font-size:14px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:24px">person_add_alt</span>{{ inviteRowLabel }}</div>
+    </div>
+    <div onClick="{{ openLeave }}" style="display:flex;align-items:center;justify-content:center;gap:6px;height:44px;border-radius:14px;color:#d32f2f;font-size:14px;font-weight:600;cursor:pointer;flex-shrink:0" style-hover="background:rgba(211,47,47,.06)"><span class="mi" style="font-size:18px">logout</span>Leave group</div>
+  </div>
+  <div style="height:64px;box-sizing:border-box;background:#fff;box-shadow:0 -1px 3px rgba(0,0,0,.08);display:flex;padding-bottom:4px;flex-shrink:0;z-index:5">
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4"><div onClick="{{ n.go }}" style="cursor:pointer;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(0,0,0,.54);font-size:12px;font-weight:500"><span class="mi">{{ n.icon }}</span><span>{{ n.label }}</span></div></sc-for>
+  </div>
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:16px;right:16px;bottom:80px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none"><span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div></div>
+  </sc-if>
+  <sc-if value="{{ hasSheet }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(15,23,42,.38);z-index:20;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ sheetInvite }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;bottom:0;z-index:21;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:0 20px 24px;animation:rn-sheet-in .25s cubic-bezier(.3,1.1,.5,1)">
+      <div style="display:flex;justify-content:center;padding:8px 0 4px"><div style="width:40px;height:4px;border-radius:2px;background:#ccc"></div></div>
+      <div style="font-size:20px;font-weight:700;margin-top:6px">Invite to your group</div>
+      <div style="font-size:13px;color:rgba(0,0,0,.54);margin-top:2px">They'll see your routines' daily scores, and you'll see theirs. {{ slotsLeft }} of 10 spots left.</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:18px;border-bottom:2px solid {{ emailLine }};padding:4px 0 6px"><span class="mi" style="font-size:20px;color:rgba(0,0,0,.45)">alternate_email</span><input value="{{ email }}" onChange="{{ setEmail }}" onKeyDown="{{ emailKey }}" placeholder="name@email.com" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:#222;height:30px"></div>
+      <div style="font-size:12px;color:{{ emailHintColor }};margin-top:6px;min-height:16px">{{ emailHint }}</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><div onClick="{{ closeSheet }}" style="height:40px;padding:0 18px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Cancel</div><div onClick="{{ sendInvite }}" style="height:40px;padding:0 20px;border-radius:20px;background:{{ sendBg }};color:#fff;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">send</span>Send invite</div></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ sheetLeave }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;bottom:0;z-index:21;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:0 20px 24px;animation:rn-sheet-in .25s cubic-bezier(.3,1.1,.5,1)">
+      <div style="display:flex;justify-content:center;padding:8px 0 4px"><div style="width:40px;height:4px;border-radius:2px;background:#ccc"></div></div>
+      <div style="font-size:20px;font-weight:700;margin-top:6px">Leave the group?</div>
+      <div style="font-size:14px;line-height:1.5;color:rgba(0,0,0,.65);margin-top:6px">You'll stop seeing {{ othersNames }}'s progress, and they'll stop seeing yours. Your routines and history stay with you.</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px"><div onClick="{{ closeSheet }}" style="height:40px;padding:0 18px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Stay</div><div onClick="{{ leaveGroup }}" style="height:40px;padding:0 20px;border-radius:20px;background:#d32f2f;color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:pointer">Leave group</div></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ sheetMember }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;bottom:0;top:56px;z-index:21;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;animation:rn-sheet-in .25s cubic-bezier(.3,1.1,.5,1)">
+      <div style="display:flex;justify-content:center;padding:8px 0 0"><div style="width:40px;height:4px;border-radius:2px;background:#ccc"></div></div>
+      <div class="rn-hscroll" style="flex:1;overflow-y:auto;min-height:0;padding:4px 16px 20px;scrollbar-width:none">
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 0 12px">
+          <div style="position:relative;width:48px;height:48px;border-radius:50%;background:{{ sel.avBg }};color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">{{ sel.initials }}<sc-if value="{{ sel.hasPic }}" hint-placeholder-val="{{ false }}"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="{{ sel.name }}"></sc-if></div>
+          <div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700;line-height:1.2">{{ sel.name }}</div><div style="font-size:13px;color:rgba(0,0,0,.54)">{{ sel.email }} · {{ sel.streak }}-day streak</div></div>
+          <span class="mi" onClick="{{ closeSheet }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px;visibility:{{ closeVis }}">close</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+          <sc-for list="{{ selStats }}" as="x" hint-placeholder-count="3"><div style="padding:10px 12px;border-radius:12px;background:#f7f7f7"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ x.k }}</div><div style="font-size:18px;font-weight:700;margin-top:2px">{{ x.v }}</div></div></sc-for>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:18px"><div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">THIS WEEK · ROUTINES × DAYS</div><div style="display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(0,0,0,.5)"><span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#4CAF50"></span>ticked</span><span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(0,0,0,.1)"></span>missed</span></div></div>
+        <div style="display:grid;grid-template-columns:104px repeat(7,minmax(0,1fr));gap:4px;margin-top:10px;align-items:center">
+          <div></div>
+          <sc-for list="{{ dayHeads }}" as="d" hint-placeholder-count="7"><div style="text-align:center;font-size:10px;font-weight:700;color:{{ d.color }}">{{ d.t }}</div></sc-for>
+          <sc-for list="{{ grid }}" as="row" hint-placeholder-count="5">
+            <div style="display:contents">
+              <div style="min-width:0;padding-right:4px;line-height:1.2"><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.4);font-variant-numeric:tabular-nums">{{ row.time }}</div><div style="font-size:12px;font-weight:600;color:rgba(0,0,0,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.name }}</div></div>
+              <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="7"><div title="{{ c.title }}" style="height:26px;border-radius:6px;background:{{ c.bg }};box-shadow:{{ c.ring }};display:flex;align-items:center;justify-content:center;color:#fff"><span class="mi" style="font-size:14px">{{ c.icon }}</span></div></sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:11px;font-weight:700;color:rgba(0,0,0,.45);padding-top:4px">DAY SCORE</div>
+          <sc-for list="{{ dayTotals }}" as="d" hint-placeholder-count="7"><div style="text-align:center;font-size:12px;font-weight:700;padding-top:4px;color:{{ d.color }}">{{ d.v }}</div></sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:-4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-fade .2s ease">
+      <div style="display:flex;align-items:center;gap:12px;padding:28px 16px 16px 20px"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div><span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px">close</span></div>
+      <div style="display:flex;gap:6px;padding:0 20px 14px"><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:#288bd5;color:#fff;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">diamond</span>128 points</div><div style="display:flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:rgba(255,152,0,.12);color:#b26a00;font-size:12px;font-weight:600"><span class="mi" style="font-size:14px">local_fire_department</span>6-day streak</div></div>
+      <div style="height:1px;background:rgba(0,0,0,.08);margin:0 0 6px"></div>
+      <sc-for list="{{ drawerItems }}" as="n" hint-placeholder-count="6"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:16px;height:48px;padding:0 20px;margin-top:{{ n.gap }};color:{{ n.color }};background:{{ n.bg }};font-size:14px;font-weight:600;text-decoration:none"><span class="mi" style="font-size:22px">{{ n.icon }}</span>{{ n.label }}</a></sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-import>
+</div>
+
+<!-- FT TABLET -->
+<div class="dv-opt" id="ft"><div class="dv-olabel"><a class="dv-oid" href="#ft">iPad mini</a>Landscape · 1133×744 · member detail beside the list</div>
+<div style="width:1165px;height:776px;border-radius:40px;background:#121212;padding:16px;box-sizing:border-box;box-shadow:0 30px 60px -24px rgba(0,0,0,.4)">
+  <div style="width:100%;height:100%;border-radius:24px;overflow:hidden;position:relative;background:#f4f4f4;display:flex;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87)">
+    <div class="rn-hscroll" style="width:76px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 0 14px;overflow-y:auto;scrollbar-width:none;border-right:1px solid rgba(0,0,0,.06)">
+      <img src="assets/icon-192.png" alt="Routine Notes" style="width:38px;height:38px;object-fit:contain;margin-bottom:6px">
+      <sc-for list="{{ sideNav }}" as="n" hint-placeholder-count="6"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;color:inherit"><div style="width:56px;height:32px;border-radius:16px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi">{{ n.icon }}</span></div><div style="font-size:11px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for><div onClick="{{ toggleNavMore }}" title="More pages" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer"><div style="width:52px;height:30px;border-radius:15px;background:{{ navMoreBtnBg }};color:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;transition:background .2s"><span class="mi" style="font-size:21px">{{ navMoreIcon }}</span></div><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.6)">More</div></div><sc-if value="{{ navMoreOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0;border-radius:16px;background:#f7f7f7;animation:rn-fade .18s ease"><sc-for list="{{ navMore }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:inherit;text-decoration:none;margin-top:{{ n.gap }}"><div style="width:52px;height:30px;border-radius:15px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:21px">{{ n.icon }}</span></div><div style="font-size:10px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</div></a></sc-for></div></sc-if>
+      <div style="flex:1"></div>
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:40px;height:40px;border-radius:50%;object-fit:cover" alt="Profile picture">
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div style="height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex-shrink:0"><span>9:30</span><span style="display:flex;gap:6px;align-items:center"><span class="mi" style="font-size:16px">wifi</span><span class="mi" style="font-size:16px">battery_full</span></span></div>
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;padding:4px 20px 20px">
+        <div style="display:flex;align-items:center;gap:16px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700">Group</div><div style="font-size:13px;color:rgba(0,0,0,.54)">{{ subLabel }}</div></div><div onClick="{{ openInvite }}" style="display:flex;align-items:center;gap:4px;height:36px;padding:0 16px 0 12px;border-radius:18px;background:{{ inviteBg }};color:#fff;font-size:13px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">person_add</span>Invite</div></div>
+        <div style="flex:1;min-height:0;display:flex;gap:12px">
+          <div class="rn-hscroll" style="flex:3 1 0;min-width:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:12px;align-content:start">    <sc-if value="{{ hasIncoming }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:50%;background:rgba(40,139,213,.12);color:#1f6fab;display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:20px">mail</span></div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Join request</div><div style="font-size:13px;color:rgba(0,0,0,.6)">nina@studio.co invited you to their group</div></div></div>
+        <div style="display:flex;gap:8px"><div onClick="{{ declineInvite }}" style="flex:1;height:40px;border-radius:14px;border:1px solid rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:rgba(0,0,0,.7);cursor:pointer">Decline</div><div onClick="{{ acceptInvite }}" style="flex:1;height:40px;border-radius:14px;background:#288bd5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;cursor:pointer">Accept</div></div>
+        <div style="font-size:11px;color:rgba(0,0,0,.45)">Accepting leaves your current group.</div>
+      </div>
+    </sc-if>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">GROUP PULSE · THIS WEEK</div>
+      <div style="display:flex;align-items:flex-end;gap:12px;margin-top:8px">
+        <div style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-1px;color:#288bd5">{{ groupAvg }}<span style="font-size:20px">%</span></div>
+        <div style="flex:1;min-width:0;padding-bottom:3px;font-size:13px;color:rgba(0,0,0,.6);line-height:1.35">{{ pulseLine }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,.06)">
+        <div style="display:flex">
+          <sc-for list="{{ doneFaces }}" as="f" hint-placeholder-count="3"><div title="{{ f.name }}" style="width:28px;height:28px;border-radius:50%;margin-left:{{ f.ml }};box-shadow:0 0 0 2px #fff;background:{{ f.bg }};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden">{{ f.initials }}</div></sc-for>
+        </div>
+        <div style="flex:1;min-width:0;font-size:13px"><b>{{ doneCount }}</b> of {{ memberCount }} finished a routine in the last hour</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:6px 8px">
+      <div style="display:flex;align-items:center;padding:8px 8px 4px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">MEMBERS · TODAY</div><div style="font-size:11px;color:rgba(0,0,0,.45)">Last 7 days</div></div>
+      <sc-for list="{{ members }}" as="m" hint-placeholder-count="4">
+        <div onClick="{{ m.onOpen }}" style="display:flex;align-items:center;gap:12px;min-height:68px;padding:6px 8px;border-radius:12px;background:{{ m.bg }};cursor:{{ m.cursor }};border-top:{{ m.border }}" style-hover="background:{{ m.hover }}">
+          <div style="position:relative;width:44px;height:44px;flex-shrink:0">
+            <svg viewBox="0 0 48 48" style="position:absolute;inset:0;width:44px;height:44px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="22" fill="none" stroke="rgba(0,0,0,.07)" stroke-width="3"></circle><circle cx="24" cy="24" r="22" fill="none" stroke="{{ m.ringColor }}" stroke-width="3" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="{{ m.ringOff }}"></circle></svg>
+            <div style="position:absolute;inset:5px;border-radius:50%;background:{{ m.avBg }};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden">{{ m.initials }}<sc-if value="{{ m.hasPic }}" hint-placeholder-val="{{ false }}"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="{{ m.name }}"></sc-if></div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px"><div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.name }}</div><sc-if value="{{ m.isYou }}" hint-placeholder-val="{{ false }}"><div style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:rgba(0,0,0,.06);color:rgba(0,0,0,.55)">YOU</div></sc-if></div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:{{ m.nowColor }};margin-top:2px;white-space:nowrap;overflow:hidden"><sc-if value="{{ m.isLive }}" hint-placeholder-val="{{ false }}"><div style="width:6px;height:6px;border-radius:50%;background:#FF9800;animation:rn-pulse 1.4s ease-in-out infinite;flex-shrink:0"></div></sc-if><span style="overflow:hidden;text-overflow:ellipsis">{{ m.now }}</span></div>
+            <sc-if value="{{ m.hasDots }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:4px;margin-top:6px"><sc-for list="{{ m.dots }}" as="d" hint-placeholder-count="7"><div title="{{ d.title }}" style="width:16px;height:16px;border-radius:50%;background:{{ d.bg }};color:#fff;display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:11px">{{ d.icon }}</span></div></sc-for></div></sc-if>
+          </div>
+          <sc-if value="{{ m.hasScore }}" hint-placeholder-val="{{ true }}"><div style="text-align:right"><div style="font-size:15px;font-weight:700">{{ m.today }}</div><div style="font-size:11px;color:rgba(0,0,0,.45)">today</div></div></sc-if>
+          <sc-if value="{{ m.isPending }}" hint-placeholder-val="{{ false }}"><div onClick="{{ m.onCancel }}" style="font-size:12px;font-weight:600;color:rgba(0,0,0,.55);padding:6px 10px;border-radius:14px;border:1px solid rgba(0,0,0,.12);cursor:pointer">Cancel</div></sc-if>
+        </div>
+      </sc-for>
+      <div onClick="{{ openInvite }}" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 8px 0 18px;border-top:1px solid rgba(0,0,0,.06);color:{{ inviteRowColor }};font-size:14px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:24px">person_add_alt</span>{{ inviteRowLabel }}</div>
+    </div>
+    <div onClick="{{ openLeave }}" style="display:flex;align-items:center;justify-content:center;gap:6px;height:44px;border-radius:14px;color:#d32f2f;font-size:14px;font-weight:600;cursor:pointer;flex-shrink:0" style-hover="background:rgba(211,47,47,.06)"><span class="mi" style="font-size:18px">logout</span>Leave group</div>
+</div>
+          <div style="flex:2 1 0;min-width:0;display:flex;flex-direction:column"><div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:8px 20px 20px;min-height:0;overflow-y:auto;animation:rn-in{{ kMod }} .25s ease" class="rn-hscroll">        <div style="display:flex;align-items:center;gap:12px;padding:8px 0 12px">
+          <div style="position:relative;width:48px;height:48px;border-radius:50%;background:{{ sel.avBg }};color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">{{ sel.initials }}<sc-if value="{{ sel.hasPic }}" hint-placeholder-val="{{ false }}"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="{{ sel.name }}"></sc-if></div>
+          <div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700;line-height:1.2">{{ sel.name }}</div><div style="font-size:13px;color:rgba(0,0,0,.54)">{{ sel.email }} · {{ sel.streak }}-day streak</div></div>
+          <span class="mi" onClick="{{ closeSheet }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px;visibility:hidden">close</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+          <sc-for list="{{ selStats }}" as="x" hint-placeholder-count="3"><div style="padding:10px 12px;border-radius:12px;background:#f7f7f7"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ x.k }}</div><div style="font-size:18px;font-weight:700;margin-top:2px">{{ x.v }}</div></div></sc-for>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:18px"><div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">THIS WEEK · ROUTINES × DAYS</div><div style="display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(0,0,0,.5)"><span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#4CAF50"></span>ticked</span><span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(0,0,0,.1)"></span>missed</span></div></div>
+        <div style="display:grid;grid-template-columns:104px repeat(7,minmax(0,1fr));gap:4px;margin-top:10px;align-items:center">
+          <div></div>
+          <sc-for list="{{ dayHeads }}" as="d" hint-placeholder-count="7"><div style="text-align:center;font-size:10px;font-weight:700;color:{{ d.color }}">{{ d.t }}</div></sc-for>
+          <sc-for list="{{ grid }}" as="row" hint-placeholder-count="5">
+            <div style="display:contents">
+              <div style="min-width:0;padding-right:4px;line-height:1.2"><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.4);font-variant-numeric:tabular-nums">{{ row.time }}</div><div style="font-size:12px;font-weight:600;color:rgba(0,0,0,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.name }}</div></div>
+              <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="7"><div title="{{ c.title }}" style="height:26px;border-radius:6px;background:{{ c.bg }};box-shadow:{{ c.ring }};display:flex;align-items:center;justify-content:center;color:#fff"><span class="mi" style="font-size:14px">{{ c.icon }}</span></div></sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:11px;font-weight:700;color:rgba(0,0,0,.45);padding-top:4px">DAY SCORE</div>
+          <sc-for list="{{ dayTotals }}" as="d" hint-placeholder-count="7"><div style="text-align:center;font-size:12px;font-weight:700;padding-top:4px;color:{{ d.color }}">{{ d.v }}</div></sc-for>
+        </div>
+</div></div>
+        </div>
+      </div>
+    </div>
+      <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none"><span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div></div>
+  </sc-if>
+  <sc-if value="{{ hasModal }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(15,23,42,.38);z-index:20;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ sheetInvite }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;max-width:92%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.35);padding:8px 24px 24px;animation:rn-fade .2s ease">
+      
+      <div style="font-size:20px;font-weight:700;margin-top:6px">Invite to your group</div>
+      <div style="font-size:13px;color:rgba(0,0,0,.54);margin-top:2px">They'll see your routines' daily scores, and you'll see theirs. {{ slotsLeft }} of 10 spots left.</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:18px;border-bottom:2px solid {{ emailLine }};padding:4px 0 6px"><span class="mi" style="font-size:20px;color:rgba(0,0,0,.45)">alternate_email</span><input value="{{ email }}" onChange="{{ setEmail }}" onKeyDown="{{ emailKey }}" placeholder="name@email.com" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:#222;height:30px"></div>
+      <div style="font-size:12px;color:{{ emailHintColor }};margin-top:6px;min-height:16px">{{ emailHint }}</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><div onClick="{{ closeSheet }}" style="height:40px;padding:0 18px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Cancel</div><div onClick="{{ sendInvite }}" style="height:40px;padding:0 20px;border-radius:20px;background:{{ sendBg }};color:#fff;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">send</span>Send invite</div></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ sheetLeave }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;max-width:92%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.35);padding:8px 24px 24px;animation:rn-fade .2s ease">
+      
+      <div style="font-size:20px;font-weight:700;margin-top:6px">Leave the group?</div>
+      <div style="font-size:14px;line-height:1.5;color:rgba(0,0,0,.65);margin-top:6px">You'll stop seeing {{ othersNames }}'s progress, and they'll stop seeing yours. Your routines and history stay with you.</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px"><div onClick="{{ closeSheet }}" style="height:40px;padding:0 18px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Stay</div><div onClick="{{ leaveGroup }}" style="height:40px;padding:0 20px;border-radius:20px;background:#d32f2f;color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:pointer">Leave group</div></div>
+    </div>
+  </sc-if>
+
+  </div>
+</div>
+</div>
+
+<!-- FD DESKTOP -->
+<div class="dv-opt" id="fd"><div class="dv-olabel"><a class="dv-oid" href="#fd">Desktop</a>1440×900 · same layout and type sizes as iPad mini, capped at 1040px</div>
+<x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1440 }}" height="{{ 900 }}" url="app.routinenotes.com/groups" tabs="{{ browserTabs }}" hint-size="1440px,900px">
+  <div style="height:100%;display:flex;background:#f4f4f4;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:rgba(0,0,0,.87);position:relative;overflow:hidden">
+    <div style="width:264px;flex-shrink:0;background:#fff;border-right:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:10px;padding:20px 20px 16px"><img src="assets/icon-192.png" alt="Routine Notes" style="width:34px;height:34px;object-fit:contain"><div style="font-size:16px;font-weight:700">Routine Notes</div></div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:0 12px">
+        <sc-for list="{{ sideNav }}" as="n" hint-placeholder-count="6"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};font-size:14px;font-weight:600" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for><div onClick="{{ toggleNavMore }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;margin-top:6px;border-radius:10px;color:rgba(0,0,0,.6);font-size:14px;font-weight:600;cursor:pointer" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">more_horiz</span><div style="flex:1">More</div><span class="mi" style="font-size:20px;transition:transform .2s;transform:rotate({{ navMoreRot }})">expand_more</span></div><sc-if value="{{ navMoreOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;animation:rn-fade .18s ease"><sc-for list="{{ navMore }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px 0 20px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};text-decoration:none;font-size:14px;font-weight:600;margin-top:{{ n.gap }}" style-hover="background:rgba(0,0,0,.04)"><span class="mi" style="font-size:20px">{{ n.icon }}</span>{{ n.label }}</a></sc-for></div></sc-if>
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-top:1px solid rgba(0,0,0,.06)"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="width:36px;height:36px;border-radius:50%;object-fit:cover" alt="Profile picture"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.5)">alex@routine.app</div></div></div>
+    </div>
+    <div style="max-width:1040px;margin:0 auto;width:100%;box-sizing:border-box;flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;padding:20px 28px 28px">
+      <div style="display:flex;align-items:center;gap:16px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700">Group</div><div style="font-size:13px;color:rgba(0,0,0,.54)">{{ subLabel }}</div></div><div onClick="{{ openInvite }}" style="display:flex;align-items:center;gap:4px;height:36px;padding:0 16px 0 12px;border-radius:18px;background:{{ inviteBg }};color:#fff;font-size:13px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">person_add</span>Invite</div></div>
+      <div style="flex:1;min-height:0;display:flex;gap:12px">
+          <div class="rn-hscroll" style="flex:3 1 0;min-width:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:12px;align-content:start">    <sc-if value="{{ hasIncoming }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:50%;background:rgba(40,139,213,.12);color:#1f6fab;display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:20px">mail</span></div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Join request</div><div style="font-size:13px;color:rgba(0,0,0,.6)">nina@studio.co invited you to their group</div></div></div>
+        <div style="display:flex;gap:8px"><div onClick="{{ declineInvite }}" style="flex:1;height:40px;border-radius:14px;border:1px solid rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:rgba(0,0,0,.7);cursor:pointer">Decline</div><div onClick="{{ acceptInvite }}" style="flex:1;height:40px;border-radius:14px;background:#288bd5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;cursor:pointer">Accept</div></div>
+        <div style="font-size:11px;color:rgba(0,0,0,.45)">Accepting leaves your current group.</div>
+      </div>
+    </sc-if>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">GROUP PULSE · THIS WEEK</div>
+      <div style="display:flex;align-items:flex-end;gap:12px;margin-top:8px">
+        <div style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-1px;color:#288bd5">{{ groupAvg }}<span style="font-size:20px">%</span></div>
+        <div style="flex:1;min-width:0;padding-bottom:3px;font-size:13px;color:rgba(0,0,0,.6);line-height:1.35">{{ pulseLine }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,.06)">
+        <div style="display:flex">
+          <sc-for list="{{ doneFaces }}" as="f" hint-placeholder-count="3"><div title="{{ f.name }}" style="width:28px;height:28px;border-radius:50%;margin-left:{{ f.ml }};box-shadow:0 0 0 2px #fff;background:{{ f.bg }};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden">{{ f.initials }}</div></sc-for>
+        </div>
+        <div style="flex:1;min-width:0;font-size:13px"><b>{{ doneCount }}</b> of {{ memberCount }} finished a routine in the last hour</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:6px 8px">
+      <div style="display:flex;align-items:center;padding:8px 8px 4px"><div style="flex:1;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">MEMBERS · TODAY</div><div style="font-size:11px;color:rgba(0,0,0,.45)">Last 7 days</div></div>
+      <sc-for list="{{ members }}" as="m" hint-placeholder-count="4">
+        <div onClick="{{ m.onOpen }}" style="display:flex;align-items:center;gap:12px;min-height:68px;padding:6px 8px;border-radius:12px;background:{{ m.bg }};cursor:{{ m.cursor }};border-top:{{ m.border }}" style-hover="background:{{ m.hover }}">
+          <div style="position:relative;width:44px;height:44px;flex-shrink:0">
+            <svg viewBox="0 0 48 48" style="position:absolute;inset:0;width:44px;height:44px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="22" fill="none" stroke="rgba(0,0,0,.07)" stroke-width="3"></circle><circle cx="24" cy="24" r="22" fill="none" stroke="{{ m.ringColor }}" stroke-width="3" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="{{ m.ringOff }}"></circle></svg>
+            <div style="position:absolute;inset:5px;border-radius:50%;background:{{ m.avBg }};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden">{{ m.initials }}<sc-if value="{{ m.hasPic }}" hint-placeholder-val="{{ false }}"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="{{ m.name }}"></sc-if></div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px"><div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.name }}</div><sc-if value="{{ m.isYou }}" hint-placeholder-val="{{ false }}"><div style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:rgba(0,0,0,.06);color:rgba(0,0,0,.55)">YOU</div></sc-if></div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:{{ m.nowColor }};margin-top:2px;white-space:nowrap;overflow:hidden"><sc-if value="{{ m.isLive }}" hint-placeholder-val="{{ false }}"><div style="width:6px;height:6px;border-radius:50%;background:#FF9800;animation:rn-pulse 1.4s ease-in-out infinite;flex-shrink:0"></div></sc-if><span style="overflow:hidden;text-overflow:ellipsis">{{ m.now }}</span></div>
+            <sc-if value="{{ m.hasDots }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:4px;margin-top:6px"><sc-for list="{{ m.dots }}" as="d" hint-placeholder-count="7"><div title="{{ d.title }}" style="width:16px;height:16px;border-radius:50%;background:{{ d.bg }};color:#fff;display:flex;align-items:center;justify-content:center"><span class="mi" style="font-size:11px">{{ d.icon }}</span></div></sc-for></div></sc-if>
+          </div>
+          <sc-if value="{{ m.hasScore }}" hint-placeholder-val="{{ true }}"><div style="text-align:right"><div style="font-size:15px;font-weight:700">{{ m.today }}</div><div style="font-size:11px;color:rgba(0,0,0,.45)">today</div></div></sc-if>
+          <sc-if value="{{ m.isPending }}" hint-placeholder-val="{{ false }}"><div onClick="{{ m.onCancel }}" style="font-size:12px;font-weight:600;color:rgba(0,0,0,.55);padding:6px 10px;border-radius:14px;border:1px solid rgba(0,0,0,.12);cursor:pointer">Cancel</div></sc-if>
+        </div>
+      </sc-for>
+      <div onClick="{{ openInvite }}" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 8px 0 18px;border-top:1px solid rgba(0,0,0,.06);color:{{ inviteRowColor }};font-size:14px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:24px">person_add_alt</span>{{ inviteRowLabel }}</div>
+    </div>
+    <div onClick="{{ openLeave }}" style="display:flex;align-items:center;justify-content:center;gap:6px;height:44px;border-radius:14px;color:#d32f2f;font-size:14px;font-weight:600;cursor:pointer;flex-shrink:0" style-hover="background:rgba(211,47,47,.06)"><span class="mi" style="font-size:18px">logout</span>Leave group</div>
+</div>
+          <div style="flex:2 1 0;min-width:0;display:flex;flex-direction:column"><div style="background:#fff;border-radius:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.05);padding:8px 20px 20px;min-height:0;overflow-y:auto;animation:rn-in{{ kMod }} .25s ease" class="rn-hscroll">        <div style="display:flex;align-items:center;gap:12px;padding:8px 0 12px">
+          <div style="position:relative;width:48px;height:48px;border-radius:50%;background:{{ sel.avBg }};color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">{{ sel.initials }}<sc-if value="{{ sel.hasPic }}" hint-placeholder-val="{{ false }}"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS2TXjnKXnWkWnD_LO8ZV7xzbA69-PNxIXh9805y7R3hntQB1PFsG0wnA&amp;s=10" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="{{ sel.name }}"></sc-if></div>
+          <div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:700;line-height:1.2">{{ sel.name }}</div><div style="font-size:13px;color:rgba(0,0,0,.54)">{{ sel.email }} · {{ sel.streak }}-day streak</div></div>
+          <span class="mi" onClick="{{ closeSheet }}" style="font-size:22px;color:rgba(0,0,0,.55);cursor:pointer;padding:6px;visibility:hidden">close</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+          <sc-for list="{{ selStats }}" as="x" hint-placeholder-count="3"><div style="padding:10px 12px;border-radius:12px;background:#f7f7f7"><div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">{{ x.k }}</div><div style="font-size:18px;font-weight:700;margin-top:2px">{{ x.v }}</div></div></sc-for>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:18px"><div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">THIS WEEK · ROUTINES × DAYS</div><div style="display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(0,0,0,.5)"><span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#4CAF50"></span>ticked</span><span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(0,0,0,.1)"></span>missed</span></div></div>
+        <div style="display:grid;grid-template-columns:104px repeat(7,minmax(0,1fr));gap:4px;margin-top:10px;align-items:center">
+          <div></div>
+          <sc-for list="{{ dayHeads }}" as="d" hint-placeholder-count="7"><div style="text-align:center;font-size:10px;font-weight:700;color:{{ d.color }}">{{ d.t }}</div></sc-for>
+          <sc-for list="{{ grid }}" as="row" hint-placeholder-count="5">
+            <div style="display:contents">
+              <div style="min-width:0;padding-right:4px;line-height:1.2"><div style="font-size:10px;font-weight:600;color:rgba(0,0,0,.4);font-variant-numeric:tabular-nums">{{ row.time }}</div><div style="font-size:12px;font-weight:600;color:rgba(0,0,0,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.name }}</div></div>
+              <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="7"><div title="{{ c.title }}" style="height:26px;border-radius:6px;background:{{ c.bg }};box-shadow:{{ c.ring }};display:flex;align-items:center;justify-content:center;color:#fff"><span class="mi" style="font-size:14px">{{ c.icon }}</span></div></sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:11px;font-weight:700;color:rgba(0,0,0,.45);padding-top:4px">DAY SCORE</div>
+          <sc-for list="{{ dayTotals }}" as="d" hint-placeholder-count="7"><div style="text-align:center;font-size:12px;font-weight:700;padding-top:4px;color:{{ d.color }}">{{ d.v }}</div></sc-for>
+        </div>
+</div></div>
+        </div>
+    </div>
+      <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:auto;right:24px;width:360px;bottom:24px;z-index:30;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#1a1a1a;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,.3);animation:rn-toast 2.8s ease forwards;pointer-events:none"><span class="mi" style="font-size:22px;color:{{ toastColor }}">{{ toastIcon }}</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ toastTitle }}</div><div style="font-size:12px;opacity:.75">{{ toastSub }}</div></div></div>
+  </sc-if>
+  <sc-if value="{{ hasModal }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(15,23,42,.38);z-index:20;animation:rn-fade .2s ease"></div></sc-if>
+  <sc-if value="{{ sheetInvite }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;max-width:92%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.35);padding:8px 24px 24px;animation:rn-fade .2s ease">
+      
+      <div style="font-size:20px;font-weight:700;margin-top:6px">Invite to your group</div>
+      <div style="font-size:13px;color:rgba(0,0,0,.54);margin-top:2px">They'll see your routines' daily scores, and you'll see theirs. {{ slotsLeft }} of 10 spots left.</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:18px;border-bottom:2px solid {{ emailLine }};padding:4px 0 6px"><span class="mi" style="font-size:20px;color:rgba(0,0,0,.45)">alternate_email</span><input value="{{ email }}" onChange="{{ setEmail }}" onKeyDown="{{ emailKey }}" placeholder="name@email.com" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:#222;height:30px"></div>
+      <div style="font-size:12px;color:{{ emailHintColor }};margin-top:6px;min-height:16px">{{ emailHint }}</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><div onClick="{{ closeSheet }}" style="height:40px;padding:0 18px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Cancel</div><div onClick="{{ sendInvite }}" style="height:40px;padding:0 20px;border-radius:20px;background:{{ sendBg }};color:#fff;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer"><span class="mi" style="font-size:18px">send</span>Send invite</div></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ sheetLeave }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;max-width:92%;z-index:21;background:#fff;border-radius:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.35);padding:8px 24px 24px;animation:rn-fade .2s ease">
+      
+      <div style="font-size:20px;font-weight:700;margin-top:6px">Leave the group?</div>
+      <div style="font-size:14px;line-height:1.5;color:rgba(0,0,0,.65);margin-top:6px">You'll stop seeing {{ othersNames }}'s progress, and they'll stop seeing yours. Your routines and history stay with you.</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px"><div onClick="{{ closeSheet }}" style="height:40px;padding:0 18px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#288bd5;cursor:pointer">Stay</div><div onClick="{{ leaveGroup }}" style="height:40px;padding:0 20px;border-radius:20px;background:#d32f2f;color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:pointer">Leave group</div></div>
+    </div>
+  </sc-if>
+
+  </div>
+</x-import>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showJoinRequest&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;}}">
+const ROUT = [['06:30', 'Morning Pages'], ['07:15', 'Workout'], ['09:00', 'Start Work'], ['12:30', 'Lunch Walk'], ['18:00', 'Family Dinner'], ['21:30', 'Wind Down']];
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const SEED = [
+  { id: 'me', name: 'Alex Morgan', email: 'alex@routine.app', you: true, pic: true, bg: '#288bd5', now: 'In Start Work · 3 of 5 done', live: true, grid: ['1111101', '1011010', '1111111', '0101100', '1111110', '1101100'], streak: 6 },
+  { id: 'pr', name: 'Priya Shah', email: 'priya@shah.in', bg: '#7b5ea7', now: 'Finished Workout · 12 min ago', live: false, grid: ['1111111', '1111011', '1111111', '1110110', '1111110', '1111100'], streak: 14 },
+  { id: 'sm', name: 'Sam Morgan', email: 'sam@routine.app', bg: '#E68900', now: 'In Start Work · just started', live: true, grid: ['1010101', '0100010', '1101110', '0010100', '1111110', '1001000'], streak: 2 },
+  { id: 'le', name: 'Leo Morgan', email: 'leo@school.edu', bg: '#2e7d32', now: 'Next: Lunch Walk at 12:30', live: false, grid: ['1101001', '0000000', '1010110', '1000100', '1101110', '0100100'], streak: 0 },
+];
+const TODAY = 6, NOW_ROUTINE = 2;
+const scoreOf = (m, d) => { const rows = m.grid.length, done = m.grid.filter(r => r[d] === '1').length; return Math.round(done / rows * 100); };
+const colorOf = (v) => v >= 70 ? '#4CAF50' : v >= 40 ? '#FF9800' : '#e53935';
+const iconOf = (v) => v >= 70 ? 'check' : v >= 40 ? 'remove' : 'close';
+const initials = (n) => n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const NAV_MORE = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2']];
+const navMoreFor = (active) => NAV_MORE.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' ? '10px' : '0px', bg: label === active ? 'rgba(40,139,213,.12)' : 'transparent', fg: label === active ? '#1f6fab' : 'rgba(0,0,0,.6)' }));
+const DRAWER_ITEMS = [['history', 'Routines', 'Routines.dc.html'], ['insights', 'Progress', 'Progress.dc.html'], ['supervisor_account', 'Groups', 'Groups.dc.html'], ['person', 'Profile', 'Profile and About.dc.html#t1'], ['info', 'About', 'Profile and About.dc.html#t2'], ['logout', 'Log out', '#']];
+const drawerFor = (active) => DRAWER_ITEMS.map(([icon, label, href]) => ({ key: label, icon, label, href, gap: label === 'Profile' || label === 'Log out' ? '8px' : '0px', color: label === 'Log out' ? '#d32f2f' : (label === active ? '#1f6fab' : 'rgba(0,0,0,.75)'), bg: label === active ? 'rgba(40,139,213,.08)' : 'transparent' }));
+const NAV_HREF = { Home: 'Routine Notes Final.dc.html', Priority: 'Priority.dc.html', Agents: 'Agents.dc.html', Goals: 'Goals.dc.html', Routines: 'Routines.dc.html', Progress: 'Progress.dc.html', Groups: 'Groups.dc.html', Profile: 'Profile and About.dc.html#t1', Settings: 'Profile and About.dc.html#t1', About: 'Profile and About.dc.html#t2' };
+const fixNav = (v) => { ['navItems', 'lgNav', 'drawerNav'].forEach(k => { if (Array.isArray(v[k])) v[k] = v[k].map(n => { const href = n.href && n.href !== '#' ? n.href : NAV_HREF[n.label]; const go = () => { if (href) window.location.href = href; }; return { ...n, href: href || '#', go, onClick: n.onClick || go, onPhone: n.onPhone || go, onTab: n.onTab || go }; }); }); return v; };
+class Component extends DCLogic {
+  state = { list: SEED.map(x => ({ ...x })), pending: [], sel: 'pr', sheet: null, email: '', tried: false, toast: null, incoming: undefined, left: false, k: 0 };
+  componentWillUnmount() { clearTimeout(this.tt); }
+  toast(t) { clearTimeout(this.tt); this.setState({ toast: { ...t, id: Date.now() } }); this.tt = setTimeout(() => this.setState({ toast: null }), 2800); }
+  renderVals() { return { ...fixNav(this.__rv()), drawerOpen: !!this.state.__dr, openDrawer: () => this.setState({ __dr: true }), closeDrawer: () => this.setState({ __dr: false }), drawerItems: drawerFor('Groups'), navMore: navMoreFor('Groups'), navMoreOpen: this.state.navMore ?? true, toggleNavMore: () => this.setState(st => ({ navMore: !(st.navMore ?? true) })), navMoreRot: (this.state.navMore ?? true) ? '180deg' : '0deg', navMoreIcon: (this.state.navMore ?? true) ? 'expand_less' : 'more_horiz', navMoreBtnBg: (this.state.navMore ?? true) ? 'rgba(0,0,0,.06)' : 'transparent' }; }
+  __rv() {
+    const st = this.state, list = st.left ? st.list.filter(m => m.you) : st.list;
+    const incoming = st.incoming ?? (this.props.showJoinRequest ?? false);
+    const todayPct = (m) => { const upto = m.grid.map(r => r.slice(0, NOW_ROUTINE + 1)); return scoreOf(m, TODAY); };
+    const weekAvg = (m) => Math.round(DAYS.reduce((a, _, d) => a + scoreOf(m, d), 0) / 7);
+    const groupAvg = Math.round(list.reduce((a, m) => a + weekAvg(m), 0) / list.length);
+    const doneRecent = list.filter(m => !m.live && /Finished/.test(m.now)).concat(list.filter(m => m.you));
+    const sorted = [...list].sort((a, b) => (b.you ? 1 : 0) - (a.you ? 1 : 0) || scoreOf(b, TODAY) - scoreOf(a, TODAY));
+    const total = list.length + st.pending.length, slots = 10 - total, full = slots <= 0;
+    const S = list.find(m => m.id === st.sel) || list[0];
+    const em = st.email.trim(), valid = EMAIL.test(em), dup = list.some(m => m.email === em) || st.pending.some(p => p.email === em);
+    const hint = !em ? 'We’ll email them a link to join.' : (!valid ? (st.tried ? 'Enter a valid email address.' : 'Keep typing…') : (dup ? 'Already in your group.' : 'Looks good.'));
+    const send = () => { this.setState({ tried: true }); if (!valid || dup || full) return; this.setState(s => ({ pending: [...s.pending, { id: 'p' + Date.now(), email: em }], sheet: null, email: '', tried: false })); this.toast({ icon: 'send', color: '#64b5f6', title: 'Invite sent', sub: em }); };
+    const memberRows = sorted.map((m, i) => { const t = scoreOf(m, TODAY), on = S && S.id === m.id;
+      return { key: m.id, name: m.name, initials: initials(m.name), avBg: m.bg, hasPic: !!m.pic, isYou: !!m.you, now: m.now, isLive: !!m.live, nowColor: m.live ? '#e68900' : 'rgba(0,0,0,.55)',
+        ringColor: colorOf(t), ringOff: (138.2 * (1 - t / 100)).toFixed(1), today: t + '%', hasScore: true, hasDots: true, isPending: false,
+        dots: DAYS.map((d, j) => { const v = scoreOf(m, j); return { key: d, title: `${d} · ${v}%`, bg: j === TODAY ? 'transparent' : colorOf(v), icon: j === TODAY ? '' : iconOf(v) }; }).map((d, j) => j === TODAY ? { ...d, bg: 'rgba(40,139,213,.18)' } : d),
+        bg: on ? 'rgba(40,139,213,.06)' : 'transparent', hover: on ? 'rgba(40,139,213,.06)' : '#fafafa', cursor: 'pointer', border: i ? '1px solid rgba(0,0,0,.05)' : '0',
+        onOpen: () => this.setState(s => ({ sel: m.id, sheet: 'member', k: s.k + 1 })), onCancel: undefined }; });
+    const pendingRows = st.pending.map(p => ({ key: p.id, name: p.email, initials: '@', avBg: '#bdbdbd', hasPic: false, isYou: false, now: 'Invite sent · waiting to join', isLive: false, nowColor: 'rgba(0,0,0,.45)', ringColor: 'transparent', ringOff: '138.2', today: '', hasScore: false, hasDots: false, isPending: true, dots: [], bg: 'transparent', hover: 'transparent', cursor: 'default', border: '1px solid rgba(0,0,0,.05)', onOpen: () => {}, onCancel: (e) => { e.stopPropagation(); this.setState(s => ({ pending: s.pending.filter(x => x.id !== p.id) })); this.toast({ icon: 'cancel_schedule_send', color: '#bdbdbd', title: 'Invite cancelled', sub: p.email }); } }));
+    const t = st.toast;
+    const g = S ? S.grid : [];
+    return {
+      subLabel: st.left ? 'You’re not in a group' : `${list.length} members · ${slots} spot${slots === 1 ? '' : 's'} left`,
+      inviteBg: full ? 'rgba(0,0,0,.25)' : '#288bd5', inviteRowColor: full ? 'rgba(0,0,0,.35)' : '#288bd5', inviteRowLabel: full ? 'Group is full · 10 members max' : 'Invite someone',
+      openInvite: () => { if (full) { this.toast({ icon: 'block', color: '#ffb74d', title: 'Group is full', sub: '10 members max' }); return; } this.setState({ sheet: 'invite', email: '', tried: false }); },
+      hasIncoming: incoming, acceptInvite: () => { this.setState({ incoming: false }); this.toast({ icon: 'group_add', color: '#81c784', title: 'You joined nina@studio.co’s group', sub: 'Your scores are now shared there' }); }, declineInvite: () => { this.setState({ incoming: false }); this.toast({ icon: 'close', color: '#bdbdbd', title: 'Invite declined', sub: 'nina@studio.co' }); },
+      groupAvg, memberCount: list.length, doneCount: doneRecent.length,
+      pulseLine: groupAvg >= 70 ? 'Strong week. Everyone is showing up.' : `Average across ${list.length} members. ${sorted.filter(m => weekAvg(m) < 50).map(m => m.name.split(' ')[0]).join(' and ') || 'Nobody'} could use a nudge.`,
+      doneFaces: doneRecent.map((m, i) => ({ key: m.id, name: m.name, initials: initials(m.name), bg: m.bg, ml: i ? '-8px' : '0' })),
+      members: [...memberRows, ...pendingRows],
+      openLeave: () => this.setState({ sheet: 'leave' }), othersNames: list.filter(m => !m.you).map(m => m.name.split(' ')[0]).join(', ') || 'others',
+      leaveGroup: () => { this.setState({ left: true, sheet: null, sel: 'me' }); this.toast({ icon: 'logout', color: '#ef9a9a', title: 'You left the group', sub: 'Your routines and history are unchanged' }); },
+      hasSheet: !!st.sheet, hasModal: st.sheet === 'invite' || st.sheet === 'leave', sheetInvite: st.sheet === 'invite', sheetLeave: st.sheet === 'leave', sheetMember: st.sheet === 'member', closeSheet: () => this.setState({ sheet: null }), closeVis: 'visible', kMod: st.k % 2,
+      slotsLeft: slots, email: st.email, setEmail: (e) => this.setState({ email: e.target.value }), emailKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } },
+      emailLine: !em ? 'rgba(0,0,0,.2)' : (valid && !dup ? '#288bd5' : (st.tried || dup ? '#d32f2f' : 'rgba(0,0,0,.3)')), emailHint: hint, emailHintColor: (st.tried && !valid) || dup ? '#d32f2f' : 'rgba(0,0,0,.5)', sendBg: valid && !dup ? '#288bd5' : 'rgba(0,0,0,.2)', sendInvite: send,
+      sel: S ? { name: S.name, email: S.email, initials: initials(S.name), avBg: S.bg, hasPic: !!S.pic, streak: S.streak } : {},
+      selStats: S ? [{ key: 'w', k: 'THIS WEEK', v: weekAvg(S) + '%' }, { key: 't', k: 'TODAY', v: scoreOf(S, TODAY) + '%' }, { key: 's', k: 'STREAK', v: S.streak + ' days' }] : [],
+      dayHeads: DAYS.map((d, j) => ({ key: d, t: j === TODAY ? 'Today' : d, color: j === TODAY ? '#288bd5' : 'rgba(0,0,0,.45)' })),
+      grid: ROUT.map(([time, name], r) => ({ key: name, time, name, cells: DAYS.map((d, j) => { const on = g[r] && g[r][j] === '1', future = j === TODAY && r > NOW_ROUTINE; return { key: d, title: `${name} · ${d} · ${future ? 'later today' : on ? 'ticked' : 'missed'}`, bg: future ? 'transparent' : (on ? '#4CAF50' : 'rgba(0,0,0,.08)'), ring: future ? 'inset 0 0 0 1px rgba(0,0,0,.12)' : (j === TODAY ? 'inset 0 0 0 2px rgba(40,139,213,.5)' : 'none'), icon: on && !future ? 'check' : '' }; }) })),
+      dayTotals: DAYS.map((d, j) => { const v = S ? scoreOf(S, j) : 0; return { key: d, v: v + '%', color: colorOf(v) }; }),
+      navItems: [['home', 'Home'], ['dashboard', 'Priority'], ['smart_toy', 'Agents'], ['assignment', 'Goals']].map(([icon, label]) => ({ key: label, icon, label })),
+      sideNav: [['home', 'Home', 'Routine Notes Final.dc.html'], ['dashboard', 'Priority', 'Priority.dc.html'], ['smart_toy', 'Agents', 'Agents.dc.html'], ['assignment', 'Goals', 'Goals.dc.html']].map(([icon, label, href]) => ({ key: label, icon, label, href, bg: label === 'Groups' ? 'rgba(40,139,213,.12)' : 'transparent', fg: label === 'Groups' ? '#1f6fab' : 'rgba(0,0,0,.6)' })),
+      browserTabs: [{ title: 'Routine Notes — Groups' }],
+      hasToast: !!t, toastIcon: t && t.icon, toastColor: t && t.color, toastTitle: t && t.title, toastSub: t && t.sub,
+    };
+  }
+}
+</script>
+</body>
+</html>

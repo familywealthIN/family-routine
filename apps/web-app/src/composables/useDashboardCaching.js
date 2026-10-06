@@ -16,6 +16,15 @@ import {
  * in localStorage with a 24-hour TTL. Processes tags sequentially to
  * avoid flooding the LLM API.
  *
+ * Two entry points, one store and one in-flight registry:
+ *
+ *   - `initDashboardCaching(vm, { tags })` — the daily sweep, kicked off by
+ *     `mixins/dashboardContextMixin` for routines opted into AI Search.
+ *   - `ensureTagContext(vm, tag)` — on demand, once, for the tag on the
+ *     routine the user just focused. This is what makes the thread's
+ *     "Before you start" card work for every tagged routine instead of only
+ *     the opted-in ones, without paying for tags nobody opens.
+ *
  * Usage in a Vue component:
  *   import { initDashboardCaching } from '@/composables/useDashboardCaching';
  *
@@ -53,13 +62,12 @@ const GOALS_BY_TAG = gql`
       period
       goalItems {
         body
+        isComplete
       }
     }
   }
 `;
 
-/**
- * Transform goal items from the tag query into the AI input format.
 /**
  * Deduplicate goal items by body text
  * @param {Array} goals - Array of goal objects with goalItems
@@ -129,6 +137,41 @@ function flattenGoalItems(goals) {
   return dedupeGoalItems(combined).slice(0, MAX_ITEMS);
 }
 
+const MAX_ACTIVITY_ROWS = 3;
+
+/**
+ * The PAST ACTIVITY rows the routine thread's "Before you start" card shows:
+ * the three most recent day-period items under this tag, newest first.
+ *
+ * Derived here rather than queried again from the card, because `goalsByTag`
+ * has already been fetched for the LLM input a few lines below and this is the
+ * only pass over it. The day label is what the card's fixed 40px date column
+ * renders, so it is formatted once, here.
+ *
+ * @param {Array} goals - goalsByTag response
+ * @returns {Array<{ date: string, text: string, done: boolean }>}
+ */
+function recentActivity(goals) {
+  if (!Array.isArray(goals)) return [];
+
+  const dayGoals = goals
+    .filter((goal) => goal && goal.period === 'day'
+      && Array.isArray(goal.goalItems) && goal.goalItems.length)
+    .slice()
+    .sort((a, b) => moment(b.date, 'DD-MM-YYYY').valueOf() - moment(a.date, 'DD-MM-YYYY').valueOf());
+
+  const rows = [];
+  dayGoals.forEach((goal) => {
+    const label = moment(goal.date, 'DD-MM-YYYY').format('ddd');
+    goal.goalItems.forEach((item) => {
+      if (rows.length < MAX_ACTIVITY_ROWS && item && item.body) {
+        rows.push({ date: label, text: item.body, done: !!item.isComplete });
+      }
+    });
+  });
+  return rows;
+}
+
 /**
  * Cache a single tag's dashboard data by fetching goals, summary, and next steps
  * @param {Object} vm - Vue component instance (needs $goals and $apollo)
@@ -148,15 +191,16 @@ async function cacheTagDashboard(vm, tag) {
 
     if (!goals || goals.length === 0) {
       // No goals — cache as empty so we don't retry
-      setCachedDashboard(tag, '', '');
+      setCachedDashboard(tag, '', '', []);
       return true;
     }
 
     // 2. Flatten goal items to AI input format
     const aiItems = flattenGoalItems(goals);
+    const activity = recentActivity(goals);
 
     if (aiItems.length === 0) {
-      setCachedDashboard(tag, '', '');
+      setCachedDashboard(tag, '', '', activity);
       return true;
     }
 
@@ -178,12 +222,86 @@ async function cacheTagDashboard(vm, tag) {
     const nextSteps = nextStepsResult?.data?.getGoalsNextSteps?.nextSteps || '';
 
     // 4. Cache the results
-    setCachedDashboard(tag, description, nextSteps);
+    setCachedDashboard(tag, description, nextSteps, activity);
     return true;
   } catch (err) {
     console.error(`Failed to cache dashboard for tag "${tag}":`, err);
     return false;
   }
+}
+
+/**
+ * tag -> the context run currently in flight for it.
+ *
+ * Shared by BOTH paths — the daily sweep below and the on-demand
+ * `ensureTagContext` the routine thread calls — so the same tag can never have
+ * two runs out at once, however it was asked for: two routines sharing
+ * `area:health`, the sweep and a focus landing on the same tag, or the phone
+ * and tablet chat panes both mounted. Each run is three network calls and two
+ * of them hit a model, so a duplicate is real money.
+ */
+const inFlight = new Map();
+
+/**
+ * Tags the on-demand path has already spent a run on this session.
+ *
+ * The sweep is allowed to retry a tag on its next run (a new day, a newly
+ * tagged routine); the on-demand path is not — it fires on every focus change,
+ * so "once" has to mean once. A reload gets a fresh attempt.
+ */
+const onDemandAttempted = new Set();
+
+/**
+ * One context run per tag, whoever asked.
+ *
+ * @returns {Promise<boolean>} Whether the tag now has a cache entry.
+ */
+function runTagContext(vm, tag) {
+  const existing = inFlight.get(tag);
+  if (existing) return existing;
+
+  const run = cacheTagDashboard(vm, tag).finally(() => {
+    inFlight.delete(tag);
+  });
+  inFlight.set(tag, run);
+  return run;
+}
+
+/**
+ * Build one tag's context on demand, now, because the user is looking at a
+ * routine that carries it.
+ *
+ * The daily sweep only covers routines opted into AI Search, so without this
+ * the routine thread's "Before you start" card would be missing for most
+ * tagged routines — narrower than the Areas/Projects pages it replaced (see
+ * docs/redesign/STATUS.md gap 16). Widening the sweep instead would buy that
+ * coverage with one model call per tagged routine per day whether or not the
+ * user ever opens it; this spends only on the tags they actually focus.
+ *
+ * Deliberately silent: no `DASHBOARD_CACHING_STATUS` event, because that drives
+ * the sweep's progress UI and the thread must not pop anything while a card
+ * fills in. A failure resolves `false` rather than throwing, so the caller's
+ * only job is to stop showing the placeholder.
+ *
+ * @param {Object} vm - Vue component instance (needs $apollo)
+ * @param {string} tag - One `area:`/`project:` tag
+ * @returns {Promise<boolean>} Whether the tag now has a cache entry.
+ */
+export function ensureTagContext(vm, tag) {
+  const key = String(tag || '').trim();
+  if (!key || filterAreaProjectTags([key]).length === 0) return Promise.resolve(false);
+  // Still inside the 24h TTL — the sweep, an earlier focus or the Area page
+  // already paid for this one.
+  if (isCacheValid(key)) return Promise.resolve(true);
+
+  // A run is already out (possibly the sweep's); join it instead of starting a
+  // second. Joining does NOT count as this path's one attempt.
+  const existing = inFlight.get(key);
+  if (existing) return existing;
+
+  if (onDemandAttempted.has(key)) return Promise.resolve(false);
+  onDemandAttempted.add(key);
+  return runTagContext(vm, key);
 }
 
 const GET_PROJECT_TAGS = gql`
@@ -276,7 +394,9 @@ export async function initDashboardCaching(vm, options = {}) {
       currentTag: tag,
     });
 
-    await cacheTagDashboard(vm, tag);
+    // Through the shared registry, so a tag the routine thread is already
+    // fetching on demand is joined rather than fetched twice.
+    await runTagContext(vm, tag);
 
     const completedCount = index + 1;
     const progress = Math.round((completedCount / tagsToCache.length) * 100);

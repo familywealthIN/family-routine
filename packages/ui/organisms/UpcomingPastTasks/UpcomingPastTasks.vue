@@ -78,7 +78,7 @@
                 class="mb-3"
                 row
                 wrap
-                v-if="hasWeekGoalFor(task.id) && hasMonthGoalFor(task.id)"
+                v-if="hasWeekGoal && hasMonthGoal"
               >
                 <AtomFlex xs12>
                   <AtomAlert :value="true" color="success" icon="check_circle" outline>
@@ -88,25 +88,25 @@
                 </AtomFlex>
               </AtomLayout>
               <AtomLayout class="mb-3" row wrap v-else>
-                <AtomFlex xs6 v-if="!hasMonthGoalFor(task.id)">
+                <AtomFlex xs6 v-if="!hasMonthGoal">
                   <AtomChip small @click="$emit('set-goal-period', { period: 'month', task })">
                     <AtomAvatar class="red text-white"><AtomIcon>close</AtomIcon></AtomAvatar>
                     Set Month's Goal
                   </AtomChip>
                 </AtomFlex>
-                <AtomFlex xs6 v-if="hasMonthGoalFor(task.id)">
+                <AtomFlex xs6 v-if="hasMonthGoal">
                   <AtomChip small>
                     <AtomAvatar class="success text-white"><AtomIcon>check</AtomIcon></AtomAvatar>
                     Set Month's Goal
                   </AtomChip>
                 </AtomFlex>
-                <AtomFlex xs6 v-if="!hasWeekGoalFor(task.id)">
+                <AtomFlex xs6 v-if="!hasWeekGoal">
                   <AtomChip small @click="$emit('set-goal-period', { period: 'week', task })">
                     <AtomAvatar class="red text-white"><AtomIcon>close</AtomIcon></AtomAvatar>
                     Set Week's Goal
                   </AtomChip>
                 </AtomFlex>
-                <AtomFlex xs6 v-if="hasWeekGoalFor(task.id)">
+                <AtomFlex xs6 v-if="hasWeekGoal">
                   <AtomChip small>
                     <AtomAvatar class="success text-white"><AtomIcon>check</AtomIcon></AtomAvatar>
                     Set Week's Goal
@@ -202,6 +202,17 @@ function filterByTaskPeriod(goals, taskId, period) {
   return bucket;
 }
 
+// Week/month/year goals belong to the period, not to a routine slot. Their
+// `taskRef` only records which item happened to be selected when they were
+// created, so scoping them per row made the same month goal read as present on
+// one expanded card and missing on the next. Whole goals, no projection.
+function filterByPeriod(goals, period) {
+  if (!Array.isArray(goals)) return [];
+  return goals.filter((goal) => goal
+    && goal.period === period
+    && !!(goal.goalItems && goal.goalItems.length));
+}
+
 export default {
   name: 'OrganismUpcomingPastTasks',
   components: {
@@ -244,6 +255,12 @@ export default {
     activeTasks() {
       return this.tabs === 1 ? this.pastTasks : this.upcomingTasks;
     },
+    hasWeekGoal() {
+      return filterByPeriod(this.goals, 'week').length > 0;
+    },
+    hasMonthGoal() {
+      return filterByPeriod(this.goals, 'month').length > 0;
+    },
   },
   methods: {
     onTabsInput(val) {
@@ -279,14 +296,12 @@ export default {
     forwardToggleGoalDisplayDialog(goalItem, open) {
       this.$emit('toggle-goal-display-dialog', goalItem, open);
     },
-    hasWeekGoalFor(taskId) {
-      return filterByTaskPeriod(this.goals, taskId, 'week').length > 0;
-    },
-    hasMonthGoalFor(taskId) {
-      return filterByTaskPeriod(this.goals, taskId, 'month').length > 0;
-    },
+    // Day goals are that routine item's milestones, so they stay task-scoped.
+    // Every longer period is a property of the period itself.
     filteredPeriodGoalsFor(taskId) {
-      return filterByTaskPeriod(this.goals, taskId, this.goalPeriod);
+      return this.goalPeriod === 'day'
+        ? filterByTaskPeriod(this.goals, taskId, 'day')
+        : filterByPeriod(this.goals, this.goalPeriod);
     },
     getWeekProgress(taskGoals) {
       if (this.goalPeriod !== 'day') return 0;

@@ -116,4 +116,58 @@ describe('agent resolvers', () => {
     expect(update.$set.lastResultBody.length).toBeLessThanOrEqual(64);
     expect(update.$inc).toEqual({ successCount: 1 });
   });
+
+  it('recordAgentExecution only closes a run that is open', async () => {
+    mockFindOneAndUpdate.mockReturnValue(exec({ id: 'a1' }));
+    const { mutation } = require('./agent');
+    await mutation.recordAgentExecution.resolve(null, {
+      id: 'a1',
+      status: 'finished',
+      incrementSuccess: 1,
+    }, ctx());
+
+    const [filter] = mockFindOneAndUpdate.mock.calls[0];
+    expect(filter.$or).toEqual([
+      { executionStatus: { $in: ['running', 'listening'] } },
+      { endEvent: null },
+    ]);
+  });
+
+  it('recordAgentExecution leaves a non-closing status unguarded', async () => {
+    mockFindOneAndUpdate.mockReturnValue(exec({ id: 'a1' }));
+    const { mutation } = require('./agent');
+    await mutation.recordAgentExecution.resolve(null, {
+      id: 'a1',
+      status: 'listening',
+      incrementSuccess: 1,
+    }, ctx());
+
+    const [filter] = mockFindOneAndUpdate.mock.calls[0];
+    expect(filter).toEqual({ _id: 'a1', email: 'me@example.com' });
+  });
+
+  // D-01: an end event fired for an agent that was never started logged a
+  // success and flipped the row idle -> finished.
+  it('recordAgentExecution refuses an end event for an agent that never started', async () => {
+    mockFindOneAndUpdate.mockReturnValue(exec(null));
+    mockFindOne.mockReturnValue(exec({ id: 'a1', executionStatus: 'idle' }));
+    const { mutation } = require('./agent');
+    await expect(mutation.recordAgentExecution.resolve(null, {
+      id: 'a1',
+      status: 'finished',
+      incrementSuccess: 1,
+    }, ctx())).rejects.toThrow(/409:Agent has no run in progress \(idle\)/);
+  });
+
+  it('recordAgentExecution still returns null for an agent the caller does not own', async () => {
+    mockFindOneAndUpdate.mockReturnValue(exec(null));
+    mockFindOne.mockReturnValue(exec(null));
+    const { mutation } = require('./agent');
+    const result = await mutation.recordAgentExecution.resolve(null, {
+      id: 'a1',
+      status: 'finished',
+      incrementSuccess: 1,
+    }, ctx());
+    expect(result).toBeNull();
+  });
 });

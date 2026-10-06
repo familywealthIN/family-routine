@@ -89,7 +89,9 @@
                   <strong>{{ task.name }}</strong>
                   <br />
                   <a @click="() => $router.push(`/agenda/tree/${task.id}`)">Go to Month Planner</a>
-                  <div class="caption"><pre>{{ task.description }}</pre></div>
+                  <div v-if="task.description" class="caption description-text">
+                    <vue-markdown class="rn-markdown" :source="task.description" :html="false"></vue-markdown>
+                  </div>
                 </atom-flex>
               </atom-layout>
             </atom-timeline-item>
@@ -234,6 +236,8 @@
 <script>
 /* eslint-disable no-param-reassign */
 import moment from 'moment';
+import VueMarkdown from 'vue-markdown';
+import '@routine-notes/markdown-editor/styles/markdown-content.css';
 
 import TimelineItemList from '@routine-notes/ui/molecules/TimelineItemList/TimelineItemList.vue';
 import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
@@ -260,6 +264,7 @@ import { ROUTINE_DATE_QUERY, AGENDA_GOALS_QUERY } from '../composables/graphql/q
 export default {
   components: {
     GoalList,
+    VueMarkdown,
     TimelineItemList,
     ContainerBox,
     AtomAlert,
@@ -506,6 +511,15 @@ export default {
   }
   .period-separator {
     border-bottom: 1px solid #ccc;
+  }
+  /* Read-only markdown descriptions rendered by vue-markdown. */
+  .description-text >>> p {
+    margin-bottom: 4px;
+  }
+  .description-text >>> ul,
+  .description-text >>> ol {
+    margin-bottom: 4px;
+    padding-left: 20px;
   }
   >>> .v-timeline--dense:before {
     left: 34px !important;

@@ -9,22 +9,25 @@ export { default as MoleculeMenuButton } from './MenuButton/MenuButton.vue';
 
 // Existing molecules
 export { default as AiSearchInput } from './AiSearchInput/AiSearchInput.vue';
-export { default as AreaSidebar } from './AreaSidebar/AreaSidebar.vue';
 export { default as GoalItemMilestoneList } from './GoalItemMilestoneList/GoalItemMilestoneList.vue';
 export { default as GoalRefSelector } from './GoalRefSelector/GoalRefSelector.vue';
 export { default as GoalTaskSelector } from './GoalTaskSelector/GoalTaskSelector.vue';
 export { default as GoalItemMilestoneTile } from './GoalItemMilestoneTile/GoalItemMilestoneTile.vue';
 export { default as GoalTagsInput } from './GoalTagsInput/GoalTagsInput.vue';
+export { default as LoadErrorState } from './LoadErrorState/LoadErrorState.vue';
 export { default as PlanConfigSelector } from './PlanConfigSelector/PlanConfigSelector.vue';
 export { default as PointsChip } from './PointsChip/PointsChip.vue';
 export { default as PriorityQuadrant } from './PriorityQuadrant/PriorityQuadrant.vue';
-export { default as ProjectSidebar } from './ProjectSidebar/ProjectSidebar.vue';
 export { default as RadarChart } from './RadarChart/RadarChart.vue';
 export { default as RelatedTasksTimeline } from './RelatedTasksTimeline/RelatedTasksTimeline.vue';
 export { default as StreakChecks } from './StreakChecks/StreakChecks.vue';
 export { default as SubTaskItemList } from './SubTaskItemList/SubTaskItemList.vue';
 export { default as TableCard } from './TableCard/TableCard.vue';
-export { default as TaskActionButtons } from './TaskActionButtons/TaskActionButtons.vue';
 export { default as TimelineEntryEditor } from './TimelineEntryEditor/TimelineEntryEditor.vue';
 export { default as TimelineItemList } from './TimelineItemList/TimelineItemList.vue';
 export { default as YearGoalSidebar } from './YearGoalSidebar/YearGoalSidebar.vue';
+
+// Routine Focus home screen (design_handoff_routine_focus)
+export { default as FocusPointsChip } from './FocusPointsChip/FocusPointsChip.vue';
+export { default as RoutineRail } from './RoutineRail/RoutineRail.vue';
+export { default as PullToRefresh } from './PullToRefresh/PullToRefresh.vue';

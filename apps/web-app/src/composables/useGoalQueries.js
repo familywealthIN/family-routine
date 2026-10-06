@@ -110,6 +110,20 @@ export const GOALS_BY_GOAL_REF_QUERY = gql`
 `;
 
 /**
+ * Milestones a delete would cascade to - the goal items transitively hanging
+ * off a goal item via goalRef. Read before a destructive delete so the
+ * confirmation dialog can name what goes with it.
+ */
+export const GOAL_ITEM_MILESTONES_QUERY = gql`
+  query goalItemMilestones($id: ID!) {
+    goalItemMilestones(id: $id) {
+      id
+      body
+    }
+  }
+`;
+
+/**
  * Agenda goals query - gets goals for a specific date across all periods
  */
 export const AGENDA_GOALS_QUERY = gql`
