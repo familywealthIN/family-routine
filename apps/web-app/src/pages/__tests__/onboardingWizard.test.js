@@ -78,7 +78,38 @@ describe('WelcomeWizard — who gets the name step', () => {
     expect(wizard().needsName).toBe(true);
   });
 
+  /*
+   * The reported bug. The server's Apple fallback is `email.split('@')[0]` for
+   * WHATEVER address the identity token carries, so an Apple user who chose to
+   * share their real address was stored as "alex" for alex@example.com — and
+   * the old check only looked for that shape on `@privaterelay.appleid.com`,
+   * so they were never asked.
+   */
+  it('asks when the name is the local part of a REAL address, not just a relay one', () => {
+    session.name = 'alex';
+    session.email = 'alex@example.com';
+    expect(wizard().needsName).toBe(true);
+  });
+
+  it('ignores case and padding when matching the placeholder', () => {
+    session.name = '  Alex  ';
+    session.email = 'ALEX@example.com';
+    expect(wizard().needsName).toBe(true);
+  });
+
   it('does not ask a Google account, which always returns a real name', () => {
+    expect(wizard().needsName).toBe(false);
+  });
+
+  it('does not ask when the name merely starts with the local part', () => {
+    session.name = 'Alex Rivera';
+    session.email = 'alex@example.com';
+    expect(wizard().needsName).toBe(false);
+  });
+
+  it('does not ask on a name alone, with no email to compare it against', () => {
+    session.name = 'Alex';
+    session.email = '';
     expect(wizard().needsName).toBe(false);
   });
 });

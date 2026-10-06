@@ -533,23 +533,27 @@ export default {
   computed: {
     /**
      * True when the signed-in account doesn't have a real display name.
-     * Triggered for Apple users (placeholder "Apple User" or email-local
-     * fallback) and as a safety net for anyone arriving without a name.
-     * Google sign-in always returns a real name so this is a no-op there.
+     *
+     * The server's Apple fallback is `email.split('@')[0]`
+     * (`passport.displayNameFromEmail`), applied to WHATEVER address the token
+     * carries — a private relay one, or the user's own if they chose to share
+     * it. This used to check the local-part case only for
+     * `@privaterelay.appleid.com`, so an Apple user who shared a real address
+     * ended up named "alex" for `alex@example.com` and was never asked. That is
+     * the gap this closes: a name that is exactly its own email's local part is
+     * a placeholder whatever the domain.
+     *
+     * It can in principle fire for a Google user whose real display name
+     * happens to equal their email's local part. That costs one extra step on
+     * a screen they are already on, which is the better side to err on — the
+     * alternative leaves someone called "alex" for good.
      */
     needsName() {
-      const rawName = (getSessionItem(GC_USER_NAME) || '').trim();
-      const rawEmail = (getSessionItem(GC_USER_EMAIL) || '').toLowerCase();
+      const rawName = (getSessionItem(GC_USER_NAME) || '').trim().toLowerCase();
+      const rawEmail = (getSessionItem(GC_USER_EMAIL) || '').trim().toLowerCase();
       if (!rawName) return true;
-      if (rawName.toLowerCase() === 'apple user') return true;
-      // Apple private relay addresses indicate the account came through
-      // Sign in with Apple — if the name happens to be the email-local
-      // part (the server fallback) ask anyway.
-      if (rawEmail.endsWith('@privaterelay.appleid.com')) {
-        const localPart = rawEmail.split('@')[0];
-        if (rawName.toLowerCase() === localPart) return true;
-      }
-      return false;
+      if (rawName === 'apple user') return true;
+      return !!rawEmail && rawName === rawEmail.split('@')[0];
     },
 
     /** The ONE breakpoint rule — `resolveShell`, never a second scheme. */

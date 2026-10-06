@@ -148,10 +148,20 @@ export default {
   padding: 10px 0 2px;
 }
 
+/*
+  Wraps, because the controls on the right cannot shrink: the time-zone select
+  is a fixed 200px and the toggles 112px. On a 320px phone that left the label
+  column 44px — measured — so "Routine times and day changes follow this" came
+  out one word per line over seven lines, and the select's text was cut off.
+  With `wrap` plus a flex-basis floor on the text, the control drops to its own
+  line instead of strangling the label.
+*/
 .rn-ptime__row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 0;
   min-height: 60px;
   border-bottom: 1px solid rgba(0, 0, 0, .06);
 }
@@ -160,8 +170,10 @@ export default {
   border-bottom: 0;
 }
 
+/* 170px is the floor that decides when the control wraps — below it the label
+   is being squeezed rather than laid out. */
 .rn-ptime__text {
-  flex: 1;
+  flex: 1 1 170px;
   min-width: 0;
 }
 
@@ -187,18 +199,28 @@ export default {
   color: rgba(0, 0, 0, .8);
 }
 
+/* `margin-left:auto` keeps the control hard right on a shared line AND on a
+   line of its own once the row wraps, so the alignment does not jump. */
 .rn-ptime__switch {
   width: 112px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .rn-ptime__select {
   /* 16px, and wider to hold it: iOS zooms the page when a focused field is
      under 16px. The extra 30px keeps "(GMT -5:00) Eastern Time" from clipping
-     any worse than it did at 13px. */
-  max-width: 200px;
+     any worse than it did at 13px.
+
+     `max-width` rather than a width, and `min-width: 0`, so that once the row
+     wraps this takes the line it is given instead of staying 200px and
+     clipping its own text. 280 is what "(GMT -5:00) Eastern Time" needs at
+     16px — the cap stops it growing absurdly wide on a desktop row. */
+  max-width: 280px;
+  min-width: 0;
+  flex: 1 1 200px;
   height: 36px;
-  flex-shrink: 0;
+  margin-left: auto;
   border: 1px solid rgba(0, 0, 0, .15);
   border-radius: 10px;
   padding: 0 8px;
@@ -210,7 +232,10 @@ export default {
 }
 
 /* The locked twin of the switch: same geometry, no thumb transition, dimmed. */
+/* Same `margin-left:auto` as `__switch`, so the two segmented controls in this
+   card line up with each other whether the row wraps or not. */
 .rn-ptime__locked {
+  margin-left: auto;
   display: flex;
   padding: 3px;
   border-radius: 10px;

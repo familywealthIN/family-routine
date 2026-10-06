@@ -138,14 +138,22 @@ export default {
           scopes: 'name email',
         });
 
-        const { identityToken, email, givenName, familyName } = result.response;
-        const name =
-          givenName && familyName
-            ? `${givenName} ${familyName}`.trim()
-            : 'Apple User';
-        const userEmail = email || 'apple.user@example.com';
+        const { identityToken, givenName, familyName } = result.response;
 
-        this.createAppleSession(identityToken, userEmail, name);
+        /*
+         * Apple hands the name over EXACTLY ONCE — in the authorization
+         * response of the first sign-in for this Apple ID — and never puts it
+         * in the identity token. If we do not forward it now it is gone for
+         * good, and the account is left with the server's placeholder (the
+         * email's local part, or "Apple User").
+         *
+         * It used to be computed here and then dropped: `createAppleSession`
+         * took it as a parameter that its own `update` callback shadowed, and
+         * the mutation never had a field to carry it.
+         */
+        const name = [givenName, familyName].filter(Boolean).join(' ').trim();
+
+        this.createAppleSession(identityToken, name);
       } catch (error) {
         this.isLoading = false;
 
@@ -162,7 +170,7 @@ export default {
       }
     },
 
-    createAppleSession(identityToken, email, name) {
+    createAppleSession(identityToken, appleName) {
       const notificationId = localStorage.getItem(GC_NOTIFICATION_TOKEN) || '';
       const timezone = (Intl.DateTimeFormat().resolvedOptions().timeZone) || '';
 
@@ -173,11 +181,13 @@ export default {
               $identityToken: String!
               $notificationId: String!
               $timezone: String
+              $name: String
             ) {
               authApple(
                 identityToken: $identityToken
                 notificationId: $notificationId
                 timezone: $timezone
+                name: $name
               ) {
                 name
                 email
@@ -189,9 +199,12 @@ export default {
             }
           `,
           variables: {
-            identityToken: identityToken,
+            identityToken,
             notificationId,
             timezone,
+            // Empty on every sign-in after the first — the server keeps the
+            // name it already has rather than overwriting it with nothing.
+            name: appleName || null,
           },
           update: async (store, { data: { authApple } }) => {
             const {
