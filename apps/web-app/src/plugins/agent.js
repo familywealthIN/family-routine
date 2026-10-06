@@ -44,6 +44,11 @@ export default {
         });
       },
 
+      /** Would an end event actually dispatch for this routine? */
+      canFireEndEvent(taskRef) {
+        return agentStore.canFireEndEvent(taskRef);
+      },
+
       fireEndEvent({ taskRef, goalId }) {
         return agentStore.fireEndEvent({
           apollo: apolloFromVm(vm), vm, taskRef, goalId,

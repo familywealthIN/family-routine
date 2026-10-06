@@ -2219,6 +2219,15 @@ export default {
       const completed = this.countTaskCompleted(task);
       if (total <= 0 || completed < total) return;
 
+      // Say nothing unless something is actually going out. `fireEndEvent`
+      // refuses three ways — no end event configured, no run open, or a run
+      // opened on an earlier day — and returned `null` for all of them, which
+      // this swallowed: the thread announced "end event firing", the bolt stage
+      // was switched on, and neither was true. The animation never appeared
+      // either, because the flag was cleared in the same microtask the refusal
+      // resolved in, so it flipped on and off before a single paint.
+      if (!this.$agent.canFireEndEvent(taskRef)) return;
+
       const gid = goalId || this.findFirstGoalIdForRoutine(taskRef);
       this.$set(this.endEventFiring, taskRef, true);
       this.postChatEvent({

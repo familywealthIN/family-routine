@@ -1575,3 +1575,64 @@ describe('RoutineFocus zero-point agent refusal', () => {
     expect(vm.$notify).toHaveBeenCalled();
   });
 });
+
+/**
+ * D-12 and the animation that went with it.
+ *
+ * `fireEndEvent` refuses three ways — no end event configured, no run open, or
+ * a run opened on an earlier day — and returns `null` for each. The page
+ * swallowed that: it posted "All tasks complete — end event firing" and set the
+ * bolt stage BEFORE dispatching, so a refusal left the thread asserting a
+ * dispatch that never happened. The animation never showed either, because the
+ * flag was cleared in the same microtask the refusal resolved in.
+ */
+describe('RoutineFocus end-event dispatch', () => {
+  const vmFor = (canFire) => ({
+    tasklist: [{
+      id: 'sw',
+      points: 12,
+      stimuli: [{ name: 'D', splitRate: 4 }, { name: 'K', splitRate: 2, earned: 12 }],
+    }],
+    endEventFiring: {},
+    postChatEvent: jest.fn(),
+    findFirstGoalIdForRoutine: jest.fn(() => 'g1'),
+    $set: (o, k, v) => { o[k] = v; },
+    $delete: (o, k) => { delete o[k]; },
+    $agent: {
+      canFireEndEvent: jest.fn(() => canFire),
+      fireEndEvent: jest.fn(() => Promise.resolve(canFire ? { ok: true } : null)),
+    },
+    countTaskTotal: methods.countTaskTotal,
+    countTaskCompleted: methods.countTaskCompleted,
+  });
+
+  it('says nothing and animates nothing when no end event would go out', () => {
+    const vm = vmFor(false);
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    expect(vm.$agent.fireEndEvent).not.toHaveBeenCalled();
+    expect(vm.postChatEvent).not.toHaveBeenCalled();
+    expect(vm.endEventFiring.sw).toBeUndefined();
+  });
+
+  it('posts the pill and raises the bolt stage when one will', () => {
+    const vm = vmFor(true);
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    expect(vm.$agent.fireEndEvent).toHaveBeenCalledWith({ taskRef: 'sw', goalId: 'g1' });
+    expect(vm.postChatEvent).toHaveBeenCalledWith(expect.objectContaining({
+      text: 'All tasks complete — end event firing',
+      icon: 'bolt',
+    }));
+    // Set synchronously, so the stage is on screen before the dispatch settles.
+    expect(vm.endEventFiring.sw).toBe(true);
+  });
+
+  // The counter gate still comes first: a routine whose slots are not full has
+  // nothing to close, whatever the agent's state.
+  it('does not even ask while the slot counter is unfilled', () => {
+    const vm = vmFor(true);
+    vm.tasklist[0].stimuli = [{ name: 'D', splitRate: 8 }, { name: 'K', splitRate: 2, earned: 0 }];
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    expect(vm.$agent.canFireEndEvent).not.toHaveBeenCalled();
+    expect(vm.postChatEvent).not.toHaveBeenCalled();
+  });
+});

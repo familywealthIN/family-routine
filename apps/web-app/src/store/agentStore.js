@@ -585,6 +585,27 @@ const actions = {
     }
   },
 
+  /**
+   * Whether an end event would actually go on the wire for this routine.
+   *
+   * The same three refusals `fireEndEvent` applies, readable BEFORE the call.
+   * It exists because the caller has to decide whether to say anything: the
+   * page used to post "All tasks complete — end event firing" and start the
+   * bolt animation before dispatching, then swallow a `null` return, so a
+   * routine with no end event configured — or whose run was opened by
+   * "Start Task", or opened yesterday — announced a dispatch that never
+   * happened and an animation that never ran.
+   *
+   * One owner of the rule, read twice. `fireEndEvent` keeps its own guards:
+   * this is a question, not a gate, and the state can change between them.
+   */
+  canFireEndEvent(taskRef) {
+    const agent = state.agentsByTaskRef[taskRef];
+    if (!agent || !agent.endEvent || !agent.endEvent.value) return false;
+    if (!RUN_OPEN_STATUSES.includes(agent.executionStatus)) return false;
+    return !!ranToday(agent);
+  },
+
   async fireEndEvent({
     apollo, vm, taskRef, goalId,
   }) {
