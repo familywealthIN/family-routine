@@ -255,6 +255,12 @@
       defaults to false), so it brings the already-passed points note, the Related
       Goals timeline and the action buttons with it.
 
+      `locked-item` is the dashboard's other dialog folded in. There, a routine
+      that ALREADY had a day goal item got a goal-action modal instead of the
+      create form, showing the item itself above Start Task / Start Agent / Build
+      Agent. One sheet does both now: it names what is locked in when there is
+      something, and asks for one when there is not.
+
       `v-if` keeps the mount/unmount semantics `RoutineSheet` had, so the container
       still refetches on each open via the `actionSheetKey` bump.
     -->
@@ -276,6 +282,7 @@
       :selectedTaskRef="focusRow ? focusRow.id : ''"
       :redeem-cost="actionRedeemCost"
       :open-item-count="focusOpenItemCount"
+      :locked-item="focusLockedItem"
       allow-start-without-task
       @close="actionSheetOpen = false"
       @start-quick-goal-task="onStartTask"
@@ -852,6 +859,31 @@ export default {
     /** Open items on the focused routine — the action sheet's hint line. */
     focusOpenItemCount() {
       return this.focusItems.filter((item) => item && !item.isComplete).length;
+    },
+    /**
+     * The goal item the focused routine is already locked in on — the sheet's
+     * LOCKED IN row.
+     *
+     * Resolved through `findFirstGoalIdForRoutine`, which is the SAME function
+     * the agent dispatch reads for `{goalId}` (see `onStartAgent` and
+     * `agentStart`'s `readGoalId`), so the row the sheet shows and the row the
+     * agent is handed cannot be two different items. `null` when the routine has
+     * nothing on it yet, and the sheet is the plain create form.
+     */
+    focusLockedItem() {
+      const row = this.focusRow;
+      if (!row) return null;
+      const goalId = this.findFirstGoalIdForRoutine(row.id);
+      if (!goalId) return null;
+      const found = this.dayGoalItems
+        .find((item) => item && String(item.id) === String(goalId));
+      if (!found) return null;
+      return {
+        id: found.id,
+        body: found.body,
+        contribution: found.contribution || '',
+        isComplete: !!found.isComplete,
+      };
     },
 
     // --- goal-item page ---------------------------------------------------
@@ -1591,8 +1623,22 @@ export default {
     /**
      * The ring's one entry point.
      *
-     * Current + unticked → the Start Task / Start-or-Build Agent sheet (that is
-     * where agents get started). Everything else ticks or redeems directly.
+     * An unticked routine ALWAYS opens the sheet — it never ticks through.
+     *
+     * It used to tick directly unless the routine was `isCurrent` or redeemable,
+     * which quietly removed the agent from most of the day: `wait` is cleared
+     * `PROACTIVE_START_TIME` minutes before a routine starts and `passed` is only
+     * stamped `TIMES_UP_TIME` minutes after, so a routine can be perfectly
+     * startable — enabled ring, alarm glyph — while a different one is the clock's
+     * current. Tapping it banked the tick with no way to say "start the agent
+     * too", and nothing on screen said which goal item had just been completed.
+     * That is also what the classic dashboard did (`DashBoard.checkDialogClick`):
+     * every startable circle opened a modal, and the modal was the only place an
+     * agent could be started.
+     *
+     * `buttonDisabled` is the one refusal, and it is the same rule the button's
+     * own `:disabled` uses — a passed-and-locked or still-waiting routine has
+     * nothing to start, so a sheet whose Start Task could not act would be a lie.
      */
     onRingAction() {
       const row = this.focusRow;
@@ -1601,12 +1647,18 @@ export default {
         this.onMiniClick();
         return;
       }
+      if (row.buttonDisabled) return;
       if (this.blockedBySkip()) return;
-      if (row.isCurrent || row.redeemable) {
-        this.actionSheetOpen = true;
+      // Affordability BEFORE the sheet, as the dashboard had it: Start Task can
+      // create a goal item and only then redeem, so an unaffordable redeem must
+      // be stopped here or the failure strands an orphan item on an unticked
+      // routine — and takes its Build Agent path with it.
+      if (row.redeemable && !this.canAffordRedeem(row)) {
+        this.paywallCost = this.getRedeemCost(row);
+        this.paywallDrawerOpen = true;
         return;
       }
-      this.tickRoutine(row);
+      this.actionSheetOpen = true;
     },
     /**
      * The header mini-ring (and a ticked card ring).
@@ -1631,9 +1683,23 @@ export default {
         duration: 3000,
       });
     },
+    /**
+     * Start Task: complete the routine, do NOT fire the agent.
+     *
+     * The redeem branch is not an extra: `tickRoutine` refuses a `passed` task,
+     * so on a redeemable routine Start Task used to do nothing at all while
+     * Start Agent right beside it worked. Both buttons now reach the same two
+     * paths, and only `fireAgent` tells them apart.
+     */
     onStartTask() {
       this.actionSheetOpen = false;
-      if (this.focusRow) this.tickRoutine(this.focusRow, { fireAgent: false });
+      const row = this.focusRow;
+      if (!row) return;
+      if (row.redeemable) {
+        this.redeemRoutine(row, { fireAgent: false });
+        return;
+      }
+      this.tickRoutine(row, { fireAgent: false });
     },
     onStartAgent() {
       this.actionSheetOpen = false;
@@ -1854,7 +1920,8 @@ export default {
       });
 
       // Local affordability check — the server re-validates authoritatively.
-      if (balance && !entitled && balance.available < cost) {
+      // Same rule the ring's pre-flight runs, so the two cannot disagree.
+      if (!this.canAffordRedeem(task)) {
         this.paywallCost = cost;
         this.paywallDrawerOpen = true;
         return;
@@ -2157,6 +2224,18 @@ export default {
     getRedeemCost(task) {
       if (!task) return 0;
       return typeof task.passedPoints === 'number' ? task.passedPoints : (task.points || 0);
+    },
+    /**
+     * Whether the balance covers rescuing this routine.
+     *
+     * One rule, read twice: the ring's pre-flight and `redeemRoutine`'s own
+     * check. The server re-validates authoritatively either way.
+     */
+    canAffordRedeem(task) {
+      const balance = this.xpBalance;
+      if (!balance) return true;
+      if (balance.entitled) return true;
+      return balance.available >= this.getRedeemCost(task);
     },
     /** What pressing Start on this routine will actually cost. */
     redeemCostForTask(task) {

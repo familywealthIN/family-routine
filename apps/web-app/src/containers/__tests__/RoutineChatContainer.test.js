@@ -78,14 +78,42 @@ const makeCtx = (sendResult, over = {}) => {
   Object.keys(Container.methods).forEach((name) => {
     if (!ctx[name]) ctx[name] = Container.methods[name].bind(ctx);
   });
-  // Computed the methods read.
-  ctx.inheritedGoalRef = Container.methods.inheritedGoalRef.bind(ctx);
   return ctx;
 };
 
 const sent = (ctx) => ctx.mutations.find((m) => m.mutation === SEND_ROUTINE_CHAT_MUTATION);
 const marked = (ctx) => ctx.mutations.filter((m) => m.mutation === MARK_ROUTINE_CHAT_ADDED_MUTATION);
 const events = (ctx) => ctx.mutations.filter((m) => m.mutation === POST_ROUTINE_CHAT_EVENT_MUTATION);
+
+/**
+ * Chips are questions the model answers — except one.
+ *
+ * "Add a task" is an affordance, and sending it as a message asked the model to
+ * add a task the user had not named. It obliged: it either invented one or, having
+ * read the thread's own convention, created an item whose whole body was a test
+ * prefix. It belongs to the capture sheet, where the composer's + button goes.
+ */
+describe('RoutineChatContainer quick replies', () => {
+  it('opens the capture sheet for "Add a task" instead of asking the model', () => {
+    const ctx = makeCtx({ intent: 'chat', reply: 'x' });
+    Container.methods.onQuickReply.call(ctx, 'Add a task');
+    expect(ctx.$emit).toHaveBeenCalledWith('add-task');
+    expect(ctx.$apollo.mutate).not.toHaveBeenCalled();
+  });
+
+  it('still sends every other chip to the model', async () => {
+    const ctx = makeCtx({ intent: 'status', reply: 'Doing well.' });
+    await Container.methods.onQuickReply.call(ctx, 'How am I doing?');
+    expect(sent(ctx).variables.text).toBe('How am I doing?');
+  });
+
+  it('offers the chip, so the handler and the list cannot drift apart', () => {
+    const chips = Container.computed.quickReplies.call({
+      openItems: [], briefDataBlocks: [],
+    });
+    expect(chips).toContain('Add a task');
+  });
+});
 
 describe('RoutineChatContainer.send', () => {
   it('sends the routine snapshot with the message so the model has context', async () => {
@@ -128,16 +156,144 @@ describe('RoutineChatContainer.send', () => {
       period: 'day',
       date: '12-09-2026',
       taskRef: 'sw',
-      // An item the chat creates must roll up the same way one created through
-      // AI Search does.
-      goalRef: 'wg_sw',
       isComplete: false,
     }));
+    /*
+     * An item the chat creates must roll up the same way one created through AI
+     * Search does — and this used to assert `goalRef: 'wg_sw'`, copied off a
+     * sibling item, which is what BROKE it.
+     *
+     * `addGoalItem` refuses `goalRef` without `isMilestone: true`, and the chat
+     * always sent `false`. So on every routine whose checklist was already linked
+     * to a week goal the create threw, the throw was swallowed, and the reply
+     * still said "Added". `resolveDayGoalLink` does the linking server-side when
+     * the ref is OMITTED — and sets the flag correctly — so not sending one is
+     * both the fix and the removal of a duplicated rule.
+     */
+    const created = ctx.$goals.addGoalItem.mock.calls[0][0];
+    expect(created).not.toHaveProperty('goalRef');
+    expect(created.isMilestone).toBe(false);
     // The ids land back on the reply bubble so it can show live checkboxes.
     expect(marked(ctx)[0].variables).toEqual({
       id: 'reply-1',
       items: ['new-Review analytics events'],
     });
+  });
+
+  /**
+   * The reply bubble has already told the user the task was added. A create that
+   * fails without saying so leaves the thread asserting something the checklist
+   * contradicts — which is precisely how the goalRef defect stayed invisible for
+   * a release: a console line and nothing else.
+   */
+  it('says so when the create fails, instead of only logging it', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks',
+      reply: 'Added it.',
+      tasks: ['Review analytics events'],
+      replyMessage: { id: 'reply-1' },
+    });
+    ctx.$goals.addGoalItem = jest.fn(() => Promise.reject(new Error('refused')));
+    await Container.methods.send.call(ctx, 'add it');
+    await flush();
+
+    expect(ctx.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+      title: "Couldn't add that task",
+    }));
+    // Nothing to attach and nothing to log when nothing was created.
+    expect(marked(ctx)).toHaveLength(0);
+    expect(events(ctx)).toHaveLength(0);
+  });
+
+  it('reports a partial add by its real numbers', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks', reply: 'Added.', tasks: ['a', 'b', 'c'], replyMessage: { id: 'r' },
+    });
+    let n = 0;
+    ctx.$goals.addGoalItem = jest.fn((input) => {
+      n += 1;
+      return n === 2 ? Promise.reject(new Error('refused'))
+        : Promise.resolve({ id: `new-${input.body}` });
+    });
+    await Container.methods.send.call(ctx, 'add three');
+    await flush();
+
+    expect(ctx.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Only 2 of 3 tasks were added',
+    }));
+  });
+
+  /**
+   * The thread is a record of the day, and every other add path posts a pill
+   * (`addProposals`, `addBriefStep`). A chat-driven add posted none, so a
+   * successful add and a failed one left the same trace in the event stream.
+   */
+  it('logs a chat-driven add as an event pill', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks', reply: 'Added.', tasks: ['Review analytics events'], replyMessage: { id: 'r' },
+    });
+    await Container.methods.send.call(ctx, 'add it');
+    await flush();
+
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      taskRef: 'sw',
+      text: '1 task added to the checklist',
+      items: ['new-Review analytics events'],
+    }));
+  });
+
+  /**
+   * A free-tier reply can take tens of seconds and the deck is swipeable, so the
+   * focused routine can change while the model is thinking. Reading `this.taskRef`
+   * after the await filed the task against whichever routine was focused when the
+   * answer landed — the message on one thread, the task on another.
+   */
+  it('files the task against the routine that was asked, not the one now focused', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks', reply: 'Added.', tasks: ['Review analytics events'], replyMessage: { id: 'r' },
+    });
+    // The user swipes to another routine while the model is answering: the
+    // mutation resolves only AFTER this context has moved on.
+    const original = ctx.$apollo.mutate;
+    ctx.$apollo.mutate = jest.fn((options) => {
+      if (options.mutation === SEND_ROUTINE_CHAT_MUTATION) {
+        ctx.taskRef = 'jogging';
+        ctx.date = '13-09-2026';
+      }
+      return original(options);
+    });
+    await Container.methods.send.call(ctx, 'add it');
+    await flush();
+
+    expect(ctx.$goals.addGoalItem).toHaveBeenCalledWith(expect.objectContaining({
+      taskRef: 'sw', date: '12-09-2026',
+    }));
+    // The message was asked on 'sw', so its pill belongs on 'sw' too.
+    expect(events(ctx)[0].variables.taskRef).toBe('sw');
+    // Proof the context really did move — otherwise this test proves nothing.
+    expect(ctx.taskRef).toBe('jogging');
+  });
+
+  /**
+   * The brief's Add pill has always refused a past day — "nothing can be added to
+   * a past checklist, so an Add pill there is a lie" — but `send` did not, so
+   * chatting while looking at yesterday wrote real items onto yesterday.
+   */
+  it('refuses to create on a past day, and says why', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks', reply: 'Added.', tasks: ['Review analytics events'], replyMessage: { id: 'r' },
+    }, { isPastDay: true });
+    await Container.methods.send.call(ctx, 'add it');
+    await flush();
+
+    expect(ctx.$goals.addGoalItem).not.toHaveBeenCalled();
+    expect(ctx.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'That day is closed',
+    }));
+    // The message itself still goes through — a past thread is readable and
+    // answerable, it just cannot be written to.
+    expect(sent(ctx)).toBeTruthy();
   });
 
   it('does not create anything for a break_down intent — those are proposals', async () => {

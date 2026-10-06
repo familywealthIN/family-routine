@@ -49,6 +49,7 @@ jest.mock(
         redeemCost: { type: Number, default: 0 },
         allowStartWithoutTask: { type: Boolean, default: false },
         openItemCount: { type: Number, default: -1 },
+        lockedItem: { type: Object, default: null },
       },
       render(h) { return h('div'); },
     },
@@ -178,6 +179,17 @@ describe('QuickGoalCreationContainer presentation', () => {
   it('defaults to the inline presentation, so the dialog hosts are untouched', () => {
     expect(Container.props.sheet.default).toBe(false);
     expect(mount().organism.sheet).toBe(false);
+  });
+
+  /**
+   * The item the routine is already locked in on. Pure pass-through — the page
+   * resolves it through the SAME `findFirstGoalIdForRoutine` the agent dispatch
+   * reads, so the container must not have its own idea of which item that is.
+   */
+  it('passes the locked-in goal item straight through', () => {
+    const lockedItem = { id: 'gi1', body: 'Ship the sheet' };
+    expect(mount({ lockedItem }).organism.lockedItem).toBe(lockedItem);
+    expect(mount().organism.lockedItem).toBeNull();
   });
 
   it('bubbles the backdrop dismissal', () => {

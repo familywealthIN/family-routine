@@ -16,6 +16,7 @@
     :redeem-cost="redeemCost"
     :allow-start-without-task="allowStartWithoutTask"
     :open-item-count="openItemCount"
+    :locked-item="lockedItem"
     :sheet="sheet"
     :open="open"
     :shell="shell"
@@ -94,6 +95,14 @@ export default {
     openItemCount: {
       type: Number,
       default: -1,
+    },
+    // The routine's first day goal item, when it has one — what Start Task
+    // completes and what `{goalId}` resolves to for the agent. Pure pass-through:
+    // the page owns the resolution, because it is the same `findFirstGoalIdForRoutine`
+    // the agent dispatch itself reads.
+    lockedItem: {
+      type: Object,
+      default: null,
     },
     // --- presentation -----------------------------------------------------
     // Off by default: the classic dashboard and QuickTaskModalContainer already

@@ -246,6 +246,13 @@ describe('RoutineFocus ring action', () => {
     isSkippedDay: false,
     $notify: jest.fn(),
     blockedBySkip: methods.blockedBySkip,
+    // The redeem pre-flight runs the real rule. No balance loaded means "the
+    // server decides", which is the ordinary case for these ring tests.
+    xpBalance: null,
+    canAffordRedeem: methods.canAffordRedeem,
+    getRedeemCost: methods.getRedeemCost,
+    paywallDrawerOpen: false,
+    paywallCost: 0,
     ...over,
   });
 
@@ -266,14 +273,71 @@ describe('RoutineFocus ring action', () => {
     expect(vm.actionSheetOpen).toBe(true);
   });
 
-  it('ticks a plain upcoming routine directly', () => {
+  /**
+   * This used to assert the opposite — "ticks a plain upcoming routine
+   * directly" — and the assertion was the bug.
+   *
+   * `isCurrent` is only ever ONE routine (the clock's), but `wait` is cleared
+   * `PROACTIVE_START_TIME` minutes before a routine starts and `passed` is not
+   * stamped until `TIMES_UP_TIME` after, so a routine can be fully startable —
+   * enabled ring, alarm glyph — without being the current one. Ticking it
+   * through banked the points with no option to start its agent and no sight of
+   * the goal item being completed.
+   */
+  it('opens the action sheet on ANY startable routine, current or not', () => {
     const row = {
       id: 'lw', isCurrent: false, ticked: false, redeemable: false,
     };
     const vm = ctx(row);
     methods.onRingAction.call(vm);
-    expect(vm.tickRoutine).toHaveBeenCalledWith(row);
+    expect(vm.actionSheetOpen).toBe(true);
+    expect(vm.tickRoutine).not.toHaveBeenCalled();
+  });
+
+  // Same rule as the button's own `:disabled`: a locked miss or a routine that
+  // has not come round yet has nothing to start, and a sheet whose Start Task
+  // could not act would be a lie.
+  it('refuses a routine whose ring is disabled', () => {
+    const vm = ctx({ id: 'lw', ticked: false, buttonDisabled: true });
+    methods.onRingAction.call(vm);
     expect(vm.actionSheetOpen).toBe(false);
+    expect(vm.tickRoutine).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Affordability is checked BEFORE the sheet, as the dashboard had it: Start
+   * Task can create a goal item and only then redeem, so letting an
+   * unaffordable redeem reach the sheet strands an orphan item on an unticked
+   * routine and takes its Build Agent path with it.
+   */
+  it('shows the paywall instead of the sheet when the redeem is unaffordable', () => {
+    const vm = ctx({
+      id: 'wo', ticked: false, redeemable: true, passedPoints: 40,
+    }, {
+      xpBalance: { available: 10, used: 0, entitled: false },
+      canAffordRedeem: methods.canAffordRedeem,
+      getRedeemCost: methods.getRedeemCost,
+      paywallDrawerOpen: false,
+      paywallCost: 0,
+    });
+    methods.onRingAction.call(vm);
+    expect(vm.actionSheetOpen).toBe(false);
+    expect(vm.paywallDrawerOpen).toBe(true);
+    expect(vm.paywallCost).toBe(40);
+  });
+
+  it('still opens the sheet when the redeem IS affordable', () => {
+    const vm = ctx({
+      id: 'wo', ticked: false, redeemable: true, passedPoints: 40,
+    }, {
+      xpBalance: { available: 90, used: 0, entitled: false },
+      canAffordRedeem: methods.canAffordRedeem,
+      getRedeemCost: methods.getRedeemCost,
+      paywallDrawerOpen: false,
+    });
+    methods.onRingAction.call(vm);
+    expect(vm.actionSheetOpen).toBe(true);
+    expect(vm.paywallDrawerOpen).toBe(false);
   });
 
   it('does nothing without a focused routine', () => {
@@ -281,6 +345,27 @@ describe('RoutineFocus ring action', () => {
     methods.onRingAction.call(vm);
     expect(vm.tickRoutine).not.toHaveBeenCalled();
     expect(vm.onMiniClick).not.toHaveBeenCalled();
+  });
+});
+
+// One rule, read by the ring's pre-flight and by redeemRoutine itself.
+describe('RoutineFocus redeem affordability', () => {
+  const afford = (balance, task) => methods.canAffordRedeem.call(
+    { xpBalance: balance, getRedeemCost: methods.getRedeemCost },
+    task,
+  );
+
+  it('allows it while the balance has not loaded — the server decides', () => {
+    expect(afford(null, { passedPoints: 40 })).toBe(true);
+  });
+
+  it('always allows it for an entitled user', () => {
+    expect(afford({ available: 0, entitled: true }, { passedPoints: 40 })).toBe(true);
+  });
+
+  it('compares the cost against what is available', () => {
+    expect(afford({ available: 40, entitled: false }, { passedPoints: 40 })).toBe(true);
+    expect(afford({ available: 39, entitled: false }, { passedPoints: 40 })).toBe(false);
   });
 });
 
@@ -583,13 +668,80 @@ describe('RoutineFocus action sheet', () => {
   });
 
   // The container creates the goal item, then emits the routine task it was
-  // filed against. The sheet ticks its OWN focused row either way — that row
+  // filed against. The sheet acts on its OWN focused row either way — that row
   // carries `redeemable`, which the raw tasklist entry does not.
-  it('ticks the focused row, not whatever the form hands back', () => {
-    const focusRow = { id: 'sw', redeemable: true };
+  it('acts on the focused row, not whatever the form hands back', () => {
+    const focusRow = { id: 'sw', redeemable: false };
     const vm = { actionSheetOpen: true, focusRow, tickRoutine: jest.fn() };
     methods.onStartTask.call(vm, { id: 'sw', name: 'Wake Up' });
     expect(vm.tickRoutine).toHaveBeenCalledWith(focusRow, { fireAgent: false });
+  });
+
+  /**
+   * `tickRoutine` refuses a `passed` task outright, so on a redeemable routine
+   * Start Task used to do nothing at all — while Start Agent beside it, which
+   * has always had this branch, worked. Both buttons reach the same two paths;
+   * only `fireAgent` tells them apart.
+   */
+  it('redeems rather than silently doing nothing on a passed routine', () => {
+    const focusRow = { id: 'wo', redeemable: true };
+    const vm = {
+      actionSheetOpen: true, focusRow, tickRoutine: jest.fn(), redeemRoutine: jest.fn(),
+    };
+    methods.onStartTask.call(vm);
+    expect(vm.redeemRoutine).toHaveBeenCalledWith(focusRow, { fireAgent: false });
+    expect(vm.tickRoutine).not.toHaveBeenCalled();
+  });
+
+  it('starts nothing without a focused routine', () => {
+    const vm = { actionSheetOpen: true, focusRow: null, tickRoutine: jest.fn() };
+    methods.onStartTask.call(vm);
+    expect(vm.tickRoutine).not.toHaveBeenCalled();
+    expect(vm.actionSheetOpen).toBe(false);
+  });
+
+  /**
+   * The item the sheet names as LOCKED IN and the item the agent is dispatched
+   * against must be the same row: both resolve through
+   * `findFirstGoalIdForRoutine`, which is what `{goalId}` substitutes.
+   */
+  describe('the locked-in goal item', () => {
+    const items = [
+      {
+        id: 'gi1',
+        taskRef: 'sw',
+        body: 'Ship the sheet',
+        contribution: 'Why it matters',
+        isComplete: false,
+      },
+      { id: 'gi2', taskRef: 'sw', body: 'Second item' },
+    ];
+    const lockedCtx = (over = {}) => ({
+      focusRow: { id: 'sw' },
+      dayGoalItems: items,
+      findFirstGoalIdForRoutine: methods.findFirstGoalIdForRoutine,
+      ...over,
+    });
+
+    it('is the routine first day goal item, with its contribution', () => {
+      expect(call('focusLockedItem', lockedCtx())).toEqual({
+        id: 'gi1',
+        body: 'Ship the sheet',
+        contribution: 'Why it matters',
+        isComplete: false,
+      });
+    });
+
+    it('is the same id the agent dispatch reads', () => {
+      const vm = lockedCtx();
+      expect(call('focusLockedItem', vm).id)
+        .toBe(methods.findFirstGoalIdForRoutine.call(vm, 'sw'));
+    });
+
+    it('is null when the routine has nothing on it yet', () => {
+      expect(call('focusLockedItem', lockedCtx({ dayGoalItems: [] }))).toBeNull();
+      expect(call('focusLockedItem', lockedCtx({ focusRow: null }))).toBeNull();
+    });
   });
 
   // The form caches the Goal Task dropdown and its own loading state, so a

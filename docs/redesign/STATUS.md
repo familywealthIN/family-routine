@@ -161,6 +161,24 @@ Where the redesign dropped behaviour, the behaviour came back.
    **once per session**, so a tag whose single attempt hit a dead network stays
    blank until a reload. The alternative — retry on every focus change — spends
    a model call per retry on a user who is offline.
-4. **About's copy is the design's trimmed version**, not `AboutTime.vue`'s longer
+4. ~~**The check circle stopped asking, and the locked-in goal item disappeared.**~~
+   **Restored.** `DashBoard.checkDialogClick` opened a modal on EVERY startable
+   routine, and branched: a routine that already had a day goal item got a
+   goal-action modal naming that item above Start Task / Start Agent / Build Agent,
+   while an empty one got the create form. The redesign kept only the create form,
+   and only for `isCurrent || redeemable` — so a routine that was startable but not
+   the clock's current one ticked straight through, banking the points with no
+   option to start its agent and nothing on screen saying which item had just been
+   completed. `onRingAction` now opens the sheet for any routine whose ring is
+   enabled, and `QuickGoalCreation` gained a `lockedItem` block — the routine's
+   first day goal item, which is the one `{goalId}` resolves to, labelled
+   `LOCKED IN · AGENT TARGET` when an agent is bound. One sheet does both jobs
+   rather than the dashboard's two dialogs. Two fixes came with it: the redeem
+   affordability pre-flight runs **before** the sheet again (the dashboard's
+   documented reason — Start Task persists the goal item and only then redeems, so a
+   failed redeem strands an orphan item on an unticked routine), and Start Task
+   redeems a passed routine instead of silently doing nothing, which is what
+   `tickRoutine`'s `passed` guard made it do while Start Agent beside it worked.
+5. **About's copy is the design's trimmed version**, not `AboutTime.vue`'s longer
    text, despite the design README claiming the copy is "kept as written". It drops
    the soldier-metaphor restatements and Priority's fifth point.
