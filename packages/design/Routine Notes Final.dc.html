@@ -60,7 +60,9 @@ a{color:#288bd5}a:hover{color:#1f6fab}
     <div ref="{{ chipRef }}" style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;margin-right:8px"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div>
     <div onClick="{{ openDrawer }}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin:0 8px 0 6px;cursor:pointer"><!-- 32px image in a 40px hit area, matching rn-topbar__avatar inside rn-topbar__avatar-btn: the tap target keeps its 40px, the picture does not. --><img src="assets/avatar.svg" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
   </div>
-  <div style="flex-shrink:0;overflow:hidden;max-height:{{ weekMaxH }};opacity:{{ weekOpacity }};transition:max-height .35s cubic-bezier(.4,0,.2,1),opacity .25s">
+  <!-- Always shown: the owner wants the week in view, not behind a grab
+       handle. 68px, which is what RoutineFocus WEEK_STRIP_OPEN_PX pins. -->
+  <div style="flex-shrink:0;overflow:hidden;height:68px">
   <div style="position:relative;display:flex;justify-content:space-between;align-items:center;margin:0 12px;flex-shrink:0">
 <div style="position:absolute;top:0;bottom:0;left:calc({{ dayIdx }} * 100% / 7);width:calc(100% / 7);border-radius:12px;background:rgba(255,255,255,.95);box-shadow:0 1px 4px rgba(0,0,0,.1);transition:left .28s cubic-bezier(.4,0,.2,1);pointer-events:none"></div>
     <sc-for list="{{ weekDays }}" as="d" hint-placeholder-count="7">
@@ -76,9 +78,6 @@ a{color:#288bd5}a:hover{color:#1f6fab}
       </div>
     </sc-for>
   </div>
-  </div>
-  <div onClick="{{ toggleWeek }}" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0 2px;cursor:grab;flex-shrink:0;color:rgba(0,0,0,.4)">
-    <div style="width:36px;height:4px;border-radius:2px;background:rgba(0,0,0,.18)"></div>
   </div>
   <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:8px 16px 64px;min-height:0">
     <div style="position:relative;flex:1;min-height:0">
@@ -2076,8 +2075,6 @@ class Component extends DCLogic {
         };
       })(),
       nameTopMargin: s.period === 'day' ? '10px' : '4px', cascadeTabLabel: s.period === 'day' ? '' : s.period,
-      weekMaxH: s.weekOpen ? '80px' : '0px', weekOpacity: s.weekOpen ? 1 : 0,
-      toggleWeek: () => this.setState(st => ({ weekOpen: !st.weekOpen })),
       ...(() => {
         // Goal cascade for the focused routine (thresholds from constants/settings.js autoCheckThreshold: day 5 → week, week 3 → month, month 6 → year)
         const TH = { week: 5, month: 3, year: 6 };

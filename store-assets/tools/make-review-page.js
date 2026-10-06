@@ -8,9 +8,9 @@ const groups = JSON.parse(fs.readFileSync(path.join(root, 'build', 'review-cards
 
 const DECISIONS = [
   {
-    k: 'Deck',
-    t: 'The stacked peek cards are gone, in the design too',
-    d: 'The app dropped them in <code>4ed0905</code> &mdash; along with the &ldquo;N OF M TICKED&rdquo; header and the &lsquo;&rsaquo; buttons, with &ldquo;Back to now&rdquo; moving into the focus card&rsquo;s status row. <code>packages/design</code> still drew all of it, so the previous slides advertised a layout the app no longer ships. The prototype now matches, and these 24 are re-cut from it.',
+    k: 'Home',
+    t: 'Three app changes the design had not caught up with',
+    d: 'The app dropped the stacked peek cards, the &ldquo;N OF M TICKED&rdquo; header and the &lsquo;&rsaquo; buttons in <code>4ed0905</code>, moving &ldquo;Back to now&rdquo; into the card&rsquo;s status row. It also pinned the <b>week selector open</b> &mdash; the grab-handle reveal was removed, so the strip is always in view at 68px. And the focus card&rsquo;s shadow is now the chat input pill&rsquo;s exact <code>0 1px 3px rgba(0,0,0,.12)</code>, with the deck&rsquo;s second stacked shadow removed. <code>packages/design</code> drew the old version of all three, so the earlier slides advertised a Home screen the app no longer ships. All matched now, and these 24 are re-cut from it.',
   },
   {
     k: 'Avatar',
