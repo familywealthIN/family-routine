@@ -108,10 +108,19 @@ describe('RoutineChatContainer quick replies', () => {
   });
 
   it('offers the chip, so the handler and the list cannot drift apart', () => {
+    // The chips follow the composer and both stay shut until the routine is
+    // ticked, so the stub has to be past that gate to see any chip at all.
     const chips = Container.computed.quickReplies.call({
-      openItems: [], briefDataBlocks: [],
+      routine: { ticked: true }, openItems: [], briefDataBlocks: [],
     });
     expect(chips).toContain('Add a task');
+  });
+
+  it('offers no chips at all until the routine is ticked', () => {
+    const chips = Container.computed.quickReplies.call({
+      routine: { ticked: false }, openItems: [{ id: 'g1' }], briefDataBlocks: [{}],
+    });
+    expect(chips).toEqual([]);
   });
 });
 
