@@ -75,3 +75,12 @@ apps/web-app/playwright-report/
 
 # Beta-cycle run evidence (screenshots + logs) - referenced by Asana tickets, too heavy to commit
 .beta-runs/
+
+# Store listing screenshots staged into the fastlane tree by
+# store-assets/tools/stage-fastlane.js. store-assets/final/ is the source of
+# truth; the staged copies are regenerated, never edited. The two AUTHORED Play
+# images beside them (icon.png, featureGraphic.png) are committed.
+fastlane/screenshots/
+fastlane/metadata/android/en-US/images/phoneScreenshots/
+fastlane/metadata/android/en-US/images/tenInchScreenshots/
+fastlane/metadata/android/en-US/images/sevenInchScreenshots/

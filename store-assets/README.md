@@ -59,6 +59,22 @@ simulated iPadOS status row is marked `data-sim-status` and hidden.
 
 Captions live in `tools/slides.js`, one per screen, in listing order.
 
+## Listing text and the pre-flight check
+
+The store copy lives in `fastlane/metadata/`. Build the two authored Play images,
+stage the slides into the fastlane trees, and assert every store cap:
+
+```
+node store-assets/tools/make-store-images.js   # icon.png + featureGraphic.png (committed)
+node store-assets/tools/stage-fastlane.js      # slides -> fastlane (gitignored, pure copy)
+node store-assets/tools/verify-listing.js      # non-zero exit on any violation
+```
+
+`verify-listing.js` is `docs/store-deployment.md`'s requirement tables turned
+into assertions, so the listing cannot drift past a cap between releases. It
+prints the six things it cannot check from the repo — demo account, privacy
+questionnaires, content rating, and whether the app still matches the design.
+
 ## Review sheet
 
 ```

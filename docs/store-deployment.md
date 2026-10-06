@@ -227,9 +227,39 @@ Both `supply` and `deliver` default to **binary-only** uploads. Store text and
 screenshots are pushed only when `SYNC_STORE_METADATA=true`, so an accidental
 run against an empty `fastlane/metadata` tree cannot blank a live listing.
 
-To enable it, populate `fastlane/metadata/` (iOS), `fastlane/metadata/android/`
-(Play), `fastlane/screenshots/` and
-`fastlane/metadata/android/en-US/images/`, then set the variable in the job.
+All four trees are populated now:
+
+| Path | Holds | Committed? |
+|---|---|---|
+| `fastlane/metadata/en-US/` | App Store name, subtitle, keywords, promo text, description, URLs, release notes | yes |
+| `fastlane/metadata/android/en-US/` | Play title, short + full description, changelog | yes |
+| `fastlane/metadata/android/en-US/images/` | `icon.png`, `featureGraphic.png` | yes — authored, built by `make-store-images.js` |
+| `fastlane/metadata/android/en-US/images/*Screenshots/`, `fastlane/screenshots/` | the slide set | **no** — staged from `store-assets/final/` |
+
+The staged screenshots are gitignored so the same 12MB of PNG is not committed
+twice. A job that sets `SYNC_STORE_METADATA=true` must therefore run the staging
+step first, or `supply`/`deliver` will push text with no images:
+
+```
+node store-assets/tools/stage-fastlane.js   # pure file copy, no browser needed
+```
+
+Before either store sees any of it:
+
+```
+node store-assets/tools/verify-listing.js
+```
+
+That asserts every cap in the two tables above — name, subtitle, keyword,
+description and changelog lengths; screenshot count, exact canvas size and the
+3840px side limit per set; the feature graphic's 1024x500-with-no-alpha rule and
+the App Store icon's no-alpha rule — and exits non-zero on any failure. It ends
+by printing the six things it cannot check from the repo, the demo account among
+them.
+
+The screenshots themselves come from `packages/design`, not from a capture of
+the running app; `store-assets/README.md` has the chain and the one standing
+caveat (the shipped app must keep matching the design the slides are cut from).
 
 ---
 
