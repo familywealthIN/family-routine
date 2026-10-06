@@ -86,7 +86,10 @@ function timeOfDayInHours(time) {
 }
 
 function timeDiff(time, nextTime) {
-  // Rounded to 2dp so the stored value stays readable rather than 2.3333333333333335.
+  // Rounded to 2dp. It is persisted into every day document, so the readable
+  // 2.33 beats 2.3333333333333335, and it changes no slot count: the slot total
+  // is `round(D.splitRate / 2)`, and with minute-granularity times the only gaps
+  // that land on a .5 boundary are whole hours, which have no decimals to round.
   const taskTime = Number((timeOfDayInHours(nextTime) - timeOfDayInHours(time)).toFixed(2));
 
   return taskTime > 2 ? taskTime : 2;

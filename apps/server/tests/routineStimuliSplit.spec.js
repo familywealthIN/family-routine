@@ -32,7 +32,9 @@ describe('buildStimuliForRoutineItem split rate', () => {
     const [d] = buildStimuliForRoutineItem('meditation', tasklist);
 
     expect(d.name).toBe('D');
-    expect(d.splitRate).toBeCloseTo(7 / 3, 6);
+    // 7/3 h, stored rounded to 2dp - see timeDiff. The point of the assertion
+    // is that the minutes are counted at all, not the stored precision.
+    expect(d.splitRate).toBe(2.33);
   });
 
   it('floors a short gap at two hours so every task keeps one slot', () => {
