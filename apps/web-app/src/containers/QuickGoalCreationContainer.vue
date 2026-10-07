@@ -42,6 +42,7 @@ import { scopeGoalsToRef } from '../utils/goalRefScope';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 import { applyPriorityTags } from '../utils/taskPriority';
 import eventBus, { EVENTS } from '../utils/eventBus';
+import refuseAgentWithoutPoints from '../utils/agentPointsGuard';
 
 const ADD_GOAL_ITEM_TIMEOUT_MS = 12000;
 
@@ -271,11 +272,15 @@ export default {
       const hasGoalItem = !!(goal && Array.isArray(goal.goalItems)
         && goal.goalItems.some((gi) => gi.taskRef === taskRef));
       const typedBody = newGoalItem && newGoalItem.body && newGoalItem.body.trim();
+      const task = this.tasklist
+        ? this.tasklist.find((t) => t.id === taskRef || t.taskId === taskRef)
+        : null;
+
+      // Refuse before anything is written: this path adds the goal item and
+      // fires the start event itself, so the page's guard never sees it (D-03).
+      if (refuseAgentWithoutPoints(this.$notify, task)) return;
 
       if (typedBody || !hasGoalItem) {
-        const task = this.tasklist
-          ? this.tasklist.find((t) => t.id === taskRef || t.taskId === taskRef)
-          : null;
         // User pressed Start Agent — this fire is explicit and may report
         // failure loudly.
         await this.addGoalItem({

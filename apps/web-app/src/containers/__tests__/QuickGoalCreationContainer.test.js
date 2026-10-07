@@ -120,6 +120,45 @@ describe('QuickGoalCreationContainer.addGoalItem', () => {
   });
 });
 
+// D-03 recurrence: the Start sheet's typed-task path adds the goal item and
+// fires the start event itself, so the page's zero-point guard never ran.
+describe('QuickGoalCreationContainer.startAgent on a 0-point routine', () => {
+  const ctxFor = (points) => makeCtx({
+    selectedTaskRef: 't1',
+    tasklist: [{ id: 't1', name: 'Task 1', points }],
+    addGoalItem: jest.fn(() => Promise.resolve()),
+  });
+
+  it('refuses with the 0-point notice and writes nothing when a task is typed', async () => {
+    const ctx = ctxFor(0);
+    await Container.methods.startAgent.call(ctx, { body: 'Check card statement' });
+
+    expect(ctx.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'This routine is worth 0 points', group: 'notify', type: 'warning',
+    }));
+    expect(ctx.addGoalItem).not.toHaveBeenCalled();
+    expect(ctx.$emit).not.toHaveBeenCalledWith('start-agent', expect.anything());
+  });
+
+  it('refuses the empty-input path too, before handing off to the page', async () => {
+    const ctx = ctxFor(0);
+    ctx.goals = [{ period: 'day', date: '24-07-2026', goalItems: [{ taskRef: 't1' }] }];
+    await Container.methods.startAgent.call(ctx, { body: '' });
+    expect(ctx.$notify).toHaveBeenCalledTimes(1);
+    expect(ctx.$emit).not.toHaveBeenCalled();
+  });
+
+  it('lets a routine worth any points through', async () => {
+    const ctx = ctxFor(1);
+    await Container.methods.startAgent.call(ctx, { body: 'Check card statement' });
+    expect(ctx.$notify).not.toHaveBeenCalled();
+    expect(ctx.addGoalItem).toHaveBeenCalledWith(
+      expect.objectContaining({ body: 'Check card statement', taskRef: 't1' }),
+      { explicitAgent: true },
+    );
+  });
+});
+
 // ---------------------------------------------------------------------------
 // The sheet presentation and the Build Agent handoff.
 //
