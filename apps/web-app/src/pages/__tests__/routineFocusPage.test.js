@@ -1686,3 +1686,22 @@ describe('RoutineFocus end-event dispatch', () => {
     expect(vm.postChatEvent).not.toHaveBeenCalled();
   });
 });
+
+// Missed-item recovery (11-17 Oct finding): an open item on a past day keeps
+// its date chips so it can be carried to today; only finished work locks.
+describe('RoutineFocus goalSheetDateLocked', () => {
+  const locked = (isPastDay, openGoalItem) => RoutineFocus.computed.goalSheetDateLocked
+    .call({ isPastDay, openGoalItem });
+
+  it('leaves an open past-day item movable', () => {
+    expect(locked(true, { id: 'g', isComplete: false })).toBe(false);
+  });
+
+  it('locks a completed past-day item', () => {
+    expect(locked(true, { id: 'g', isComplete: true })).toBe(true);
+  });
+
+  it('never locks today', () => {
+    expect(locked(false, { id: 'g', isComplete: true })).toBe(false);
+  });
+});

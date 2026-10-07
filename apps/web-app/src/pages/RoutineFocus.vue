@@ -311,7 +311,7 @@
       :routine-label="goalSheetRoutineLabel"
       :goal-ref-label="goalSheetGoalRefLabel"
       :date-label="goalSheetDateLabel"
-      :date-locked="isPastDay"
+      :date-locked="goalSheetDateLocked"
       :date-options="goalSheetDateOptions"
       :tag-universe="tagUniverse"
       :tag-usage="tagUsage"
@@ -946,6 +946,14 @@ export default {
      * with a different `date`, which relocates the subdocument and keeps its id;
      * a past day is locked instead (see the sheet's Date row).
      */
+    /**
+     * Only a COMPLETED item on a past day is read-only. An open one keeps its
+     * date chips so a missed item can be carried to today (packages/design
+     * HANDOFF, past-day rule) — the chat's move refusal points at these chips.
+     */
+    goalSheetDateLocked() {
+      return this.isPastDay && !!(this.openGoalItem && this.openGoalItem.isComplete);
+    },
     goalSheetDateOptions() {
       const today = moment(this.todayDate, 'DD-MM-YYYY');
       const current = this.openGoalItemDate;

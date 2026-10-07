@@ -244,10 +244,10 @@
         <div v-else class="rn-gis__field-value">
           <div class="rn-gis__date" data-testid="goal-sheet-date">{{ dateLabel }}</div>
           <!--
-            A past day is read-only on purpose: `updateGoalItem`'s move path
-            rewrites the item's owning day document, and moving yesterday's work
-            onto yesterday is not a thing the user can want. The lock says so
-            rather than offering pills that then refuse.
+            The caller locks a COMPLETED item on a past day: finished work has
+            nowhere to move to. An open past item keeps its pills so a missed
+            task can be carried forward to today. The lock says so rather than
+            offering pills that then refuse.
           -->
           <div v-if="dateLocked" class="rn-gis__locked" data-testid="goal-sheet-date-locked">
             <i class="rn-mi rn-gis__locked-icon">lock</i>past dates can’t change

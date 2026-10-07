@@ -118,6 +118,7 @@ Add to the schema in `apps/server/src/schema/*` and resolvers, and update the fr
 8. **Routine context brief:** query `routineContext(taskRef)` returning, for each `area:`/`project:` tag: `{ tag, description, nextSteps[], recentActivity[] }`. Reuse the AreasTime/ProjectsTime resolvers and `NextStepsContainer` data.
 9. **Agent:** existing fields cover the page. Add mutation `testAgent(id)`, a dry run that fires start/end with a test `goal_id`.
 10. **Past-day rule (server-side guard):** reject `addGoalItem` for `period:'day'` with `date < today` (in user timezone), and reject `tickRoutine` for past dates. Edits and deletes stay allowed.
+    **Missed-item recovery:** an OPEN day goal item on a past day keeps the goal sheet's date chips (Today / Tomorrow / Mon, none pre-selected) so it can be carried forward in two taps; the move toast reads "Moved to Today". Only a COMPLETED past item shows the lock row ("past dates can’t change").
 11. **Start rule:** `startRoutine`/tick requires ≥1 open goal item under the routine for today (or a body passed to create one). ~~Remove `allow-start-without-task`.~~ **Kept on Home** — the sheet is the only start path there, so an empty-input refusal makes a routine with no checklist unstartable. The prop stays, defaulting to off for every other mount.
 
 ## State notes (client)
