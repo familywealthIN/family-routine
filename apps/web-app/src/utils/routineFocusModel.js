@@ -469,7 +469,11 @@ export function buildCascade({
 
   const limit = threshold[meta.thresholdKey];
   const done = units.filter((unit) => unit.state === 'done').length;
-  const complete = !!item.isComplete || done >= limit;
+  // 'Done' is the server's call alone. evaluateAutoComplete
+  // (apps/server/src/utils/goalCompletionCriteria.js) also requires no
+  // outstanding criterion, so reaching the threshold here while a linked task is
+  // still open would declare a goal the server never completed (D-02).
+  const complete = !!item.isComplete;
 
   const linked = linkedGoals({
     period, children, unitDates: days.map((day) => day.date), date,

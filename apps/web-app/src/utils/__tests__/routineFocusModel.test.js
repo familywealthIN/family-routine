@@ -320,6 +320,26 @@ describe('buildCascade', () => {
     expect(cascade.rule).toBe('Week auto-ticks after 5 day goals');
   });
 
+  // D-02: the threshold alone must not declare 'Done' while the server, which
+  // also requires every linked criterion to be met, has not completed the goal.
+  it('does not show Done at the threshold while the server goal is still open', () => {
+    const atThreshold = JSON.parse(JSON.stringify(weekGoals));
+    atThreshold[0].goalItems[0].milestoneDays[0].status = 'complete';
+    const c = buildCascade({
+      period: 'week', goals: atThreshold, focusRow: { id: 'sw', items: [] }, date: '12-09-2026',
+    });
+    expect(c.done).toBe(5);
+    expect(c.complete).toBe(false);
+    expect(c.statusLabel).toBe('Active');
+
+    atThreshold[0].goalItems[0].isComplete = true;
+    const closed = buildCascade({
+      period: 'week', goals: atThreshold, focusRow: { id: 'sw', items: [] }, date: '12-09-2026',
+    });
+    expect(closed.complete).toBe(true);
+    expect(closed.statusLabel).toBe('Done');
+  });
+
   it('lays the week out as seven labelled day cells', () => {
     expect(cascade.cols).toBe(7);
     expect(cascade.units).toHaveLength(7);
