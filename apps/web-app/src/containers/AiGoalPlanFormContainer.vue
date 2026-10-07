@@ -207,14 +207,16 @@ export default {
       }
     },
     /**
-     * The plan title is saved as the parent goal, so it is what the user
-     * typed (D-15). The planner sees a period-rewritten query ("this week" ->
-     * "this 6 days") and the model writes its own title from it; neither may
-     * replace the user's words. They can still edit the field before saving.
+     * The period rewrite ("this week" -> "this 6 days") is for the planner
+     * only. The server echoes the query back as the plan title, which becomes
+     * the parent goal, so an echoed rewrite is swapped back for what the user
+     * typed (D-15). A title the model genuinely wrote is left alone.
      */
-    keepTypedTitle(title) {
+    keepTypedTitle(title, sentQuery) {
       const typed = (this.searchQuery || '').trim();
-      return typed || title;
+      const norm = (text) => (text || '').trim().toLowerCase();
+      if (!title || !typed || sentQuery === this.searchQuery) return title;
+      return norm(title) === norm(sentQuery) ? typed : title;
     },
     modifyQueryPeriod(query) {
       const now = moment();
@@ -335,7 +337,7 @@ export default {
         }
 
         if (plan) {
-          this.milestoneData = { ...plan, title: this.keepTypedTitle(plan.title) };
+          this.milestoneData = { ...plan, title: this.keepTypedTitle(plan.title, modifiedQuery) };
 
           this.$emit('search-complete', {
             milestoneData: this.milestoneData,
