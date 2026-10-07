@@ -206,18 +206,6 @@ export default {
         this.$refs.goalForm.resetForm();
       }
     },
-    /**
-     * The period rewrite ("this week" -> "this 6 days") is for the planner
-     * only. The server echoes the query back as the plan title, which becomes
-     * the parent goal, so an echoed rewrite is swapped back for what the user
-     * typed (D-15). A title the model genuinely wrote is left alone.
-     */
-    keepTypedTitle(title, sentQuery) {
-      const typed = (this.searchQuery || '').trim();
-      const norm = (text) => (text || '').trim().toLowerCase();
-      if (!title || !typed || sentQuery === this.searchQuery) return title;
-      return norm(title) === norm(sentQuery) ? typed : title;
-    },
     modifyQueryPeriod(query) {
       const now = moment();
       let modifiedQuery = query;
@@ -337,7 +325,7 @@ export default {
         }
 
         if (plan) {
-          this.milestoneData = { ...plan, title: this.keepTypedTitle(plan.title, modifiedQuery) };
+          this.milestoneData = { ...plan };
 
           this.$emit('search-complete', {
             milestoneData: this.milestoneData,
