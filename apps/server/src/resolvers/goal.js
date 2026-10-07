@@ -258,6 +258,12 @@ async function autoCheckTaskPeriod({
       // than only how many wins it holds. GraphQL-only, like the tallies above.
       periodGoalItem.milestoneDays = buildMilestoneDays(childDates, criteria, date);
 
+      // One number for one goal (D-02): progress is the count of child dates
+      // whose every criterion was checked on time — exactly what milestoneDays
+      // marks 'complete', and what the cascade's counter and dots render.
+      periodGoalItem.progress = periodGoalItem.milestoneDays
+        .filter((day) => day.status === 'complete').length;
+
       if (dayCleanGoals && dayCleanGoals.length) {
         const tempGRoutineTasks = [];
         dayCleanGoals.forEach((dayCleanGoal) => {
@@ -266,9 +272,6 @@ async function autoCheckTaskPeriod({
             .find((dayGoalItem) => String(periodGoalItem.id) === String(dayGoalItem.goalRef) && dayGoalItem.isComplete);
 
           if (matchedDayGoal && matchedDayGoal.goalRef) {
-            // Addition Logic to threshold
-            periodGoalItem.progress += 1;
-
             tempGRoutineTasks.push({
               id: String(matchedDayGoal.id),
               updatePeriod: currentPeriod,

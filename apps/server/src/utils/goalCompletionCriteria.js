@@ -41,7 +41,13 @@ function collectPeriodCriteria(childPeriodGoals, goalItemId) {
   childPeriodGoals.forEach((childGoal) => {
     (childGoal.goalItems || []).forEach((childGoalItem) => {
       if (String(childGoalItem.goalRef) === String(goalItemId)) {
-        criteria.push({ date: childGoal.date, isComplete: !!childGoalItem.isComplete });
+        // Met means CHECKED ON TIME (owner's rule, D-02). A day item ticked
+        // after its routine window — or on a later day — is graded 'missed' by
+        // utils/goalItemStatus when it is completed; it is recorded as late and
+        // never counts towards the period.
+        const ticked = !!childGoalItem.isComplete;
+        const late = ticked && childGoalItem.status === 'missed';
+        criteria.push({ date: childGoal.date, isComplete: ticked && !late, late });
       }
     });
   });
@@ -76,6 +82,8 @@ function buildMilestoneDays(childDates, criteria, referenceDate) {
 
     if (!onThisDate.length) return { date: childDate, status: 'none' };
     if (onThisDate.every((criterion) => criterion.isComplete)) return { date: childDate, status: 'complete' };
+    // A late tick can no longer be made on time, so the day is lost even today.
+    if (onThisDate.some((criterion) => criterion.late)) return { date: childDate, status: 'missed' };
 
     return {
       date: childDate,
