@@ -412,22 +412,24 @@ describe('GoalsTime — the editor dialog', () => {
 describe('GoalsTime — where the editor and the delete are mounted', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'GoalsTime.vue'), 'utf8');
 
-  it('mounts the dialog container, and nothing called a sheet', () => {
-    expect(source).toContain('<goal-edit-dialog-container');
-    expect(source).not.toContain('goal-edit-sheet-container');
-    expect(source).not.toContain('GoalEditSheetContainer');
+  // The owner asked for one edit surface: Home's goal sheet, not the old
+  // GoalCreation fullscreen dialog.
+  it('mounts Home’s goal sheet, not the old GoalCreation dialog', () => {
+    expect(source).toContain('<goal-edit-sheet-container');
+    expect(source).not.toContain('goal-edit-dialog-container');
+    expect(source).not.toContain('GoalEditDialogContainer.vue');
   });
 
-  it('hands the dialog no `shell` — a fullscreen dialog has no per-shell geometry', () => {
-    const mount = source.slice(source.indexOf('<goal-edit-dialog-container'));
-    expect(mount.slice(0, mount.indexOf('/>'))).not.toContain(':shell');
+  it('hands the sheet its shell, and runs its toggle through the cascade tick rule', () => {
+    const mount = source.slice(source.indexOf('<goal-edit-sheet-container'));
+    const tag = mount.slice(0, mount.indexOf('/>'));
+    expect(tag).toContain(':shell="shell"');
+    expect(tag).toContain('@toggle="$refs.cascade.toggleItem($event)"');
   });
 
-  it('takes the delete from the cascade, never from the editor', () => {
+  it('keeps the delete on the cascade row too', () => {
     const cascade = source.slice(source.indexOf('<goals-cascade-container'));
     expect(cascade.slice(0, cascade.indexOf('>'))).toContain('@delete="confirmDelete"');
-    const editor = source.slice(source.indexOf('<goal-edit-dialog-container'));
-    expect(editor.slice(0, editor.indexOf('/>'))).not.toContain('@delete');
   });
 });
 

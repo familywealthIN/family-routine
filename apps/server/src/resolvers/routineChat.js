@@ -18,6 +18,17 @@ const {
 } = require('../schema/RoutineChatSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const { chatWithRoutine } = require('../utils/chatApi');
+const { RoutineModel } = require('../schema/RoutineSchema');
+const { GoalModel } = require('../schema/GoalSchema');
+const {
+  previousDates,
+  summariseRoutineHistory,
+  generateRoutineInsight,
+} = require('../utils/routineInsight');
+
+// Marks the one "how do I improve this routine" paragraph a thread gets per day.
+const INSIGHT_ICON = 'tips_and_updates';
+const BRIEF_MAX = 1500;
 
 // How many turns of a thread the model gets to see. Free models have small
 // context budgets, and the routine snapshot is what actually steers the reply.
@@ -163,6 +174,59 @@ const mutation = {
         model: result.model,
         error: result.error,
       };
+    },
+  },
+
+  /**
+   * "How do I improve the current routine?" — answered once per routine per
+   * day, right after it is ticked, in three sentences grounded in the last two
+   * weeks: in-time / late / missed ticks, the checklist work under it, and the
+   * area/project description + next steps the client already caches (`brief`).
+   * Idempotent: a thread that already holds today's paragraph gets it back.
+   */
+  routineInsight: {
+    type: RoutineChatMessageType,
+    args: {
+      date: { type: new GraphQLNonNull(GraphQLString) },
+      taskRef: { type: new GraphQLNonNull(GraphQLString) },
+      routineName: { type: GraphQLString },
+      brief: { type: GraphQLString },
+    },
+    resolve: async (root, args, ctx) => {
+      const email = getEmailfromSession(ctx);
+      const {
+        date, taskRef, routineName, brief,
+      } = args;
+
+      const existing = await RoutineChatMessageModel
+        .findOne({
+          email, date, taskRef, from: 'routine', kind: 'text', icon: INSIGHT_ICON,
+        })
+        .exec();
+      if (existing) return existing;
+
+      const dates = previousDates(date);
+      const [routines, goals] = await Promise.all([
+        RoutineModel.find({ email, date: { $in: dates } }).lean().exec(),
+        GoalModel.find({ email, period: 'day', date: { $in: dates } }).exec(),
+      ]);
+      const summary = summariseRoutineHistory({ routines, goals, taskRef });
+      const { text, model } = await generateRoutineInsight({
+        summary,
+        routineName: cap(String(routineName || ''), 120),
+        brief: cap(String(brief || ''), BRIEF_MAX),
+      });
+
+      return decryptSaved(await new RoutineChatMessageModel({
+        email,
+        date,
+        taskRef,
+        from: 'routine',
+        kind: 'text',
+        text: cap(text, TEXT_MAX),
+        icon: INSIGHT_ICON,
+        model: model || null,
+      }).save());
     },
   },
 

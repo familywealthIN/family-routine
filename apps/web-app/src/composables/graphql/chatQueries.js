@@ -74,6 +74,19 @@ export const POST_ROUTINE_CHAT_EVENT_MUTATION = gql`
   }
 `;
 
+/**
+ * "How do I improve the current routine?" — one three-sentence answer per
+ * routine per day, grounded server-side in the routine's last two weeks.
+ * `brief` is the area/project description + next steps the client caches.
+ */
+export const ROUTINE_INSIGHT_MUTATION = gql`
+  mutation routineInsight($date: String!, $taskRef: String!, $routineName: String, $brief: String) {
+    routineInsight(date: $date, taskRef: $taskRef, routineName: $routineName, brief: $brief) {
+      ${CHAT_MESSAGE_FIELDS}
+    }
+  }
+`;
+
 export const MARK_ROUTINE_CHAT_ADDED_MUTATION = gql`
   mutation markRoutineChatAdded($id: ID!, $items: [String]) {
     markRoutineChatAdded(id: $id, items: $items) {
@@ -93,5 +106,6 @@ export default {
   SEND_ROUTINE_CHAT_MUTATION,
   POST_ROUTINE_CHAT_EVENT_MUTATION,
   MARK_ROUTINE_CHAT_ADDED_MUTATION,
+  ROUTINE_INSIGHT_MUTATION,
   CLEAR_ROUTINE_CHAT_MUTATION,
 };

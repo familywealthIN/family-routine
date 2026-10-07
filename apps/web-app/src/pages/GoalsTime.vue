@@ -24,10 +24,9 @@
     A delete is page-orchestrated for the same reason: the server cascades to every
     transitive `goalRef` descendant, so both display reads go stale at once.
 
-    The editor is DashBoard's own fullscreen dialog, mounted again around the SAME
-    `GoalCreationContainer` — so a goal edited here looks like, and runs the same
-    mutations as, one edited from the dashboard. Delete sits on the cascade ROW,
-    which is where the dashboard has it too. See `GoalEditDialogContainer`.
+    The editor is Home's goal sheet (`GoalEditSheetContainer` around the same
+    `GoalItemSheetContainer`), so a goal edited here looks and behaves exactly
+    like one opened from a checklist row. Delete sits on the cascade ROW too.
   -->
   <app-shell-container
     active="goals"
@@ -126,18 +125,17 @@
         />
 
         <!--
-          The full editor — body, contribution, tags, subtasks, the milestone
-          link, defer / mark-missed. DashBoard's fullscreen dialog outside, the
-          dashboard's `GoalCreationContainer` inside, so neither the chrome nor
-          the behaviour is forked. It carries no delete: that is the row's.
+          The editor: Home's goal sheet — title, description, tags, subtasks,
+          date. Its status toggle runs through the cascade's tick rule.
         -->
-        <goal-edit-dialog-container
+        <goal-edit-sheet-container
           :open="editorOpen"
+          :shell="shell"
           :item="editItem"
-          :period="tab"
-          :date="editorDate"
+          :routines="routines"
           @close="closeEditor"
-          @saved="onGoalSaved"
+          @toggle="$refs.cascade.toggleItem($event)"
+          @changed="refreshReads"
         />
 
         <!-- The write units. Renderless: one mutation each and nothing else. -->
@@ -190,7 +188,7 @@ import GoalRoutineIndexContainer from '../containers/GoalRoutineIndexContainer.v
 import GoalsCascadeContainer from '../containers/GoalsCascadeContainer.vue';
 import GoalCalendarContainer from '../containers/GoalCalendarContainer.vue';
 import GoalItemCreateContainer from '../containers/GoalItemCreateContainer.vue';
-import GoalEditDialogContainer from '../containers/GoalEditDialogContainer.vue';
+import GoalEditSheetContainer from '../containers/GoalEditSheetContainer.vue';
 import GoalPeriodTickContainer from '../containers/GoalPeriodTickContainer.vue';
 import GoalPeriodDeleteContainer from '../containers/GoalPeriodDeleteContainer.vue';
 import GoalDeleteConfirmContainer from '../containers/GoalDeleteConfirmContainer.vue';
@@ -227,7 +225,7 @@ export default {
     GoalsCascadeContainer,
     GoalCalendarContainer,
     GoalItemCreateContainer,
-    GoalEditDialogContainer,
+    GoalEditSheetContainer,
     GoalPeriodTickContainer,
     GoalPeriodDeleteContainer,
     GoalDeleteConfirmContainer,

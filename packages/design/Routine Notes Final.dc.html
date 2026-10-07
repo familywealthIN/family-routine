@@ -58,7 +58,7 @@ a{color:#288bd5}a:hover{color:#1f6fab}
       <div ref="{{ nameTargetRef }}" style="font-size:12px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:170px;text-align:center">{{ focus.name }}</div>
     </div>
     <div ref="{{ chipRef }}" style="display:flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:24px;background:#288bd5;color:#fff;font-size:13px;font-weight:600;margin-right:8px"><span class="mi" style="font-size:16px">diamond</span><span>{{ points }}</span></div>
-    <div onClick="{{ openDrawer }}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin:0 8px 0 6px;cursor:pointer"><!-- 32px image in a 40px hit area, matching rn-topbar__avatar inside rn-topbar__avatar-btn: the tap target keeps its 40px, the picture does not. --><img src="assets/avatar.svg" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
+    <div onClick="{{ openDrawer }}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin:0 8px 0 6px;cursor:pointer"><!-- 32px image in a 40px hit area, matching rn-topbar__avatar inside rn-topbar__avatar-btn: the tap target keeps its 40px, the picture does not. --><img src="assets/avatar.svg" style="width:40px;height:40px;border-radius:50%;object-fit:cover" alt="Profile picture"></div>
   </div>
   <!-- Always shown: the owner wants the week in view, not behind a grab
        handle. 68px, which is what RoutineFocus WEEK_STRIP_OPEN_PX pins. -->
@@ -225,21 +225,12 @@ a{color:#288bd5}a:hover{color:#1f6fab}
   <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div>
     <div style="position:absolute;left:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-drawer-in .28s cubic-bezier(.4,0,.2,1)">
-      <div style="padding:24px 20px 16px;background:#f4f8fc;display:flex;align-items:center;gap:12px">
+      <div style="padding:24px 20px 16px;background:#f4f8fc;display:flex;align-items:flex-start;gap:12px">
         <img src="assets/avatar.svg" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture">
-        <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div>
+        <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="display:flex;gap:10px;margin-top:10px"><sc-for list="{{ scores }}" as="s" hint-placeholder-count="3"><div title="{{ s.label }} {{ s.pct }}%" style="position:relative;width:50px;height:50px"><svg viewBox="0 0 48 48" style="width:50px;height:50px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="21" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="5.8"></circle><circle cx="24" cy="24" r="21" fill="none" stroke="{{ s.color }}" stroke-width="5.8" stroke-dasharray="131.95" stroke-dashoffset="{{ s.off }}" style="transition:stroke-dashoffset .4s"></circle></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:rgba(0,0,0,.87)">{{ s.letter }}</div></div></sc-for></div></div>
         <span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.5);cursor:pointer">close</span>
       </div>
-      <div style="padding:16px 20px 4px;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">TODAY'S BALANCE</div>
-      <div style="display:flex;justify-content:space-around;padding:8px 12px 14px">
-        <sc-for list="{{ scores }}" as="s" hint-placeholder-count="3">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-            <div style="position:relative;width:64px;height:64px"><svg viewBox="0 0 48 48" style="width:64px;height:64px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="21" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="5"></circle><circle cx="24" cy="24" r="21" fill="none" stroke="{{ s.color }}" stroke-width="5" stroke-dasharray="131.95" stroke-dashoffset="{{ s.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font-size:15px;font-weight:700;color:{{ s.color }}">{{ s.letter }}</div><div style="font-size:10px;color:rgba(0,0,0,.54)">{{ s.pct }}%</div></div></div>
-            <div style="font-size:11px;font-weight:600;color:rgba(0,0,0,.7)">{{ s.label }}</div>
-          </div>
-        </sc-for>
-      </div>
-      <div style="margin:0 16px;padding:10px 12px;border-radius:12px;background:#f7f7f7;display:flex;align-items:center;gap:10px">
+      <div style="margin:14px 16px 0;padding:10px 12px;border-radius:12px;background:#f7f7f7;display:flex;align-items:center;gap:10px">
         <span class="mi" style="font-size:22px;color:#FF9800">local_fire_department</span>
         <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ streakDays }}-day streak</div><div style="font-size:11px;color:rgba(0,0,0,.54)">{{ streakHint }}</div></div>
       </div>
@@ -740,21 +731,12 @@ a{color:#288bd5}a:hover{color:#1f6fab}
       <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div>
     <div style="position:absolute;left:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-drawer-in .28s cubic-bezier(.4,0,.2,1)">
-      <div style="padding:24px 20px 16px;background:#f4f8fc;display:flex;align-items:center;gap:12px">
+      <div style="padding:24px 20px 16px;background:#f4f8fc;display:flex;align-items:flex-start;gap:12px">
         <img src="assets/avatar.svg" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture">
-        <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div>
+        <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="display:flex;gap:10px;margin-top:10px"><sc-for list="{{ scores }}" as="s" hint-placeholder-count="3"><div title="{{ s.label }} {{ s.pct }}%" style="position:relative;width:50px;height:50px"><svg viewBox="0 0 48 48" style="width:50px;height:50px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="21" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="5.8"></circle><circle cx="24" cy="24" r="21" fill="none" stroke="{{ s.color }}" stroke-width="5.8" stroke-dasharray="131.95" stroke-dashoffset="{{ s.off }}" style="transition:stroke-dashoffset .4s"></circle></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:rgba(0,0,0,.87)">{{ s.letter }}</div></div></sc-for></div></div>
         <span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.5);cursor:pointer">close</span>
       </div>
-      <div style="padding:16px 20px 4px;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">TODAY'S BALANCE</div>
-      <div style="display:flex;justify-content:space-around;padding:8px 12px 14px">
-        <sc-for list="{{ scores }}" as="s" hint-placeholder-count="3">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-            <div style="position:relative;width:64px;height:64px"><svg viewBox="0 0 48 48" style="width:64px;height:64px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="21" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="5"></circle><circle cx="24" cy="24" r="21" fill="none" stroke="{{ s.color }}" stroke-width="5" stroke-dasharray="131.95" stroke-dashoffset="{{ s.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font-size:15px;font-weight:700;color:{{ s.color }}">{{ s.letter }}</div><div style="font-size:10px;color:rgba(0,0,0,.54)">{{ s.pct }}%</div></div></div>
-            <div style="font-size:11px;font-weight:600;color:rgba(0,0,0,.7)">{{ s.label }}</div>
-          </div>
-        </sc-for>
-      </div>
-      <div style="margin:0 16px;padding:10px 12px;border-radius:12px;background:#f7f7f7;display:flex;align-items:center;gap:10px">
+      <div style="margin:14px 16px 0;padding:10px 12px;border-radius:12px;background:#f7f7f7;display:flex;align-items:center;gap:10px">
         <span class="mi" style="font-size:22px;color:#FF9800">local_fire_department</span>
         <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ streakDays }}-day streak</div><div style="font-size:11px;color:rgba(0,0,0,.54)">{{ streakHint }}</div></div>
       </div>
@@ -1240,21 +1222,12 @@ a{color:#288bd5}a:hover{color:#1f6fab}
       <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:45;animation:rn-fade .2s ease"></div>
     <div style="position:absolute;left:0;top:0;bottom:0;width:300px;background:#fff;z-index:46;box-shadow:4px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:rn-drawer-in .28s cubic-bezier(.4,0,.2,1)">
-      <div style="padding:24px 20px 16px;background:#f4f8fc;display:flex;align-items:center;gap:12px">
+      <div style="padding:24px 20px 16px;background:#f4f8fc;display:flex;align-items:flex-start;gap:12px">
         <img src="assets/avatar.svg" style="width:48px;height:48px;border-radius:50%;object-fit:cover" alt="Profile picture">
-        <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="font-size:12px;color:rgba(0,0,0,.54)">alex@routine.app</div></div>
+        <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Alex Morgan</div><div style="display:flex;gap:10px;margin-top:10px"><sc-for list="{{ scores }}" as="s" hint-placeholder-count="3"><div title="{{ s.label }} {{ s.pct }}%" style="position:relative;width:50px;height:50px"><svg viewBox="0 0 48 48" style="width:50px;height:50px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="21" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="5.8"></circle><circle cx="24" cy="24" r="21" fill="none" stroke="{{ s.color }}" stroke-width="5.8" stroke-dasharray="131.95" stroke-dashoffset="{{ s.off }}" style="transition:stroke-dashoffset .4s"></circle></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:rgba(0,0,0,.87)">{{ s.letter }}</div></div></sc-for></div></div>
         <span class="mi" onClick="{{ closeDrawer }}" style="font-size:22px;color:rgba(0,0,0,.5);cursor:pointer">close</span>
       </div>
-      <div style="padding:16px 20px 4px;font-size:11px;font-weight:700;letter-spacing:.5px;color:rgba(0,0,0,.45)">TODAY'S BALANCE</div>
-      <div style="display:flex;justify-content:space-around;padding:8px 12px 14px">
-        <sc-for list="{{ scores }}" as="s" hint-placeholder-count="3">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-            <div style="position:relative;width:64px;height:64px"><svg viewBox="0 0 48 48" style="width:64px;height:64px;transform:rotate(-90deg)"><circle cx="24" cy="24" r="21" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="5"></circle><circle cx="24" cy="24" r="21" fill="none" stroke="{{ s.color }}" stroke-width="5" stroke-dasharray="131.95" stroke-dashoffset="{{ s.off }}" stroke-linecap="round" style="transition:stroke-dashoffset .4s"></circle></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font-size:15px;font-weight:700;color:{{ s.color }}">{{ s.letter }}</div><div style="font-size:10px;color:rgba(0,0,0,.54)">{{ s.pct }}%</div></div></div>
-            <div style="font-size:11px;font-weight:600;color:rgba(0,0,0,.7)">{{ s.label }}</div>
-          </div>
-        </sc-for>
-      </div>
-      <div style="margin:0 16px;padding:10px 12px;border-radius:12px;background:#f7f7f7;display:flex;align-items:center;gap:10px">
+      <div style="margin:14px 16px 0;padding:10px 12px;border-radius:12px;background:#f7f7f7;display:flex;align-items:center;gap:10px">
         <span class="mi" style="font-size:22px;color:#FF9800">local_fire_department</span>
         <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ streakDays }}-day streak</div><div style="font-size:11px;color:rgba(0,0,0,.54)">{{ streakHint }}</div></div>
       </div>

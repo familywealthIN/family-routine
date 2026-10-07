@@ -8,14 +8,20 @@
     @sign-out="onSignOut"
   >
     <template v-slot:header-actions>
+      <!-- The person-add glyph alone on phone, as every header action is;
+           labelled where there is room. -->
       <div
-        class="rn-shell__act rn-shell__act--label"
-        :class="isFull || loadFailed ? 'rn-shell__act--muted' : 'rn-shell__act--primary'"
+        class="rn-shell__act"
+        :class="[
+          isFull || loadFailed ? 'rn-shell__act--muted' : 'rn-shell__act--primary',
+          isPhone ? 'rn-shell__act--icon' : 'rn-shell__act--label',
+        ]"
         title="Invite member"
         data-testid="groups-invite-button"
         @click="openInvite"
       >
-        <i class="rn-mi rn-shell__act-glyph">person_add</i>Invite
+        <i class="rn-mi rn-shell__act-glyph">person_add</i>
+        <span v-if="!isPhone">Invite</span>
       </div>
     </template>
 

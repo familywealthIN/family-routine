@@ -22,8 +22,18 @@
     @sign-out="onSignOut"
   >
     <template v-slot:header-actions>
-      <button type="button" class="rn-shell__act rn-shell__act--primary rn-shell__act--label" data-testid="agents-new" @click="openNew">
-        <i class="rn-mi rn-shell__act-glyph">add</i>New agent
+      <!-- Same rule as every header action: the + glyph alone on phone, the
+           label beside it where there is room. -->
+      <button
+        type="button"
+        class="rn-shell__act rn-shell__act--primary"
+        :class="isPhone ? 'rn-shell__act--icon' : 'rn-shell__act--label'"
+        title="New agent"
+        data-testid="agents-new"
+        @click="openNew"
+      >
+        <i class="rn-mi rn-shell__act-glyph">add</i>
+        <span v-if="!isPhone">New agent</span>
       </button>
     </template>
 

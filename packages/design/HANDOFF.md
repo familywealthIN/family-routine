@@ -24,7 +24,8 @@ The `.dc.html` files are **design references built in HTML**: prototypes of inte
   - iPad: 76px rail (item 52×30 pill, label 10/600, gap 10, padding 22/14, scrolls if needed).
   - Desktop: 264px sidebar (row 40px, radius 10, 14/600, active bg `rgba(40,139,213,.12)` fg `#1f6fab`).
 - **More:** Routines · Progress · Groups · (8px gap) Profile · About.
-  - Phone: avatar (top-right, 40px hit area) opens a right drawer (300px) with user card, points + streak chips, the More links and "Log out" (`#d32f2f`).
+  - Phone: avatar (top-right, 40px, filling its hit area) opens a drawer (300px): the user's name with the previous dashboard's **D/K/G circles** under it (three 50px progress rings, letter inside, 6px stroke) — **no email and no points** — then the streak row and the More links. The drawer never repeats the bottom-bar items. *Shipped departure:* no "Log out" row; signing out lives on Profile.
+  - **Header actions** (Goals, Routines, Agents, Groups): a 36px circle with the glyph alone on phone — `add` for create, `person_add` for Groups' invite — and glyph + label on iPad/desktop.
   - iPad/desktop: a **More** toggle under the primary items (rail: ⋯ / ˄ icon; sidebar: "More ⌄" row with rotating chevron). Expanded by default when the current page is in More.
 - **Goals tab:** tapping Goals while already on Goals opens a "Go to" sheet/shelf (Goals overview + year goals by routine time). Goals icon carries a small ring = average year-goal progress.
 - Desktop content: centred, `max-width` 980px (Home) / 1040px (others). iPad mini and desktop share **identical type sizes**; two-column pages use a **60/40** split (`flex:3` / `flex:2`).
@@ -34,7 +35,7 @@ The `.dc.html` files are **design references built in HTML**: prototypes of inte
 - **Colours:** primary `#288bd5`, primary-dark `#1f6fab`, primary-tint `rgba(40,139,213,.12)`; success `#4CAF50` / `#2e7d32`; warning/now `#FF9800` / `#e68900`; danger `#d32f2f` / `#E53935`; agent blue `#1976d2`; page bg `#f4f4f4`; card `#fff`; text `rgba(0,0,0,.87)` / secondary `.54` / tertiary `.45`; dividers `rgba(0,0,0,.06–.08)`.
   - Priority: DO `#F44336`, PLAN `#1976D2`, DELEGATE `#E68900`, AUTOMATE `#616161`.
   - Stimuli (Progress only): D `#4CAF50`, K `#E53935`, G `#2196F3`.
-- **Type scale:** page title 24/700 (phone) · 20/700 (iPad/desktop); card title 15–17/700; body 14–15; meta 12–13; overline 11/700 letter-spacing .5px uppercase; chip 11–13/600.
+- **Type scale:** page title 24/700 (phone) · 20/700 (iPad/desktop), **line-height 1.3** on every single-line clipped title so descenders (g, y, p) are never cut; card title 15–17/700; body 14–15; meta 12–13; overline 11/700 letter-spacing .5px uppercase; chip 11–13/600.
 - **Radii:** cards 16 (phone) / 20 (iPad/desktop); sheets 20 top; modals 20; pills 999; inputs 10–12.
 - **Shadows:** card `0 1px 3px rgba(0,0,0,.12)` — the same elevation as the chat
   composer's input pill, so the two surfaces stacked on the page background sit
@@ -45,19 +46,20 @@ The `.dc.html` files are **design references built in HTML**: prototypes of inte
 ## Screens
 
 ### Home — `Routine Notes Final.dc.html` (RoutineFocus.vue)
-- **Header (phone):** Inbox (40px white circle, orange count badge) at far left · "Home" · points pill · avatar (32px image in a 40px hit area) at right. When the routine is ticked, the ring + routine name fly into the header centre (stacked, 34px ring, 12/700 name).
+- **Header (phone):** Inbox (40px white circle, orange count badge) at far left · "Home" · points pill · avatar (40px, filling its hit area — the same on every page) at right. When the routine is ticked, the ring + routine name fly into the header centre (stacked, 34px ring, 12/700 name).
 - **Week selector:** 7 day rings (D/K/G triple ring); sliding white highlight; **long-press today (≥520ms) or right-click** → Skip day sheet. Skipped day shows an orange pause badge.
 - **Focus card:** 120px tick ring (Muse-style), title under it. Checklist (15/500 rows, 24px checkbox, 44px min height) → row opens the goal item page; checkbox ticks. Bottom tabs Today · Week · Month · Year with sliding underline.
 - **Chat with the routine** under the checklist:
   - "Before you start" card from the routine's `area:`/`project:` tags: description, next steps (Add → checklist), past activity.
-  - Collapses when the composer is focused (phone also collapses the checklist).
+  - Collapses when the composer is focused (phone also collapses the checklist **and hides the bottom bar**, so the input sits on the keyboard; the bar returns on blur).
+  - **After the tick** the routine posts one three-sentence paragraph answering "How do I improve the current routine?", grounded in the last 14 days (in time / late / missed / skipped ticks, the checklist work under it) plus the area/project description and next steps. Once per routine per day.
   - Chips: "What did I do last time?", "Plan from next steps".
   - Agent results post a preview card.
 - **Start sheet:** opened by the check circle of **any** startable routine — an unticked routine never ticks through, because ticking it directly banks the points with no way to start its agent and nothing on screen naming the item just completed. Contents: "Type your task" input (placeholder becomes "Add another task" once something is locked in) · **LOCKED IN** block · routine (locked) · parent goal selector (week goals grouped by routine) · Related Goals timeline · Start Task / Start Agent.
   - **LOCKED IN** is the routine's **first** day goal item — body, contribution, struck through when complete. That first item is the one an agent's `{goalId}` resolves to, so when an agent is bound the overline reads `LOCKED IN · AGENT TARGET` and the lock tooltip says the agent runs against it. Absent on a routine with nothing on it yet, and the sheet is the plain create form.
   - **A routine cannot start without at least one open goal item** (typed or existing) — the button greys out with an orange hint. *Shipped departure:* Home passes `allow-start-without-task`, because there the sheet is the **only** way to start a routine; refusing an empty input would strand a routine that has no checklist yet. The rule still holds wherever another tick path exists.
   - **Redeem affordability is checked before the sheet opens**, not inside it: Start Task persists the goal item and only then redeems, so a failed redeem would strand an orphan item on an unticked routine. On a passed routine Start Task redeems rather than ticking.
-- **Past days (week selector < today):** read-only for additions — no Add task, no + in composer, no ticks, date locked; editing title/contribution/delete still allowed; chat queries allowed (per-day thread, no additions).
+- **Past days (week selector < today):** read-only for additions — no Add task, no + in composer, no ticks; a completed item's date is locked, an open one keeps its date chips so it can be carried to today; editing title/contribution/delete still allowed; chat queries allowed (per-day thread, no additions).
 - **Inbox sheet/modal:** quick-add input on top; rows with "Do now · <current routine>", "Move to routine" (routine chips), delete; empty state "Inbox zero".
 - **Skip day:** sheet with optional reason; once skipped, an orange banner on the card ("Today is skipped … Undo"), ticks blocked.
 - iPad/desktop: focus card and chat side by side 60/40; modals centred (desktop 720px, iPad 860px).
@@ -67,7 +69,8 @@ The `.dc.html` files are **design references built in HTML**: prototypes of inte
 - Borderless 28/700 auto-height title.
 - **Contribution** directly under the title: rendered Markdown, click to edit with `@routine-notes/markdown-editor` (default config).
 - **Agent result** card (when `reward` exists): meta "Updated by <agent> · end event · <time>", NEW badge until seen, clamped HTML + Show more / Full transcript (modal = title + HTML only).
-- Then: Linked to (routine → parent goal), Date (Today/Tomorrow/Mon chips; locked on past days), Tags (segmented `:` chips, add/remove, level-aware autocomplete), Subtasks (tick, rename, ↑, delete, add with Enter, progress bar).
+- **The one goal editor:** Home, Goals, Year Goals, Priority and Search all open this sheet (the old fullscreen GoalCreation dialog is gone). Week/month/year goals show their date without day chips.
+- Then: Linked to (routine → parent goal), Date (Today/Tomorrow/Mon chips; locked only for a completed item on a past day), Tags (segmented `:` chips, add/remove, level-aware autocomplete), Subtasks (tick, rename, ↑, delete, add with Enter, progress bar).
 
 ### Priority — `Priority.dc.html`
 - Triage card for items without a quadrant (one at a time, 2×2 buttons, Skip).
@@ -88,6 +91,9 @@ The `.dc.html` files are **design references built in HTML**: prototypes of inte
 
 ### Goals / Year Goals
 Goals overview + year goal pages as designed; the year goal sheet supports one goal per routine: search, sort by routine time (Now / Later / Earlier) or by progress.
+- Editing a goal opens the **goal item sheet** (above), never a separate editor.
+- **Phone: Year Goals never auto-scrolls** — its chat shares the page scroller, so it only follows a message the user just sent.
+- Focus card ring on iPad/desktop: after the tick the donut keeps showing **checklist progress** (3 of 5 done = 3/5 of the ring), never a full circle.
 
 ### Progress — `Progress.dc.html`
 - Day · Week · Month · Year sliding switch.

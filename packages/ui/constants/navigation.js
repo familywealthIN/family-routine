@@ -97,7 +97,9 @@ export const SHELLS = ['phone', 'tablet', 'desktop'];
  */
 export const SHELL_CHROME = {
   phone: {
-    title: 24, subtitle: 12, avatar: 32, pointsSize: 24, glyph: 24,
+    // 40px: Home's original avatar, filling its whole tap target — the owner
+    // preferred it, so every phone header now uses it.
+    title: 24, subtitle: 12, avatar: 40, pointsSize: 24, glyph: 24,
   },
   tablet: {
     title: 22, subtitle: 13, avatar: 40, pointsSize: 28, glyph: 24,

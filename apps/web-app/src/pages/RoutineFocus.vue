@@ -1,5 +1,5 @@
 <template>
-  <div class="rn-home" :class="`rn-home--${shell}`">
+  <div class="rn-home" :class="[`rn-home--${shell}`, { 'rn-home--typing': composerFocused }]">
     <!-- ================= PHONE ================= -->
     <template v-if="shell === 'phone'">
       <routine-top-bar
@@ -70,6 +70,7 @@
           :disabled="chatDisabled"
           @send="sendChat"
           @focus="onComposerFocus(true)"
+          @blur="onComposerBlur"
           @add-task="openAiSearch"
         />
       </div>
@@ -78,7 +79,10 @@
            v-bottom-nav pinned with position: fixed to the real viewport bottom.
            An in-flow bar under a 100vh/100dvh column fell off-screen in the
            iPhone standalone PWA, whose vh units disagree with the window. -->
+      <!-- Hidden while the chat input has focus, so the input sits right on
+           the keyboard instead of a tab bar's height above it. -->
       <v-bottom-nav
+        v-show="!composerFocused"
         :value="true"
         :active="activeNavRoute"
         fixed
@@ -399,6 +403,7 @@ import RoutineRail from '@routine-notes/ui/molecules/RoutineRail/RoutineRail.vue
 import FocusPointsChip from '@routine-notes/ui/molecules/FocusPointsChip/FocusPointsChip.vue';
 import PullToRefresh from '@routine-notes/ui/molecules/PullToRefresh/PullToRefresh.vue';
 import { FOCUS_NAV, agentStageOf, AGENT_LIVE_STAGES } from '@routine-notes/ui/constants/routineFocus';
+import { MORE_NAV } from '@routine-notes/ui/constants/navigation';
 
 import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue';
 import RoutineChatContainer from '../containers/RoutineChatContainer.vue';
@@ -584,6 +589,8 @@ export default {
       todayDate: moment().format('DD-MM-YYYY'),
       now: moment(),
       nowTimerId: null,
+      composerFocused: false,
+      composerBlurTimer: null,
       did: '',
       // Which routine the screen is concentrated on. Empty = "follow the clock".
       focusRoutineId: '',
@@ -1202,13 +1209,16 @@ export default {
       const active = this.navItems.find((item) => item.active);
       return active ? active.route : null;
     },
+    /**
+     * The chassis More list — the same rows every other page's avatar drawer
+     * shows. The four tabs are already in the bottom nav one thumb away, so
+     * the drawer never repeats them.
+     */
     drawerNavItems() {
-      return [
-        ...this.navItems,
-        { icon: 'settings', label: 'Settings', route: '/settings' },
-        // No Log out: signing out lives on Profile, as on every other shell.
-        { icon: 'person', label: 'Profile', route: '/settings/profile' },
-      ];
+      return MORE_NAV.map((item) => ({
+        ...item,
+        active: this.$route.path === item.route,
+      }));
     },
 
     // --- fly --------------------------------------------------------------
@@ -1318,6 +1328,7 @@ export default {
     }, 60 * 1000);
   },
   beforeDestroy() {
+    clearTimeout(this.composerBlurTimer);
     eventBus.$off(EVENTS.REFETCH_DAILY_GOALS, this.refetchGoals);
     eventBus.$off(EVENTS.GOAL_ITEM_CREATED, this.refetchGoals);
     eventBus.$off(EVENTS.TASK_CREATED, this.refetchGoals);
@@ -1639,8 +1650,17 @@ export default {
      * chat" — `chatFocus` vs `chatFocusLg`).
      */
     onComposerFocus(collapseChecklist) {
+      clearTimeout(this.composerBlurTimer);
+      // Phone only: the tab bar steps aside for the keyboard.
+      if (collapseChecklist) this.composerFocused = true;
       if (collapseChecklist) this.checklistOpen = false;
       if (this.$refs.chat) this.$refs.chat.collapseBrief();
+    },
+    onComposerBlur() {
+      // Deferred: a tap on Send blurs the input first, and bringing the tab bar
+      // back in the same frame would shift the button out from under the tap.
+      clearTimeout(this.composerBlurTimer);
+      this.composerBlurTimer = setTimeout(() => { this.composerFocused = false; }, 200);
     },
     postChatEvent(payload) {
       if (this.$refs.chat) this.$refs.chat.postEvent(payload);
@@ -2564,6 +2584,11 @@ export default {
   flex-direction: column;
   padding: 8px 16px calc(64px + var(--rn-safe-bottom));
   overflow: hidden;
+}
+
+/* Typing: the tab bar is hidden, so the composer drops onto the keyboard. */
+.rn-home--typing .rn-home__phone-body {
+  padding-bottom: 8px;
 }
 
 /* The MobileLayout bottom nav: fixed to the viewport bottom, grown by the

@@ -157,27 +157,20 @@
     </responsive-sheet>
 
     <!--
-      The day goal's real editor — body, markdown contribution, hierarchical
-      tags, subtasks, the milestone link. It is DashBoard's own fullscreen dialog
-      around the dashboard's `GoalCreationContainer`, so a day goal saved here
-      runs the same `$goals.updateGoalItem` with the same optimistic response and
-      the same cache update as one saved from Home or from the Goals page.
-
-      Month and week goals do NOT come here. On this page their title genuinely
-      is the whole form and their parent is locked by the ladder, which is what
-      `GoalPeriodForm` in the create sheet above is; routing them through a
-      fullscreen editor with a period tab would offer a move the cascade cannot
-      take. No `shell`: a fullscreen dialog has no per-shell geometry. No
-      `@delete` either — deleting cascades to every transitive `goalRef`
-      descendant, so it stays behind the ⋮ and its confirmation.
+      The day goal's real editor — Home's goal sheet (`GoalEditSheetContainer`),
+      so a day goal edited here looks and saves exactly like one opened from a
+      checklist row. Its status toggle runs this page's own `applyTick`, which
+      rolls the tick up the tree. Month and week goals keep `GoalPeriodForm` in
+      the create sheet: on this page their title is the whole form. Delete stays
+      behind the ⋮ and its confirmation.
     -->
-    <goal-edit-dialog-container
+    <goal-edit-sheet-container
       :open="editorOpen"
+      :shell="shell"
       :item="editItem"
-      :period="editorPeriod"
-      :date="editorDate"
       @close="closeEditor"
-      @saved="onGoalSaved"
+      @toggle="applyTick(($event && $event.period) || 'day', $event && $event.id)"
+      @changed="refetchTree"
     />
 
     <app-toast
@@ -237,8 +230,7 @@
  * its date, so `GoalPeriodForm` in the create sheet is the whole form, and the ⋮
  * edits it there. A DAY goal is a whole goal item — markdown contribution,
  * hierarchical tags, subtasks, the milestone link — and none of that fits in a
- * title field, so it opens `GoalEditDialogContainer`: the dashboard's own
- * fullscreen editor, running the dashboard's mutations. Creating a day goal still
+ * title field, so it opens Home's goal sheet (`GoalEditSheetContainer`). Creating a day goal still
  * goes through the sheet, because a new one needs nothing but a title and the
  * sheet is the one place that already derives its date and parent
  * (`yearGoalModel.createDraft`); the editor is then one glyph away on its row.
@@ -254,7 +246,7 @@ import AppShellContainer from '../containers/AppShellContainer.vue';
 import YearGoalContainer from '../containers/YearGoalContainer.vue';
 import YearGoalListContainer from '../containers/YearGoalListContainer.vue';
 import YearGoalChatContainer from '../containers/YearGoalChatContainer.vue';
-import GoalEditDialogContainer from '../containers/GoalEditDialogContainer.vue';
+import GoalEditSheetContainer from '../containers/GoalEditSheetContainer.vue';
 import GoalPeriodTickContainer from '../containers/GoalPeriodTickContainer.vue';
 import GoalPeriodCreateContainer from '../containers/GoalPeriodCreateContainer.vue';
 import GoalItemCreateContainer from '../containers/GoalItemCreateContainer.vue';
@@ -284,7 +276,7 @@ export default {
     YearGoalContainer,
     YearGoalListContainer,
     YearGoalChatContainer,
-    GoalEditDialogContainer,
+    GoalEditSheetContainer,
     GoalPeriodTickContainer,
     GoalPeriodCreateContainer,
     GoalItemCreateContainer,
@@ -330,7 +322,7 @@ export default {
       /**
        * The day-goal editor. The flag lives here, not in the container, because
        * the editor is opened from more than one place on this page — the same
-       * split `GoalsTime` and `GoalDisplayModalContainer` use.
+       * split `GoalsTime` uses.
        */
       editorOpen: false,
       /** The COMPLETE goal-item record being edited, never a row view-model. */

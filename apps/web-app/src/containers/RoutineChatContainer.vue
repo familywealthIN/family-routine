@@ -32,6 +32,7 @@ import {
   SEND_ROUTINE_CHAT_MUTATION,
   POST_ROUTINE_CHAT_EVENT_MUTATION,
   MARK_ROUTINE_CHAT_ADDED_MUTATION,
+  ROUTINE_INSIGHT_MUTATION,
 } from '../composables/graphql/chatQueries';
 
 /** Client-only messages (the brief, a brief quick reply) are never persisted. */
@@ -243,6 +244,9 @@ export default {
       chips.push(ADD_TASK_CHIP);
       return chips;
     },
+    tickState() {
+      return { ref: this.taskRef, ticked: !!(this.routine && this.routine.ticked) };
+    },
     /** What the model is told about the routine the user is looking at. */
     chatContext() {
       if (!this.routine) return null;
@@ -294,12 +298,47 @@ export default {
       },
       immediate: true,
     },
+    // Ticking the routine is what opens the chat; the routine answers "how do I
+    // improve this?" straight away (once per routine per day — the server
+    // returns the existing paragraph rather than writing a second one).
+    // Keyed by routine: swiping from an unticked card to a ticked one is not a tick.
+    tickState(now, before) {
+      if (now.ticked && before && !before.ticked && now.ref === before.ref) this.requestInsight();
+    },
     // Coming back from a past day, where the brief deliberately does not render.
     isPastDay(past) {
       if (!past) this.ensureBriefContext();
     },
   },
   methods: {
+    /** The area/project context the brief already caches, as plain text. */
+    insightBrief() {
+      return this.contextTags.map((tag) => {
+        const cached = getCachedDashboard(tag);
+        if (!cached) return '';
+        return [`[${tag}]`, cached.description, cached.nextSteps && `Next steps:\n${cached.nextSteps}`]
+          .filter(Boolean).join('\n');
+      }).filter(Boolean).join('\n\n');
+    },
+    async requestInsight() {
+      if (this.isPastDay || !this.taskRef) return;
+      const { taskRef, date } = this;
+      this.typing = true;
+      try {
+        await this.$apollo.mutate({
+          mutation: ROUTINE_INSIGHT_MUTATION,
+          variables: {
+            date, taskRef, routineName: this.routineName, brief: this.insightBrief(),
+          },
+        });
+        if (taskRef === this.taskRef && date === this.date) this.refetch();
+      } catch (error) {
+        // Optional extra: the chat is open and usable without it.
+        console.warn('[RoutineChat] routine insight failed:', error);
+      } finally {
+        this.typing = false;
+      }
+    },
     /** Re-read the thread from the network. Resolves when the read settles. */
     refetch() {
       const query = this.$apollo.queries.chatMessages;

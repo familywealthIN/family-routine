@@ -209,7 +209,8 @@ export default {
 }
 
 .rn-topbar__title-text {
-  line-height: 1.15;
+  /* Room for descenders (g, y, p) — matches the shell title. */
+  line-height: 1.3;
 }
 
 .rn-topbar__subtitle {
@@ -277,7 +278,7 @@ export default {
 .rn-topbar__mini-name {
   font-size: 12px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -299,12 +300,11 @@ export default {
   flex-shrink: 0;
 }
 
-/* 32px is what every design file's phone header draws, and what
-   `SHELL_CHROME.phone.avatar` already gave the other eleven pages. The 40px
-   button around it keeps the tap target. */
+/* 40px, edge to edge in its 40px button — Home's original size, which the
+   owner preferred; `SHELL_CHROME.phone.avatar` gives every other page the same. */
 .rn-topbar__avatar {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
 }

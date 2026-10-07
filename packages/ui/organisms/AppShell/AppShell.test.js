@@ -89,10 +89,10 @@ describe('OrganismAppShell — phone', () => {
     expect(el.querySelector('.rn-shell__subtitle').style.fontSize).toBe('12px');
   });
 
-  it('shows the points pill and a 32px avatar inside a 40px tap target', () => {
+  it('shows the points pill and the 40px avatar filling its 40px tap target', () => {
     const { el } = render();
     expect(testid(el, 'focus-points-chip').textContent).toContain('128');
-    expect(el.querySelector('.rn-shell__avatar').style.width).toBe('32px');
+    expect(el.querySelector('.rn-shell__avatar').style.width).toBe('40px');
     expect(testid(el, 'shell-avatar').className).toContain('rn-shell__avatar-btn');
   });
 
@@ -286,15 +286,18 @@ describe('OrganismAppShell — the avatar drawer', () => {
     });
   });
 
-  it('carries the fixed copy — name, email, points, streak', () => {
+  // Owner's call: the drawer shows the name with the previous dashboard's
+  // D/K/G circles under it — no email, no points.
+  it('carries the name, the D/K/G circles and the streak — no email, no points', () => {
     const { el, shell } = render();
     shell.openDrawer();
     return Vue.nextTick().then(() => {
       const drawer = testid(el, 'user-drawer');
       expect(drawer.textContent).toContain('Alex Morgan');
-      expect(drawer.textContent).toContain('alex@routine.app');
-      expect(drawer.textContent).toContain('128 points');
       expect(drawer.textContent).toContain('6-day streak');
+      expect(drawer.textContent).not.toContain('alex@routine.app');
+      expect(drawer.textContent).not.toContain('128 points');
+      ['D', 'K', 'G'].forEach((key) => expect(testid(el, `drawer-score-${key}`)).not.toBeNull());
     });
   });
 
@@ -433,11 +436,10 @@ describe('OrganismAppShell — unknown is not zero (drawer figures, Goals ring)'
     expect(root.classList.contains('rn-shell--no-streak')).toBe(false);
   });
 
-  it('hides exactly the figures, not the points pill', () => {
+  it('hides exactly the unknown figures: the D/K/G circles and the streak row', () => {
     const css = fs.readFileSync(path.join(__dirname, 'AppShell.vue'), 'utf8');
-    expect(css).toMatch(/\.rn-shell--no-balance \.rn-drawer__donuts/);
-    expect(css).toMatch(/\.rn-shell--no-streak \.rn-drawer__streak-text/);
-    expect(css).not.toMatch(/\.rn-shell--no-\w+ \.rn-drawer__points/);
+    expect(css).toMatch(/\.rn-shell--no-balance \.rn-drawer__scores/);
+    expect(css).toMatch(/\.rn-shell--no-streak \.rn-drawer__streak \{/);
   });
 
   it('opens the drawer without throwing when nothing was supplied', () => {

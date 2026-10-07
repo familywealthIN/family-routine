@@ -810,18 +810,18 @@ describe('YearGoalsTime — a day goal opens the real editor', () => {
 describe('YearGoalsTime — the editor is the dashboard’s, not a fork', () => {
   const dir = path.join(__dirname, '..');
   const source = fs.readFileSync(path.join(dir, 'YearGoalsTime.vue'), 'utf8');
-  const dialog = fs.readFileSync(
-    path.join(dir, '..', 'containers', 'GoalEditDialogContainer.vue'), 'utf8',
-  );
 
-  it('mounts the shared dialog container', () => {
-    expect(source).toContain('<goal-edit-dialog-container');
-    expect(source).toContain("import GoalEditDialogContainer from '../containers/GoalEditDialogContainer.vue'");
+  it('mounts Home’s goal sheet as the day editor', () => {
+    expect(source).toContain('<goal-edit-sheet-container');
+    expect(source).toContain("import GoalEditSheetContainer from '../containers/GoalEditSheetContainer.vue'");
+    expect(source).not.toContain('goal-edit-dialog-container');
   });
 
-  it('hands it no `shell` — a fullscreen dialog has no per-shell geometry', () => {
-    const mount = source.slice(source.indexOf('<goal-edit-dialog-container'));
-    expect(mount.slice(0, mount.indexOf('/>'))).not.toContain(':shell');
+  it('hands the sheet its shell and rolls its toggle up the tree', () => {
+    const mount = source.slice(source.indexOf('<goal-edit-sheet-container'));
+    const tag = mount.slice(0, mount.indexOf('/>'));
+    expect(tag).toContain(':shell="shell"');
+    expect(tag).toContain('applyTick(');
   });
 
   it('takes the day row’s edit glyph off the read container, beside the tick', () => {
@@ -842,9 +842,7 @@ describe('YearGoalsTime — the editor is the dashboard’s, not a fork', () => 
     expect(tree.slice(0, tree.indexOf('>'))).toContain('@retry="refetchGoalList"');
   });
 
-  it('keeps the delete behind the ⋮ and its confirmation, never in the editor', () => {
-    const mount = source.slice(source.indexOf('<goal-edit-dialog-container'));
-    expect(mount.slice(0, mount.indexOf('/>'))).not.toContain('@delete');
+  it('keeps the ⋮ delete behind its confirmation', () => {
     expect(source).toContain("if (key === 'confirm-delete') return this.removeGoal(item)");
   });
 
@@ -853,10 +851,7 @@ describe('YearGoalsTime — the editor is the dashboard’s, not a fork', () => 
     expect(source).toContain("import GoalPeriodForm from '@routine-notes/ui/molecules/GoalPeriodForm/GoalPeriodForm.vue'");
   });
 
-  it('adds no mutation of its own — the save is GoalCreationContainer’s', () => {
-    // Same path as DashBoard and the Goals page: the dialog mounts the dashboard's
-    // own GoalCreationContainer, which calls `$goals`. The page declares neither.
-    expect(dialog).toContain("import GoalCreation from './GoalCreationContainer.vue'");
+  it('adds no mutation of its own — the sheet’s container owns the writes', () => {
     expect(source).not.toContain('this.$goals');
     expect(source).not.toContain('gql`');
     expect(source).not.toContain('this.$apollo');

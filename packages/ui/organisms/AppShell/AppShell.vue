@@ -529,17 +529,10 @@ export default {
    `--rn-safe-bottom` on the Home page. */
 
 /* Unknown is not 0: a page that did not supply D/K/G or the streak gets no
-   "0%" rings and no "0-day streak" in the drawer. The points pill on the
-   streak row stays - it has its own known/unknown handling. */
-.rn-shell--no-balance .rn-drawer__section-label,
-.rn-shell--no-balance .rn-drawer__donuts,
-.rn-shell--no-streak .rn-drawer__streak-icon,
-.rn-shell--no-streak .rn-drawer__streak-text {
+   "0%" circles and no "0-day streak" in the drawer. */
+.rn-shell--no-balance .rn-drawer__scores,
+.rn-shell--no-streak .rn-drawer__streak {
   display: none;
-}
-
-.rn-shell--no-balance .rn-drawer__streak {
-  margin-top: 12px;
 }
 
 .rn-shell--phone {
@@ -566,7 +559,9 @@ export default {
 
 .rn-shell__title {
   font-weight: 700;
-  line-height: 1.1;
+  /* 1.3, not 1.1: with overflow hidden for the ellipsis, a tighter box cut the
+     descenders of g, y and p off the bottom of the title. */
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

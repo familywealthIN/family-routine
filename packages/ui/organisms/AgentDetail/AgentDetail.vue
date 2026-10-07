@@ -300,7 +300,7 @@ export default {
 .rn-agd__name {
   font-size: 20px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

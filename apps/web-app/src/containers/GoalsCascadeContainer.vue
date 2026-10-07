@@ -201,6 +201,21 @@ export default {
       this.$emit('tick', plan);
     },
     /**
+     * The edit sheet's status toggle, run through the same tick rule as a tap
+     * on the row (a day tick can close the week, month and year above it).
+     */
+    toggleItem(item) {
+      if (!item || !item.id) return;
+      this.onToggleRow({
+        id: item.id,
+        period: item.period,
+        date: item.date,
+        taskRef: item.taskRef || '',
+        done: !!item.isComplete,
+        isMilestone: !!item.isMilestone,
+      });
+    },
+    /**
      * A row carries only what it draws. The editor needs the WHOLE goal item —
      * contribution, tags, subtasks, `goalRef` — plus the `period` + `date` of the
      * Goal document that owns it, which is the address its mutations are sent to.

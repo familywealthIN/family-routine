@@ -159,3 +159,17 @@ export default {
   REORDER_SUB_TASK_ITEMS_MUTATION,
   SKIP_ROUTINE_MUTATION,
 };
+
+/**
+ * One goal item, live. The Goals and Year Goals pages edit week/month/year
+ * goals with the same sheet Home uses; their item arrives as a shallow copy
+ * from the cascade read, so the sheet watches the normalized entity through
+ * this query instead and every write lands on screen at once.
+ */
+export const GOAL_ITEM_LIVE_QUERY = gql`
+  query goalItem($id: ID!, $date: String!, $period: String!) {
+    goalItem(id: $id, date: $date, period: $period) {
+      ${GOAL_ITEM_SHEET_FIELDS}
+    }
+  }
+`;

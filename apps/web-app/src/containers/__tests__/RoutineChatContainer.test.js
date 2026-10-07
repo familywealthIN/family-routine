@@ -34,6 +34,7 @@ const {
   SEND_ROUTINE_CHAT_MUTATION,
   MARK_ROUTINE_CHAT_ADDED_MUTATION,
   POST_ROUTINE_CHAT_EVENT_MUTATION,
+  ROUTINE_INSIGHT_MUTATION,
 } = require('../../composables/graphql/chatQueries');
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -1032,5 +1033,46 @@ describe('RoutineChatContainer — Home keeps its accepted-proposal rendering', 
   it('does not opt into replace-added-proposals', () => {
     const source = fs.readFileSync(path.join(__dirname, '../RoutineChatContainer.vue'), 'utf8');
     expect(source).not.toContain('replace-added-proposals');
+  });
+});
+
+// After the tick the routine answers "how do I improve this?" once, from the
+// server's history plus the area/project context the brief caches.
+describe('RoutineChatContainer routine insight', () => {
+  const insights = (ctx) => ctx.mutations.filter((m) => m.mutation === ROUTINE_INSIGHT_MUTATION);
+  const tick = Container.watch.tickState;
+
+  it('asks once when the focused routine turns ticked', async () => {
+    const ctx = makeCtx(null, { routineName: 'Start Work', contextTags: [], isPastDay: false });
+    tick.call(ctx, { ref: 'sw', ticked: true }, { ref: 'sw', ticked: false });
+    await flush();
+    expect(insights(ctx)).toHaveLength(1);
+    expect(insights(ctx)[0].variables).toEqual({
+      date: '12-09-2026', taskRef: 'sw', routineName: 'Start Work', brief: '',
+    });
+    expect(ctx.refetch).toHaveBeenCalled();
+  });
+
+  it('does not ask when swiping onto a routine that was already ticked', async () => {
+    const ctx = makeCtx(null, { routineName: 'Start Work', contextTags: [], isPastDay: false });
+    tick.call(ctx, { ref: 'sw', ticked: true }, { ref: 'other', ticked: false });
+    await flush();
+    expect(insights(ctx)).toHaveLength(0);
+  });
+
+  it('does not ask on a past day', async () => {
+    const ctx = makeCtx(null, { routineName: 'Start Work', contextTags: [], isPastDay: true });
+    tick.call(ctx, { ref: 'sw', ticked: true }, { ref: 'sw', ticked: false });
+    await flush();
+    expect(insights(ctx)).toHaveLength(0);
+  });
+
+  it('sends the cached area description and next steps as the brief', () => {
+    localStorage.setItem(`${CACHE_KEY_PREFIX}area:work`, JSON.stringify({
+      description: 'Ship the beta.', nextSteps: '- Fix sync', activity: [], timestamp: Date.now(),
+    }));
+    const ctx = makeCtx(null, { contextTags: ['area:work'] });
+    expect(ctx.insightBrief()).toBe('[area:work]\nShip the beta.\nNext steps:\n- Fix sync');
+    localStorage.clear();
   });
 });

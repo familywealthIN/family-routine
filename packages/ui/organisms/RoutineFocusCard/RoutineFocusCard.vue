@@ -379,8 +379,10 @@ export default {
       const ratio = phone.ringGlyph / (phone.ring - 2 * phone.ringInset);
       return Math.round(button * ratio);
     },
+    // The border donut is the checklist's progress on every form factor — a
+    // ticked routine with 3 of 5 done draws 3/5 of the ring on tablet and
+    // desktop too, not a full circle.
     ringOffset() {
-      if (this.routine.ticked && this.geometry.ringSm) return 0;
       const pct = this.totalCount
         ? this.doneCount / this.totalCount
         : (this.routine.ticked ? 1 : 0);
@@ -769,7 +771,8 @@ export default {
 
 .rn-focus-card__title {
   font-weight: 700;
-  line-height: 1.2;
+  /* Clipped for the ellipsis, so the box must hold the descenders of g, y, p. */
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
