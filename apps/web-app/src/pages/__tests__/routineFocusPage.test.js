@@ -228,10 +228,60 @@ describe('RoutineFocus effectiveAgentStatus', () => {
     expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('finished');
   });
 
+  // D-16: a fresh session has no badge, but the server kept the transcript.
+  it('restores finished from the saved transcript when the badge map is empty', () => {
+    const ctx = vm(undefined, [{ taskRef: 'sw', reward: '<h1>Hello World</h1>' }]);
+    ctx.$agent.statusByRoutineId = {};
+    ctx.$agent.statusDay = '';
+    ctx.taskAgentEndEventDone = methods.taskAgentEndEventDone.bind(ctx);
+    expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('finished');
+  });
+
+  it('restores finished even when the stored badges belong to an earlier day', () => {
+    const ctx = vm('', [{ taskRef: 'sw', reward: '<p>done</p>' }], { todayDate: '06-10-2026' });
+    ctx.taskAgentEndEventDone = methods.taskAgentEndEventDone.bind(ctx);
+    expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('finished');
+  });
+
+  it('does not override a live firing/running run with an old transcript', () => {
+    const ctx = vm('running', [{ taskRef: 'sw', reward: '<p>done</p>' }]);
+    ctx.taskAgentEndEventDone = methods.taskAgentEndEventDone.bind(ctx);
+    expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('running');
+  });
+
   it('leaves listening alone while no transcript exists', () => {
     const ctx = vm('listening', [{ taskRef: 'sw', reward: null }]);
     ctx.taskAgentEndEventDone = methods.taskAgentEndEventDone.bind(ctx);
     expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('listening');
+  });
+});
+
+describe('RoutineFocus openAgentResult', () => {
+  const ctx = (over = {}) => ({
+    resolvedFocusId: 'sw',
+    dayGoalItems: [{ taskRef: 'sw', reward: '<h1>Hello World</h1>' }],
+    taskAgentReward: methods.taskAgentReward,
+    $agent: {
+      lastResultByRoutineId: {},
+      showSavedResult: jest.fn(),
+      openResultModal: jest.fn(),
+    },
+    ...over,
+  });
+
+  it('shows the saved transcript after a reopen, when no live result is in memory (D-16)', () => {
+    const c = ctx();
+    methods.openAgentResult.call(c);
+    expect(c.$agent.showSavedResult).toHaveBeenCalledWith('sw', '<h1>Hello World</h1>');
+    expect(c.$agent.openResultModal).not.toHaveBeenCalled();
+  });
+
+  it('opens the live result when this session holds one', () => {
+    const c = ctx();
+    c.$agent.lastResultByRoutineId = { sw: { type: 'html', body: 'live' } };
+    methods.openAgentResult.call(c);
+    expect(c.$agent.openResultModal).toHaveBeenCalledWith('sw');
+    expect(c.$agent.showSavedResult).not.toHaveBeenCalled();
   });
 });
 

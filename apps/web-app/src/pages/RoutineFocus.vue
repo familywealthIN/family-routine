@@ -1539,7 +1539,15 @@ export default {
       }
     },
     openAgentResult() {
-      if (this.resolvedFocusId) this.$agent.openResultModal(this.resolvedFocusId);
+      const id = this.resolvedFocusId;
+      if (!id) return;
+      // A live run leaves its result in memory; after a reopen only the saved
+      // transcript is left, so show that instead of an empty sheet (D-16).
+      if (!this.$agent.lastResultByRoutineId[id] && this.taskAgentReward(id)) {
+        this.$agent.showSavedResult(id, this.taskAgentReward(id));
+        return;
+      }
+      this.$agent.openResultModal(id);
     },
 
     toggleItem(item) {
@@ -2142,12 +2150,21 @@ export default {
       // badge set on a previous day never survives into a new one.
       if (!taskRef || !this.isToday) return '';
       const day = this.$agent.statusDay;
-      if (day && day !== this.todayDate) return '';
-      const status = this.$agent.statusByRoutineId[taskRef] || '';
-      // A 'listening' agent whose end event already saved a transcript is done;
-      // never leave the badge stuck when a late start dispatch resolves after.
-      if (status === 'listening' && this.taskAgentEndEventDone(taskRef)) return 'finished';
+      const status = (day && day !== this.todayDate)
+        ? '' : (this.$agent.statusByRoutineId[taskRef] || '');
+      // The saved transcript (today's goal item `reward`) is the authority on
+      // "finished". The badge map is day-scoped localStorage, so a fresh
+      // session reads '' and would lose View result although the server kept
+      // it (D-16); a late start dispatch can also leave it on 'listening'.
+      if ((status === '' || status === 'listening') && this.taskAgentEndEventDone(taskRef)) {
+        return 'finished';
+      }
       return status;
+    },
+    /** Today's saved transcript for a routine, if its agent has finished. */
+    taskAgentReward(taskRef) {
+      const item = this.dayGoalItems.find((gi) => gi.taskRef === taskRef && gi.reward);
+      return item ? item.reward : '';
     },
     taskAgentEndEventDone(taskRef) {
       if (!taskRef) return false;
