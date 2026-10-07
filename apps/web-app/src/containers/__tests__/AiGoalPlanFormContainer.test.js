@@ -25,25 +25,22 @@ const ctxFor = (searchQuery) => {
 
 describe('AiGoalPlanFormContainer.keepTypedTitle', () => {
   const typed = 'Ship the Routine Notes beta this week';
-  const daysLeft = `${7 - moment().day()} days`;
 
-  it('swaps an echoed rewrite back for the typed title', () => {
-    const ctx = ctxFor(typed);
-    const sent = ctx.modifyQueryPeriod(typed);
-    expect(sent).toBe(`Ship the Routine Notes beta this ${daysLeft}`);
-    expect(ctx.keepTypedTitle(sent, sent)).toBe(typed);
+  it('still rewrites the period for the planner', () => {
+    expect(ctxFor(typed).modifyQueryPeriod(typed))
+      .toBe(`Ship the Routine Notes beta this ${7 - moment().day()} days`);
   });
 
-  it('keeps a title the model genuinely wrote', () => {
+  it('keeps the typed text over an echoed rewrite', () => {
     const ctx = ctxFor(typed);
-    const sent = ctx.modifyQueryPeriod(typed);
-    expect(ctx.keepTypedTitle('Beta release sprint', sent)).toBe('Beta release sprint');
+    expect(ctx.keepTypedTitle(ctx.modifyQueryPeriod(typed))).toBe(typed);
   });
 
-  it('leaves a title alone when nothing was rewritten', () => {
-    const ctx = ctxFor('Ship the beta next week');
-    const sent = ctx.modifyQueryPeriod('Ship the beta next week');
-    expect(sent).toBe('Ship the beta next week');
-    expect(ctx.keepTypedTitle('Beta launch plan', sent)).toBe('Beta launch plan');
+  it('keeps the typed text over a title the model wrote', () => {
+    expect(ctxFor(`  ${typed} `).keepTypedTitle('Ship Routine Notes Beta')).toBe(typed);
+  });
+
+  it('falls back to the model title only when nothing was typed', () => {
+    expect(ctxFor('').keepTypedTitle('Beta launch plan')).toBe('Beta launch plan');
   });
 });
