@@ -178,11 +178,13 @@ const mutation = {
   },
 
   /**
-   * "How do I improve the current routine?" — answered once per routine per
-   * day, right after it is ticked, in three sentences grounded in the last two
-   * weeks: in-time / late / missed ticks, the checklist work under it, and the
-   * area/project description + next steps the client already caches (`brief`).
-   * Idempotent: a thread that already holds today's paragraph gets it back.
+   * The first message after a routine is ticked — once per routine per day, in
+   * three sentences that celebrate a real win, offer one fresh idea for the next
+   * session and end on a target within reach. Grounded in the last month: the
+   * run of check-ins, this week against last, K/D/G earned, the activities done
+   * most, and the area/project description + next steps the client already
+   * caches (`brief`). Idempotent: a thread that already holds today's paragraph
+   * gets it back.
    */
   routineInsight: {
     type: RoutineChatMessageType,
@@ -205,12 +207,15 @@ const mutation = {
         .exec();
       if (existing) return existing;
 
-      const dates = previousDates(date);
+      // Today is included so the run of check-ins counts the tick that asked.
+      const dates = [date, ...previousDates(date)];
       const [routines, goals] = await Promise.all([
         RoutineModel.find({ email, date: { $in: dates } }).lean().exec(),
         GoalModel.find({ email, period: 'day', date: { $in: dates } }).exec(),
       ]);
-      const summary = summariseRoutineHistory({ routines, goals, taskRef });
+      const summary = summariseRoutineHistory({
+        routines, goals, taskRef, today: date,
+      });
       const { text, model } = await generateRoutineInsight({
         summary,
         routineName: cap(String(routineName || ''), 120),

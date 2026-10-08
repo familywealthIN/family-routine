@@ -75,8 +75,9 @@ export const POST_ROUTINE_CHAT_EVENT_MUTATION = gql`
 `;
 
 /**
- * "How do I improve the current routine?" — one three-sentence answer per
- * routine per day, grounded server-side in the routine's last two weeks.
+ * The momentum message after a tick — a win, one fresh idea for the next
+ * session and a target within reach, in three sentences, once per routine per
+ * day, grounded server-side in the routine's last month.
  * `brief` is the area/project description + next steps the client caches.
  */
 export const ROUTINE_INSIGHT_MUTATION = gql`
