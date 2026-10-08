@@ -160,7 +160,7 @@ describe('completeChat failover', () => {
   it('throws only once every model has failed', async () => {
     global.fetch = jest.fn().mockResolvedValue(errResponse(503));
     await expect(completeChat([{ role: 'user', content: 'hi' }]))
-      .rejects.toThrow(/All free OpenRouter models failed/);
+      .rejects.toThrow(/All OpenRouter models failed/);
   });
 
   it('refuses to run without an API key', async () => {
@@ -334,7 +334,7 @@ describe('chatWithRoutine', () => {
 
     expect(result.intent).toBe('chat');
     expect(result.tasks).toEqual([]);
-    expect(result.error).toMatch(/All free OpenRouter models failed/);
+    expect(result.error).toMatch(/All OpenRouter models failed/);
     expect(result.reply).toMatch(/can't reach the chat model/);
   });
 });

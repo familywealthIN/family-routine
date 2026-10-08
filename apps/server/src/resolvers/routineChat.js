@@ -22,6 +22,7 @@ const { RoutineModel } = require('../schema/RoutineSchema');
 const { GoalModel } = require('../schema/GoalSchema');
 const {
   previousDates,
+  periodDates,
   summariseRoutineHistory,
   generateRoutineInsight,
 } = require('../utils/routineInsight');
@@ -193,11 +194,16 @@ const mutation = {
       taskRef: { type: new GraphQLNonNull(GraphQLString) },
       routineName: { type: GraphQLString },
       brief: { type: GraphQLString },
+      // The tick as the client saw it, in the user's own clock: the server only
+      // knows UTC, and the window's end is the next routine's start.
+      tickedAt: { type: GraphQLString },
+      windowEnd: { type: GraphQLString },
+      minutesLeft: { type: GraphQLInt },
     },
     resolve: async (root, args, ctx) => {
       const email = getEmailfromSession(ctx);
       const {
-        date, taskRef, routineName, brief,
+        date, taskRef, routineName, brief, tickedAt, windowEnd, minutesLeft,
       } = args;
 
       const existing = await RoutineChatMessageModel
@@ -209,17 +215,37 @@ const mutation = {
 
       // Today is included so the run of check-ins counts the tick that asked.
       const dates = [date, ...previousDates(date)];
-      const [routines, goals] = await Promise.all([
+      const { week, month } = periodDates(date);
+      const [routines, goals, earlier, periodGoals] = await Promise.all([
         RoutineModel.find({ email, date: { $in: dates } }).lean().exec(),
         GoalModel.find({ email, period: 'day', date: { $in: dates } }).exec(),
+        // Past insights, so tomorrow's idea is never yesterday's again.
+        RoutineChatMessageModel.find({
+          email, taskRef, from: 'routine', kind: 'text', icon: INSIGHT_ICON, date: { $in: dates },
+        }).sort({ _id: -1 }).limit(5).exec(),
+        GoalModel.find({
+          email,
+          $or: [{ period: 'week', date: week }, { period: 'month', date: month }],
+        }).exec(),
       ]);
+      const hhmm = (v) => (/^\d{1,2}:\d{2}$/.test(String(v || '')) ? String(v) : null);
       const summary = summariseRoutineHistory({
-        routines, goals, taskRef, today: date,
+        routines,
+        goals,
+        taskRef,
+        today: date,
+        periodGoals,
+        moment: {
+          tickedAt: hhmm(tickedAt),
+          windowEnd: hhmm(windowEnd),
+          minutesLeft: Number.isInteger(minutesLeft) ? Math.max(0, Math.min(minutesLeft, 24 * 60)) : null,
+        },
       });
       const { text, model } = await generateRoutineInsight({
         summary,
         routineName: cap(String(routineName || ''), 120),
         brief: cap(String(brief || ''), BRIEF_MAX),
+        previous: earlier.map((m) => m.text),
       });
 
       return decryptSaved(await new RoutineChatMessageModel({

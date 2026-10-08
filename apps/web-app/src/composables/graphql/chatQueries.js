@@ -75,14 +75,21 @@ export const POST_ROUTINE_CHAT_EVENT_MUTATION = gql`
 `;
 
 /**
- * The momentum message after a tick — a win, one fresh idea for the next
- * session and a target within reach, in three sentences, once per routine per
- * day, grounded server-side in the routine's last month.
- * `brief` is the area/project description + next steps the client caches.
+ * The message after a tick: three sentences written for that moment, once per
+ * routine per day, grounded server-side in the routine's last month, today's
+ * whole day and the goals it feeds. `brief` is the area/project description +
+ * next steps the client caches; `tickedAt` / `windowEnd` / `minutesLeft` are
+ * the tick on the user's own clock.
  */
 export const ROUTINE_INSIGHT_MUTATION = gql`
-  mutation routineInsight($date: String!, $taskRef: String!, $routineName: String, $brief: String) {
-    routineInsight(date: $date, taskRef: $taskRef, routineName: $routineName, brief: $brief) {
+  mutation routineInsight(
+    $date: String!, $taskRef: String!, $routineName: String, $brief: String,
+    $tickedAt: String, $windowEnd: String, $minutesLeft: Int
+  ) {
+    routineInsight(
+      date: $date, taskRef: $taskRef, routineName: $routineName, brief: $brief,
+      tickedAt: $tickedAt, windowEnd: $windowEnd, minutesLeft: $minutesLeft
+    ) {
       ${CHAT_MESSAGE_FIELDS}
     }
   }

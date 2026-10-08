@@ -1047,9 +1047,10 @@ describe('RoutineChatContainer routine insight', () => {
     tick.call(ctx, { ref: 'sw', ticked: true }, { ref: 'sw', ticked: false });
     await flush();
     expect(insights(ctx)).toHaveLength(1);
-    expect(insights(ctx)[0].variables).toEqual({
+    expect(insights(ctx)[0].variables).toMatchObject({
       date: '12-09-2026', taskRef: 'sw', routineName: 'Start Work', brief: '',
     });
+    expect(insights(ctx)[0].variables.tickedAt).toMatch(/^\d{2}:\d{2}$/);
     expect(ctx.refetch).toHaveBeenCalled();
   });
 
@@ -1065,6 +1066,17 @@ describe('RoutineChatContainer routine insight', () => {
     tick.call(ctx, { ref: 'sw', ticked: true }, { ref: 'sw', ticked: false });
     await flush();
     expect(insights(ctx)).toHaveLength(0);
+  });
+
+  it('sends the tick on the user clock with the minutes left in the window', () => {
+    const ctx = makeCtx(null, { endTime: '21:00' });
+    expect(ctx.tickMoment(new Date(2026, 9, 7, 20, 29))).toEqual({
+      tickedAt: '20:29', windowEnd: '21:00', minutesLeft: 31,
+    });
+    expect(ctx.tickMoment(new Date(2026, 9, 7, 21, 40)).minutesLeft).toBe(0);
+    expect(makeCtx(null, { endTime: '00:30' }).tickMoment(new Date(2026, 9, 7, 23, 50)).minutesLeft).toBe(40);
+    expect(makeCtx(null, { endTime: '' }).tickMoment(new Date(2026, 9, 7, 9, 5)))
+      .toEqual({ tickedAt: '09:05', windowEnd: null, minutesLeft: null });
   });
 
   it('sends the cached area description and next steps as the brief', () => {

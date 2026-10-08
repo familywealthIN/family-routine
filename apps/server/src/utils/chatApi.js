@@ -11,6 +11,9 @@
  *
  * Configure with `OPENROUTER_FREE_MODELS` (comma-separated) to change the
  * roster without a deploy.
+ *
+ * The one exception is a caller that names its own `models`: the post-tick
+ * routine insight runs once per routine per day and is worth a paid model.
  */
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_MODELS_URL = 'https://openrouter.ai/api/v1/models';
@@ -141,16 +144,23 @@ function cleanJson(text) {
  * model answers. Throws only when every model failed.
  *
  * @param {Array<{role: string, content: string}>} messages
- * @param {{jsonMode?: boolean, maxTokens?: number}} options
+ * @param {{jsonMode?: boolean, maxTokens?: number, temperature?: number, models?: string[],
+ *   reasoning?: Object}} options
+ *   `models` replaces the free roster with the caller's own chain (paid models allowed);
+ *   `reasoning` overrides the default "off" for a model that refuses to run without it.
  * @returns {Promise<{content: string, model: string}>}
  */
-async function completeChat(messages, { jsonMode = false, maxTokens = 1200 } = {}) {
+async function completeChat(messages, {
+  jsonMode = false, maxTokens = 1200, temperature = 0.4, models = null,
+  reasoning = { enabled: false, exclude: true },
+} = {}) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error('OPENROUTER_API_KEY is not configured');
   }
 
-  const roster = (await resolveFreeModels()).slice(0, MAX_ATTEMPTS);
+  const roster = (models && models.length ? models : await resolveFreeModels())
+    .slice(0, MAX_ATTEMPTS);
   if (!roster.length) {
     throw new Error('No free OpenRouter models available');
   }
@@ -174,11 +184,11 @@ async function completeChat(messages, { jsonMode = false, maxTokens = 1200 } = {
           model,
           messages,
           max_tokens: maxTokens,
-          temperature: 0.4,
+          temperature,
           // Nearly every free model is a reasoning model. Left on, the chain of
           // thought eats the token budget and the answer is truncated before
           // the closing brace — ask for the answer, not the thinking.
-          reasoning: { enabled: false, exclude: true },
+          reasoning,
           ...(jsonMode && { response_format: { type: 'json_object' } }),
         }),
       });
@@ -207,7 +217,7 @@ async function completeChat(messages, { jsonMode = false, maxTokens = 1200 } = {
     }
   }
 
-  throw new Error(`All free OpenRouter models failed — ${failures.join(' | ')}`);
+  throw new Error(`All OpenRouter models failed — ${failures.join(' | ')}`);
 }
 
 const INTENTS = ['add_tasks', 'break_down', 'complete_task', 'status', 'chat'];

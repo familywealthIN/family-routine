@@ -320,6 +320,20 @@ export default {
           .filter(Boolean).join('\n');
       }).filter(Boolean).join('\n\n');
     },
+    /**
+     * The tick on the user's own clock: the time it happened, when the window
+     * closes and the minutes still left in it. The server only knows UTC and
+     * does not know where the window ends.
+     */
+    tickMoment(now = new Date()) {
+      const pad = (n) => String(n).padStart(2, '0');
+      const tickedAt = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const end = /^(\d{1,2}):(\d{2})$/.exec(String(this.endTime || ''));
+      if (!end) return { tickedAt, windowEnd: null, minutesLeft: null };
+      let left = (Number(end[1]) * 60 + Number(end[2])) - (now.getHours() * 60 + now.getMinutes());
+      if (left < -12 * 60) left += 24 * 60; // a window that closes after midnight
+      return { tickedAt, windowEnd: this.endTime, minutesLeft: Math.max(0, left) };
+    },
     async requestInsight() {
       if (this.isPastDay || !this.taskRef) return;
       const { taskRef, date } = this;
@@ -328,7 +342,11 @@ export default {
         await this.$apollo.mutate({
           mutation: ROUTINE_INSIGHT_MUTATION,
           variables: {
-            date, taskRef, routineName: this.routineName, brief: this.insightBrief(),
+            date,
+            taskRef,
+            routineName: this.routineName,
+            brief: this.insightBrief(),
+            ...this.tickMoment(),
           },
         });
         if (taskRef === this.taskRef && date === this.date) this.refetch();

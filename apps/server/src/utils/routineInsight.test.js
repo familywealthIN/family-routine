@@ -2,7 +2,10 @@ jest.mock('./chatApi', () => ({ completeChat: jest.fn() }));
 
 const { completeChat } = require('./chatApi');
 const {
+  DEFAULT_INSIGHT_MODEL,
   previousDates,
+  periodDates,
+  dayPlan,
   summariseRoutineHistory,
   nextMilestone,
   describeHistory,
@@ -90,9 +93,9 @@ describe('generateRoutineInsight', () => {
       milestone: nextMilestone({ streak: 3, bestStreak: 5 }),
     };
     const text = fallbackInsight(s, 'Jog');
-    expect(text).toMatch(/^That is 3 check-ins in a row on Jog/);
-    expect(text).toMatch(/"Core Workout" into a game/);
-    expect(text).toMatch(/3 more days beats your best run of 5, so see you there\.$/);
+    expect(text).toBe('3 in a row on Jog. Next time, beat "Core Workout" by one rep or one minute. '
+      + '3 more days beats your best run of 5.');
+    expect(text.split(' ').length).toBeLessThanOrEqual(30);
     expect(text).not.toMatch(/missed|late/);
     expect(text.match(/[.!?](\s|$)/g)).toHaveLength(3);
   });
@@ -103,13 +106,75 @@ describe('generateRoutineInsight', () => {
     expect(text.match(/[.!?](\s|$)/g)).toHaveLength(3);
   });
 
-  it('asks the model for a win, an idea and a hook, never a lecture', async () => {
-    completeChat.mockResolvedValueOnce({ content: 'A. B. C.', model: 'm' });
-    await generateRoutineInsight({ summary, routineName: 'Jog' });
-    const [system, user] = completeChat.mock.calls[completeChat.mock.calls.length - 1][0];
-    expect(system.content).toMatch(/Never shame or lecture/);
-    expect(system.content).toMatch(/Never give generic advice/);
-    expect(user.content).toMatch(/Next target within reach:/);
+  it('asks Claude Fable first, at full creativity, with the moment and past messages', async () => {
+    completeChat.mockClear();
+    completeChat.mockResolvedValueOnce({ content: 'A. B. C.', model: 'anthropic/claude-fable-5.1' });
+    await generateRoutineInsight({
+      summary, routineName: 'Jog', previous: ['Yesterday you ran a 5k. Try hills. See you.'],
+    });
+    const [[messages, options]] = completeChat.mock.calls;
+    expect(options).toMatchObject({ models: [DEFAULT_INSIGHT_MODEL], temperature: 1 });
+    const [system, user] = messages;
+    expect(system.content).toMatch(/Formulas and stock phrases such as "just N more"/);
+    expect(system.content).toMatch(/quick way to compensate/);
+    expect(user.content).toMatch(/The moment:/);
+    expect(user.content).toMatch(/do not repeat them\):\n- Yesterday you ran a 5k/);
+  });
+
+  it('falls back to the free roster when Fable is unavailable', async () => {
+    completeChat.mockClear();
+    completeChat
+      .mockRejectedValueOnce(new Error('402 credits'))
+      .mockResolvedValueOnce({ content: 'One. Two. Three.', model: 'free:model' });
+    await expect(generateRoutineInsight({ summary, routineName: 'Jog' }))
+      .resolves.toEqual({ text: 'One. Two. Three.', model: 'free:model' });
+    expect(completeChat.mock.calls[1][1].models).toBeUndefined();
+  });
+});
+
+describe('the day around the tick', () => {
+  const routine = {
+    date: '07-10-2026',
+    tasklist: [
+      { _id: 'r3', name: 'Night Routine', time: '22:00' },
+      { _id: 'r1', name: 'Workout', time: '19:30', passed: false },
+      { _id: 'r0', name: 'Morning Pages', time: '06:30', passed: true, ticked: false },
+      { _id: 'r2', name: 'Lunch Walk', time: '12:30', passed: true, ticked: true },
+    ],
+  };
+
+  it('lists the whole day in time order and marks what was missed', () => {
+    expect(dayPlan(routine, 'r1')).toEqual([
+      { time: '06:30', name: 'Morning Pages', state: 'missed', current: false },
+      { time: '12:30', name: 'Lunch Walk', state: 'done late', current: false },
+      { time: '19:30', name: 'Workout', state: 'done', current: true },
+      { time: '22:00', name: 'Night Routine', state: 'not yet', current: false },
+    ]);
+  });
+
+  it('carries the tick moment, the missed routines and the linked goals to the model', () => {
+    const s = summariseRoutineHistory({
+      routines: [routine],
+      goals: [],
+      taskRef: 'r1',
+      today: '07-10-2026',
+      periodGoals: [
+        { period: 'week', goalItems: [{ taskRef: 'r1', body: 'Train 4 times', isComplete: false }] },
+        { period: 'month', goalItems: [{ taskRef: 'other', body: 'Not mine' }] },
+      ],
+      moment: { tickedAt: '20:29', windowEnd: '21:00', minutesLeft: 31 },
+    });
+    expect(s.missedToday).toEqual(['Morning Pages']);
+    expect(s.linked).toEqual([{ period: 'week', body: 'Train 4 times', done: false }]);
+    const text = describeHistory(s);
+    expect(text).toMatch(/The moment: ticked at 20:29, on Wednesday, window 19:30-21:00, 31 min left in the window/);
+    expect(text).toMatch(/Missed earlier today: Morning Pages/);
+    expect(text).toMatch(/19:30 Workout \(done\) <- this routine/);
+    expect(text).toMatch(/week goal "Train 4 times" \(open\)/);
+  });
+
+  it('keys week goals by their Friday and month goals by the last day', () => {
+    expect(periodDates('07-10-2026')).toEqual({ week: '09-10-2026', month: '31-10-2026' });
   });
 });
 
@@ -175,6 +240,6 @@ describe('nextMilestone', () => {
   });
 
   it('aims at the next round number once the run is the record', () => {
-    expect(nextMilestone({ streak: 6, bestStreak: 6 })).toMatch(/^1 more day makes it a 7-day run/);
+    expect(nextMilestone({ streak: 6, bestStreak: 6 })).toBe('1 more day makes 7 in a row');
   });
 });
