@@ -253,18 +253,25 @@ export default {
 
 /* --- tablet + desktop: the 2:3 split ----------------------------------- */
 
+/* Same as Goals and Routines: the left pane (the list) stays put while the
+   page scrolls the detail. Sticky rather than a height: 100% chain, which iPad
+   WebKit can leave unresolved, and which overflow: hidden then cut off. The
+   max-height (viewport less the shell's head and padding) keeps a long list
+   scrollable inside its pane. */
 .rn-agents--tablet,
 .rn-agents--desktop {
   flex-direction: row;
+  align-items: flex-start;
   gap: 12px;
-  height: 100%;
-  overflow: hidden;
 }
 
 .rn-agents--tablet .rn-agents__list,
 .rn-agents--desktop .rn-agents__list {
   flex: 2 1 0;
-  min-height: 0;
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 120px);
+  max-height: calc(100dvh - 120px);
   overflow-y: auto;
   scrollbar-width: none;
   /* Room for the selected card's 2px inset ring, which would otherwise be
@@ -281,23 +288,14 @@ export default {
 .rn-agents__pane {
   flex: 3 1 0;
   min-width: 0;
-  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
 .rn-agents__card {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: none;
   background: #fff;
   border-radius: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .08), 0 2px 4px -1px rgba(0, 0, 0, .05);
   padding: 8px 20px 20px;
   animation: rn-fade .25s ease;
-}
-
-.rn-agents__card::-webkit-scrollbar {
-  display: none;
 }
