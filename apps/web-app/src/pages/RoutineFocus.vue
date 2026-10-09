@@ -1323,6 +1323,21 @@ export default {
       this.rewardSeen = {};
     }
     this.$agent.fetchAll();
+    // Once the day, its goal items and the agents are all in, close any run
+    // left listening with its counter full (see fireDueEndEvents).
+    let swept = false;
+    const unwatchDue = this.$watch(
+      () => this.tasklist.length > 0 && this.dayGoalItems.length > 0 && this.$agent.agents.length > 0,
+      (ready) => {
+        if (!ready || swept) return;
+        swept = true;
+        this.$nextTick(() => {
+          if (unwatchDue) unwatchDue();
+          this.fireDueEndEvents();
+        });
+      },
+      { immediate: true },
+    );
 
     eventBus.$on(EVENTS.REFETCH_DAILY_GOALS, this.refetchGoals);
     eventBus.$on(EVENTS.GOAL_ITEM_CREATED, this.refetchGoals);
@@ -1445,6 +1460,7 @@ export default {
       try {
         await Promise.all(reads);
         this.loadError = false;
+        this.fireDueEndEvents();
       } catch (error) {
         console.error('[RoutineFocus] pull-to-refresh failed:', error);
       } finally {
@@ -2273,9 +2289,16 @@ export default {
       // when the page mounted, so a run started since on another device (iPad
       // starts it, the phone completes it) is invisible here. Ask the server
       // before concluding there is nothing to close.
+      //
+      // And when the server has no run either, but THIS device's badge says it
+      // started one today, the start's record was lost (the app closed while
+      // the webhook was still answering): the badge is the evidence, so the
+      // run is re-opened and closed.
       if (!this.$agent.canFireEndEvent(taskRef)) {
         if (typeof this.$agent.fetchByTaskRef !== 'function') return;
         this.$agent.fetchByTaskRef(taskRef)
+          .then(() => (this.$agent.canFireEndEvent(taskRef)
+            || (this.$agent.adoptLocalRun && this.$agent.adoptLocalRun(taskRef))))
           .then(() => {
             if (this.$agent.canFireEndEvent(taskRef)) this.dispatchAgentEndEvent(taskRef, goalId);
           })
@@ -2283,6 +2306,17 @@ export default {
         return;
       }
       this.dispatchAgentEndEvent(taskRef, goalId);
+    },
+    /**
+     * A routine finished while its end event could not go out (or the app
+     * closed first) is still "listening" with a full counter. Re-run the end
+     * rule for those on open and on pull to refresh, so it does not stay stuck.
+     */
+    fireDueEndEvents() {
+      if (!this.isToday) return;
+      this.tasklist.forEach((task) => {
+        if (this.effectiveAgentStatus(task.id) === 'listening') this.maybeFireAgentEndEvent(task.id);
+      });
     },
     dispatchAgentEndEvent(taskRef, goalId) {
       const gid = goalId || this.findFirstGoalIdForRoutine(taskRef);

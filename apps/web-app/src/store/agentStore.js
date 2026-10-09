@@ -372,6 +372,19 @@ const recordExecution = async (apollo, variables) => {
   return data && data.recordAgentExecution;
 };
 
+// Record a run as open, with no counters: the outcome is recorded separately.
+const openRun = async (apollo, agent, status = 'running') => {
+  if (!apollo || !agent) return false;
+  try {
+    const updated = await recordExecution(apollo, { id: agent.id, status });
+    if (updated) upsertAgent(updated);
+    return !!updated;
+  } catch (err) {
+    console.warn('[agentStore] could not record the run as open', err);
+    return false;
+  }
+};
+
 const actions = {
   async fetchAll(apollo) {
     if (!apollo) return [];
@@ -466,6 +479,20 @@ const actions = {
     clearStatus(taskRef);
   },
 
+  /**
+   * This device's badge says a run is open today but the server does not know
+   * it (the start was recorded before `openRun` existed, or that write
+   * failed). The badge is only ever set by an explicit Start Agent here today,
+   * so it is evidence enough: open the run on the server so the end event can
+   * close it. Returns whether it did.
+   */
+  async adoptLocalRun(apollo, taskRef) {
+    const agent = state.agentsByTaskRef[taskRef];
+    if (!agent || !RUN_OPEN_STATUSES.includes(statusFor(taskRef))) return false;
+    if (RUN_OPEN_STATUSES.includes(agent.executionStatus) && ranToday(agent)) return false;
+    return openRun(apollo, agent, 'listening');
+  },
+
   /** Today's badge for a task ('' when none, or when it was set another day). */
   statusFor(taskRef) {
     return statusFor(taskRef);
@@ -521,6 +548,12 @@ const actions = {
       : Promise.resolve(null);
     const settleJob = () => jobIdP.then((jid) => (jid ? settleAgentJob(jid) : null)).catch(() => {});
     const show = (s) => { if (visible) setStatus(taskRef, s); };
+    // Tell the server the run is open BEFORE the webhook is called. The
+    // outcome below is only recorded once the webhook answers, and a slow one
+    // (or the app being closed meanwhile) used to leave the server on
+    // yesterday's run: this device's badge said "listening" while the end
+    // event, which the server gates on a run opened today, was refused.
+    await openRun(apollo, agent);
     try {
       const result = await dispatchEvent({
         vm, event: stripGraphqlMeta(agent.startEvent), goalId,

@@ -166,3 +166,60 @@ describe("agentStore — badges are only about today's trigger", () => {
     expect(agentStore.statusFor('task-2')).toBe('running');
   });
 });
+
+// "Stuck in listening": the start's outcome was recorded only after the webhook
+// answered, so closing the app meanwhile left the server on yesterday's run
+// while this device's badge said "listening" — and the end event was refused.
+describe('agentStore — the server learns of a run before its webhook answers', () => {
+  const recorded = (apollo) => apollo.mutate.mock.calls.map(([{ variables }]) => variables.status);
+  const echo = (agent) => jest.fn(({ variables }) => Promise.resolve({
+    data: { recordAgentExecution: { ...agent, executionStatus: variables.status, lastRunAt: String(Date.now()) } },
+  }));
+
+  beforeEach(() => {
+    global.fetch = jest.fn(jsonResponse);
+  });
+
+  afterEach(() => {
+    agentStore.reset();
+    jest.restoreAllMocks();
+    delete global.fetch;
+  });
+
+  it('records the run open, then its outcome', async () => {
+    const agent = makeAgent({ lastRunAt: String(Date.now() - 2 * 864e5) });
+    const apollo = await seed(agent, echo(agent));
+    let atDispatch;
+    global.fetch = jest.fn(() => {
+      atDispatch = recorded(apollo);
+      return jsonResponse();
+    });
+    await agentStore.fireStartEventIfPresent({ apollo, vm: {}, taskRef: 'task-1' });
+    expect(atDispatch).toEqual(['running']);
+    expect(recorded(apollo)).toEqual(['running', 'listening']);
+  });
+
+  it('re-opens a run this device started today but the server never recorded', async () => {
+    const agent = makeAgent({ executionStatus: 'listening', lastRunAt: String(Date.now() - 864e5) });
+    const apollo = await seed(agent, echo(agent));
+    expect(agentStore.canFireEndEvent('task-1')).toBe(false);
+    agentStore.setLocalStatus('task-1', 'listening');
+
+    expect(await agentStore.adoptLocalRun(apollo, 'task-1')).toBe(true);
+    expect(recorded(apollo)).toEqual(['listening']);
+    expect(agentStore.canFireEndEvent('task-1')).toBe(true);
+  });
+
+  it('adopts nothing without a badge from today, or when the server already has the run', async () => {
+    const stale = makeAgent({ executionStatus: 'listening', lastRunAt: String(Date.now() - 864e5) });
+    let apollo = await seed(stale, echo(stale));
+    expect(await agentStore.adoptLocalRun(apollo, 'task-1')).toBe(false);
+    agentStore.reset();
+
+    const open = makeAgent({ executionStatus: 'listening' });
+    apollo = await seed(open, echo(open));
+    agentStore.setLocalStatus('task-1', 'listening');
+    expect(await agentStore.adoptLocalRun(apollo, 'task-1')).toBe(false);
+    expect(apollo.mutate).not.toHaveBeenCalled();
+  });
+});

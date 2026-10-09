@@ -1703,6 +1703,35 @@ describe('RoutineFocus end-event dispatch', () => {
     expect(vm.postChatEvent).toHaveBeenCalled();
   });
 
+  // Started here, but the app closed before the start was recorded: the
+  // server has no run today, so this device's own badge re-opens it.
+  it('falls back to this device’s badge when the server has no run either', async () => {
+    const vm = vmFor(false);
+    vm.$agent.adoptLocalRun = jest.fn(() => {
+      vm.$agent.canFireEndEvent.mockReturnValue(true);
+      return Promise.resolve(true);
+    });
+    vm.dispatchAgentEndEvent = methods.dispatchAgentEndEvent.bind(vm);
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    await flush();
+    expect(vm.$agent.adoptLocalRun).toHaveBeenCalledWith('sw');
+    expect(vm.$agent.fireEndEvent).toHaveBeenCalledWith({ taskRef: 'sw', goalId: 'g1' });
+  });
+
+  it('re-checks only listening routines, and only today', () => {
+    const vm = {
+      isToday: true,
+      tasklist: [{ id: 'a' }, { id: 'b' }],
+      effectiveAgentStatus: (id) => (id === 'a' ? 'listening' : 'finished'),
+      maybeFireAgentEndEvent: jest.fn(),
+    };
+    methods.fireDueEndEvents.call(vm);
+    expect(vm.maybeFireAgentEndEvent.mock.calls).toEqual([['a']]);
+    vm.isToday = false;
+    methods.fireDueEndEvents.call(vm);
+    expect(vm.maybeFireAgentEndEvent).toHaveBeenCalledTimes(1);
+  });
+
   // The counter gate still comes first: a routine whose slots are not full has
   // nothing to close, whatever the agent's state.
   it('does not even ask while the slot counter is unfilled', () => {
