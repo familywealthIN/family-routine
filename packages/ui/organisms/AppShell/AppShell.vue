@@ -583,8 +583,14 @@ export default {
   flex-shrink: 0;
 }
 
+/* `1 1 0px` + `height: 0`, not `flex: 1` (a 0% basis): with a percentage basis
+   WebKit (iPad) treats this box's height as indefinite, so a page inside it
+   sized `height: 100%` (Goals, Routines, Year Goals on tablet and desktop)
+   resolved against the whole shell column instead, came out the header's
+   height too tall, and scrolled the page on top of its own panes. */
 .rn-shell__body {
-  flex: 1;
+  flex: 1 1 0px;
+  height: 0;
   min-height: 0;
   overflow-y: auto;
 }
