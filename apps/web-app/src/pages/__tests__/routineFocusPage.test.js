@@ -1610,7 +1610,9 @@ describe('RoutineFocus zero-point agent refusal', () => {
     const vm = {
       ...vmFor(0),
       actionSheetOpen: true,
-      focusRow: { id: 'sw', ticked: true, passed: false, wait: false, redeemable: false },
+      focusRow: {
+        id: 'sw', ticked: true, passed: false, wait: false, redeemable: false,
+      },
       findFirstGoalIdForRoutine: jest.fn(() => 'g1'),
       $agent: { fireStartEventIfPresent: jest.fn() },
       date: '06-10-2026',
@@ -1646,7 +1648,10 @@ describe('RoutineFocus end-event dispatch', () => {
     endEventFiring: {},
     postChatEvent: jest.fn(),
     findFirstGoalIdForRoutine: jest.fn(() => 'g1'),
+    // Vue.set / Vue.delete stand-ins: mutating the target is the point.
+    // eslint-disable-next-line no-param-reassign
     $set: (o, k, v) => { o[k] = v; },
+    // eslint-disable-next-line no-param-reassign
     $delete: (o, k) => { delete o[k]; },
     $agent: {
       canFireEndEvent: jest.fn(() => canFire),
