@@ -29,6 +29,13 @@
         </provider>
     </application>
 
+    <!--
+        Every Android app implicitly requires a touchscreen, and Play hides such
+        apps from laptops without one (Googlebooks, most Chromebooks). The app
+        is a WebView driven equally well by mouse and keyboard.
+    -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />

@@ -61,7 +61,7 @@ ALSO IN THE APP
 • Chat with each routine — ask what you did last time, break a task down, or plan from your next steps, in a thread scoped to that block.
 • Progress — routine efficiency with a week-over-week trend, a Discipline / Kinetics / Geniuses balance ring, and what's slipping.
 • Groups — share a routine with family or a team, see who has checked in today.
-• Works offline and installs to your home screen.
+• Phone, tablet and laptop (Googlebook and Chromebook) — side-by-side panes on big screens, keyboard and mouse welcome, synced everywhere, works offline.
 • Sign in with Google or with Apple. Delete your account from inside the app at any time.
 
 
