@@ -48,6 +48,17 @@
         </div>
       </div>
 
+      <!-- On time vs late, the old "Tasks in Time / out of Time" bar as a ribbon. -->
+      <molecule-timing-ribbon
+        v-if="timing"
+        :slots="timing.slots"
+        :counts="timing.counts"
+        :next-index="timing.nextIndex"
+        :skip="timing.skip"
+        :rate="timing.rate"
+        :delta="timing.delta"
+      />
+
       <nav class="rn-drawer__nav">
         <div
           v-for="item in navItems"
@@ -67,12 +78,12 @@
 
 <script>
 import AtomProgressCircular from '../../atoms/ProgressCircular/ProgressCircular.vue';
+import MoleculeTimingRibbon from '../../molecules/TimingRibbon/TimingRibbon.vue';
 import { STIMULI, STIMULUS_ORDER } from '../../constants/routineFocus';
-
 
 export default {
   name: 'OrganismUserDrawer',
-  components: { AtomProgressCircular },
+  components: { AtomProgressCircular, MoleculeTimingRibbon },
   props: {
     value: { type: Boolean, default: false },
     name: { type: String, default: '' },
@@ -85,8 +96,13 @@ export default {
     streakHint: { type: String, default: '' },
     /** Accepted for callers' sake; the drawer no longer shows points. */
     points: { type: Number, default: null },
-    /** [{ key, icon, label, route, active, color, gap }] — the chassis More list. */
+    /** [{ key, icon, label, route, active, color }] — the chassis More list. */
     navItems: { type: Array, default: () => [] },
+    /**
+     * `drawerTiming()` (web-app utils/routineTiming): today's check-ins and the
+     * week's on-time rate. Null while unknown, and the ribbon is left out.
+     */
+    timing: { type: Object, default: null },
   },
   watch: {
     // Escape closes the drawer like the scrim does. Listening only while open
@@ -124,10 +140,11 @@ export default {
     clamp(value) {
       return Math.min(Math.max(value, 0), 100);
     },
-    // `item.color` lets the list carry its own emphasis.
+    // `item.color` lets the list carry its own emphasis. Every row sits on the
+    // same rhythm: the More list's `gap` (a breather above Profile in the
+    // tablet flyout) made one gap in the phone list wider than the rest.
     rowStyle(item) {
       return {
-        marginTop: item.gap || '0px',
         background: item.active ? 'rgba(40,139,213,.08)' : 'transparent',
         color: item.color || (item.active ? '#288bd5' : 'rgba(0,0,0,.7)'),
       };
@@ -224,15 +241,6 @@ export default {
   text-overflow: ellipsis;
 }
 
-
-
-
-
-
-
-
-
-
 .rn-drawer__streak {
   display: flex;
   align-items: center;
@@ -253,8 +261,6 @@ export default {
   flex: 1;
   min-width: 0;
 }
-
-
 
 .rn-drawer__streak-days {
   font-size: 14px;

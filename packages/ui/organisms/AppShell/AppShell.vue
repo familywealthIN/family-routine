@@ -253,6 +253,7 @@
       :streak-days="streakDays == null ? undefined : streakDays"
       :streak-hint="streakHint"
       :nav-items="moreItems"
+      :timing="timing"
       @input="drawerOpen = $event"
       @navigate="go"
     />
@@ -360,6 +361,8 @@ export default {
     streakHint: { type: String, default: '' },
     /** { D, K, G } percentages for the drawer's ring trio. Null hides it. */
     scores: { type: Object, default: null },
+    /** The drawer's on-time ribbon (UserDrawer `timing`). Null hides it. */
+    timing: { type: Object, default: null },
     /** Year average %, drawn as the ring around the Goals nav glyph. Null: no ring. */
     yearAverage: { type: Number, default: null },
     logo: { type: String, default: '/img/icons/android-chrome-192x192.png' },

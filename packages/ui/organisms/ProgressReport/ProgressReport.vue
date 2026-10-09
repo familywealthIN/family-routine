@@ -64,6 +64,11 @@
 
         <ProgressBarGroup class="rn-pcard" v-bind="barProps" />
 
+        <!-- On time vs late: the page's own read (`routineTiming`), not the report's. -->
+        <div v-if="$scopedSlots.timing || $slots.timing" class="rn-pcard">
+          <slot name="timing"></slot>
+        </div>
+
         <RoutineRankCard class="rn-pcard" v-bind="goodProps" />
 
         <RoutineRankCard
@@ -137,6 +142,9 @@
           <DkgRingTrio :values="balance" :heading="balanceHeading" />
         </section>
         <ProgressBarGroup class="rn-pcard" v-bind="barProps" />
+        <div v-if="$scopedSlots.timing || $slots.timing" class="rn-pcard">
+          <slot name="timing"></slot>
+        </div>
         <a
           class="rn-pcard rn-prog__history"
           :href="historyRoute"

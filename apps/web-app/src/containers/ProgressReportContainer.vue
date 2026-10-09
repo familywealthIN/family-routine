@@ -29,7 +29,11 @@
     @open-routine="$emit('open-routine', $event)"
     @open-history="$emit('open-history')"
     @retry="refresh"
-  />
+  >
+    <template v-slot:timing>
+      <slot name="timing"></slot>
+    </template>
+  </ProgressReport>
 </template>
 
 <script>

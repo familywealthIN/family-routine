@@ -1,4 +1,12 @@
 <template>
+  <!-- The drawer's on-time ribbon: read the first time the drawer opens. -->
+  <RoutineTimingContainer
+    v-slot="{ timing }"
+    :start-date="timingWindow.startDate"
+    :end-date="timingWindow.endDate"
+    :today="today"
+    :paused="!drawerOpened"
+  >
   <AppShell
     :active="active"
     :title="title"
@@ -14,7 +22,9 @@
     :streak-hint="streakHint"
     :status-bar="statusBar"
     :more-initially-open="moreInitiallyOpen"
+    :timing="drawerTiming(timing, today)"
     v-on="$listeners"
+    @open-drawer="drawerOpened = true"
   >
     <!--
       Forwarded unconditionally and NOT behind a `v-if`: `$scopedSlots` is not
@@ -38,6 +48,7 @@
     </template>
     <slot></slot>
   </AppShell>
+  </RoutineTimingContainer>
 </template>
 
 <script>
@@ -65,13 +76,16 @@
  * container home for the AppShell organism (ARCHITECTURE.md § 6), so the
  * consolidation to make is for the renderless one to go.
  */
+import moment from 'moment';
 import AppShell from '@routine-notes/ui/organisms/AppShell/AppShell.vue';
+import RoutineTimingContainer from './RoutineTimingContainer.vue';
 import { XP_BALANCE_QUERY } from '../composables/graphql/queries';
+import { DATE_FORMAT, drawerWindow, drawerTiming } from '../utils/routineTiming';
 
 export default {
   name: 'AppShellContainer',
 
-  components: { AppShell },
+  components: { AppShell, RoutineTimingContainer },
 
   props: {
     /** `navKey()` of the current page's nav item, e.g. 'progress'. */
@@ -97,10 +111,18 @@ export default {
   },
 
   data() {
-    return { xpBalance: null, xpBalanceError: false };
+    return {
+      xpBalance: null,
+      xpBalanceError: false,
+      drawerOpened: false,
+      today: moment().format(DATE_FORMAT),
+    };
   },
 
   computed: {
+    timingWindow() {
+      return drawerWindow(this.today);
+    },
     user() {
       const root = (this.$root && this.$root.$data) || {};
       return { name: root.name || '', email: root.email || '', picture: root.picture || '' };
@@ -125,6 +147,8 @@ export default {
       return this.xpBalanceError && !this.xpBalance;
     },
   },
+
+  methods: { drawerTiming },
 
   apollo: {
     xpBalance: {

@@ -64,3 +64,36 @@ describe('OrganismUserDrawer — Escape', () => {
     host.$destroy();
   });
 });
+
+describe('OrganismUserDrawer — list and timing', () => {
+  const render = (props) => new Vue({
+    render: (h) => h(UserDrawer, { props: { value: true, ...props } }),
+  }).$mount();
+
+  it('spaces every row of the list the same, whatever gap the More list carries', () => {
+    const host = render({
+      navItems: [
+        { key: 'groups', icon: 'group', label: 'Groups' },
+        {
+          key: 'profile', icon: 'person', label: 'Profile', gap: '10px',
+        },
+      ],
+    });
+    const rows = host.$el.querySelectorAll('.rn-drawer__nav-row');
+    expect([...rows].map((r) => r.style.marginTop)).toEqual(['', '']);
+    host.$destroy();
+  });
+
+  it('shows the on-time ribbon only once the timing is known', () => {
+    const none = render({});
+    expect(none.$el.querySelector('[data-testid="timing-ribbon"]')).toBeNull();
+    none.$destroy();
+    const known = render({
+      timing: {
+        slots: [], counts: {}, nextIndex: -1, skip: false, rate: 80, delta: null,
+      },
+    });
+    expect(known.$el.querySelector('[data-testid="timing-ribbon"]')).not.toBeNull();
+    known.$destroy();
+  });
+});

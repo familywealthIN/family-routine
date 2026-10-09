@@ -232,18 +232,28 @@
     </app-shell-container>
 
     <!-- ================= SHARED OVERLAYS ================= -->
-    <user-drawer
-      :value="drawerOpen"
-      :name="userName"
-      :email="userEmail"
-      :picture="profileImage"
-      :stimulus-totals="stimulusTotals"
-      :streak-days="streakDays"
-      :streak-hint="streakHint"
-      :nav-items="drawerNavItems"
-      @input="drawerOpen = $event"
-      @navigate="onDrawerNavigate"
-    />
+    <!-- The on-time ribbon is read each time the drawer opens, so it has the latest ticks. -->
+    <routine-timing-container
+      v-slot="{ timing }"
+      :start-date="timingWindow.startDate"
+      :end-date="timingWindow.endDate"
+      :today="todayDate"
+      :paused="!drawerOpen"
+    >
+      <user-drawer
+        :value="drawerOpen"
+        :name="userName"
+        :email="userEmail"
+        :picture="profileImage"
+        :stimulus-totals="stimulusTotals"
+        :streak-days="streakDays"
+        :streak-hint="streakHint"
+        :nav-items="drawerNavItems"
+        :timing="drawerTiming(timing, todayDate)"
+        @input="drawerOpen = $event"
+        @navigate="onDrawerNavigate"
+      />
+    </routine-timing-container>
 
     <!--
       The Start Work sheet. It owns its own chassis sheet now (`sheet` prop) rather
@@ -413,6 +423,8 @@ import InboxSheetContainer from '../containers/InboxSheetContainer.vue';
 import SkipDayContainer from '../containers/SkipDayContainer.vue';
 import AgentFormContainer from '../containers/AgentFormContainer.vue';
 import AppShellContainer from '../containers/AppShellContainer.vue';
+import RoutineTimingContainer from '../containers/RoutineTimingContainer.vue';
+import { drawerWindow, drawerTiming } from '../utils/routineTiming';
 import {
   ROUTINE_DATE_QUERY,
   DAILY_GOALS_QUERY,
@@ -476,6 +488,7 @@ const DATE_PICKS = [
 export default {
   name: 'RoutineFocus',
   components: {
+    RoutineTimingContainer,
     RoutineFocusCard,
     RoutineDeck,
     RoutineComposer,
@@ -1214,6 +1227,9 @@ export default {
      * shows. The four tabs are already in the bottom nav one thumb away, so
      * the drawer never repeats them.
      */
+    timingWindow() {
+      return drawerWindow(this.todayDate);
+    },
     drawerNavItems() {
       return MORE_NAV.map((item) => ({
         ...item,
@@ -1341,6 +1357,7 @@ export default {
     if (this.flyTimer) clearTimeout(this.flyTimer);
   },
   methods: {
+    drawerTiming,
     // =====================================================================
     // Navigation / shell
     // =====================================================================
