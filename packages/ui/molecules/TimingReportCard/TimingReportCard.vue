@@ -465,14 +465,13 @@ export default {
 }
 
 /* ---------------- wide: a full-width row on tablet / desktop ----------------
-   The page grid is minmax(0,3fr) minmax(0,2fr) with a 12px gutter and 16px card
-   padding. Inside this card's content box (C) the left column ends 16px short of
-   that gutter and the right one starts 16px past it, so "By routine" lines up
-   with the cards above: left = 0.6C - 20px, gap = 12 + 16 + 16 = 44px. */
+   7/12 for the read-outs (split bar, day bars, weekly rhythm) and 5/12 for "By
+   routine", so the bars and the seven weekday tiles keep a sensible width
+   instead of stretching across the whole row. */
 .rn-ptime--wide .rn-ptime__body {
   display: grid;
-  grid-template-columns: minmax(0, calc(60% - 20px)) minmax(0, 1fr);
-  column-gap: 44px;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: 28px;
   align-items: start;
 }
 

@@ -10,6 +10,9 @@
  * gets its own scope wording, and that the figures the report does not return
  * leave as nulls rather than as plausible zeros.
  */
+const fs = require('fs');
+const path = require('path');
+
 jest.mock('vue-radar', () => ({ __esModule: true, default: {} }));
 
 const Container = require('../ProgressReportContainer.vue').default;
@@ -235,5 +238,17 @@ describe("ProgressReportContainer — never another period's figures (BUG-1)", (
     const refetch = jest.fn(() => Promise.resolve());
     Container.methods.refresh.call({ $apollo: { queries: { progress: { refetch } } } });
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The page's On the clock card only lays out in two columns when the report's
+// `wide` slot prop reaches it. This container re-exposes the slot, and once
+// passed it on bare, so the card stayed single-column on its full-width row.
+describe('ProgressReportContainer — the timing slot', () => {
+  it('passes the report’s slot props through to the page', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../ProgressReportContainer.vue'), 'utf8');
+    const slot = source.match(/<template v-slot:timing="(\w+)">\s*<slot name="timing" v-bind="(\w+)"/);
+    expect(slot).not.toBeNull();
+    expect(slot[1]).toBe(slot[2]);
   });
 });
