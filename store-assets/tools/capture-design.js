@@ -119,6 +119,11 @@ const FRAMES = {
   android: { frame: 'phone', size: [412, 868], dpr: 3 },
   ipad: { frame: 'tablet', size: [1133, 744], dpr: 2 },
   mac: { frame: 'desktop', size: [1440, 856], dpr: 2 },
+  // Pixel Tablet: 1280x800dp, less the 24dp status bar and 24dp gesture inset.
+  'android-tablet': { frame: 'tablet', size: [1280, 752], dpr: 2 },
+  // A 16:10 1440x900dp laptop panel, less the 32dp ChromeOS window caption and
+  // the 48dp shelf compose.js draws.
+  googlebook: { frame: 'desktop', size: [1440, 820], dpr: 2 },
 };
 
 /**
@@ -161,6 +166,19 @@ const PREPARE = ([optId, w, h]) => {
       background: 'transparent',
     });
   }
+  // Pin the frame to the viewport origin. Left in the prototype's flow it sits
+  // at a fractional offset, so the element screenshot rounds outward and picks
+  // up an extra device row of the frame's dark bezel — a hairline across the
+  // top of the app, and a capture one CSS px taller than the viewport.
+  Object.assign((root || host).style, {
+    position: 'fixed',
+    left: '0',
+    top: '0',
+    margin: '0',
+    padding: '0',
+    zIndex: '2147483647',
+  });
+  if (!root) Object.assign(host.style, { width: 'auto', height: 'auto', borderRadius: '0', boxShadow: 'none' });
   Object.assign(screen.style, {
     flex: 'none',
     width: `${w}px`,

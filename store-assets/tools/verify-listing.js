@@ -103,6 +103,16 @@ function imageInfo(file) {
   // --- Screenshots ---------------------------------------------------------
   // Apple requires every slide in a device set to share one size, and Play caps
   // a side at 3840px. Both are checked against the canvas each platform claims.
+  //
+  // The Play sets carry Play's own rules on top: phone and tablet slots take a
+  // 24-bit PNG or JPEG, 320-3840px a side, the long side at most twice the
+  // short; the Chromebook slot (uploaded by hand, the API has no type for it)
+  // wants 16:9 or 9:16 with each side 1080-7680px. None may carry alpha.
+  const PLAY_RULES = {
+    android: { minSide: 320, maxRatio: 2 },
+    'android-tablet': { minSide: 320, maxRatio: 2 },
+    googlebook: { minSide: 1080, ratio: 16 / 9 },
+  };
   for (const [name, p] of Object.entries(platforms)) {
     const [cw, ch] = p.canvas;
     const wrong = [];
@@ -111,10 +121,21 @@ function imageInfo(file) {
       const f = path.join(FINAL, `${name}-${s.key}.png`);
       if (!fs.existsSync(f)) { wrong.push(`${s.key} missing`); continue; }
       count += 1;
-      const { w, h, bytes } = imageInfo(f);
+      const {
+        w, h, bytes, alpha, indexed,
+      } = imageInfo(f);
       if (w !== cw || h !== ch) wrong.push(`${s.key} is ${w}x${h}, expected ${cw}x${ch}`);
       if (Math.max(w, h) > 3840) wrong.push(`${s.key} exceeds 3840px on a side`);
       if (bytes > 8 * 1024 * 1024) wrong.push(`${s.key} is ${Math.round(bytes / 1048576)}MB`);
+      const rule = PLAY_RULES[name];
+      if (rule) {
+        const long = Math.max(w, h);
+        const short = Math.min(w, h);
+        if (short < rule.minSide) wrong.push(`${s.key} short side ${short}px, Play wants >= ${rule.minSide}`);
+        if (rule.maxRatio && long / short > rule.maxRatio) wrong.push(`${s.key} ratio ${(long / short).toFixed(2)}:1 exceeds 2:1`);
+        if (rule.ratio && Math.abs(long / short - rule.ratio) > 0.01) wrong.push(`${s.key} is not 16:9`);
+        if (alpha || indexed) wrong.push(`${s.key} is not a 24-bit PNG (alpha or palette)`);
+      }
     }
     if (wrong.length) bad(`${p.label} slides`, wrong.join('; '));
     else if (count < 2) bad(`${p.label} slides`, `${count} slides, both stores want at least 2`);
@@ -168,6 +189,7 @@ function imageInfo(file) {
   const staged = [
     ['Play phone', path.join(PLAY, 'images', 'phoneScreenshots'), slides.length],
     ['Play 10" tablet', path.join(PLAY, 'images', 'tenInchScreenshots'), slides.length],
+    ['Play 7" tablet', path.join(PLAY, 'images', 'sevenInchScreenshots'), slides.length],
     ['App Store screenshots', path.join(ROOT, 'fastlane', 'screenshots', 'en-US'), slides.length * 2],
   ];
   const anyStaged = staged.some(([, dir]) => fs.existsSync(dir));

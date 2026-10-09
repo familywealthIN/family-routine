@@ -75,6 +75,22 @@ function androidStatus(statusH, time) {
         </span>`;
 }
 
+// Material-style glyphs for the Android tablet and ChromeOS chrome. Drawn as
+// SVG rather than CSS boxes so they stay crisp at any status-bar height.
+const WIFI = (c) => `<svg viewBox="0 0 24 24"><path fill="${c}" d="M12 20.5 23.6 6.3C23.1 5.9 18.7 2.5 12 2.5S.9 5.9.4 6.3L12 20.5z"/></svg>`;
+const BATTERY = (c) => `<svg viewBox="0 0 27 14"><rect x="1" y="1" width="22" height="12" rx="3.2" fill="none" stroke="${c}" stroke-width="1.6"/>`
+  + `<rect x="3" y="3" width="15" height="8" rx="1.6" fill="${c}"/><rect x="24.2" y="4.6" width="2" height="4.8" rx="1" fill="${c}"/></svg>`;
+
+/** Android 14+ tablet status bar: clock left; wifi and a landscape battery right. */
+function androidTabletStatus(statusH, time) {
+  return `<span class="and-clock">${time}</span>
+        <span class="icons glyphs">${WIFI('#1f1f1f')}${BATTERY('#1f1f1f')}</span>`;
+}
+
+// The Play listing icon, inlined into the ChromeOS window caption and shelf.
+const PLAY_ICON = require('path').join(__dirname, '..', '..', 'fastlane', 'metadata', 'android', 'en-US', 'images', 'icon.png');
+const playIcon = () => `data:image/png;base64,${fs.readFileSync(PLAY_ICON).toString('base64')}`;
+
 const DEVICES = {
   // ---- iPhone 17 Pro, Deep Blue -------------------------------------------
   iphone17: {
@@ -161,6 +177,104 @@ const DEVICES = {
     buttons: [['r', 0.055, 0.030]],
   },
 
+  // ---- Android tablet (Pixel Tablet proportions), landscape ----------------
+  // A 16:10 panel behind a uniform dark bezel, the front camera centred on the
+  // long top edge, a soft matte body edge and no buttons on the faces. Status
+  // bar and gesture inset are 24dp each on a 1280dp-wide screen.
+  androidTablet: {
+    frameWFrac: 0.640,
+    topFrac: 0.190,
+    railFrac: 0.006,
+    bezelFrac: 0.026,
+    screenRFrac: 0.016,
+    rail: 'linear-gradient(160deg,#5a5e66 0%,#2a2c31 30%,#3d4047 60%,#232529 100%)',
+    statusHFrac: 0.01875,
+    statusFontFrac: 0.58,
+    statusPadFrac: 0.019,
+    status: androidTabletStatus,
+    navHFrac: 0.01875,
+    gestureNav: true,
+    pillWFrac: 0.085,
+    extra: ({ frameW, rail, bezel }) => `<span class="tabcam" style="width:${px(bezel * 0.30)};`
+      + `height:${px(bezel * 0.30)};top:${px(rail + bezel * 0.35)};left:${px(frameW / 2 - bezel * 0.15)}"></span>`,
+    css: ({ statusH, rail }) => `
+  .tabcam{position:absolute;background:#1b2b36;border-radius:50%;z-index:2;
+    box-shadow:inset 0 0 2px rgba(120,180,220,.5)}
+  .glyphs{align-items:center;gap:${px(statusH * 0.22)}}
+  .glyphs svg{display:block;height:${px(statusH * 0.50)};width:auto}
+  .btn.t{top:${px(-Math.max(3, Math.round(rail * 1.15)) * 0.55)};height:${px(Math.max(3, Math.round(rail * 1.15)))}}
+`,
+    // Power and volume on the top edge in landscape, toward the left corner.
+    buttons: [['t', 0.10, 0.06], ['t', 0.18, 0.09]],
+  },
+
+  // ---- Googlebook / Chromebook laptop ------------------------------------
+  // Generic and unbranded: an aluminium lid with a thin black bezel and a
+  // webcam dot, a base deck beneath, and ChromeOS chrome on screen - a window
+  // caption with minimise/maximise/close on the right (32dp) and the shelf with
+  // launcher, the pinned app and the status tray along the bottom (48dp).
+  googlebook: {
+    frameWFrac: 0.640,
+    topFrac: 0.180,
+    railFrac: 0.005,
+    bezelFrac: 0.020,
+    screenRFrac: 0.006,
+    rail: 'linear-gradient(160deg,#b8bec6 0%,#8d939b 40%,#c6ccd3 70%,#9aa0a8 100%)',
+    statusHFrac: 0.0222,
+    navHFrac: 0.0333,
+    baseFrac: 0.026,
+    chrome: () => `<div class="cros-caption"><img class="cros-appicon" src="${playIcon()}">`
+      + '<span class="cros-title">Routine Notes</span><span class="cros-ctl">'
+      + '<svg viewBox="0 0 20 20"><path d="M5 10h10" stroke="#3c4043" stroke-width="1.6"/></svg>'
+      + '<svg viewBox="0 0 20 20"><rect x="5" y="5" width="10" height="10" rx="1.5" fill="none" stroke="#3c4043" stroke-width="1.6"/></svg>'
+      + '<svg viewBox="0 0 20 20"><path d="M5.5 5.5l9 9M14.5 5.5l-9 9" stroke="#3c4043" stroke-width="1.6"/></svg>'
+      + '</span></div>',
+    shelf: () => '<div class="cros-shelf"><span class="cros-launcher"></span>'
+      + `<span class="cros-pinned"><img src="${playIcon()}"><i></i></span>`
+      + `<span class="cros-tray">${WIFI('#3c4043')}${BATTERY('#3c4043')}<b>9:41</b></span></div>`,
+    extra: ({ frameW, rail, bezel }) => `<span class="webcam" style="width:${px(bezel * 0.28)};`
+      + `height:${px(bezel * 0.28)};top:${px(rail + bezel * 0.36)};left:${px(frameW / 2 - bezel * 0.14)}"></span>`,
+    base: ({
+      frameW, frameH, frameTop, width, baseH,
+    }) => {
+      const bw = Math.round(frameW * 1.13);
+      return `<div class="deck" style="width:${px(bw)};height:${px(baseH)};left:${px((width - bw) / 2)};`
+        + `top:${px(frameTop + frameH - 2)};border-radius:${px(baseH * 0.2)} ${px(baseH * 0.2)} ${px(baseH * 0.9)} ${px(baseH * 0.9)}`
+        + ` / ${px(baseH * 0.2)} ${px(baseH * 0.2)} ${px(baseH * 0.8)} ${px(baseH * 0.8)}">`
+        + `<span class="hinge" style="width:${px(frameW * 0.97)}"></span></div>`;
+    },
+    css: ({
+      statusH, navH, width, baseH,
+    }) => `
+  .webcam{position:absolute;background:#1b2b36;border-radius:50%;z-index:2;
+    box-shadow:inset 0 0 2px rgba(120,180,220,.5)}
+  .cros-caption{flex:0 0 ${px(statusH)};display:flex;align-items:center;gap:${px(statusH * 0.30)};
+    padding:0 ${px(statusH * 0.35)} 0 ${px(statusH * 0.45)};background:#eef2f7;color:#3c4043;
+    font-size:${px(statusH * 0.40)};font-weight:500;border-bottom:1px solid #dde3ea}
+  .screen .cros-appicon{width:${px(statusH * 0.56)};height:${px(statusH * 0.56)};border-radius:22%}
+  .cros-title{flex:1}
+  .cros-ctl{display:flex;gap:${px(statusH * 0.55)}}
+  .cros-ctl svg{width:${px(statusH * 0.62)};height:${px(statusH * 0.62)};display:block}
+  .cros-shelf{flex:0 0 ${px(navH)};display:flex;align-items:center;justify-content:center;position:relative;
+    background:#dde4ec;border-top:1px solid #cfd7e0}
+  .cros-launcher{position:absolute;left:${px(navH * 0.30)};width:${px(navH * 0.50)};height:${px(navH * 0.50)};
+    border-radius:50%;border:${px(navH * 0.07)} solid #3c4043}
+  .cros-pinned{position:relative;display:flex;justify-content:center}
+  .screen .cros-pinned img{width:${px(navH * 0.62)};height:${px(navH * 0.62)};border-radius:24%;display:block}
+  .cros-pinned i{position:absolute;bottom:${px(-navH * 0.14)};width:${px(navH * 0.20)};height:${px(navH * 0.05)};
+    border-radius:${px(navH)};background:#3c4043}
+  .cros-tray{position:absolute;right:${px(navH * 0.22)};display:flex;align-items:center;gap:${px(navH * 0.16)};
+    padding:0 ${px(navH * 0.26)};height:${px(navH * 0.66)};border-radius:${px(navH)};background:#cbd4de;
+    color:#1f1f1f;font-size:${px(navH * 0.30)}}
+  .cros-tray svg{height:${px(navH * 0.28)};width:auto;display:block}
+  .cros-tray b{font-weight:500;margin-left:${px(navH * 0.06)}}
+  .deck{position:absolute;background:linear-gradient(180deg,#e1e5ea 0%,#c9ced5 30%,#a3a9b1 75%,#80868e 100%);
+    box-shadow:0 ${px(width * 0.010)} ${px(width * 0.024)} rgba(11,32,74,.28);display:flex;justify-content:center}
+  .hinge{display:block;height:${px(baseH * 0.16)};background:linear-gradient(180deg,#6f757d,#b3b9c0);
+    border-radius:0 0 ${px(baseH * 0.3)} ${px(baseH * 0.3)}}
+`,
+  },
+
   // ---- macOS window --------------------------------------------------------
   // No hardware body: the Mac App Store expects the app window itself, so this
   // draws title-bar chrome with traffic lights instead of a device frame.
@@ -205,14 +319,20 @@ function build({
   const bezelR = screenR + bezel;
   const frameR = d.frameRFrac ? Math.round(frameW * d.frameRFrac) : bezelR + rail;
 
+  // A laptop's base deck hangs below the lid and has to fit the canvas too.
+  const baseH = d.baseFrac ? Math.round(frameW * d.baseFrac) : 0;
   const frameTop = Math.min(
     Math.round(height * d.topFrac),
-    height - frameH - Math.round(height * 0.02),
+    height - frameH - baseH - Math.round(height * 0.02),
   );
 
   const btnW = Math.max(3, Math.round(rail * 1.15));
-  const buttons = (d.buttons || []).map(([side, topFrac, hFrac]) => `<span class="btn ${side}" `
-    + `style="top:${px(frameH * topFrac)};height:${px(frameH * hFrac)}"></span>`).join('');
+  // Side `t` puts a key on the top edge, measured along the width - the power
+  // and volume keys of a tablet held in landscape.
+  const buttons = (d.buttons || []).map(([side, topFrac, hFrac]) => (side === 't'
+    ? `<span class="btn ${side}" style="left:${px(frameW * topFrac)};width:${px(frameW * hFrac)}"></span>`
+    : `<span class="btn ${side}" `
+    + `style="top:${px(frameH * topFrac)};height:${px(frameH * hFrac)}"></span>`)).join('');
 
   // A landscape canvas gets a smaller caption: the same fraction of width would
   // dwarf the window, and there is far more horizontal room for the line.
@@ -220,17 +340,28 @@ function build({
   const captionTop = landscape ? height * 0.062 : height * 0.050;
 
   let navBar = '';
-  if (navH) {
+  if (navH && d.shelf) {
+    navBar = d.shelf(navH);
+  } else if (navH) {
     navBar = d.gestureNav
       ? '<div class="navbar"><span class="nav-pill"></span></div>'
       : '<div class="navbar"><span class="nav-back"></span>'
         + '<span class="nav-home"></span><span class="nav-recent"></span></div>';
   }
 
-  const chrome = d.window
-    ? '<div class="titlebar"><span class="light red"></span><span class="light amber"></span>'
-      + '<span class="light green"></span></div>'
-    : `<div class="statusbar">${d.status(statusH, statusTime)}</div>`;
+  // Values the device hooks (extra / css / base) lay themselves out from.
+  const ctx = {
+    frameW, frameH, frameTop, rail, bezel, screenW, statusH, navH, baseH, width, height,
+  };
+
+  let chrome;
+  if (d.chrome) chrome = d.chrome(statusH);
+  else {
+    chrome = d.window
+      ? '<div class="titlebar"><span class="light red"></span><span class="light amber"></span>'
+        + '<span class="light green"></span></div>'
+      : `<div class="statusbar">${d.status(statusH, statusTime)}</div>`;
+  }
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>
   *{margin:0;padding:0;box-sizing:border-box}
@@ -258,7 +389,7 @@ function build({
   .screen img{display:block;width:${px(screenW)};height:${px(imageH)}}
 
   .statusbar{flex:0 0 ${px(statusH)};display:flex;align-items:center;justify-content:space-between;
-    padding:0 ${px(screenW * 0.055)};font-size:${px(statusH * (d.statusFontFrac || 0.30))};
+    padding:0 ${px(screenW * (d.statusPadFrac || 0.055))};font-size:${px(statusH * (d.statusFontFrac || 0.30))};
     font-weight:600;color:#111;background:#fff;position:relative;z-index:2}
   .and-clock{font-weight:500}
   .icons{display:flex;gap:${px(statusH * 0.09)};align-items:flex-end}
@@ -289,7 +420,7 @@ function build({
     border:${px(Math.max(2, navH * 0.05))} solid #5f6368}
   .nav-recent{width:${px(navH * 0.24)};height:${px(navH * 0.24)};
     border:${px(Math.max(2, navH * 0.05))} solid #5f6368;border-radius:${px(navH * 0.03)}}
-  .nav-pill{width:${px(screenW * 0.30)};height:${px(Math.max(3, navH * 0.13))};
+  .nav-pill{width:${px(screenW * (d.pillWFrac || 0.30))};height:${px(Math.max(3, navH * 0.13))};
     background:#1f1f1f;border-radius:${px(navH)}}
 
   /* macOS window chrome. */
@@ -301,7 +432,7 @@ function build({
   .btn{position:absolute;width:${px(btnW)};border-radius:${px(btnW * 0.45)};
     background:${d.rail || '#999'}}
   .btn.l{left:${px(-btnW * 0.55)}}
-  .btn.r{right:${px(-btnW * 0.55)}}
+  .btn.r{right:${px(-btnW * 0.55)}}${d.css ? d.css(ctx) : ''}
   </style></head><body>
     <div class="band"></div>
     <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
@@ -310,14 +441,14 @@ function build({
       ${buttons}
       ${d.brow ? d.brow(frameW, brow) : ''}
       ${d.chin ? d.chin(frameW, chin) : ''}
-      ${d.sideCam ? '<span class="sidecam"></span>' : ''}
+      ${d.sideCam ? '<span class="sidecam"></span>' : ''}${d.extra ? d.extra(ctx) : ''}
       <div class="bezel"><div class="screen">
         ${chrome}
         ${d.overlay ? d.overlay(screenW) : ''}
         <img src="data:${src.mime};base64,${b64}">
         ${navBar}
       </div></div>
-    </div>
+    </div>${d.base ? d.base(ctx) : ''}
   </body></html>`;
 
   fs.writeFileSync(out, html);
@@ -333,7 +464,7 @@ function build({
     navH,
     imageH,
     frameTop,
-    fitsCanvas: frameTop + frameH <= height,
+    fitsCanvas: frameTop + frameH + baseH <= height,
   };
 }
 

@@ -42,4 +42,25 @@ module.exports = {
     singleLineCaption: true,
     label: 'Mac App Store - 2880x1800',
   },
+  // Play's tablet slots. The iPad set used to double as tenInchScreenshots,
+  // which put an Apple device on Google Play; this one draws a generic Android
+  // tablet (Pixel Tablet proportions: 16:10 panel, uniform dark bezel, camera on
+  // the long top edge) around the same landscape tablet layout, re-captured at
+  // the Pixel Tablet's 1280x800dp minus the status bar and gesture inset.
+  'android-tablet': {
+    device: 'androidTablet',
+    capture: '1280x752x2,touch',
+    canvas: [2560, 1440],
+    singleLineCaption: true,
+    label: 'Play Store - tablet (7" + 10")',
+  },
+  // Play Console's Chromebook slot. The Play API has no image type for it, so
+  // `supply` cannot upload these; they are added by hand (see README).
+  googlebook: {
+    device: 'googlebook',
+    capture: '1440x820x2',
+    canvas: [2560, 1440],
+    singleLineCaption: true,
+    label: 'Play Store - Chromebook (manual upload)',
+  },
 };

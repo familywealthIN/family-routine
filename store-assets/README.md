@@ -1,6 +1,6 @@
 # Store screenshots
 
-The 24 slides the listings take: 6 screens x 4 listing sizes.
+The 36 slides the listings take: 6 screens x 6 listing sizes.
 
 ```
 node store-assets/tools/capture-design.js      # packages/design -> raw/<platform>/<key>.png
@@ -31,14 +31,35 @@ The older real-app captures taken over Chrome DevTools are still in
 `raw/<platform>/*.jpeg`. `render-all.js` reads `png` first precisely so a stale
 jpeg can never shadow a fresh capture.
 
-## The four sizes
+## The six sizes
 
-| Platform | Canvas | Device frame | Design frame | Viewport |
-|---|---|---|---|---|
-| `iphone` | 1290x2796 | iPhone 17 Pro | phone | 412x892 @3x |
-| `android` | 1080x1920 | Pixel 10 Pro | phone | 412x868 @3x |
-| `ipad` | 2732x2048 **landscape** | iPad Pro 13" | iPad mini landscape | 1133x744 @2x |
-| `mac` | 2880x1800 | macOS window | desktop | 1440x856 @2x |
+| Platform | Canvas | Device frame | Design frame | Viewport | Goes to |
+|---|---|---|---|---|---|
+| `iphone` | 1290x2796 | iPhone 17 Pro | phone | 412x892 @3x | App Store iPhone 6.9" |
+| `android` | 1080x1920 | Pixel 10 Pro | phone | 412x868 @3x | Play `phoneScreenshots` |
+| `ipad` | 2732x2048 **landscape** | iPad Pro 13" | iPad mini landscape | 1133x744 @2x | App Store iPad 13" |
+| `mac` | 2880x1800 | macOS window | desktop | 1440x856 @2x | none (marketing site) |
+| `android-tablet` | 2560x1440 landscape | generic Android tablet (Pixel Tablet proportions) | iPad mini landscape, reflowed | 1280x752 @2x | Play `tenInchScreenshots` **and** `sevenInchScreenshots` |
+| `googlebook` | 2560x1440 | generic laptop, ChromeOS window + shelf | desktop | 1440x820 @2x | Play Console **Chromebook** slot, uploaded by hand |
+
+`android-tablet` exists so Google Play never shows an Apple device: the tablet
+slots used to take the iPad slides. Its frame is unbranded - uniform dark bezel,
+camera dot centred on the long top edge, Android status bar (9:41, wifi,
+battery) and a gesture pill. The viewport is the Pixel Tablet's 1280x800dp less
+the 24dp status bar and 24dp gesture inset that compose.js draws.
+
+`googlebook` is an unbranded laptop (no logo, no notch) with ChromeOS chrome: a
+window caption with minimise/maximise/close on the right and the shelf with the
+launcher, the pinned app and the status tray. The viewport is a 16:10 1440x900dp
+panel less the 32dp caption and the 48dp shelf.
+
+### Chromebook screenshots are a manual upload
+
+The Play Developer API has no image type for the Chromebook slot, so `supply`
+cannot upload them and `stage-fastlane.js` does not stage them. Upload
+`store-assets/final/googlebook-*.png` (2560x1440, 16:9, 24-bit PNG) by hand in
+**Play Console > Grow users > Store presence > Main store listing > Chromebook**
+(listed as "Chromebook screenshots"; 4-8 images, 16:9, 1080-7680px a side).
 
 The iPad set is landscape because the design has no portrait tablet layout. The
 App Store accepts a 13" set in either orientation as long as every slide in the
@@ -67,6 +88,7 @@ stage the slides into the fastlane trees, and assert every store cap:
 ```
 node store-assets/tools/make-store-images.js   # icon.png + featureGraphic.png (committed)
 node store-assets/tools/stage-fastlane.js      # slides -> fastlane (gitignored, pure copy)
+                                               #   android-tablet -> tenInch + sevenInch
 node store-assets/tools/verify-listing.js      # non-zero exit on any violation
 ```
 
@@ -82,6 +104,9 @@ screenshot folders can never reach `supply`/`deliver` — which would read them 
 only, so neither needs a `yarn install` to run.
 
 ## Review sheet
+
+(`make-review-page.js` still says "24 slides, 4 platforms" in its header copy;
+`make-review.js` picks up every platform in `platforms.js`.)
 
 ```
 node store-assets/tools/make-review.js && node store-assets/tools/make-review-page.js

@@ -27,7 +27,9 @@ function stage(src, dest) {
 }
 
 function run() {
-  const counts = { phone: 0, ten: 0, ios: 0 };
+  const counts = {
+    phone: 0, ten: 0, seven: 0, ios: 0,
+  };
   const missing = [];
 
   slides.forEach((s, i) => {
@@ -36,6 +38,7 @@ function run() {
     const n = String(i + 1).padStart(2, '0');
     const android = path.join(FINAL, `android-${s.key}.png`);
     const ipad = path.join(FINAL, `ipad-${s.key}.png`);
+    const tablet = path.join(FINAL, `android-tablet-${s.key}.png`);
     const iphone = path.join(FINAL, `iphone-${s.key}.png`);
 
     if (fs.existsSync(android)) {
@@ -43,11 +46,17 @@ function run() {
       counts.phone += 1;
     } else missing.push(`android-${s.key}`);
 
-    if (fs.existsSync(ipad)) {
-      // The iPad landscape set doubles as Play's 10" tablet set, which is what
-      // earns the tablet-optimised badge.
-      stage(ipad, path.join(PLAY_IMG, 'tenInchScreenshots', `${n}-${s.key}.png`));
+    if (fs.existsSync(tablet)) {
+      // Play's 7" and 10" tablet slots both take the Android tablet set, which
+      // is what earns the tablet-optimised badge. These used to be the iPad
+      // slides, which put an Apple device on Google Play.
+      stage(tablet, path.join(PLAY_IMG, 'tenInchScreenshots', `${n}-${s.key}.png`));
+      stage(tablet, path.join(PLAY_IMG, 'sevenInchScreenshots', `${n}-${s.key}.png`));
       counts.ten += 1;
+      counts.seven += 1;
+    } else missing.push(`android-tablet-${s.key}`);
+
+    if (fs.existsSync(ipad)) {
       // `deliver` routes an iOS screenshot by its pixel size, so the iPad and
       // iPhone sets share one folder.
       stage(ipad, path.join(IOS_SHOTS, `ipad-${n}-${s.key}.png`));
@@ -61,9 +70,14 @@ function run() {
   });
 
   console.log(`Play    ${path.relative(ROOT, PLAY_IMG)}`);
-  console.log(`          ${counts.phone} phone, ${counts.ten} tenInch`);
+  console.log(`          ${counts.phone} phone, ${counts.ten} tenInch, ${counts.seven} sevenInch`);
   console.log(`Apple   ${path.relative(ROOT, IOS_SHOTS)}`);
   console.log(`          ${counts.ios} screenshots`);
+  // The Play API has no Chromebook image type, so `supply` cannot carry these;
+  // they are uploaded by hand from store-assets/final/ (see README).
+  const chromebook = slides.filter((s) => fs.existsSync(path.join(FINAL, `googlebook-${s.key}.png`))).length;
+  console.log(`Manual  Play Console > Main store listing > Chromebook`);
+  console.log(`          ${chromebook} googlebook-*.png in ${path.relative(ROOT, FINAL)}`);
   if (missing.length) console.log(`MISSING  ${missing.join(', ')}`);
   return { counts, missing };
 }
