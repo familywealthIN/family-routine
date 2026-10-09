@@ -16,16 +16,16 @@
         />
         <div class="rn-drawer__id">
           <div class="rn-drawer__name">{{ name || 'Routine Notes' }}</div>
-          <!-- D/K/G as the previous dashboard drew them: three 50px progress
-               circles, letter inside, under the name. -->
+          <!-- D/K/G as compact rings, letter inside, on one line under the
+               name so the name + rings block sits level with the avatar. -->
           <div class="rn-drawer__scores" data-testid="drawer-scores">
             <atom-progress-circular
               v-for="score in scores"
               :key="score.key"
               :value="clamp(score.pct)"
-              :size="50"
+              :size="ringSize"
               :rotate="-90"
-              width="6"
+              :width="ringWidth"
               :color="score.color"
               :title="`${score.label} ${Math.round(score.pct)}%`"
               :data-testid="`drawer-score-${score.key}`"
@@ -104,6 +104,12 @@ export default {
      */
     timing: { type: Object, default: null },
   },
+  data: () => ({
+    // Compact identity header: the rings read as badges beside the 48px avatar
+    // rather than as a second, bigger row of content.
+    ringSize: 30,
+    ringWidth: 3,
+  }),
   watch: {
     // Escape closes the drawer like the scrim does. Listening only while open
     // keeps a closed drawer from swallowing Escape meant for anything else.
@@ -190,14 +196,16 @@ export default {
   padding-bottom: 24px;
 }
 
+/* Avatar, name + rings, and close share one centre line. */
 .rn-drawer__head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 20px 16px;
+  padding: 18px 10px 18px 16px;
+  margin-bottom: 12px;
   background: #f4f8fc;
   /* Native WebView: the drawer runs under the status bar. */
-  padding-top: calc(20px + env(safe-area-inset-top));
+  padding-top: calc(18px + env(safe-area-inset-top));
 }
 
 .rn-drawer__avatar {
@@ -215,17 +223,21 @@ export default {
 
 .rn-drawer__scores {
   display: flex;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 .rn-drawer__scores .v-progress-circular__info {
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 700;
-  color: rgba(0, 0, 0, .87);
+  line-height: 1;
+  color: rgba(0, 0, 0, .7);
 }
 
+/* Pinned to the top-right corner, not the centre line, like any sheet close. */
 .rn-drawer__close {
+  align-self: flex-start;
+  margin-top: -6px;
   font-size: 22px;
   color: rgba(0, 0, 0, .55);
   cursor: pointer;
@@ -236,6 +248,7 @@ export default {
 .rn-drawer__name {
   font-size: 15px;
   font-weight: 700;
+  line-height: 20px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

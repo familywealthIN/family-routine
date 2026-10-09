@@ -84,6 +84,22 @@ describe('OrganismUserDrawer — list and timing', () => {
     host.$destroy();
   });
 
+  it('draws D, K and G as compact rings with their letter and percentage title', () => {
+    const host = render({ stimulusTotals: { D: 72, K: 140, G: 0 } });
+    expect(host.$el.querySelector('[data-testid="drawer-scores"]')).not.toBeNull();
+    const rings = host.$children[0].$children.filter((c) => c.$options.name === 'AtomProgressCircular');
+    expect(rings.map((r) => [r.size, Number(r.width), r.value])).toEqual([
+      [30, 3, 72], [30, 3, 100], [30, 3, 0],
+    ]);
+    ['D', 'K', 'G'].forEach((key) => {
+      const el = host.$el.querySelector(`[data-testid="drawer-score-${key}"]`);
+      expect(el).not.toBeNull();
+      expect(el.textContent.trim()).toBe(key);
+    });
+    expect(host.$el.querySelector('[data-testid="drawer-score-K"]').getAttribute('title')).toBe('Kinetics 140%');
+    host.$destroy();
+  });
+
   it('shows the on-time ribbon only once the timing is known', () => {
     const none = render({});
     expect(none.$el.querySelector('[data-testid="timing-ribbon"]')).toBeNull();
