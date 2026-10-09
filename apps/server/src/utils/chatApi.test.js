@@ -160,7 +160,7 @@ describe('completeChat failover', () => {
   it('throws only once every model has failed', async () => {
     global.fetch = jest.fn().mockResolvedValue(errResponse(503));
     await expect(completeChat([{ role: 'user', content: 'hi' }]))
-      .rejects.toThrow(/All free OpenRouter models failed/);
+      .rejects.toThrow(/All OpenRouter models failed/);
   });
 
   it('refuses to run without an API key', async () => {
@@ -242,6 +242,58 @@ describe('chatWithRoutine', () => {
     expect(result.intent).toBe('complete_task');
   });
 
+  // D-04: the chat can only add, break down and tick off. There is no
+  // reschedule or skip intent, so a reply claiming a move left the user with a
+  // confirmation and an unchanged checklist.
+  describe('never claims a move or skip it cannot perform', () => {
+    const replyFor = async (reply) => {
+      global.fetch = jest.fn().mockResolvedValue(okResponse(JSON.stringify({
+        reply, intent: 'chat', tasks: [], completeItemId: null,
+      })));
+      const result = await chatWithRoutine({ text: 'move the PR to tomorrow', context: CONTEXT });
+      return result.reply;
+    };
+
+    it.each([
+      "I've moved that to tomorrow.",
+      'I have rescheduled it for Monday.',
+      "I've skipped that one for today.",
+      'Moved it to tomorrow for you.',
+      "I've pushed the PR to Friday.",
+      'I deleted that item.',
+    ])('replaces the false claim: %s', async (claim) => {
+      await expect(replyFor(claim)).resolves
+        .toBe("I can't move or skip items from here. Tap the item in the "
+          + 'checklist to open it, then use its date chips to change the day.');
+    });
+
+    // The guard is narrow on purpose: advice and questions are true and useful,
+    // and rewriting them would make the chat worse, not safer.
+    it.each([
+      'You could skip it today and pick it up tomorrow.',
+      'Try moving this one to tomorrow from its goal sheet.',
+      'Do you want to move it, or drop it entirely?',
+      'Two of three done — finish the PR.',
+    ])('leaves advice and questions alone: %s', async (prose) => {
+      await expect(replyFor(prose)).resolves.toBe(prose);
+    });
+  });
+
+  // An intent that DOES act keeps its own words - the guard only fires when
+  // nothing is going to happen.
+  it('leaves a real complete_task confirmation untouched', async () => {
+    global.fetch = jest.fn().mockResolvedValue(okResponse(JSON.stringify({
+      reply: "I've removed “Ship dashboard PR” from the open list — nice.",
+      intent: 'complete_task',
+      completeItemId: 'gi1',
+    })));
+
+    const result = await chatWithRoutine({ text: 'done with the PR', context: CONTEXT });
+
+    expect(result.intent).toBe('complete_task');
+    expect(result.reply).toMatch(/I've removed/);
+  });
+
   it('keeps the prose when a free model ignores JSON mode', async () => {
     global.fetch = jest.fn().mockResolvedValue(okResponse('Two of three done — finish the PR.'));
 
@@ -282,7 +334,7 @@ describe('chatWithRoutine', () => {
 
     expect(result.intent).toBe('chat');
     expect(result.tasks).toEqual([]);
-    expect(result.error).toMatch(/All free OpenRouter models failed/);
+    expect(result.error).toMatch(/All OpenRouter models failed/);
     expect(result.reply).toMatch(/can't reach the chat model/);
   });
 });

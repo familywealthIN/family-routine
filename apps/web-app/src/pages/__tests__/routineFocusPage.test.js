@@ -228,10 +228,60 @@ describe('RoutineFocus effectiveAgentStatus', () => {
     expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('finished');
   });
 
+  // D-16: a fresh session has no badge, but the server kept the transcript.
+  it('restores finished from the saved transcript when the badge map is empty', () => {
+    const ctx = vm(undefined, [{ taskRef: 'sw', reward: '<h1>Hello World</h1>' }]);
+    ctx.$agent.statusByRoutineId = {};
+    ctx.$agent.statusDay = '';
+    ctx.taskAgentEndEventDone = methods.taskAgentEndEventDone.bind(ctx);
+    expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('finished');
+  });
+
+  it('restores finished even when the stored badges belong to an earlier day', () => {
+    const ctx = vm('', [{ taskRef: 'sw', reward: '<p>done</p>' }], { todayDate: '06-10-2026' });
+    ctx.taskAgentEndEventDone = methods.taskAgentEndEventDone.bind(ctx);
+    expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('finished');
+  });
+
+  it('does not override a live firing/running run with an old transcript', () => {
+    const ctx = vm('running', [{ taskRef: 'sw', reward: '<p>done</p>' }]);
+    ctx.taskAgentEndEventDone = methods.taskAgentEndEventDone.bind(ctx);
+    expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('running');
+  });
+
   it('leaves listening alone while no transcript exists', () => {
     const ctx = vm('listening', [{ taskRef: 'sw', reward: null }]);
     ctx.taskAgentEndEventDone = methods.taskAgentEndEventDone.bind(ctx);
     expect(methods.effectiveAgentStatus.call(ctx, 'sw')).toBe('listening');
+  });
+});
+
+describe('RoutineFocus openAgentResult', () => {
+  const ctx = (over = {}) => ({
+    resolvedFocusId: 'sw',
+    dayGoalItems: [{ taskRef: 'sw', reward: '<h1>Hello World</h1>' }],
+    taskAgentReward: methods.taskAgentReward,
+    $agent: {
+      lastResultByRoutineId: {},
+      showSavedResult: jest.fn(),
+      openResultModal: jest.fn(),
+    },
+    ...over,
+  });
+
+  it('shows the saved transcript after a reopen, when no live result is in memory (D-16)', () => {
+    const c = ctx();
+    methods.openAgentResult.call(c);
+    expect(c.$agent.showSavedResult).toHaveBeenCalledWith('sw', '<h1>Hello World</h1>');
+    expect(c.$agent.openResultModal).not.toHaveBeenCalled();
+  });
+
+  it('opens the live result when this session holds one', () => {
+    const c = ctx();
+    c.$agent.lastResultByRoutineId = { sw: { type: 'html', body: 'live' } };
+    methods.openAgentResult.call(c);
+    expect(c.$agent.openResultModal).toHaveBeenCalledWith('sw');
+    expect(c.$agent.showSavedResult).not.toHaveBeenCalled();
   });
 });
 
@@ -246,6 +296,13 @@ describe('RoutineFocus ring action', () => {
     isSkippedDay: false,
     $notify: jest.fn(),
     blockedBySkip: methods.blockedBySkip,
+    // The redeem pre-flight runs the real rule. No balance loaded means "the
+    // server decides", which is the ordinary case for these ring tests.
+    xpBalance: null,
+    canAffordRedeem: methods.canAffordRedeem,
+    getRedeemCost: methods.getRedeemCost,
+    paywallDrawerOpen: false,
+    paywallCost: 0,
     ...over,
   });
 
@@ -266,14 +323,71 @@ describe('RoutineFocus ring action', () => {
     expect(vm.actionSheetOpen).toBe(true);
   });
 
-  it('ticks a plain upcoming routine directly', () => {
+  /**
+   * This used to assert the opposite — "ticks a plain upcoming routine
+   * directly" — and the assertion was the bug.
+   *
+   * `isCurrent` is only ever ONE routine (the clock's), but `wait` is cleared
+   * `PROACTIVE_START_TIME` minutes before a routine starts and `passed` is not
+   * stamped until `TIMES_UP_TIME` after, so a routine can be fully startable —
+   * enabled ring, alarm glyph — without being the current one. Ticking it
+   * through banked the points with no option to start its agent and no sight of
+   * the goal item being completed.
+   */
+  it('opens the action sheet on ANY startable routine, current or not', () => {
     const row = {
       id: 'lw', isCurrent: false, ticked: false, redeemable: false,
     };
     const vm = ctx(row);
     methods.onRingAction.call(vm);
-    expect(vm.tickRoutine).toHaveBeenCalledWith(row);
+    expect(vm.actionSheetOpen).toBe(true);
+    expect(vm.tickRoutine).not.toHaveBeenCalled();
+  });
+
+  // Same rule as the button's own `:disabled`: a locked miss or a routine that
+  // has not come round yet has nothing to start, and a sheet whose Start Task
+  // could not act would be a lie.
+  it('refuses a routine whose ring is disabled', () => {
+    const vm = ctx({ id: 'lw', ticked: false, buttonDisabled: true });
+    methods.onRingAction.call(vm);
     expect(vm.actionSheetOpen).toBe(false);
+    expect(vm.tickRoutine).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Affordability is checked BEFORE the sheet, as the dashboard had it: Start
+   * Task can create a goal item and only then redeem, so letting an
+   * unaffordable redeem reach the sheet strands an orphan item on an unticked
+   * routine and takes its Build Agent path with it.
+   */
+  it('shows the paywall instead of the sheet when the redeem is unaffordable', () => {
+    const vm = ctx({
+      id: 'wo', ticked: false, redeemable: true, passedPoints: 40,
+    }, {
+      xpBalance: { available: 10, used: 0, entitled: false },
+      canAffordRedeem: methods.canAffordRedeem,
+      getRedeemCost: methods.getRedeemCost,
+      paywallDrawerOpen: false,
+      paywallCost: 0,
+    });
+    methods.onRingAction.call(vm);
+    expect(vm.actionSheetOpen).toBe(false);
+    expect(vm.paywallDrawerOpen).toBe(true);
+    expect(vm.paywallCost).toBe(40);
+  });
+
+  it('still opens the sheet when the redeem IS affordable', () => {
+    const vm = ctx({
+      id: 'wo', ticked: false, redeemable: true, passedPoints: 40,
+    }, {
+      xpBalance: { available: 90, used: 0, entitled: false },
+      canAffordRedeem: methods.canAffordRedeem,
+      getRedeemCost: methods.getRedeemCost,
+      paywallDrawerOpen: false,
+    });
+    methods.onRingAction.call(vm);
+    expect(vm.actionSheetOpen).toBe(true);
+    expect(vm.paywallDrawerOpen).toBe(false);
   });
 
   it('does nothing without a focused routine', () => {
@@ -281,6 +395,27 @@ describe('RoutineFocus ring action', () => {
     methods.onRingAction.call(vm);
     expect(vm.tickRoutine).not.toHaveBeenCalled();
     expect(vm.onMiniClick).not.toHaveBeenCalled();
+  });
+});
+
+// One rule, read by the ring's pre-flight and by redeemRoutine itself.
+describe('RoutineFocus redeem affordability', () => {
+  const afford = (balance, task) => methods.canAffordRedeem.call(
+    { xpBalance: balance, getRedeemCost: methods.getRedeemCost },
+    task,
+  );
+
+  it('allows it while the balance has not loaded — the server decides', () => {
+    expect(afford(null, { passedPoints: 40 })).toBe(true);
+  });
+
+  it('always allows it for an entitled user', () => {
+    expect(afford({ available: 0, entitled: true }, { passedPoints: 40 })).toBe(true);
+  });
+
+  it('compares the cost against what is available', () => {
+    expect(afford({ available: 40, entitled: false }, { passedPoints: 40 })).toBe(true);
+    expect(afford({ available: 39, entitled: false }, { passedPoints: 40 })).toBe(false);
   });
 });
 
@@ -520,7 +655,6 @@ describe('RoutineFocus computed graph', () => {
     expect(vm.focusWindowInfo.statusLabel).toBe('In progress');
     expect(vm.tickedCount).toBe(1);
     expect(vm.routinesLeft).toBe(2);
-    expect(vm.deckPeeks.map((p) => p.id)).toEqual(['lw']);
     expect(vm.showBackToNow).toBe(false);
   });
 
@@ -528,7 +662,6 @@ describe('RoutineFocus computed graph', () => {
     const vm = graph({ focusRoutineId: 'lw' });
     expect(vm.resolvedFocusId).toBe('lw');
     expect(vm.showBackToNow).toBe(true);
-    expect(vm.deckPeeks).toEqual([]);
   });
 
   // A focus held on a routine that is gone (edited away, or a day switch) must
@@ -552,7 +685,9 @@ describe('RoutineFocus computed graph', () => {
     expect(vm.cardProps.items).toHaveLength(2);
     expect(vm.chatProps.routine.id).toBe('sw');
     expect(vm.chatProps.scores).toEqual(vm.stimulusTotals);
-    expect(vm.composerPlaceholder).toBe('Message Start Work…');
+    // Not ticked yet, so the chat is shut and the placeholder says why.
+    expect(vm.chatDisabled).toBe(true);
+    expect(vm.composerPlaceholder).toBe('Check off Start Work to chat…');
   });
 
   it('has nothing to render for a day with no routine', () => {
@@ -583,13 +718,80 @@ describe('RoutineFocus action sheet', () => {
   });
 
   // The container creates the goal item, then emits the routine task it was
-  // filed against. The sheet ticks its OWN focused row either way — that row
+  // filed against. The sheet acts on its OWN focused row either way — that row
   // carries `redeemable`, which the raw tasklist entry does not.
-  it('ticks the focused row, not whatever the form hands back', () => {
-    const focusRow = { id: 'sw', redeemable: true };
+  it('acts on the focused row, not whatever the form hands back', () => {
+    const focusRow = { id: 'sw', redeemable: false };
     const vm = { actionSheetOpen: true, focusRow, tickRoutine: jest.fn() };
     methods.onStartTask.call(vm, { id: 'sw', name: 'Wake Up' });
     expect(vm.tickRoutine).toHaveBeenCalledWith(focusRow, { fireAgent: false });
+  });
+
+  /**
+   * `tickRoutine` refuses a `passed` task outright, so on a redeemable routine
+   * Start Task used to do nothing at all — while Start Agent beside it, which
+   * has always had this branch, worked. Both buttons reach the same two paths;
+   * only `fireAgent` tells them apart.
+   */
+  it('redeems rather than silently doing nothing on a passed routine', () => {
+    const focusRow = { id: 'wo', redeemable: true };
+    const vm = {
+      actionSheetOpen: true, focusRow, tickRoutine: jest.fn(), redeemRoutine: jest.fn(),
+    };
+    methods.onStartTask.call(vm);
+    expect(vm.redeemRoutine).toHaveBeenCalledWith(focusRow, { fireAgent: false });
+    expect(vm.tickRoutine).not.toHaveBeenCalled();
+  });
+
+  it('starts nothing without a focused routine', () => {
+    const vm = { actionSheetOpen: true, focusRow: null, tickRoutine: jest.fn() };
+    methods.onStartTask.call(vm);
+    expect(vm.tickRoutine).not.toHaveBeenCalled();
+    expect(vm.actionSheetOpen).toBe(false);
+  });
+
+  /**
+   * The item the sheet names as LOCKED IN and the item the agent is dispatched
+   * against must be the same row: both resolve through
+   * `findFirstGoalIdForRoutine`, which is what `{goalId}` substitutes.
+   */
+  describe('the locked-in goal item', () => {
+    const items = [
+      {
+        id: 'gi1',
+        taskRef: 'sw',
+        body: 'Ship the sheet',
+        contribution: 'Why it matters',
+        isComplete: false,
+      },
+      { id: 'gi2', taskRef: 'sw', body: 'Second item' },
+    ];
+    const lockedCtx = (over = {}) => ({
+      focusRow: { id: 'sw' },
+      dayGoalItems: items,
+      findFirstGoalIdForRoutine: methods.findFirstGoalIdForRoutine,
+      ...over,
+    });
+
+    it('is the routine first day goal item, with its contribution', () => {
+      expect(call('focusLockedItem', lockedCtx())).toEqual({
+        id: 'gi1',
+        body: 'Ship the sheet',
+        contribution: 'Why it matters',
+        isComplete: false,
+      });
+    });
+
+    it('is the same id the agent dispatch reads', () => {
+      const vm = lockedCtx();
+      expect(call('focusLockedItem', vm).id)
+        .toBe(methods.findFirstGoalIdForRoutine.call(vm, 'sw'));
+    });
+
+    it('is null when the routine has nothing on it yet', () => {
+      expect(call('focusLockedItem', lockedCtx({ dayGoalItems: [] }))).toBeNull();
+      expect(call('focusLockedItem', lockedCtx({ focusRow: null }))).toBeNull();
+    });
   });
 
   // The form caches the Goal Task dropdown and its own loading state, so a
@@ -1284,11 +1486,21 @@ describe('RoutineFocus shell geometry', () => {
   });
 
   // --- 7. phone details ----------------------------------------------------
-  it('always shows the phone week strip, at the design 80px', () => {
-    // Measured 73px: `max-height` alone left the cells deciding the height.
+  /*
+   * 68px, down from the design token's 80.
+   *
+   * The token sizes a box whose CONTENT the design does not pin, and ours came
+   * to 73px of label + ring inside the 80, so the rings sat against the top and
+   * left a dead band under them — which, with the deck's leftover 30px peek
+   * margin above the card, is the empty space between the strip and the card
+   * the owner asked about. The day cell's phone padding is 4px now (it was 8),
+   * putting the content at 61px, so 68 keeps the same breathing room the 80 was
+   * meant to give. Both numbers are measured, not guessed.
+   */
+  it('sizes the phone week strip to its content, not the raw design token', () => {
     const style = call('weekStripStyle', {});
-    expect(style.height).toBe('80px');
-    expect(style.maxHeight).toBe('80px');
+    expect(style.height).toBe('68px');
+    expect(style.maxHeight).toBe('68px');
     // No grab handle, no hidden state: the owner wants the week always in view.
     expect(source).not.toContain('week-grab');
     expect(source).not.toContain('weekStripOpen');
@@ -1307,17 +1519,245 @@ describe('RoutineFocus shell geometry', () => {
     expect(source).toMatch(/<pull-to-refresh[^>]*@refresh="pullRefresh"/);
   });
 
-  it('draws the phone header avatar at 40px', () => {
-    // The rule lives in RoutineTopBar.vue — this page is its only consumer, and
-    // the design's phone header fills the 40px tap target with the image instead
-    // of insetting a 32px one inside a 36px button.
+  /*
+   * Home's header has to BE the header every other page draws.
+   *
+   * This asserted 40px, on the stated premise that "the design's phone header
+   * fills the 40px tap target with the image". The design files say otherwise:
+   * all nine draw the phone header avatar at 32px, and the only 36px one in
+   * each — Home's file included — is the DESKTOP sidebar's profile row. The
+   * other eleven pages already render 32 through `SHELL_CHROME.phone.avatar`,
+   * so Home at 40 was the single outlier on the one screen most people open.
+   *
+   * The 40px button stays: that is the tap target, and the image is inset in it.
+   */
+  it('draws the phone header avatar at the shell size, so Home matches every other page', () => {
     const topbar = fs.readFileSync(path.join(
       __dirname, '..', '..', '..', '..', '..',
       'packages', 'ui', 'organisms', 'RoutineTopBar', 'RoutineTopBar.vue',
     ), 'utf8');
+    // eslint-disable-next-line global-require
+    const { SHELL_CHROME } = require('@routine-notes/ui/constants/navigation');
+
     const button = topbar.slice(topbar.indexOf('.rn-topbar__avatar-btn'));
     expect(button.slice(0, button.indexOf('}'))).toContain('width: 40px');
+
     const image = button.slice(button.indexOf('.rn-topbar__avatar {'));
-    expect(image.slice(0, image.indexOf('}'))).toContain('width: 40px');
+    expect(image.slice(0, image.indexOf('}')))
+      .toContain(`width: ${SHELL_CHROME.phone.avatar}px`);
+  });
+
+  it('titles the header the way the shell titles every other page', () => {
+    const topbar = fs.readFileSync(path.join(
+      __dirname, '..', '..', '..', '..', '..',
+      'packages', 'ui', 'organisms', 'RoutineTopBar', 'RoutineTopBar.vue',
+    ), 'utf8');
+    // eslint-disable-next-line global-require
+    const { SHELL_CHROME } = require('@routine-notes/ui/constants/navigation');
+
+    const title = topbar.slice(topbar.indexOf('.rn-topbar__title {'));
+    const titleRule = title.slice(0, title.indexOf('}'));
+    expect(titleRule).toContain(`font-size: ${SHELL_CHROME.phone.title}px`);
+    // 700, as `.rn-shell__title` is. It was 500 — the only page that differed.
+    expect(titleRule).toContain('font-weight: 700');
+
+    const sub = topbar.slice(topbar.indexOf('.rn-topbar__subtitle {'));
+    expect(sub.slice(0, sub.indexOf('}')))
+      .toContain(`font-size: ${SHELL_CHROME.phone.subtitle}px`);
+  });
+});
+
+/**
+ * D-03: an agent on a 0-point routine could never finish.
+ *
+ * The end event fires when the slot counter fills, and `countTaskCompleted`
+ * scales `K.earned` by the routine's points — so 0 points divides by zero,
+ * reads 0 for ever, and leaves the agent in `listening` with every checklist
+ * item ticked. 0 is legacy data: `assertMinPoints` refuses anything below 1 but
+ * grandfathers a stored 0.
+ */
+describe('RoutineFocus zero-point agent refusal', () => {
+  const vmFor = (points) => ({
+    tasklist: [{ id: 'sw', points }],
+    $notify: jest.fn(),
+  });
+
+  it('refuses, and names the repair rather than just the failure', () => {
+    const vm = vmFor(0);
+    expect(methods.refuseAgentWithoutPoints.call(vm, 'sw')).toBe(true);
+    expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'This routine is worth 0 points',
+      type: 'warning',
+      group: 'notify',
+    }));
+    expect(vm.$notify.mock.calls[0][0].text).toMatch(/at least 1 point in Routines/);
+  });
+
+  it('lets a routine worth any points through untouched', () => {
+    const vm = vmFor(12);
+    expect(methods.refuseAgentWithoutPoints.call(vm, 'sw')).toBe(false);
+    expect(vm.$notify).not.toHaveBeenCalled();
+  });
+
+  // An unknown taskRef is not this guard's business — the caller handles it.
+  it('does not refuse a routine it cannot find', () => {
+    const vm = vmFor(0);
+    expect(methods.refuseAgentWithoutPoints.call(vm, 'nope')).toBe(false);
+    expect(vm.$notify).not.toHaveBeenCalled();
+  });
+
+  it('stops the start dispatch before it reaches the agent store', () => {
+    const vm = {
+      ...vmFor(0),
+      actionSheetOpen: true,
+      focusRow: {
+        id: 'sw', ticked: true, passed: false, wait: false, redeemable: false,
+      },
+      findFirstGoalIdForRoutine: jest.fn(() => 'g1'),
+      $agent: { fireStartEventIfPresent: jest.fn() },
+      date: '06-10-2026',
+      // The real guard, not a stub: the point of this case is that
+      // `onStartAgent` actually consults it before dispatching.
+      refuseAgentWithoutPoints(ref) {
+        return methods.refuseAgentWithoutPoints.call(this, ref);
+      },
+    };
+    methods.onStartAgent.call(vm);
+    expect(vm.$agent.fireStartEventIfPresent).not.toHaveBeenCalled();
+    expect(vm.$notify).toHaveBeenCalled();
+  });
+});
+
+/**
+ * D-12 and the animation that went with it.
+ *
+ * `fireEndEvent` refuses three ways — no end event configured, no run open, or
+ * a run opened on an earlier day — and returns `null` for each. The page
+ * swallowed that: it posted "All tasks complete — end event firing" and set the
+ * bolt stage BEFORE dispatching, so a refusal left the thread asserting a
+ * dispatch that never happened. The animation never showed either, because the
+ * flag was cleared in the same microtask the refusal resolved in.
+ */
+describe('RoutineFocus end-event dispatch', () => {
+  const vmFor = (canFire) => ({
+    tasklist: [{
+      id: 'sw',
+      points: 12,
+      stimuli: [{ name: 'D', splitRate: 4 }, { name: 'K', splitRate: 2, earned: 12 }],
+    }],
+    endEventFiring: {},
+    postChatEvent: jest.fn(),
+    findFirstGoalIdForRoutine: jest.fn(() => 'g1'),
+    // Vue.set / Vue.delete stand-ins: mutating the target is the point.
+    // eslint-disable-next-line no-param-reassign
+    $set: (o, k, v) => { o[k] = v; },
+    // eslint-disable-next-line no-param-reassign
+    $delete: (o, k) => { delete o[k]; },
+    $agent: {
+      canFireEndEvent: jest.fn(() => canFire),
+      fetchByTaskRef: jest.fn(() => Promise.resolve(null)),
+      fireEndEvent: jest.fn(() => Promise.resolve(canFire ? { ok: true } : null)),
+    },
+    countTaskTotal: methods.countTaskTotal,
+    countTaskCompleted: methods.countTaskCompleted,
+    dispatchAgentEndEvent: methods.dispatchAgentEndEvent,
+  });
+  const flush = () => [1, 2, 3, 4, 5].reduce((p) => p.then(() => {}), Promise.resolve());
+
+  it('says nothing and animates nothing when no end event would go out', async () => {
+    const vm = vmFor(false);
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    await flush();
+    expect(vm.$agent.fetchByTaskRef).toHaveBeenCalledWith('sw');
+    expect(vm.$agent.fireEndEvent).not.toHaveBeenCalled();
+    expect(vm.postChatEvent).not.toHaveBeenCalled();
+    expect(vm.endEventFiring.sw).toBeUndefined();
+  });
+
+  it('posts the pill and raises the bolt stage when one will', () => {
+    const vm = vmFor(true);
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    expect(vm.$agent.fireEndEvent).toHaveBeenCalledWith({ taskRef: 'sw', goalId: 'g1' });
+    expect(vm.postChatEvent).toHaveBeenCalledWith(expect.objectContaining({
+      text: 'All tasks complete — end event firing',
+      icon: 'bolt',
+    }));
+    // Set synchronously, so the stage is on screen before the dispatch settles.
+    expect(vm.endEventFiring.sw).toBe(true);
+  });
+
+  // Started on the iPad, completed on the phone: the phone's copy of the agent
+  // predates the run, so it must ask the server before giving up.
+  it('closes a run another device opened once the server confirms it', async () => {
+    const vm = vmFor(false);
+    vm.$agent.fetchByTaskRef = jest.fn(() => {
+      vm.$agent.canFireEndEvent.mockReturnValue(true);
+      return Promise.resolve({ id: 'a1' });
+    });
+    vm.dispatchAgentEndEvent = methods.dispatchAgentEndEvent.bind(vm);
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    expect(vm.$agent.fireEndEvent).not.toHaveBeenCalled();
+    await flush();
+    expect(vm.$agent.fetchByTaskRef).toHaveBeenCalledWith('sw');
+    expect(vm.$agent.fireEndEvent).toHaveBeenCalledWith({ taskRef: 'sw', goalId: 'g1' });
+    expect(vm.postChatEvent).toHaveBeenCalled();
+  });
+
+  // Started here, but the app closed before the start was recorded: the
+  // server has no run today, so this device's own badge re-opens it.
+  it('falls back to this device’s badge when the server has no run either', async () => {
+    const vm = vmFor(false);
+    vm.$agent.adoptLocalRun = jest.fn(() => {
+      vm.$agent.canFireEndEvent.mockReturnValue(true);
+      return Promise.resolve(true);
+    });
+    vm.dispatchAgentEndEvent = methods.dispatchAgentEndEvent.bind(vm);
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    await flush();
+    expect(vm.$agent.adoptLocalRun).toHaveBeenCalledWith('sw');
+    expect(vm.$agent.fireEndEvent).toHaveBeenCalledWith({ taskRef: 'sw', goalId: 'g1' });
+  });
+
+  it('re-checks only listening routines, and only today', () => {
+    const vm = {
+      isToday: true,
+      tasklist: [{ id: 'a' }, { id: 'b' }],
+      effectiveAgentStatus: (id) => (id === 'a' ? 'listening' : 'finished'),
+      maybeFireAgentEndEvent: jest.fn(),
+    };
+    methods.fireDueEndEvents.call(vm);
+    expect(vm.maybeFireAgentEndEvent.mock.calls).toEqual([['a']]);
+    vm.isToday = false;
+    methods.fireDueEndEvents.call(vm);
+    expect(vm.maybeFireAgentEndEvent).toHaveBeenCalledTimes(1);
+  });
+
+  // The counter gate still comes first: a routine whose slots are not full has
+  // nothing to close, whatever the agent's state.
+  it('does not even ask while the slot counter is unfilled', () => {
+    const vm = vmFor(true);
+    vm.tasklist[0].stimuli = [{ name: 'D', splitRate: 8 }, { name: 'K', splitRate: 2, earned: 0 }];
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    expect(vm.$agent.canFireEndEvent).not.toHaveBeenCalled();
+    expect(vm.postChatEvent).not.toHaveBeenCalled();
+  });
+});
+
+// Missed-item recovery (11-17 Oct finding): an open item on a past day keeps
+// its date chips so it can be carried to today; only finished work locks.
+describe('RoutineFocus goalSheetDateLocked', () => {
+  const locked = (isPastDay, openGoalItem) => RoutineFocus.computed.goalSheetDateLocked
+    .call({ isPastDay, openGoalItem });
+
+  it('leaves an open past-day item movable', () => {
+    expect(locked(true, { id: 'g', isComplete: false })).toBe(false);
+  });
+
+  it('locks a completed past-day item', () => {
+    expect(locked(true, { id: 'g', isComplete: true })).toBe(true);
+  });
+
+  it('never locks today', () => {
+    expect(locked(false, { id: 'g', isComplete: true })).toBe(false);
   });
 });

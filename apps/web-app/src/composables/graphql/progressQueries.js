@@ -45,4 +45,33 @@ export const PROGRESS_REPORT_QUERY = gql`
   }
 `;
 
-export default { PROGRESS_REPORT_QUERY };
+/**
+ * On time / late / missed check-ins for a date range (resolvers/progress.js
+ * `routineTiming`). The drawer's day ribbon reads two weeks; the Progress page's
+ * Timing card reads the period on screen. Its slot and routine rows are kept out
+ * of normalization (apollo/dataIdFromObject.js): their counts belong to the range.
+ */
+export const ROUTINE_TIMING_QUERY = gql`
+  query routineTiming($startDate: String!, $endDate: String!, $today: String) {
+    routineTiming(startDate: $startDate, endDate: $endDate, today: $today) {
+      startDate
+      endDate
+      onTime
+      late
+      missed
+      pending
+      days {
+        date
+        skip
+        onTime
+        late
+        missed
+        pending
+        slots { id name time state }
+      }
+      routines { id name time onTime late missed pending }
+    }
+  }
+`;
+
+export default { PROGRESS_REPORT_QUERY, ROUTINE_TIMING_QUERY };

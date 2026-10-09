@@ -234,47 +234,74 @@ describe('GoalItemSheet — Linked to, locked', () => {
   });
 });
 
-describe('GoalItemSheet — Linked to, editable', () => {
+/*
+ * Editing a saved item (Home's host, and the only one that opens the sheet this
+ * way) shows Linked to as chips, never pickers: re-pointing a saved goal at a
+ * different routine or parent re-parents a node mid-cascade and moves the
+ * roll-up counts on both sides, with no confirm and no undo.
+ */
+describe('GoalItemSheet — Linked to while EDITING is read-only', () => {
+  it('shows the chips, not the pickers', () => {
+    const { el } = render();
+    expect(q(el, 'goal-sheet-routine-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-goal-ref-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-routine').textContent).toContain('Start Work · 09:00');
+    expect(q(el, 'goal-sheet-goal-ref').textContent).toContain('Ship the dashboard');
+  });
+
+  it('offers no way to emit a link change at all', () => {
+    const { sheet } = render();
+    expect(findByName(sheet, 'GoalTaskSelector')).toBeNull();
+    expect(findByName(sheet, 'GoalRefSelector')).toBeNull();
+  });
+});
+
+describe('GoalItemSheet — Linked to while ADDING', () => {
+  const adding = (props = {}) => render({
+    mode: 'create',
+    seed: { period: 'day', date: '12-09-2026', taskRef: 'sw', goalRef: 'wg1' },
+    ...props,
+  });
+
   const pickers = (sheet) => ({
     routine: findByName(sheet, 'GoalTaskSelector'),
     goalRef: findByName(sheet, 'GoalRefSelector'),
   });
 
-  it("shows the routine and parent-goal pickers on the item's current link", () => {
-    const { el } = render();
+  it('shows the routine and parent-goal pickers on the draft’s link', () => {
+    const { el } = adding();
     expect(q(el, 'goal-sheet-routine-picker').getAttribute('data-value')).toBe('sw');
     expect(q(el, 'goal-sheet-goal-ref-picker').getAttribute('data-value')).toBe('wg1');
     expect(q(el, 'goal-sheet-routine')).toBeNull();
   });
 
-  it('writes a new parent goal through update-link', () => {
-    const { sheet } = render();
+  it('writes the pick into the draft rather than emitting a save', () => {
+    const { sheet } = adding();
     const links = [];
     sheet.$on('update-link', (payload) => links.push(payload));
     pickers(sheet).goalRef.$emit('input', 'wg2');
-    expect(links).toEqual([{ item: ITEM, goalRef: 'wg2' }]);
-  });
-
-  it('writes a new routine, and clearing one sends an empty ref', () => {
-    const { sheet } = render();
-    const links = [];
-    sheet.$on('update-link', (payload) => links.push(payload));
     pickers(sheet).routine.$emit('input', 'eve');
-    pickers(sheet).goalRef.$emit('input', null);
-    expect(links).toEqual([{ item: ITEM, taskRef: 'eve' }, { item: ITEM, goalRef: '' }]);
-  });
-
-  it('does not write a pick that changes nothing', () => {
-    const { sheet } = render();
-    const links = [];
-    sheet.$on('update-link', (payload) => links.push(payload));
-    pickers(sheet).goalRef.$emit('input', 'wg1');
+    expect(sheet.form.goalRef).toBe('wg2');
+    expect(sheet.form.taskRef).toBe('eve');
     expect(links).toEqual([]);
   });
 
+  it('clearing a pick empties the draft’s ref', () => {
+    const { sheet } = adding();
+    pickers(sheet).goalRef.$emit('input', null);
+    expect(sheet.form.goalRef).toBe('');
+  });
+
   it('labels the parent picker one period up', () => {
-    const { sheet } = render({ period: 'week' });
+    const { sheet } = adding({ seed: { period: 'week', date: '12-09-2026' } });
     expect(pickers(sheet).goalRef.label).toBe('Rolls up into a month goal');
+  });
+
+  it('keeps the routine picker but locks the parent when the caller fixes it (Year Goals)', () => {
+    const { el } = adding({ linkLocked: true });
+    expect(q(el, 'goal-sheet-routine-picker').getAttribute('data-value')).toBe('sw');
+    expect(q(el, 'goal-sheet-goal-ref-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-goal-ref').textContent).toContain('Ship the dashboard');
   });
 });
 
@@ -369,7 +396,8 @@ describe('GoalItemSheet — create mode', () => {
       goalRefLabel: 'Ship the dashboard',
     });
     expect(q(el, 'goal-sheet-date-picker')).toBeNull();
-    expect(q(el, 'goal-sheet-routine-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-goal-ref-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-routine-picker')).not.toBeNull();
     expect(q(el, 'goal-sheet-date').textContent).toContain('Week 37');
     type(el, 'Day goal');
     await Vue.nextTick();
@@ -513,5 +541,25 @@ describe('GoalItemSheet — closed', () => {
   it('renders nothing while closed', () => {
     const { el } = render({ open: false });
     expect(el.nodeType).toBe(8);
+  });
+});
+
+describe('GoalItemSheet — view only', () => {
+  it('is the same sheet with every input disabled, no toggle and no delete', () => {
+    const { el, events } = render({ readonly: true, readonlyNote: 'View only · August is over' });
+    expect(q(el, 'goal-sheet-readonly').textContent).toContain('August is over');
+    expect(q(el, 'goal-sheet-title').disabled).toBe(true);
+    expect(q(el, 'goal-sheet-delete')).toBeNull();
+    expect(q(el, 'goal-sheet-date-today')).toBeNull();
+    const locked = el.querySelectorAll('.rn-gis__lockable');
+    expect(locked.length).toBeGreaterThanOrEqual(3);
+    locked.forEach((node) => expect(node.hasAttribute('inert')).toBe(true));
+    q(el, 'goal-sheet-status').click();
+    expect(events['toggle-status']).toHaveLength(0);
+  });
+
+  it('names the parent noun by period when nothing is linked', () => {
+    const { el } = render({ period: 'week', goalRefLabel: '', linkLocked: true });
+    expect(q(el, 'goal-sheet-no-goal-ref').textContent.trim()).toBe('Not linked to a month goal');
   });
 });

@@ -18,6 +18,18 @@ const {
 } = require('../schema/RoutineChatSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const { chatWithRoutine } = require('../utils/chatApi');
+const { RoutineModel } = require('../schema/RoutineSchema');
+const { GoalModel } = require('../schema/GoalSchema');
+const {
+  previousDates,
+  periodDates,
+  summariseRoutineHistory,
+  generateRoutineInsight,
+} = require('../utils/routineInsight');
+
+// Marks the one "how do I improve this routine" paragraph a thread gets per day.
+const INSIGHT_ICON = 'tips_and_updates';
+const BRIEF_MAX = 1500;
 
 // How many turns of a thread the model gets to see. Free models have small
 // context budgets, and the routine snapshot is what actually steers the reply.
@@ -163,6 +175,89 @@ const mutation = {
         model: result.model,
         error: result.error,
       };
+    },
+  },
+
+  /**
+   * The first message after a routine is ticked — once per routine per day, in
+   * three sentences that celebrate a real win, offer one fresh idea for the next
+   * session and end on a target within reach. Grounded in the last month: the
+   * run of check-ins, this week against last, K/D/G earned, the activities done
+   * most, and the area/project description + next steps the client already
+   * caches (`brief`). Idempotent: a thread that already holds today's paragraph
+   * gets it back.
+   */
+  routineInsight: {
+    type: RoutineChatMessageType,
+    args: {
+      date: { type: new GraphQLNonNull(GraphQLString) },
+      taskRef: { type: new GraphQLNonNull(GraphQLString) },
+      routineName: { type: GraphQLString },
+      brief: { type: GraphQLString },
+      // The tick as the client saw it, in the user's own clock: the server only
+      // knows UTC, and the window's end is the next routine's start.
+      tickedAt: { type: GraphQLString },
+      windowEnd: { type: GraphQLString },
+      minutesLeft: { type: GraphQLInt },
+    },
+    resolve: async (root, args, ctx) => {
+      const email = getEmailfromSession(ctx);
+      const {
+        date, taskRef, routineName, brief, tickedAt, windowEnd, minutesLeft,
+      } = args;
+
+      const existing = await RoutineChatMessageModel
+        .findOne({
+          email, date, taskRef, from: 'routine', kind: 'text', icon: INSIGHT_ICON,
+        })
+        .exec();
+      if (existing) return existing;
+
+      // Today is included so the run of check-ins counts the tick that asked.
+      const dates = [date, ...previousDates(date)];
+      const { week, month } = periodDates(date);
+      const [routines, goals, earlier, periodGoals] = await Promise.all([
+        RoutineModel.find({ email, date: { $in: dates } }).lean().exec(),
+        GoalModel.find({ email, period: 'day', date: { $in: dates } }).exec(),
+        // Past insights, so tomorrow's idea is never yesterday's again.
+        RoutineChatMessageModel.find({
+          email, taskRef, from: 'routine', kind: 'text', icon: INSIGHT_ICON, date: { $in: dates },
+        }).sort({ _id: -1 }).limit(5).exec(),
+        GoalModel.find({
+          email,
+          $or: [{ period: 'week', date: week }, { period: 'month', date: month }],
+        }).exec(),
+      ]);
+      const hhmm = (v) => (/^\d{1,2}:\d{2}$/.test(String(v || '')) ? String(v) : null);
+      const summary = summariseRoutineHistory({
+        routines,
+        goals,
+        taskRef,
+        today: date,
+        periodGoals,
+        moment: {
+          tickedAt: hhmm(tickedAt),
+          windowEnd: hhmm(windowEnd),
+          minutesLeft: Number.isInteger(minutesLeft) ? Math.max(0, Math.min(minutesLeft, 24 * 60)) : null,
+        },
+      });
+      const { text, model } = await generateRoutineInsight({
+        summary,
+        routineName: cap(String(routineName || ''), 120),
+        brief: cap(String(brief || ''), BRIEF_MAX),
+        previous: earlier.map((m) => m.text),
+      });
+
+      return decryptSaved(await new RoutineChatMessageModel({
+        email,
+        date,
+        taskRef,
+        from: 'routine',
+        kind: 'text',
+        text: cap(text, TEXT_MAX),
+        icon: INSIGHT_ICON,
+        model: model || null,
+      }).save());
     },
   },
 

@@ -1,5 +1,15 @@
 apply plugin: 'com.android.application'
 
+// Release signing credentials. CI writes apps/android/keystore.properties and the
+// keystore itself from GitHub secrets; both are gitignored and never committed.
+// When the file is absent (every local debug build) the release signingConfig is
+// left unconfigured, which is fine — only bundleRelease/assembleRelease need it.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace "com.routine.note"
     compileSdk rootProject.ext.compileSdkVersion
@@ -16,8 +26,21 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
+            // Left off for the first store release: enabling R8 later is safe, but
+            // flipping it mid-flight would break crash-report symbolication continuity.
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

@@ -155,7 +155,11 @@ export default {
           isComplete: false,
           isMilestone: false,
           taskRef: String(routine.id),
-          goalRef: routine.goalRef || '',
+          // No goalRef: the server links the item to the routine's week goal
+          // itself, and passing one without `isMilestone: true` is refused — so
+          // planning an inbox item onto a linked routine failed with
+          // "Couldn't move that task." for no reason the user could see.
+          // Same correction as the chat's createItems.
           tags: [],
         })
         .then(() => {

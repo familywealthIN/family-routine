@@ -2,7 +2,7 @@ name: Mobile Build (Android + iOS)
 
 on:
   push:
-    branches: [main, develop, agents-initial]
+    branches: [master, develop, agents-initial]
     paths:
       - 'apps/web-app/**'
       - 'packages/**'
@@ -12,7 +12,7 @@ on:
       - 'yarn.lock'
       - '.github/workflows/mobile-build.yml'
   pull_request:
-    branches: [main, develop]
+    branches: [master, develop]
     paths:
       - 'apps/web-app/**'
       - 'packages/**'
@@ -31,6 +31,11 @@ env:
   NODE_VERSION: '20'
   JAVA_VERSION: '21'
   RUBY_VERSION: '3.2'
+  # Pinned so a runner image bumping Xcode cannot silently break signed builds.
+  # Kept identical to release-mobile.yml: if the PR lane and the release lane
+  # build with different toolchains, the PR lane goes green on builds the
+  # release lane cannot produce. See that file for why this must be a 26.x.
+  XCODE_VERSION: '26.2'
 
 jobs:
   build-web:
@@ -59,7 +64,10 @@ jobs:
           FCM_MESSAGING_SENDER_ID: ${{ secrets.FCM_MESSAGING_SENDER_ID }}
           FCM_APP_ID: ${{ secrets.FCM_APP_ID }}
           FCM_MEASUREMENT_ID: ${{ secrets.FCM_MEASUREMENT_ID }}
-          GQL_URL: ${{ secrets.GQL_URL || 'https://api.routine.familywealth.in/graphql' }}
+          # api.routine.familywealth.in does not resolve (NXDOMAIN) and is not in
+          # the CSP connect-src either, so it could never have worked. This is the
+          # endpoint the live web app at routine.familywealth.in actually calls.
+          GQL_URL: ${{ secrets.GQL_URL || 'https://aicivz8c3l.execute-api.ap-south-1.amazonaws.com/dev/graphql' }}
           GA_PUBLIC_KEY: ${{ secrets.GA_PUBLIC_KEY }}
           GA_CLIENT_ID: ${{ secrets.GA_CLIENT_ID }}
           GA_SERVER_CLIENT_ID: ${{ secrets.GA_SERVER_CLIENT_ID }}
@@ -101,7 +109,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -126,12 +134,30 @@ jobs:
           ANDROID_GOOGLE_SERVICES_JSON_B64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_B64 }}
         run: |
           set -e
-          if [ -n "$ANDROID_GOOGLE_SERVICES_JSON_B64" ]; then
-            printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON_B64" | base64 --decode > apps/android/app/google-services.json
-            echo "Wrote google-services.json from secret"
-          else
-            echo "::warning::ANDROID_GOOGLE_SERVICES_JSON_B64 not set; building without google-services (push won't work)"
+          if [ -z "$ANDROID_GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "::error::ANDROID_GOOGLE_SERVICES_JSON_B64 not set; the APK would ship without Firebase and push/sign-in would silently fail"
+            exit 1
           fi
+          printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON_B64" | base64 --decode > apps/android/app/google-services.json
+          echo "Wrote google-services.json from secret"
+
+      # Without this, the Android Gradle Plugin mints a fresh random debug
+      # keystore on every ephemeral runner. Each build would then have a
+      # different signing SHA-1, and Google Sign-In fails with DEVELOPER_ERROR
+      # because that fingerprint is not registered in Firebase — which would
+      # make the APKs sent to testers unusable for login.
+      - name: Provision stable debug keystore
+        env:
+          ANDROID_DEBUG_KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
+        run: |
+          set -e
+          if [ -z "$ANDROID_DEBUG_KEYSTORE_B64" ]; then
+            echo "::error::ANDROID_DEBUG_KEYSTORE_B64 not set; debug builds would get a random signing key and Google Sign-In would break"
+            exit 1
+          fi
+          mkdir -p ~/.android
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_B64" | base64 --decode > ~/.android/debug.keystore
+          keytool -list -v -keystore ~/.android/debug.keystore -storepass android 2>/dev/null | grep SHA1:
 
       - name: Write apps/android/local.properties
         run: |
@@ -146,11 +172,8 @@ jobs:
         working-directory: apps/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Build release AAB (unsigned)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        working-directory: apps/android
-        run: ./gradlew bundleRelease --no-daemon --stacktrace
-        continue-on-error: true
+      # Signed release AABs are built and published by release-mobile.yml on a v* tag.
+      # This workflow is the pre-merge gate only.
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -158,14 +181,6 @@ jobs:
           name: android-debug-apk
           path: apps/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-
-      - name: Upload release AAB
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-release-aab
-          path: apps/android/app/build/outputs/bundle/release/*.aab
-          if-no-files-found: ignore
 
   smoke-android:
     name: Smoke test Android (boot emulator + launch app)
@@ -231,7 +246,9 @@ jobs:
   build-ios:
     name: Build iOS (unsigned)
     needs: build-web
-    runs-on: macos-14
+    # macos-15, not macos-14: that image tops out at Xcode 16.2 and has no 26.x,
+    # so it cannot build with the toolchain the release lane requires.
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
@@ -241,19 +258,18 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: yarn
 
+      # CocoaPods comes from the root Gemfile, pinned to the version in
+      # Podfile.lock so CI never resolves a different one than the lockfile.
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
-          bundler-cache: false
+          bundler-cache: true
 
-      - name: Install CocoaPods
-        run: gem install cocoapods --no-document
-
-      - name: Select Xcode
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: ${{ env.XCODE_VERSION }}
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
@@ -294,7 +310,7 @@ jobs:
 
       - name: Pod install
         working-directory: apps/ios/App
-        run: pod install --repo-update
+        run: bundle exec pod install --repo-update
 
       - name: Build .app for simulator (unsigned)
         working-directory: apps/ios/App
@@ -331,7 +347,9 @@ jobs:
     name: Smoke test iOS (boot simulator + launch app)
     needs: build-ios
     if: github.event_name != 'workflow_dispatch' || inputs.smoke_test
-    runs-on: macos-14
+    # Must match build-ios: a simulator can only run a build made for its own
+    # runtime, and macos-14 has no iOS 26 runtime.
+    runs-on: macos-15
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -353,7 +371,18 @@ jobs:
               ids=[v['udid'] for k,arr in d.items() if 'iOS' in k for v in arr if v.get('isAvailable') and 'iPhone' in v['name']]; \
               print(ids[0] if ids else '')")
           if [ -z "$DEVICE" ]; then
-            DEVICE=$(xcrun simctl create "ci-iphone" "iPhone 15")
+            # Don't hardcode a model — the device types shipped with each Xcode
+            # change every release, and a name that no longer exists makes this
+            # fall over exactly when the discovery above has already failed.
+            DEVICE_TYPE=$(xcrun simctl list devicetypes -j | \
+              python3 -c "import json,sys; t=[d['identifier'] for d in json.load(sys.stdin)['devicetypes'] if 'iPhone' in d['name']]; \
+                print(t[-1] if t else '')")
+            if [ -z "$DEVICE_TYPE" ]; then
+              echo "::error::No iPhone simulator or device type available"
+              exit 1
+            fi
+            echo "No booted iPhone found; creating one from $DEVICE_TYPE"
+            DEVICE=$(xcrun simctl create "ci-iphone" "$DEVICE_TYPE")
           fi
           echo "Using simulator: $DEVICE"
           xcrun simctl boot "$DEVICE" || true
@@ -388,3 +417,127 @@ jobs:
           name: ios-smoke-screenshot
           path: ios-smoke-screenshot.png
           if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # PR distribution — get a testable build into a tester's hands on every PR.
+  # Both jobs need repository secrets, which forked PRs never receive.
+  # ---------------------------------------------------------------------------
+
+  distribute-android:
+    name: Send APK to Firebase App Distribution
+    needs: smoke-android
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      # Reuses the exact APK that just passed the emulator smoke test rather
+      # than rebuilding — the tester gets the binary CI actually verified.
+      - name: Download debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-debug-apk
+          path: artifacts
+
+      - name: Locate APK
+        id: locate
+        run: echo "apk=$(find artifacts -name '*.apk' -print -quit)" >> "$GITHUB_OUTPUT"
+
+      - name: Provision Firebase service account
+        env:
+          FIREBASE_SA_JSON_B64: ${{ secrets.FIREBASE_SA_JSON_B64 }}
+        run: printf '%s' "$FIREBASE_SA_JSON_B64" | base64 --decode > "$RUNNER_TEMP/firebase-sa.json"
+
+      - name: Distribute to testers
+        env:
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_SA_PATH: ${{ runner.temp }}/firebase-sa.json
+          APK_PATH: ${{ steps.locate.outputs.apk }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: bundle exec fastlane android pr_distribute
+
+      - name: Remove service account
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-sa.json"
+
+  distribute-ios:
+    name: Send build to TestFlight
+    needs: build-web
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: apps/ios/App/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('apps/ios/App/Podfile.lock') }}
+          restore-keys: pods-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # The smoke-test artifact is an unsigned simulator .app and cannot go to
+      # TestFlight, so this job archives a real signed device build from scratch.
+      - name: Download web dist
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web-app/dist
+
+      - name: Provision GoogleService-Info.plist
+        env:
+          IOS_GOOGLE_SERVICE_INFO_PLIST_B64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_B64 }}
+        run: |
+          set -e
+          printf '%s' "$IOS_GOOGLE_SERVICE_INFO_PLIST_B64" | base64 --decode > apps/ios/App/App/GoogleService-Info.plist
+
+      - name: Capacitor sync (ios)
+        working-directory: apps/web-app
+        run: npx cap sync ios
+
+      - name: Pod install
+        working-directory: apps/ios/App
+        run: bundle exec pod install --repo-update
+
+      - name: Configure match SSH access
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.MATCH_DEPLOY_KEY }}
+
+      - name: Build and upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: bundle exec fastlane ios pr_testflight

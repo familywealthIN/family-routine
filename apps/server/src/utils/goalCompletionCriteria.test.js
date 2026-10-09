@@ -16,7 +16,7 @@ describe('collectPeriodCriteria', () => {
       { date: '07-09-2026', goalItems: [{ goalRef: 'W2', isComplete: false }] },
     ], 'W1');
 
-    expect(criteria).toEqual([{ date: '06-09-2026', isComplete: true }]);
+    expect(criteria).toEqual([{ date: '06-09-2026', isComplete: true, late: false }]);
   });
 
   it('matches ObjectId-ish ids by string and tolerates empty docs', () => {
@@ -25,13 +25,42 @@ describe('collectPeriodCriteria', () => {
       { date: '07-09-2026' },
     ], 'W1');
 
-    expect(criteria).toEqual([{ date: '06-09-2026', isComplete: false }]);
+    expect(criteria).toEqual([{ date: '06-09-2026', isComplete: false, late: false }]);
   });
 });
 
 // D-11: the streak filled left-to-right by completion count, so the beta week
 // (completed 16, 17, 18; MISSED 19; completed 20, 21) rendered as five solid
 // nodes in a row — an unbroken run in a control called "Streak".
+// D-02, owner's rule: a milestone is met only when it was checked on time.
+// goalItemStatus grades a tick after the routine window (or on a later day)
+// as 'missed'; that tick is recorded as late and never counts.
+describe('checked on time', () => {
+  const lateOn = (date) => weekDays.map((d) => ({
+    date: d,
+    goalItems: [{ goalRef: 'W1', isComplete: true, status: d === date ? 'missed' : 'done' }],
+  }));
+
+  it('does not count a late tick as met', () => {
+    const criteria = collectPeriodCriteria(lateOn('07-09-2026'), 'W1');
+    expect(criteria.find((c) => c.date === '07-09-2026')).toEqual({ date: '07-09-2026', isComplete: false, late: true });
+    expect(criteria.filter((c) => c.isComplete)).toHaveLength(6);
+  });
+
+  it('marks a late day missed, even when it is the day being read', () => {
+    const days = buildMilestoneDays(weekDays, collectPeriodCriteria(lateOn('12-09-2026'), 'W1'), '12-09-2026');
+    expect(days[6]).toEqual({ date: '12-09-2026', status: 'missed' });
+  });
+
+  it('does not auto-complete a goal whose only open criterion was ticked late', () => {
+    const criteria = collectPeriodCriteria(lateOn('09-09-2026'), 'W1');
+    const result = evaluateAutoComplete({
+      criteria, completionThreshold: 5, stepDownPeriod: 'day', date: '12-09-2026',
+    });
+    expect(result.isComplete).toBe(false);
+  });
+});
+
 describe('buildMilestoneDays', () => {
   const betaWeek = ['16-08-2026', '17-08-2026', '18-08-2026', '19-08-2026', '20-08-2026', '21-08-2026', '22-08-2026'];
   const betaCriteria = collectPeriodCriteria(
@@ -88,7 +117,7 @@ describe('evaluateAutoComplete', () => {
     const result = evaluateAutoComplete({ ...base, criteria, progress: 6 });
 
     expect(result.isComplete).toBe(false);
-    expect(result.outstanding).toEqual([{ date: '09-09-2026', isComplete: false }]);
+    expect(result.outstanding).toEqual([{ date: '09-09-2026', isComplete: false, late: false }]);
     expect(result.note).toBeNull();
   });
 

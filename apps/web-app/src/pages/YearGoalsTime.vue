@@ -100,46 +100,30 @@
 
     <!--
       Create: the goal-item sheet every page adds goals with (Home, Goals). The
-      plan fixes what a new goal rolls up into, so period, date and Linked to
-      are locked to the draft and shown read-only.
+      plan fixes what a new goal rolls up into, so period, date and the parent
+      are locked to the draft and shown read-only; the routine is the user's.
     -->
-    <goal-item-create-container
-      :open="sheet === 'create' && !!draft && !draft.edit"
-      :shell="shell"
-      locked
-      :period="createDraftFor.period"
-      :date="createDraftFor.date"
-      :task-ref="createDraftFor.taskRef || ''"
-      :goal-ref="createDraftFor.goalRef || ''"
-      :heading="createDraftFor.title || ''"
-      :placeholder="createDraftFor.placeholder || ''"
-      :locked-date-label="createDraftFor.periodLabel || ''"
-      locked-routine-label=""
-      :locked-goal-ref-label="createDraftFor.parentLabel || ''"
-      :selected-date="createDraftFor.date || today"
-      :today="today"
-      @close="closeSheet"
-      @created="onDraftCreated"
-      @failed="onDraftFailed"
-    />
-
-    <!-- Rename. 480px on tablet and desktop (chassis.md § per-page). -->
-    <responsive-sheet
-      :open="sheet === 'create' && !!draft && !!draft.edit"
-      :shell="shell"
-      :width="SHEET_WIDTH"
-      :title="draft ? draft.title : ''"
-      @close="closeSheet"
-    >
-      <goal-period-form
-        v-if="draft"
-        :key="draftKey"
-        :draft="draft"
-        :value="draftText"
-        @input="draftText = $event"
-        @submit="submitDraft"
+    <goal-routine-index-container v-slot="{ routines }">
+      <goal-item-create-container
+        :open="sheet === 'create' && !!draft"
+        :shell="shell"
+        :routines="routines"
+        locked
+        :period="createDraftFor.period"
+        :date="createDraftFor.date"
+        :task-ref="createDraftFor.taskRef || ''"
+        :goal-ref="createDraftFor.goalRef || ''"
+        :heading="createDraftFor.title || ''"
+        :placeholder="createDraftFor.placeholder || ''"
+        :locked-date-label="createDraftFor.periodLabel || ''"
+        :locked-goal-ref-label="createDraftFor.parentLabel || ''"
+        :selected-date="createDraftFor.date || today"
+        :today="today"
+        @close="closeSheet"
+        @created="onDraftCreated"
+        @failed="onDraftFailed"
       />
-    </responsive-sheet>
+    </goal-routine-index-container>
 
     <!-- The ⋮ action sheet, and the delete confirmation it leads to. -->
     <responsive-sheet
@@ -157,28 +141,25 @@
     </responsive-sheet>
 
     <!--
-      The day goal's real editor — body, markdown contribution, hierarchical
-      tags, subtasks, the milestone link. It is DashBoard's own fullscreen dialog
-      around the dashboard's `GoalCreationContainer`, so a day goal saved here
-      runs the same `$goals.updateGoalItem` with the same optimistic response and
-      the same cache update as one saved from Home or from the Goals page.
-
-      Month and week goals do NOT come here. On this page their title genuinely
-      is the whole form and their parent is locked by the ladder, which is what
-      `GoalPeriodForm` in the create sheet above is; routing them through a
-      fullscreen editor with a period tab would offer a move the cascade cannot
-      take. No `shell`: a fullscreen dialog has no per-shell geometry. No
-      `@delete` either — deleting cascades to every transitive `goalRef`
-      descendant, so it stays behind the ⋮ and its confirmation.
+      The editor for every level, month, week and day: Home's goal sheet
+      (`GoalEditSheetContainer`), the same sheet adding uses, so a goal edited
+      here looks and saves exactly like one opened from a checklist row. Its
+      status toggle runs this page's own `applyTick`, which rolls the tick up
+      the tree. Delete stays behind the ⋮ and its confirmation.
     -->
-    <goal-edit-dialog-container
-      :open="editorOpen"
-      :item="editItem"
-      :period="editorPeriod"
-      :date="editorDate"
-      @close="closeEditor"
-      @saved="onGoalSaved"
-    />
+    <goal-routine-index-container v-slot="{ routines }">
+      <goal-edit-sheet-container
+        :open="editorOpen"
+        :shell="shell"
+        :item="editItem"
+        :routines="routines"
+        :readonly="editorReadonly"
+        :readonly-note="editorReadonlyNote"
+        @close="closeEditor"
+        @toggle="applyTick(($event && $event.period) || 'day', $event && $event.id)"
+        @changed="refetchTree"
+      />
+    </goal-routine-index-container>
 
     <app-toast
       :shell="shell"
@@ -193,7 +174,6 @@
     <!-- Single-op write units. Renderless: they own a mutation, not a pixel. -->
     <goal-period-tick-container ref="tick" />
     <goal-period-create-container ref="create" />
-    <goal-period-update-container ref="update" />
     <goal-period-delete-container ref="remove" />
   </app-shell-container>
 </template>
@@ -231,22 +211,16 @@
  * single-op container, deletion is a sheet that states the cascade, and creating
  * is one text field with a locked parent.
  *
- * TWO FORMS, AND WHY
- * ------------------
- * A month or week goal on this page IS its title: the ladder locks its parent and
- * its date, so `GoalPeriodForm` in the create sheet is the whole form, and the ⋮
- * edits it there. A DAY goal is a whole goal item — markdown contribution,
- * hierarchical tags, subtasks, the milestone link — and none of that fits in a
- * title field, so it opens `GoalEditDialogContainer`: the dashboard's own
- * fullscreen editor, running the dashboard's mutations. Creating a day goal still
- * goes through the sheet, because a new one needs nothing but a title and the
- * sheet is the one place that already derives its date and parent
- * (`yearGoalModel.createDraft`); the editor is then one glyph away on its row.
+ * ONE SHEET, AND WHY
+ * -------------------
+ * Every goal on this page, month, week or day, is added and edited in the goal
+ * sheet Home and Goals use (`GoalItemSheet`). Adding locks the period, date and
+ * parent to what `yearGoalModel.createDraft` derives; the routine is picked.
+ * A month that is over takes no new goals.
  */
 import moment from 'moment';
 import AppToast from '@routine-notes/ui/molecules/AppToast/AppToast.vue';
 import ResponsiveSheet from '@routine-notes/ui/molecules/ResponsiveSheet/ResponsiveSheet.vue';
-import GoalPeriodForm from '@routine-notes/ui/molecules/GoalPeriodForm/GoalPeriodForm.vue';
 import GoalActionMenu from '@routine-notes/ui/molecules/GoalActionMenu/GoalActionMenu.vue';
 import RoutineComposer from '@routine-notes/ui/organisms/RoutineComposer/RoutineComposer.vue';
 import { resolveShell } from '@routine-notes/ui/constants/navigation';
@@ -254,15 +228,15 @@ import AppShellContainer from '../containers/AppShellContainer.vue';
 import YearGoalContainer from '../containers/YearGoalContainer.vue';
 import YearGoalListContainer from '../containers/YearGoalListContainer.vue';
 import YearGoalChatContainer from '../containers/YearGoalChatContainer.vue';
-import GoalEditDialogContainer from '../containers/GoalEditDialogContainer.vue';
+import GoalEditSheetContainer from '../containers/GoalEditSheetContainer.vue';
 import GoalPeriodTickContainer from '../containers/GoalPeriodTickContainer.vue';
 import GoalPeriodCreateContainer from '../containers/GoalPeriodCreateContainer.vue';
 import GoalItemCreateContainer from '../containers/GoalItemCreateContainer.vue';
-import GoalPeriodUpdateContainer from '../containers/GoalPeriodUpdateContainer.vue';
+import GoalRoutineIndexContainer from '../containers/GoalRoutineIndexContainer.vue';
 import GoalPeriodDeleteContainer from '../containers/GoalPeriodDeleteContainer.vue';
 import { signOut } from '../utils/signOut';
 import {
-  TH, DATE_FORMAT, createDraft, planTick, findWeek, findMonthOfWeek, nextWeekDate, parseDate,
+  TH, DATE_FORMAT, createDraft, planTick, nextWeekDate,
   itemForRow,
 } from '../utils/yearGoalModel';
 
@@ -284,15 +258,14 @@ export default {
     YearGoalContainer,
     YearGoalListContainer,
     YearGoalChatContainer,
-    GoalEditDialogContainer,
+    GoalEditSheetContainer,
     GoalPeriodTickContainer,
     GoalPeriodCreateContainer,
     GoalItemCreateContainer,
-    GoalPeriodUpdateContainer,
+    GoalRoutineIndexContainer,
     GoalPeriodDeleteContainer,
     RoutineComposer,
     ResponsiveSheet,
-    GoalPeriodForm,
     GoalActionMenu,
     AppToast,
   },
@@ -325,16 +298,17 @@ export default {
       /** 'create' | 'menu' | 'confirm' | null */
       sheet: null,
       draft: null,
-      draftText: '',
       menu: null,
       /**
        * The day-goal editor. The flag lives here, not in the container, because
        * the editor is opened from more than one place on this page — the same
-       * split `GoalsTime` and `GoalDisplayModalContainer` use.
+       * split `GoalsTime` uses.
        */
       editorOpen: false,
       /** The COMPLETE goal-item record being edited, never a row view-model. */
       editItem: null,
+      /** The editor opened on a past month's goal: same sheet, view only. */
+      editorReadonly: false,
       chatText: '',
       toast: noToast(),
     };
@@ -380,12 +354,7 @@ export default {
     },
     /** The open create draft, or an empty one so the sheet's props stay defined. */
     createDraftFor() {
-      return (this.draft && !this.draft.edit) ? this.draft : { period: 'day', date: '' };
-    },
-    /** Re-key the form so a new draft resets the field and re-focuses it. */
-    draftKey() {
-      if (!this.draft) return 'none';
-      return `${this.draft.kind}-${this.draft.edit || this.draft.date}`;
+      return this.draft || { period: 'day', date: '' };
     },
     /**
      * The address a blank editor would start on. Only ever a day here: the
@@ -408,6 +377,10 @@ export default {
       }
       return this.menu.item.body;
     },
+    editorReadonlyNote() {
+      const month = this.focusedMonth;
+      return month ? `View only · ${month.name} is over` : 'View only';
+    },
     menuItems() {
       if (!this.menu) return [];
       if (this.sheet === 'confirm') {
@@ -419,9 +392,18 @@ export default {
         ];
       }
       const isMonth = this.menu.kind === 'month';
-      return [
-        { key: 'edit', icon: 'edit', label: isMonth ? 'Edit month goal' : 'Edit week goal' },
+      // A month that is over takes no new goals, so its menus offer no Add.
+      const add = (this.focusedMonth && this.focusedMonth.isPast) ? [] : [
         { key: 'add', icon: 'add_task', label: isMonth ? 'Add week goal' : 'Add day goal' },
+      ];
+      const noun = isMonth ? 'month goal' : 'week goal';
+      // A month that is over is history: its goals open view only.
+      const view = (this.focusedMonth && this.focusedMonth.isPast)
+        ? { key: 'edit', icon: 'visibility', label: `View ${noun}` }
+        : { key: 'edit', icon: 'edit', label: `Edit ${noun}` };
+      return [
+        view,
+        ...add,
         {
           key: 'delete',
           icon: 'delete',
@@ -593,6 +575,7 @@ export default {
      * @param {Object} [context] `{ weekId }` for a day goal
      */
     openCreate(kind, context) {
+      if (this.refusePastMonth()) return;
       const draft = createDraft(this.tree, kind, {
         monthIndex: this.selectedMonth,
         weekId: (context && context.weekId) || '',
@@ -615,7 +598,6 @@ export default {
         return;
       }
       this.draft = draft;
-      this.draftText = '';
       this.sheet = 'create';
     },
     monthFullToast(month) {
@@ -625,6 +607,18 @@ export default {
         title: `${month.name} is fully planned`,
         sub: 'Its last week goal already reaches the end of the month.',
       };
+    },
+    /** A month that is over takes no new goals. Says so instead of opening. */
+    refusePastMonth() {
+      const month = this.focusedMonth;
+      if (!month || !month.isPast) return false;
+      this.showToast({
+        icon: 'lock',
+        color: '#90caf9',
+        title: `${month.name} is over`,
+        sub: 'Goals can only be added to this month or later.',
+      });
+      return true;
     },
     onAddDay(week) {
       this.openCreate('day', { weekId: week && week.id });
@@ -640,7 +634,7 @@ export default {
     onMenuSelect(key) {
       const { kind, item } = this.menu || {};
       if (!item) return undefined;
-      if (key === 'edit') return this.editGoal(kind, item);
+      if (key === 'edit') return this.editGoal(item);
       if (key === 'add') {
         if (kind === 'month') this.openCreate('week');
         else this.openCreate('day', { weekId: item.id });
@@ -658,44 +652,14 @@ export default {
     },
     /**
      * The ONE edit path for every level of the ladder, so the ⋮'s Edit and the
-     * day row's edit glyph cannot drift into opening two different things.
+     * day row's edit glyph cannot drift into opening two different things: the
+     * goal sheet, the same one adding uses. `openEditor` resolves the row to
+     * its complete record, whatever its period.
      *
-     * A day goal is a real goal item — a markdown contribution, hierarchical
-     * tags, subtasks, the milestone link — so it opens the full editor the
-     * dashboard and the Goals page open. A month or week goal does not: here its
-     * title IS the whole form and its parent is locked by the ladder it hangs
-     * from, which is exactly what the create sheet's `GoalPeriodForm` is.
-     *
-     * @param {string} kind 'month' | 'week' | 'day'
-     * @param {Object} row  the ROW that was acted on, not a record
+     * @param {Object} row the ROW that was acted on, not a record
      */
-    editGoal(kind, row) {
-      if (!row) return undefined;
-      if (kind === 'day') return this.openEditor(row);
-
-      // The rename echoes every stored field back through `updateGoalItem`,
-      // which `$set`s them all — so it must be handed the COMPLETE record. The
-      // row carries no tags, contribution, reward or deadline, and sending it
-      // would wipe them. A row with no record behind it is not edited at all.
-      const item = itemForRow(this.tree, row);
-      if (!item) return undefined;
-
-      this.draft = {
-        kind,
-        edit: row.id,
-        item,
-        period: row.period,
-        date: row.date,
-        goalRef: row.goalRef,
-        parentLabel: this.parentLabelOf(kind, row),
-        periodIcon: kind === 'month' ? 'calendar_month' : 'view_week',
-        periodLabel: this.periodLabelOf(kind, row),
-        placeholder: row.body,
-        title: kind === 'month' ? 'Edit month goal' : 'Edit week goal',
-      };
-      this.draftText = row.body;
-      this.sheet = 'create';
-      return undefined;
+    editGoal(row) {
+      return this.openEditor(row);
     },
     /** The day row's edit glyph. `.stop` there kept the row tap as the tick. */
     onEditDay(payload) {
@@ -717,12 +681,15 @@ export default {
       // leaving a sheet open underneath it would be two forms for one goal.
       this.closeSheet();
       this.editItem = item;
+      // A month that is over opens its goals view only, every input disabled.
+      this.editorReadonly = !!(this.focusedMonth && this.focusedMonth.isPast);
       this.editorOpen = true;
       return undefined;
     },
     closeEditor() {
       this.editorOpen = false;
       this.editItem = null;
+      this.editorReadonly = false;
     },
     /**
      * A save went through the same mutation the dashboard runs, so the normalized
@@ -741,32 +708,6 @@ export default {
         color: '#90caf9',
         title: created ? 'Day goal added' : 'Saved',
         sub: item.body || '',
-      });
-      this.refetchTree();
-    },
-    parentLabelOf(kind, item) {
-      if (kind === 'month') return this.tree ? this.tree.body : '';
-      const month = findMonthOfWeek(this.tree, item.id);
-      return month && month.goal ? month.goal.body : '';
-    },
-    periodLabelOf(kind, item) {
-      const parsed = parseDate(item.date);
-      if (kind === 'month') {
-        return parsed ? parsed.format('MMMM YYYY') : item.date;
-      }
-      const week = findWeek(this.tree, item.id);
-      return week ? `Week ${week.week} · ${week.rangeLabel}` : item.date;
-    },
-
-    /** The rename form. Creates go through the goal-item create sheet. */
-    async submitDraft() {
-      const body = String(this.draftText || '').trim();
-      if (!body || !this.draft || !this.draft.edit) return;
-      const { draft } = this;
-      await this.$refs.update.rename(draft.item, body).catch(() => null);
-      this.closeSheet();
-      this.showToast({
-        icon: 'edit', color: '#90caf9', title: 'Saved', sub: body,
       });
       this.refetchTree();
     },
@@ -844,7 +785,6 @@ export default {
     closeSheet() {
       this.sheet = null;
       this.draft = null;
-      this.draftText = '';
       this.menu = null;
     },
 
@@ -863,7 +803,7 @@ export default {
      */
     async onCreateWeeksFromChat({ bodies, done }) {
       const month = this.focusedMonth;
-      if (!this.tree || !month || !month.goal) {
+      if (!this.tree || !month || !month.goal || this.refusePastMonth()) {
         done([]);
         return;
       }

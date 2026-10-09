@@ -9,7 +9,7 @@
       :quick-replies="quickReplies"
       @toggle-item="$emit('toggle-item', $event)"
       @add-proposals="addProposals"
-      @quick-reply="send"
+      @quick-reply="onQuickReply"
       @toggle-brief="toggleBrief"
       @add-brief-step="addBriefStep"
     />
@@ -32,9 +32,16 @@ import {
   SEND_ROUTINE_CHAT_MUTATION,
   POST_ROUTINE_CHAT_EVENT_MUTATION,
   MARK_ROUTINE_CHAT_ADDED_MUTATION,
+  ROUTINE_INSIGHT_MUTATION,
 } from '../composables/graphql/chatQueries';
 
 /** Client-only messages (the brief, a brief quick reply) are never persisted. */
+/**
+ * The one chip that is an affordance rather than a question. Named so the
+ * handler and the list cannot drift apart.
+ */
+const ADD_TASK_CHIP = 'Add a task';
+
 const LOCAL_PREFIX = 'local-';
 const isLocal = (id) => String(id || '').indexOf(LOCAL_PREFIX) === 0;
 
@@ -78,7 +85,6 @@ export default {
     routine: { type: Object, default: null },
     endTime: { type: String, default: '' },
     statusLabel: { type: String, default: '' },
-    leftLabel: { type: String, default: '' },
     /** This routine's day goal items. */
     goalItems: { type: Array, default: () => [] },
     /** { D, K, G } percentages. */
@@ -166,36 +172,9 @@ export default {
     doneCount() {
       return this.goalItems.filter((item) => item && item.isComplete).length;
     },
-    /**
-     * The card's "x of y": y is the routine's slot count (the server's D/K
-     * equation), so an empty routine reads "0 of 1", never "0 of 0".
-     */
-    totalCount() {
-      const slots = this.routine && this.routine.totalCount;
-      return Math.max(this.goalItems.length, slots || 0);
-    },
     openItems() {
       return this.goalItems.filter((item) => item && !item.isComplete);
     },
-    /**
-     * The opening line is synthesised, not stored: it restates the routine's
-     * live state, so persisting it would mean showing yesterday's numbers.
-     */
-    greeting() {
-      if (!this.routine) return null;
-      const open = this.openItems[0];
-      const tail = open ? ` Want me to break down “${open.body}”?` : '';
-      return {
-        id: 'greeting',
-        from: 'routine',
-        kind: 'text',
-        text: `${this.routineName} · ${this.routine.time} – ${this.endTime}. `
-          + `${this.doneCount} of ${this.totalCount} done${this.leftLabel ? ` — ${this.leftLabel}` : ''}.${tail}`,
-        items: [],
-        proposals: [],
-      };
-    },
-
     // --- "Before you start" ------------------------------------------------
     /** The focused routine's `area:`/`project:` tags, in the order it lists them. */
     contextTags() {
@@ -240,14 +219,21 @@ export default {
 
     displayMessages() {
       const stored = Array.isArray(this.chatMessages) ? this.chatMessages : [];
+      // No synthesised opening line. It restated what the focus card's own
+      // status row already shows (routine, time range, "x of y done", time
+      // left) and then offered to break the first open item down unprompted.
+      // The "Break it down" quick reply still offers that on demand.
       return [
         ...(this.briefMessage ? [this.briefMessage] : []),
-        ...(this.greeting ? [this.greeting] : []),
         ...stored,
         ...this.localMessages,
       ];
     },
     quickReplies() {
+      // The chips send chat turns, so they follow the composer: both stay shut
+      // until the routine is checked off (RoutineFocus.chatDisabled). Offering
+      // them next to a disabled composer would just be a way around it.
+      if (!(this.routine && this.routine.ticked)) return [];
       const chips = [];
       if (this.openItems.length) chips.push('Break it down');
       if (this.briefDataBlocks.length) {
@@ -255,8 +241,11 @@ export default {
         chips.push('Plan from next steps');
       }
       chips.push('How am I doing?');
-      chips.push('Add a task');
+      chips.push(ADD_TASK_CHIP);
       return chips;
+    },
+    tickState() {
+      return { ref: this.taskRef, ticked: !!(this.routine && this.routine.ticked) };
     },
     /** What the model is told about the routine the user is looking at. */
     chatContext() {
@@ -309,12 +298,65 @@ export default {
       },
       immediate: true,
     },
+    // Ticking the routine is what opens the chat; the routine answers "how do I
+    // improve this?" straight away (once per routine per day — the server
+    // returns the existing paragraph rather than writing a second one).
+    // Keyed by routine: swiping from an unticked card to a ticked one is not a tick.
+    tickState(now, before) {
+      if (now.ticked && before && !before.ticked && now.ref === before.ref) this.requestInsight();
+    },
     // Coming back from a past day, where the brief deliberately does not render.
     isPastDay(past) {
       if (!past) this.ensureBriefContext();
     },
   },
   methods: {
+    /** The area/project context the brief already caches, as plain text. */
+    insightBrief() {
+      return this.contextTags.map((tag) => {
+        const cached = getCachedDashboard(tag);
+        if (!cached) return '';
+        return [`[${tag}]`, cached.description, cached.nextSteps && `Next steps:\n${cached.nextSteps}`]
+          .filter(Boolean).join('\n');
+      }).filter(Boolean).join('\n\n');
+    },
+    /**
+     * The tick on the user's own clock: the time it happened, when the window
+     * closes and the minutes still left in it. The server only knows UTC and
+     * does not know where the window ends.
+     */
+    tickMoment(now = new Date()) {
+      const pad = (n) => String(n).padStart(2, '0');
+      const tickedAt = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const end = /^(\d{1,2}):(\d{2})$/.exec(String(this.endTime || ''));
+      if (!end) return { tickedAt, windowEnd: null, minutesLeft: null };
+      let left = (Number(end[1]) * 60 + Number(end[2])) - (now.getHours() * 60 + now.getMinutes());
+      if (left < -12 * 60) left += 24 * 60; // a window that closes after midnight
+      return { tickedAt, windowEnd: this.endTime, minutesLeft: Math.max(0, left) };
+    },
+    async requestInsight() {
+      if (this.isPastDay || !this.taskRef) return;
+      const { taskRef, date } = this;
+      this.typing = true;
+      try {
+        await this.$apollo.mutate({
+          mutation: ROUTINE_INSIGHT_MUTATION,
+          variables: {
+            date,
+            taskRef,
+            routineName: this.routineName,
+            brief: this.insightBrief(),
+            ...this.tickMoment(),
+          },
+        });
+        if (taskRef === this.taskRef && date === this.date) this.refetch();
+      } catch (error) {
+        // Optional extra: the chat is open and usable without it.
+        console.warn('[RoutineChat] routine insight failed:', error);
+      } finally {
+        this.typing = false;
+      }
+    },
     /** Re-read the thread from the network. Resolves when the read settles. */
     refetch() {
       const query = this.$apollo.queries.chatMessages;
@@ -387,6 +429,23 @@ export default {
         });
     },
 
+    /**
+     * A chip. All but one are questions, which the model answers.
+     *
+     * "Add a task" is not a question — it is an affordance, and sending it as a
+     * message asked the model to add a task the user had not named yet. It
+     * obliged: it invented one, or (having seen the thread's convention) created
+     * an item whose entire body was the test prefix. It opens the capture sheet
+     * instead, which is where the composer's own + button goes.
+     */
+    onQuickReply(text) {
+      if (text === ADD_TASK_CHIP) {
+        this.$emit('add-task');
+        return;
+      }
+      this.send(text);
+    },
+
     async send(text) {
       const body = String(text || '').trim();
       if (!body || !this.taskRef || this.sending) return;
@@ -395,6 +454,13 @@ export default {
       // already renders. Sending them to the model would spend a round trip
       // paraphrasing data that is on the client.
       if (this.answerFromBrief(body)) return;
+
+      // Captured BEFORE the round trip, and used for every side effect below.
+      // A free-tier reply can take tens of seconds, and the user can swipe the
+      // deck to another routine (or midnight can roll the date) while it is in
+      // flight — reading `this.taskRef` afterwards filed the task against
+      // whatever routine happened to be focused when the model answered.
+      const { taskRef, date } = this;
 
       this.sending = true;
       this.typing = true;
@@ -405,8 +471,8 @@ export default {
         const { data } = await this.$apollo.mutate({
           mutation: SEND_ROUTINE_CHAT_MUTATION,
           variables: {
-            date: this.date,
-            taskRef: this.taskRef,
+            date,
+            taskRef,
             text: body,
             context: this.chatContext,
           },
@@ -417,9 +483,21 @@ export default {
         if (!result) return;
 
         if (result.intent === 'add_tasks' && result.tasks && result.tasks.length) {
-          const ids = await this.createItems(result.tasks);
+          const ids = await this.createItems(result.tasks, { taskRef, date });
           if (ids.length && result.replyMessage) {
             await this.attachItems(result.replyMessage.id, ids);
+          }
+          // The pill, as the proposal and brief paths already post one. Without
+          // it the thread's event log skipped every chat-driven add, so a failed
+          // add and a successful one left the same trace.
+          if (ids.length) {
+            await this.postEvent({
+              text: `${ids.length} task${ids.length === 1 ? '' : 's'} added to the checklist`,
+              tone: 'blue',
+              icon: 'playlist_add_check',
+              items: ids.map(String),
+              taskRef,
+            });
           }
         } else if (result.intent === 'complete_task' && result.completeItemId) {
           const item = this.goalItems.find((g) => String(g.id) === String(result.completeItemId));
@@ -508,6 +586,20 @@ export default {
       this.addedSteps = { ...this.addedSteps, [`${this.taskRef}|${value}`]: true };
     },
 
+    /**
+     * Undo a `rememberStep`. Only for a create that failed: the pill is flipped
+     * optimistically, so without this a step whose save fell over stayed marked
+     * "Added" — and un-retryable — for the rest of the session.
+     */
+    forgetStep(text) {
+      const value = String(text || '').trim();
+      const key = `${this.taskRef}|${value}`;
+      if (!value || !this.addedSteps[key]) return;
+      const next = { ...this.addedSteps };
+      delete next[key];
+      this.addedSteps = next;
+    },
+
     toggleBrief() {
       this.briefOpen = {
         ...this.briefOpen,
@@ -533,7 +625,12 @@ export default {
       // against adding twice is this record, not a disabled control.
       this.rememberStep(text);
       const ids = await this.createItems([text]);
-      if (!ids.length) return;
+      if (!ids.length) {
+        // Nothing was created, so the pill is claiming something that did not
+        // happen AND the step can never be retried this session. Give it back.
+        this.forgetStep(text);
+        return;
+      }
       await this.postEvent({
         text: `Added “${text}” to the checklist`,
         tone: 'blue',
@@ -609,13 +706,36 @@ export default {
     },
 
     /**
-     * Create day goal items under the focused routine. `goalRef` copies the
-     * routine's existing week-goal link so an item the chat creates rolls up
-     * the same way one created through AI Search does.
+     * Create day goal items under a routine.
+     *
+     * **No `goalRef` is sent, deliberately.** The server links a day item to its
+     * routine's week goal itself (`resolveDayGoalLink`), and an explicit ref
+     * SUPPRESSES that resolution. This used to pass one — copied off a sibling
+     * item by an `inheritedGoalRef()` helper — together with a hardcoded
+     * `isMilestone: false`, which is the one combination `addGoalItem` refuses
+     * outright ("When goalRef is provided, isMilestone must be true"). Every
+     * chat-created task on a routine whose checklist was already linked to a
+     * week goal therefore threw, while the reply above it still said "Added".
+     * Routines with no linked sibling sent no ref and worked, which is what made
+     * it read as intermittent.
+     *
+     * Omitting it is not a behaviour change: the server returns the same
+     * `goalRef` and `isMilestone: true` the sheet's item gets. One owner of the
+     * rule instead of two, and the drifted copy is gone.
+     *
+     * `taskRef`/`date` are PARAMETERS, not reads of `this`: the caller may have
+     * been awaiting the model while the user swiped to another routine.
      */
-    async createItems(bodies) {
+    async createItems(bodies, { taskRef = this.taskRef, date = this.date } = {}) {
+      // Nothing can be added to a checklist that has already closed — the same
+      // rule the brief's Add pill has always applied, which `send` did not, so
+      // chatting on yesterday wrote real items onto yesterday.
+      if (this.isPastDay) {
+        this.notifyPastDay();
+        return [];
+      }
       const ids = [];
-      const goalRef = this.inheritedGoalRef();
+      let failed = 0;
       // Sequential: addGoalItem's optimistic cache write reads the day goal it
       // just wrote to, so concurrent creates race each other's reads.
       for (let i = 0; i < bodies.length; i += 1) {
@@ -626,25 +746,51 @@ export default {
             const created = await this.$goals.addGoalItem({
               body,
               period: 'day',
-              date: this.date,
-              taskRef: this.taskRef,
-              goalRef: goalRef || undefined,
+              date,
+              taskRef,
               isComplete: false,
               isMilestone: false,
             });
             if (created && created.id) ids.push(created.id);
+            else failed += 1;
           } catch (error) {
+            failed += 1;
             console.error('[RoutineChat] createItems failed:', error);
           }
         }
       }
+      // A console line is not enough. The reply bubble above has already told
+      // the user the tasks were added, so a create that fails without saying so
+      // leaves the thread asserting something the checklist contradicts — which
+      // is exactly how the goalRef bug stayed invisible.
+      if (failed) this.notifyCreateFailed(failed, ids.length);
       if (ids.length) this.$emit('items-created', ids);
       return ids;
     },
 
-    inheritedGoalRef() {
-      const linked = this.goalItems.find((item) => item && item.goalRef);
-      return linked ? linked.goalRef : '';
+    /** Say that the chat could not add what its reply already claimed. */
+    notifyCreateFailed(failed, added) {
+      this.$notify({
+        title: added
+          ? `Only ${added} of ${added + failed} tasks were added`
+          : `Couldn't add ${failed === 1 ? 'that task' : `those ${failed} tasks`}`,
+        text: "The reply above is ahead of the checklist — the task didn't save. "
+          + 'Try adding it from the checklist instead.',
+        group: 'notify',
+        type: 'error',
+        duration: 5000,
+      });
+    },
+
+    notifyPastDay() {
+      this.$notify({
+        title: 'That day is closed',
+        text: "You can read this thread, but nothing can be added to a past day's "
+          + 'checklist. Switch to today to add a task.',
+        group: 'notify',
+        type: 'info',
+        duration: 4000,
+      });
     },
 
     attachItems(messageId, items) {

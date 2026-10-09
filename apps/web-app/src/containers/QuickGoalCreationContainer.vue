@@ -16,6 +16,7 @@
     :redeem-cost="redeemCost"
     :allow-start-without-task="allowStartWithoutTask"
     :open-item-count="openItemCount"
+    :locked-item="lockedItem"
     :sheet="sheet"
     :open="open"
     :shell="shell"
@@ -24,7 +25,6 @@
     :routine-end-time="routineEndTime"
     :earn-points="earnPoints"
     :description="description"
-    :parent-goal-period-label="parentGoalPeriodLabel"
     @add-goal-item="addGoalItem"
     @goal-ref-changed="updateCurrentGoalRef"
     @close="$emit('close')"
@@ -42,6 +42,7 @@ import { scopeGoalsToRef } from '../utils/goalRefScope';
 import { stepupMilestonePeriodDate, periodGoalDates } from '../utils/getDates';
 import { applyPriorityTags } from '../utils/taskPriority';
 import eventBus, { EVENTS } from '../utils/eventBus';
+import refuseAgentWithoutPoints from '../utils/agentPointsGuard';
 
 const ADD_GOAL_ITEM_TIMEOUT_MS = 12000;
 
@@ -95,6 +96,14 @@ export default {
       type: Number,
       default: -1,
     },
+    // The routine's first day goal item, when it has one — what Start Task
+    // completes and what `{goalId}` resolves to for the agent. Pure pass-through:
+    // the page owns the resolution, because it is the same `findFirstGoalIdForRoutine`
+    // the agent dispatch itself reads.
+    lockedItem: {
+      type: Object,
+      default: null,
+    },
     // --- presentation -----------------------------------------------------
     // Off by default: the classic dashboard and QuickTaskModalContainer already
     // wrap this container in their own v-dialog, so the organism renders inline
@@ -131,10 +140,6 @@ export default {
       default: 0,
     },
     description: {
-      type: String,
-      default: '',
-    },
-    parentGoalPeriodLabel: {
       type: String,
       default: '',
     },
@@ -267,11 +272,15 @@ export default {
       const hasGoalItem = !!(goal && Array.isArray(goal.goalItems)
         && goal.goalItems.some((gi) => gi.taskRef === taskRef));
       const typedBody = newGoalItem && newGoalItem.body && newGoalItem.body.trim();
+      const task = this.tasklist
+        ? this.tasklist.find((t) => t.id === taskRef || t.taskId === taskRef)
+        : null;
+
+      // Refuse before anything is written: this path adds the goal item and
+      // fires the start event itself, so the page's guard never sees it (D-03).
+      if (refuseAgentWithoutPoints(this.$notify, task)) return;
 
       if (typedBody || !hasGoalItem) {
-        const task = this.tasklist
-          ? this.tasklist.find((t) => t.id === taskRef || t.taskId === taskRef)
-          : null;
         // User pressed Start Agent — this fire is explicit and may report
         // failure loudly.
         await this.addGoalItem({

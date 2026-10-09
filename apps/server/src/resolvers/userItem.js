@@ -165,11 +165,19 @@ const mutation = {
       identityToken: { type: GraphQLNonNull(GraphQLString) },
       notificationId: { type: GraphQLNonNull(GraphQLString) },
       timezone: { type: GraphQLString },
+      /**
+       * Apple's real name, which only the client ever sees: it comes back in
+       * the authorization response of the FIRST sign-in for an Apple ID and is
+       * never in the identity token. Optional — on every later sign-in, and on
+       * a reinstall, there is nothing to send.
+       */
+      name: { type: GraphQLString },
     },
     resolve: async (root, args) => {
       const req = {};
       req.body = {
         identityToken: args.identityToken,
+        name: args.name,
       };
 
       try {

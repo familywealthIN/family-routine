@@ -52,6 +52,9 @@ and `WeekGoalStreakContainer` — nothing imports them.
 | Sign out (shared with MobileLayout) | `apps/web-app/src/utils/signOut.js` |
 | Focus card, cascade panel, chat thread, composer, deck, sheet, top bar, drawer | `packages/ui/organisms/Routine*`, `packages/ui/organisms/UserDrawer` |
 | Routine rail / day chips, points chip | `packages/ui/molecules/RoutineRail`, `packages/ui/molecules/FocusPointsChip` |
+| Pull to refresh (phone card; both panes on tablet/desktop) | `packages/ui/molecules/PullToRefresh` |
+| Drawer's "Today on the clock" ribbon (`routineTiming` read while the drawer is open) | `apps/web-app/src/containers/RoutineTimingContainer.vue`, `apps/web-app/src/utils/routineTiming.js`, `packages/ui/molecules/TimingRibbon` |
+| Agent run state + start/end dispatch | `apps/web-app/src/store/agentStore.js` (via `plugins/agent.js` → `this.$agent`); webhook bodies read by `utils/responseBody.js` |
 | Design tokens (colours, agent stages, per-shell geometry) | `packages/ui/constants/routineFocus.js` |
 | Motion keyframes (`rn-fly`, `rn-breathe`, `rn-pop`, …) | `packages/ui/styles/routine-focus.css` |
 | Chat model calls (free OpenRouter tier) | `apps/server/src/utils/chatApi.js` |
@@ -169,6 +172,17 @@ event firing — so the thread is a record of the day, not a reconstruction.
   derived from the routine's time gap, not from the checklist length (D-20). A
   listening agent completes when that counter fills. Do not unify these two —
   the first is what the user sees, the second is what the economy counts.
+- **The end event also needs a run open today on the server**
+  (`canFireEndEvent`: end event configured, `executionStatus` running/listening,
+  `ranToday`). Start records the run open (`openRun`) *before* the start webhook
+  is called, so closing the app mid-webhook no longer strands it. When this
+  device's copy says no run, the page re-reads the agent (`fetchByTaskRef` — a
+  run another device opened); if the server still has none but this device's
+  badge from today says listening/running, `adoptLocalRun` re-opens it. On load
+  and after every pull to refresh, `fireDueEndEvents` re-runs the rule for each
+  routine still listening, so one whose counter already filled does not stay
+  stuck. A webhook's success is its status code; a body that is not valid JSON
+  is kept as text (`utils/responseBody.js`), not a failed run.
 - **`countTotal('G')`** multiplies by 4 / 2 / 1.334 depending on how far into the
   week, month and year the day sits. The drawer's donuts clamp at 100%, because
   the raw value legitimately exceeds it early in the week.
@@ -180,7 +194,8 @@ event firing — so the thread is a record of the day, not a reconstruction.
 | `packages/ui/organisms/RoutineFocusCard/RoutineFocusCard.test.js` | ring geometry per shell, tick/agent states, checklist collapse, cascade swap |
 | `packages/ui/organisms/RoutineChatThread/RoutineChatThread.test.js` | bubble alignment, event pills, live checkbox rows, proposals, quick-reply placement |
 | `apps/web-app/src/utils/__tests__/routineFocusModel.test.js` | current routine, window maths, button states, cascade grid |
-| `apps/web-app/src/pages/__tests__/routineFocusPage.test.js` | shell selection, tasklist dedupe, `firing` derivation, ticked-ring gesture, the computed graph (catches the rows ↔ focus cycle) |
+| `apps/web-app/src/pages/__tests__/routineFocusPage.test.js` | shell selection, tasklist dedupe, `firing` derivation, ticked-ring gesture, the computed graph (catches the rows ↔ focus cycle), end event after a server re-read / badge fallback, `fireDueEndEvents` |
+| `apps/web-app/src/store/__tests__/agentEndEvent.test.js` | `fireEndEvent`, today-only badges, run recorded open before the start webhook answers, `adoptLocalRun` |
 | `apps/web-app/src/containers/__tests__/RoutineChatContainer.test.js` | every intent path, proposal acceptance, event posting |
 | `apps/server/src/utils/chatApi.test.js` | free-roster enforcement, runtime discovery + ranking, model failover, intent coercion, chain-of-thought filtering, outage degradation |
 | `apps/server/src/schema/RoutineChatSchema.test.js` | chat body + per-proposal encryption round trip |

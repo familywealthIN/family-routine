@@ -16,7 +16,21 @@
         />
         <div class="rn-drawer__id">
           <div class="rn-drawer__name">{{ name || 'Routine Notes' }}</div>
-          <div class="rn-drawer__email">{{ email }}</div>
+          <!-- D/K/G as compact rings, letter inside, on one line under the
+               name so the name + rings block sits level with the avatar. -->
+          <div class="rn-drawer__scores" data-testid="drawer-scores">
+            <atom-progress-circular
+              v-for="score in scores"
+              :key="score.key"
+              :value="clamp(score.pct)"
+              :size="ringSize"
+              :rotate="-90"
+              :width="ringWidth"
+              :color="score.color"
+              :title="`${score.label} ${Math.round(score.pct)}%`"
+              :data-testid="`drawer-score-${score.key}`"
+            >{{ score.key }}</atom-progress-circular>
+          </div>
         </div>
         <i
           class="rn-mi rn-drawer__close"
@@ -26,41 +40,24 @@
         >close</i>
       </header>
 
-      <div class="rn-drawer__section-label">TODAY'S BALANCE</div>
-      <div class="rn-drawer__donuts">
-        <div v-for="score in scores" :key="score.key" class="rn-drawer__donut">
-          <div class="rn-drawer__donut-ring">
-            <svg viewBox="0 0 48 48" class="rn-drawer__donut-svg">
-              <circle cx="24" cy="24" r="21" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="5" />
-              <circle
-                cx="24" cy="24" r="21" fill="none"
-                :stroke="score.color" stroke-width="5"
-                :stroke-dasharray="DONUT_CIRCUMFERENCE"
-                :stroke-dashoffset="DONUT_CIRCUMFERENCE * (1 - clamp(score.pct) / 100)"
-                stroke-linecap="round"
-              />
-            </svg>
-            <div class="rn-drawer__donut-letter" :style="{ color: score.color }">{{ score.key }}</div>
-          </div>
-          <div class="rn-drawer__donut-pct">{{ Math.round(score.pct) }}%</div>
-          <div class="rn-drawer__donut-label">{{ score.label }}</div>
-        </div>
-      </div>
-
       <div class="rn-drawer__streak">
         <i class="rn-mi rn-drawer__streak-icon">local_fire_department</i>
         <div class="rn-drawer__streak-text">
           <div class="rn-drawer__streak-days">{{ streakDays }}-day streak</div>
           <div v-if="streakHint" class="rn-drawer__streak-hint">{{ streakHint }}</div>
         </div>
-        <!-- Fixed drawer copy is name · email · `{points} points` · `{n}-day streak`
-             (chassis.md § Drawer). The pill sits on the streak row so neither
-             number is stated twice. -->
-        <div v-if="points !== null" class="rn-drawer__points" data-testid="drawer-points">
-          <i class="rn-mi rn-drawer__points-icon">diamond</i>
-          <span>{{ pointsLabel }}</span>
-        </div>
       </div>
+
+      <!-- On time vs late, the old "Tasks in Time / out of Time" bar as a ribbon. -->
+      <molecule-timing-ribbon
+        v-if="timing"
+        :slots="timing.slots"
+        :counts="timing.counts"
+        :next-index="timing.nextIndex"
+        :skip="timing.skip"
+        :rate="timing.rate"
+        :delta="timing.delta"
+      />
 
       <nav class="rn-drawer__nav">
         <div
@@ -80,33 +77,39 @@
 </template>
 
 <script>
+import AtomProgressCircular from '../../atoms/ProgressCircular/ProgressCircular.vue';
+import MoleculeTimingRibbon from '../../molecules/TimingRibbon/TimingRibbon.vue';
 import { STIMULI, STIMULUS_ORDER } from '../../constants/routineFocus';
-
-// r=21 in a 48 viewBox.
-const DONUT_CIRCUMFERENCE = 2 * Math.PI * 21;
 
 export default {
   name: 'OrganismUserDrawer',
+  components: { AtomProgressCircular, MoleculeTimingRibbon },
   props: {
     value: { type: Boolean, default: false },
     name: { type: String, default: '' },
+    /** Accepted for callers' sake; the drawer no longer shows the email. */
     email: { type: String, default: '' },
     picture: { type: String, default: '' },
     /** { D, K, G } percentages — the same numbers the old dashboard's rings showed. */
     stimulusTotals: { type: Object, default: () => ({ D: 0, K: 0, G: 0 }) },
     streakDays: { type: Number, default: 0 },
     streakHint: { type: String, default: '' },
-    /**
-     * Spendable balance — rendered as the fixed `{points} points` copy. Null
-     * hides the pill: a caller with no balance to show must not assert zero (D-10).
-     */
+    /** Accepted for callers' sake; the drawer no longer shows points. */
     points: { type: Number, default: null },
-    /** [{ key, icon, label, route, active, color, gap }] — the chassis More list. */
+    /** [{ key, icon, label, route, active, color }] — the chassis More list. */
     navItems: { type: Array, default: () => [] },
+    /**
+     * `drawerTiming()` (web-app utils/routineTiming): today's check-ins and the
+     * week's on-time rate. Null while unknown, and the ribbon is left out.
+     */
+    timing: { type: Object, default: null },
   },
-  data() {
-    return { DONUT_CIRCUMFERENCE };
-  },
+  data: () => ({
+    // Compact identity header: the rings read as badges beside the 48px avatar
+    // rather than as a second, bigger row of content.
+    ringSize: 30,
+    ringWidth: 3,
+  }),
   watch: {
     // Escape closes the drawer like the scrim does. Listening only while open
     // keeps a closed drawer from swallowing Escape meant for anything else.
@@ -123,9 +126,6 @@ export default {
     if (typeof document !== 'undefined') document.removeEventListener('keydown', this.onKeydown);
   },
   computed: {
-    pointsLabel() {
-      return `${Math.round(this.points).toLocaleString()} points`;
-    },
     scores() {
       return STIMULUS_ORDER.map((key) => ({
         key,
@@ -146,10 +146,11 @@ export default {
     clamp(value) {
       return Math.min(Math.max(value, 0), 100);
     },
-    // `item.color` lets the list carry its own emphasis.
+    // `item.color` lets the list carry its own emphasis. Every row sits on the
+    // same rhythm: the More list's `gap` (a breather above Profile in the
+    // tablet flyout) made one gap in the phone list wider than the rest.
     rowStyle(item) {
       return {
-        marginTop: item.gap || '0px',
         background: item.active ? 'rgba(40,139,213,.08)' : 'transparent',
         color: item.color || (item.active ? '#288bd5' : 'rgba(0,0,0,.7)'),
       };
@@ -195,14 +196,16 @@ export default {
   padding-bottom: 24px;
 }
 
+/* Avatar, name + rings, and close share one centre line. */
 .rn-drawer__head {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 20px 16px;
+  padding: 18px 10px 18px 16px;
+  margin-bottom: 12px;
   background: #f4f8fc;
   /* Native WebView: the drawer runs under the status bar. */
-  padding-top: calc(20px + env(safe-area-inset-top));
+  padding-top: calc(18px + env(safe-area-inset-top));
 }
 
 .rn-drawer__avatar {
@@ -218,7 +221,23 @@ export default {
   min-width: 0;
 }
 
+.rn-drawer__scores {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.rn-drawer__scores .v-progress-circular__info {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(0, 0, 0, .7);
+}
+
+/* Pinned to the top-right corner, not the centre line, like any sheet close. */
 .rn-drawer__close {
+  align-self: flex-start;
+  margin-top: -6px;
   font-size: 22px;
   color: rgba(0, 0, 0, .55);
   cursor: pointer;
@@ -229,69 +248,10 @@ export default {
 .rn-drawer__name {
   font-size: 15px;
   font-weight: 700;
+  line-height: 20px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.rn-drawer__email {
-  font-size: 12px;
-  color: rgba(0, 0, 0, .54);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rn-drawer__section-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .5px;
-  color: rgba(0, 0, 0, .45);
-  padding: 16px 16px 8px;
-}
-
-.rn-drawer__donuts {
-  display: flex;
-  justify-content: space-around;
-  padding: 0 8px 12px;
-}
-
-.rn-drawer__donut {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.rn-drawer__donut-ring {
-  position: relative;
-  width: 64px;
-  height: 64px;
-}
-
-.rn-drawer__donut-svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.rn-drawer__donut-letter {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.rn-drawer__donut-pct {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.rn-drawer__donut-label {
-  font-size: 10px;
-  color: rgba(0, 0, 0, .54);
 }
 
 .rn-drawer__streak {
@@ -313,25 +273,6 @@ export default {
 .rn-drawer__streak-text {
   flex: 1;
   min-width: 0;
-}
-
-.rn-drawer__points {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 13px;
-  background: #288bd5;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.rn-drawer__points-icon {
-  font-size: 14px;
 }
 
 .rn-drawer__streak-days {

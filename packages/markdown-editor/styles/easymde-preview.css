@@ -45,3 +45,17 @@
         padding: 12px;
     }
 }
+
+/*
+ * 16px minimum on the text surfaces. iOS Safari/WKWebView zooms the whole page
+ * when a focused input, textarea or contenteditable renders below 16px, and
+ * EasyMDE's own stylesheet sets 14px — so tapping into the editor inside a
+ * dialog zoomed the dialog. CodeMirror's measured character cells come from
+ * `.CodeMirror`, so the size has to be set there (and on the hidden textarea
+ * that actually takes focus), not on an inner line.
+ */
+.markdown-editor .CodeMirror,
+.markdown-editor .vue-easymde-textarea,
+.markdown-editor textarea {
+    font-size: 16px;
+}

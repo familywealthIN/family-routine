@@ -89,10 +89,10 @@ describe('OrganismAppShell — phone', () => {
     expect(el.querySelector('.rn-shell__subtitle').style.fontSize).toBe('12px');
   });
 
-  it('shows the points pill and a 32px avatar inside a 40px tap target', () => {
+  it('shows the points pill and the 40px avatar filling its 40px tap target', () => {
     const { el } = render();
     expect(testid(el, 'focus-points-chip').textContent).toContain('128');
-    expect(el.querySelector('.rn-shell__avatar').style.width).toBe('32px');
+    expect(el.querySelector('.rn-shell__avatar').style.width).toBe('40px');
     expect(testid(el, 'shell-avatar').className).toContain('rn-shell__avatar-btn');
   });
 
@@ -286,15 +286,18 @@ describe('OrganismAppShell — the avatar drawer', () => {
     });
   });
 
-  it('carries the fixed copy — name, email, points, streak', () => {
+  // Owner's call: the drawer shows the name with the previous dashboard's
+  // D/K/G circles under it — no email, no points.
+  it('carries the name, the D/K/G circles and the streak — no email, no points', () => {
     const { el, shell } = render();
     shell.openDrawer();
     return Vue.nextTick().then(() => {
       const drawer = testid(el, 'user-drawer');
       expect(drawer.textContent).toContain('Alex Morgan');
-      expect(drawer.textContent).toContain('alex@routine.app');
-      expect(drawer.textContent).toContain('128 points');
       expect(drawer.textContent).toContain('6-day streak');
+      expect(drawer.textContent).not.toContain('alex@routine.app');
+      expect(drawer.textContent).not.toContain('128 points');
+      ['D', 'K', 'G'].forEach((key) => expect(testid(el, `drawer-score-${key}`)).not.toBeNull());
     });
   });
 
@@ -397,8 +400,9 @@ describe('OrganismAppShell — the main-column slot', () => {
     expect(render({ shell: 'tablet', statusBar: true }).el.classList.contains('rn-shell--no-status')).toBe(false);
     const css = fs.readFileSync(path.join(__dirname, 'AppShell.vue'), 'utf8');
     const rule = css.slice(css.indexOf('.rn-shell--tablet.rn-shell--no-status .rn-shell__head {'));
-    // The design's 4px head padding + the 24px strip it sits under, +1 to centre.
-    expect(rule.match(/padding-top:\s*(\d+)px/)[1]).toBe('29');
+    // Measured in WebKit: the middle of the 22px title's capitals lands on the
+    // logo's centre (41px). 29px, sized for a 24px line, left it ~3px low.
+    expect(rule.match(/padding-top:\s*(\d+)px/)[1]).toBe('26');
   });
 
   it('runs the tablet rail at 77px so the main column is the design 1056', () => {
@@ -433,11 +437,10 @@ describe('OrganismAppShell — unknown is not zero (drawer figures, Goals ring)'
     expect(root.classList.contains('rn-shell--no-streak')).toBe(false);
   });
 
-  it('hides exactly the figures, not the points pill', () => {
+  it('hides exactly the unknown figures: the D/K/G circles and the streak row', () => {
     const css = fs.readFileSync(path.join(__dirname, 'AppShell.vue'), 'utf8');
-    expect(css).toMatch(/\.rn-shell--no-balance \.rn-drawer__donuts/);
-    expect(css).toMatch(/\.rn-shell--no-streak \.rn-drawer__streak-text/);
-    expect(css).not.toMatch(/\.rn-shell--no-\w+ \.rn-drawer__points/);
+    expect(css).toMatch(/\.rn-shell--no-balance \.rn-drawer__scores/);
+    expect(css).toMatch(/\.rn-shell--no-streak \.rn-drawer__streak \{/);
   });
 
   it('opens the drawer without throwing when nothing was supplied', () => {

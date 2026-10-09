@@ -12,7 +12,7 @@
 // them). Stub it — it plays no part in searching.
 jest.mock('vue-radar', () => ({ __esModule: true, default: {} }));
 jest.mock('vue-easymde', () => ({ __esModule: true, default: {} }));
-jest.mock('../../containers/GoalCreationContainer.vue', () => ({
+jest.mock('../../containers/GoalEditSheetContainer.vue', () => ({
   __esModule: true,
   default: { render: (h) => h('div') },
 }));

@@ -136,10 +136,10 @@ const page = (over = {}) => {
     goalIds: ['y1', 'y2', 'y3'],
     sheet: null,
     draft: null,
-    draftText: '',
     menu: null,
     editorOpen: false,
     editItem: null,
+    editorReadonly: false,
     chatText: '',
     toast: {
       title: '', sub: '', icon: 'check_circle', color: '#4CAF50', seq: 0,
@@ -158,7 +158,6 @@ const page = (over = {}) => {
         create: (d) => Promise.resolve({ id: 'new', body: d.body }),
         createMany: (drafts) => Promise.resolve(drafts.map((d, i) => ({ id: `n${i}`, ...d }))),
       },
-      update: { rename: () => Promise.resolve({ id: 'w1' }) },
       remove: { remove: () => Promise.resolve({ id: 'w1' }) },
     },
     spies: {
@@ -273,7 +272,6 @@ describe('YearGoalsTime — the create sheet locks the parent', () => {
     expect(vm.sheet).toBe('create');
     expect(vm.draft.goalRef).toBe('y1');
     expect(vm.draft.parentLabel).toBe('Ship v2 of Routine Notes');
-    expect(vm.draftText).toBe('');
   });
 
   it('locks a week goal to the focused month’s goal', () => {
@@ -342,14 +340,47 @@ describe('YearGoalsTime — the create sheet locks the parent', () => {
     expect(vm.toast.title).toBe('Day goal added');
     expect(vm.spies.refetched).toHaveLength(1);
   });
+});
 
-  it('the rename form never creates — a create draft belongs to the sheet', async () => {
+describe('YearGoalsTime — a month that is over takes no new goals', () => {
+  it('refuses every add in a past month and says why', async () => {
+    const vm = page({ selectedMonth: SEP - 1 });
+    vm.openCreate('week');
+    expect(vm.sheet).toBeNull();
+    expect(vm.toast.title).toBe('August is over');
+    vm.onAddDay({ id: 'wB' });
+    expect(vm.sheet).toBeNull();
+    const done = jest.fn();
+    await vm.onCreateWeeksFromChat({ bodies: ['A week'], done });
+    expect(done).toHaveBeenCalledWith([]);
+  });
+
+  it('opens a past month’s goals view only, from the menu and the day glyph', () => {
+    const vm = page({ selectedMonth: SEP });
+    Object.defineProperty(vm, 'focusedMonth', { get: () => ({ ...vm.tree.months[SEP], isPast: true }) });
+    vm.openMenu({ kind: 'week', week: vm.tree.months[SEP].weeks[1] });
+    expect(vm.menuItems[0]).toMatchObject({ key: 'edit', icon: 'visibility', label: 'View week goal' });
+    vm.onMenuSelect('edit');
+    expect(vm.editorOpen).toBe(true);
+    expect(vm.editorReadonly).toBe(true);
+    expect(vm.editorReadonlyNote).toBe('View only · September is over');
+    vm.closeEditor();
+    expect(vm.editorReadonly).toBe(false);
+  });
+
+  it('keeps Edit for a current month', () => {
     const vm = page();
-    vm.openCreate('month');
-    vm.draftText = 'Retention push';
-    await vm.submitDraft();
-    expect(vm.sheet).toBe('create');
-    expect(vm.spies.refetched).toHaveLength(0);
+    vm.openMenu({ kind: 'week', week: vm.tree.months[SEP].weeks[1] });
+    expect(vm.menuItems[0]).toMatchObject({ icon: 'edit', label: 'Edit week goal' });
+    vm.onMenuSelect('edit');
+    expect(vm.editorReadonly).toBe(false);
+  });
+
+  it('offers no Add in a past month’s menu', () => {
+    const vm = page({ selectedMonth: SEP - 1 });
+    vm.menu = { kind: 'month', item: { id: 'mAug' } };
+    vm.sheet = 'menu';
+    expect(vm.menuItems.map((i) => i.key)).toEqual(['edit', 'delete']);
   });
 });
 
@@ -362,57 +393,19 @@ describe('YearGoalsTime — edit and delete live behind the ⋮', () => {
     expect(vm.menuItems[2].color).toBe('#d32f2f');
   });
 
-  it('turns Edit into the same sheet, pre-filled and still parent-locked', () => {
+  it('edits a week or month goal in the same goal sheet as a day goal, from its COMPLETE record', () => {
     const vm = page();
     vm.openMenu({ kind: 'week', week: vm.tree.months[SEP].weeks[1] });
     vm.onMenuSelect('edit');
-    expect(vm.sheet).toBe('create');
-    expect(vm.draft.edit).toBe('wB');
-    expect(vm.draftText).toBe('Ship the dashboard');
-    expect(vm.draft.parentLabel).toBe('Launch mobile dashboard');
-  });
+    expect(vm.sheet).toBeNull();
+    expect(vm.editorOpen).toBe(true);
+    expect(vm.editItem).toMatchObject({ id: 'wB', period: 'week' });
 
-  it('renames from the COMPLETE record, so tags, contribution, reward and deadline survive', async () => {
-    const STORED = {
-      tags: ['priority:plan'], contribution: 'Why it matters', reward: 'cake', deadline: '30-10-2026',
-    };
-    const tree = buildYearGoal({
-      id: 'y1',
-      body: 'Year',
-      period: 'year',
-      date: '31-12-2026',
-      milestones: [{
-        id: 'mSep',
-        period: 'month',
-        date: '30-09-2026',
-        body: 'Month',
-        ...STORED,
-        milestones: [{
-          id: 'wB', period: 'week', date: '11-09-2026', body: 'Week', goalRef: 'mSep', ...STORED,
-        }],
-      }],
-    }, TODAY);
-    const renamed = [];
-    const vm = page({ tree });
-    vm.$refs.update.rename = (item, body) => {
-      renamed.push({ item, body });
-      return Promise.resolve({ id: item.id });
-    };
-
+    vm.closeEditor();
     vm.openMenu({ kind: 'month', month: vm.tree.months[SEP] });
     vm.onMenuSelect('edit');
-    vm.draftText = 'Month renamed';
-    await vm.submitDraft();
-
-    vm.openMenu({ kind: 'week', week: vm.tree.months[SEP].weeks[0] });
-    vm.onMenuSelect('edit');
-    vm.draftText = 'Week renamed';
-    await vm.submitDraft();
-
-    expect(renamed.map((r) => r.item.id)).toEqual(['mSep', 'wB']);
-    renamed.forEach(({ item }) => expect(item).toMatchObject(STORED));
-    expect(renamed[0].item).toMatchObject({ period: 'month', date: '30-09-2026' });
-    expect(renamed[1].item).toMatchObject({ period: 'week', date: '11-09-2026', goalRef: 'mSep' });
+    expect(vm.editorOpen).toBe(true);
+    expect(vm.editItem).toMatchObject({ id: 'mSep', period: 'month', date: '30-09-2026' });
   });
 
   it('confirms a delete and says what else goes with it', () => {
@@ -709,22 +702,6 @@ describe('YearGoalsTime — a day goal opens the real editor', () => {
     expect(vm.sheet).toBeNull();
   });
 
-  it('keeps month and week goals on the title-only sheet', () => {
-    const vm = page();
-    vm.openMenu({ kind: 'week', week: vm.tree.months[SEP].weeks[1] });
-    vm.onMenuSelect('edit');
-    expect(vm.sheet).toBe('create');
-    expect(vm.draft.edit).toBe('wB');
-    expect(vm.editorOpen).toBe(false);
-
-    const other = page();
-    other.openMenu({ kind: 'month', month: other.tree.months[SEP] });
-    other.onMenuSelect('edit');
-    expect(other.sheet).toBe('create');
-    expect(other.draft.edit).toBe('mSep');
-    expect(other.editorOpen).toBe(false);
-  });
-
   it('creating a day goal still goes through the parent-locked sheet', () => {
     const vm = page();
     vm.onAddDay({ id: 'wB' });
@@ -810,18 +787,18 @@ describe('YearGoalsTime — a day goal opens the real editor', () => {
 describe('YearGoalsTime — the editor is the dashboard’s, not a fork', () => {
   const dir = path.join(__dirname, '..');
   const source = fs.readFileSync(path.join(dir, 'YearGoalsTime.vue'), 'utf8');
-  const dialog = fs.readFileSync(
-    path.join(dir, '..', 'containers', 'GoalEditDialogContainer.vue'), 'utf8',
-  );
 
-  it('mounts the shared dialog container', () => {
-    expect(source).toContain('<goal-edit-dialog-container');
-    expect(source).toContain("import GoalEditDialogContainer from '../containers/GoalEditDialogContainer.vue'");
+  it('mounts Home’s goal sheet as the day editor', () => {
+    expect(source).toContain('<goal-edit-sheet-container');
+    expect(source).toContain("import GoalEditSheetContainer from '../containers/GoalEditSheetContainer.vue'");
+    expect(source).not.toContain('goal-edit-dialog-container');
   });
 
-  it('hands it no `shell` — a fullscreen dialog has no per-shell geometry', () => {
-    const mount = source.slice(source.indexOf('<goal-edit-dialog-container'));
-    expect(mount.slice(0, mount.indexOf('/>'))).not.toContain(':shell');
+  it('hands the sheet its shell and rolls its toggle up the tree', () => {
+    const mount = source.slice(source.indexOf('<goal-edit-sheet-container'));
+    const tag = mount.slice(0, mount.indexOf('/>'));
+    expect(tag).toContain(':shell="shell"');
+    expect(tag).toContain('applyTick(');
   });
 
   it('takes the day row’s edit glyph off the read container, beside the tick', () => {
@@ -842,21 +819,17 @@ describe('YearGoalsTime — the editor is the dashboard’s, not a fork', () => 
     expect(tree.slice(0, tree.indexOf('>'))).toContain('@retry="refetchGoalList"');
   });
 
-  it('keeps the delete behind the ⋮ and its confirmation, never in the editor', () => {
-    const mount = source.slice(source.indexOf('<goal-edit-dialog-container'));
-    expect(mount.slice(0, mount.indexOf('/>'))).not.toContain('@delete');
+  it('keeps the ⋮ delete behind its confirmation', () => {
     expect(source).toContain("if (key === 'confirm-delete') return this.removeGoal(item)");
   });
 
-  it('keeps GoalPeriodForm for the month and week goals it still owns', () => {
-    expect(source).toContain('<goal-period-form');
-    expect(source).toContain("import GoalPeriodForm from '@routine-notes/ui/molecules/GoalPeriodForm/GoalPeriodForm.vue'");
+  it('adds and edits every level in the goal sheet, never a separate rename form', () => {
+    expect(source).not.toContain('<goal-period-form');
+    expect(source).toContain('<goal-edit-sheet-container');
+    expect(source).toContain(':routines="routines"');
   });
 
-  it('adds no mutation of its own — the save is GoalCreationContainer’s', () => {
-    // Same path as DashBoard and the Goals page: the dialog mounts the dashboard's
-    // own GoalCreationContainer, which calls `$goals`. The page declares neither.
-    expect(dialog).toContain("import GoalCreation from './GoalCreationContainer.vue'");
+  it('adds no mutation of its own — the sheet’s container owns the writes', () => {
     expect(source).not.toContain('this.$goals');
     expect(source).not.toContain('gql`');
     expect(source).not.toContain('this.$apollo');

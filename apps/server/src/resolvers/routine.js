@@ -65,8 +65,22 @@ async function getSkipDayCount(email) {
   return skipDayCount;
 }
 
+/**
+ * Hours between a routine item and the next one, as a real number.
+ *
+ * This feeds D.splitRate, and `D.splitRate / K.splitRate` (K is always 2, i.e.
+ * "one task per two hours") is the number of day goal-items the task needs
+ * before its counter reads full. So an error here silently changes how many
+ * goals a task demands.
+ *
+ * It used to subtract only the hour field - `'06:40'` and `'09:00'` became
+ * 9 - 6 = 3 - which rounded a 2h20m gap up to 3h. That gave `round(3/2) = 2`
+ * slots for a task the user had given one goal, so the card sat on "1/2"
+ * forever and the agent end event (which waits for completed >= total) could
+ * never fire. Minutes are counted now: 2.33h -> `round(1.17) = 1`.
+ */
 function timeOfDayInHours(time) {
-  const [hour, minute] = time.split(':');
+  const [hour, minute] = String(time).split(':');
 
   return Number(hour) + (Number(minute || 0) / 60);
 }
@@ -323,6 +337,14 @@ const query = {
             task.ticked = foundTask.ticked;
             task.redeemed = foundTask.redeemed;
             task.passedPoints = foundTask.passedPoints;
+            // splitRate is a property of the schedule, not of the day: it is
+            // recomputed from the current times on every read, while `earned`
+            // (the only part the day owns) is carried over. Without this, every
+            // routine document written before the timeDiff fix would keep its
+            // stale hour-only splitRate forever and still demand the wrong
+            // number of goals — so this heals old days instead of needing a
+            // migration.
+            const fresh = buildStimuliForRoutineItem(task._id, tasklist);
             task.stimuli = foundTask.stimuli && foundTask.stimuli.length
               ? refreshStimuliSplitRates(foundTask.stimuli, task._id, tasklist)
               : buildStimuliForRoutineItem(task._id, tasklist);

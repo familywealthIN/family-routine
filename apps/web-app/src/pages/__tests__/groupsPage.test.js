@@ -222,7 +222,7 @@ describe('Groups — the 10-member cap counts pending invites', () => {
     page.onMembers(roster(10));
     await Vue.nextTick();
 
-    expect(q(el, 'groups-invite-button').className).toContain('rn-groups__invite-btn--full');
+    expect(q(el, 'groups-invite-button').className).toContain('rn-shell__act--muted');
     expect(page.subLabel).toBe('Group is full · 10 members max');
     expect(q(el, 'members-stub').dataset.full).toBe('true');
   });
@@ -335,7 +335,7 @@ describe('Groups — the identity read failed', () => {
     const { el, page } = await failed();
 
     expect(page.subLabel).toBe('Could not load your group');
-    expect(q(el, 'groups-invite-button').className).toContain('rn-groups__invite-btn--full');
+    expect(q(el, 'groups-invite-button').className).toContain('rn-shell__act--muted');
   });
 
   it('does not open the invite sheet, and retries the read instead', async () => {

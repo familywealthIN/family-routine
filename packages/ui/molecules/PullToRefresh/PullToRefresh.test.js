@@ -56,6 +56,22 @@ describe('MoleculePullToRefresh', () => {
     expect(events).toEqual([]);
   });
 
+  // Home opens its card scrolled to the bottom of the chat. A drag down scrolls
+  // it back up, and once it reaches the top the same drag becomes the pull.
+  it('turns a scroll into a pull when the content reaches its top mid-drag', () => {
+    const { vm, inner, scroller, events } = mount();
+    let top = 40;
+    Object.defineProperty(scroller, 'scrollTop', { get: () => top, configurable: true });
+    vm.onTouchStart(touch(inner, 0, 0));
+    vm.onTouchMove(touch(inner, 0, 40));
+    expect(vm.pulling).toBe(false);
+    top = 0;
+    [80, 200, 320].forEach((y) => vm.onTouchMove(touch(inner, 0, y)));
+    expect(vm.armed).toBe(true);
+    vm.onTouchEnd();
+    expect(events).toEqual(['refresh']);
+  });
+
   it('ignores a horizontal drag (the deck swipe) and an upward one', () => {
     const { vm, inner, events } = mount();
     pull(vm, inner, 300, 40);

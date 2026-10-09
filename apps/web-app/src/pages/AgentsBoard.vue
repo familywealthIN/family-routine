@@ -22,8 +22,18 @@
     @sign-out="onSignOut"
   >
     <template v-slot:header-actions>
-      <button type="button" class="rn-agents__new" data-testid="agents-new" @click="openNew">
-        <i class="rn-mi rn-agents__new-glyph">add</i>New agent
+      <!-- Same rule as every header action: the + glyph alone on phone, the
+           label beside it where there is room. -->
+      <button
+        type="button"
+        class="rn-shell__act rn-shell__act--primary"
+        :class="isPhone ? 'rn-shell__act--icon' : 'rn-shell__act--label'"
+        title="New agent"
+        data-testid="agents-new"
+        @click="openNew"
+      >
+        <i class="rn-mi rn-shell__act-glyph">add</i>
+        <span v-if="!isPhone">New agent</span>
       </button>
     </template>
 
@@ -243,18 +253,25 @@ export default {
 
 /* --- tablet + desktop: the 2:3 split ----------------------------------- */
 
+/* Same as Goals and Routines: the left pane (the list) stays put while the
+   page scrolls the detail. Sticky rather than a height: 100% chain, which iPad
+   WebKit can leave unresolved, and which overflow: hidden then cut off. The
+   max-height (viewport less the shell's head and padding) keeps a long list
+   scrollable inside its pane. */
 .rn-agents--tablet,
 .rn-agents--desktop {
   flex-direction: row;
+  align-items: flex-start;
   gap: 12px;
-  height: 100%;
-  overflow: hidden;
 }
 
 .rn-agents--tablet .rn-agents__list,
 .rn-agents--desktop .rn-agents__list {
   flex: 2 1 0;
-  min-height: 0;
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 120px);
+  max-height: calc(100dvh - 120px);
   overflow-y: auto;
   scrollbar-width: none;
   /* Room for the selected card's 2px inset ring, which would otherwise be
@@ -271,47 +288,15 @@ export default {
 .rn-agents__pane {
   flex: 3 1 0;
   min-width: 0;
-  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
 .rn-agents__card {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: none;
   background: #fff;
   border-radius: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .08), 0 2px 4px -1px rgba(0, 0, 0, .05);
   padding: 8px 20px 20px;
   animation: rn-fade .25s ease;
-}
-
-.rn-agents__card::-webkit-scrollbar {
-  display: none;
-}
-
-/* --- header action ----------------------------------------------------- */
-
-.rn-agents__new {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 36px;
-  padding: 0 14px 0 10px;
-  border: 0;
-  border-radius: 18px;
-  background: #288bd5;
-  color: #fff;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.rn-agents__new-glyph {
-  font-size: 18px;
 }
 </style>

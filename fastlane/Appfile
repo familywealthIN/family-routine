@@ -1,0 +1,11 @@
+# Shared identity for both stores. One iOS binary covers iPhone and iPad, and is
+# offered on Apple Silicon Macs via the "Designed for iPad" availability option
+# in App Store Connect — so a single app record covers every Apple target.
+
+app_identifier('com.routine.note')
+team_id('NJ3L9A8F3R')
+
+for_platform :android do
+  package_name('com.routine.note')
+  json_key_file(ENV['PLAY_JSON_KEY_PATH']) if ENV['PLAY_JSON_KEY_PATH']
+end

@@ -12,7 +12,9 @@
     needs attention, history - the design's order. Tablet and desktop use the
     2-column `minmax(0,3fr) minmax(0,2fr)` grid, where the two columns scroll as
     independent flex stacks (a single CSS grid would force the rows of the left
-    and right stacks to line up, which the design does not do).
+    and right stacks to line up, which the design does not do). The `timing`
+    slot (On the clock) is a full-width row under both stacks, and its slot
+    props say `wide` there.
 
     The Day/Week/Month/Year switch lives in the AppShell HEADER on tablet and
     desktop (a fixed 340px next to the title), so the page renders it into the
@@ -63,6 +65,11 @@
         </section>
 
         <ProgressBarGroup class="rn-pcard" v-bind="barProps" />
+
+        <!-- On time vs late: the page's own read (`routineTiming`), not the report's. -->
+        <div v-if="$scopedSlots.timing || $slots.timing" class="rn-pcard">
+          <slot name="timing"></slot>
+        </div>
 
         <RoutineRankCard class="rn-pcard" v-bind="goodProps" />
 
@@ -147,6 +154,16 @@
           <span class="rn-prog__history-label">View your routine history</span>
           <i class="rn-mi rn-prog__history-chevron">chevron_right</i>
         </a>
+      </div>
+
+      <!--
+        On the clock spans both columns: in the 2fr column its bars, weekday
+        tiles and routine rows were squeezed, and it made that column twice the
+        height of the other. Full width, it lays its routine list on the same
+        3fr / 2fr gutter as the cards above (`wide`).
+      -->
+      <div v-if="$scopedSlots.timing || $slots.timing" class="rn-pcard rn-prog__wide">
+        <slot name="timing" :wide="true"></slot>
       </div>
     </div>
   </div>
@@ -382,6 +399,11 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+}
+
+.rn-prog__wide {
+  grid-column: 1 / -1;
   min-width: 0;
 }
 

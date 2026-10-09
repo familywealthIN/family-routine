@@ -7,7 +7,12 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.7.2'
+        // 8.13 is the first AGP that supports compiling against API 36, which
+        // Google Play has required for new uploads since 2026-08-31. Deliberately
+        // not AGP 9: the Capacitor 7 plugin modules under node_modules still use
+        // `lintOptions` and a library-level `targetSdkVersion`, both of which AGP 9
+        // removes. Capacitor 8 itself ships AGP 8.13.0, so this matches upstream.
+        classpath 'com.android.tools.build:gradle:8.13.0'
         classpath 'com.google.gms:google-services:4.4.2'
 
         // NOTE: Do not place your application dependencies here; they belong
@@ -25,5 +30,5 @@ allprojects {
 }
 
 task clean(type: Delete) {
-    delete rootProject.buildDir
+    delete rootProject.layout.buildDirectory
 }

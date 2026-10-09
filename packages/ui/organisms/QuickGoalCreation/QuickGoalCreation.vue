@@ -12,6 +12,12 @@
     a task line, the locked routine chip, a bordered PARENT GOAL picker, the
     Related Goals timeline, the one-line hint, and two equal 44px buttons.
 
+    It is also where the classic dashboard's SECOND dialog went. There, a check
+    circle on a routine that already had a day goal item opened a goal-action
+    modal instead of this form, so the user could see the item Start Task would
+    complete and the agent would be handed. That is the `lockedItem` block below:
+    one sheet, which either has an item locked in or does not.
+
     `sheet` is the switch, and it is off by default: the classic dashboard's
     quick-task dialog and `QuickTaskModalContainer` already supply their own
     `v-dialog`, and nesting a second overlay inside one would stack two scrims.
@@ -64,7 +70,7 @@
             class="rn-qg__input"
             type="text"
             autocomplete="off"
-            placeholder="Type your task"
+            :placeholder="bodyPlaceholder"
             data-testid="quick-goal-body"
             @focus="bodyFocused = true"
             @blur="bodyFocused = false"
@@ -103,6 +109,59 @@
           >lock</i>
         </div>
 
+        <!--
+          The goal item this routine is already locked in on.
+
+          The classic dashboard branched to a SECOND dialog here
+          (`DashBoard.openGoalActionModal`): tapping the check circle on a
+          routine that already had a day goal item opened a goal-action modal
+          showing that item plus Start Task / Start Agent / Build Agent, and only
+          a routine with nothing on it got the create form. The branch is folded
+          into this one sheet rather than restored as a second modal — the sheet
+          already carries both actions, so the only thing it was missing is the
+          item itself.
+
+          It matters because of the agent: `{goalId}` in an agent's start URL
+          resolves to the routine's FIRST day goal item, so Start Agent acts on
+          exactly this row. With it off-screen there was no way to tell what was
+          about to be dispatched, which is what the lock and the overline say.
+
+          Plain text, not markdown: the dashboard ran the contribution through
+          `vue-markdown`, and `packages/ui` carries no markdown dependency.
+        -->
+        <div
+          v-if="lockedItem"
+          class="rn-qg__item"
+          data-testid="quick-goal-locked-item"
+        >
+          <div class="rn-qg__item-head">
+            <span class="rn-qg__item-label">{{ lockedItemLabel }}</span>
+            <i
+              class="rn-mi rn-qg__item-lock"
+              :title="lockedItemLockTitle"
+              :aria-label="lockedItemLockTitle"
+              data-testid="quick-goal-item-lock"
+            >lock</i>
+          </div>
+          <div
+            class="rn-qg__item-body"
+            :class="{ 'rn-qg__item-body--done': !!lockedItem.isComplete }"
+            data-testid="quick-goal-locked-item-body"
+          >{{ lockedItem.body }}</div>
+          <div
+            v-if="lockedItem.contribution"
+            class="rn-qg__item-note"
+            data-testid="quick-goal-locked-item-note"
+          >{{ lockedItem.contribution }}</div>
+        </div>
+
+        <!--
+          The parent-goal picker, drawn as one of the AI search modal's toolbar
+          selects rather than as a 52px two-line row of its own: this is the same
+          choice that modal's `flag` select makes, and the two sit one tap apart
+          on the same screen. One line, so the caption above the value goes — the
+          glyph says which link it is, exactly as it does there.
+        -->
         <div
           class="rn-qg__pick"
           :class="{ 'rn-qg__pick--on': pickerOpen }"
@@ -111,15 +170,12 @@
           data-testid="quick-goal-goal-picker"
           @click="togglePicker"
         >
-          <i class="rn-mi rn-qg__pick-glyph">timeline</i>
-          <div class="rn-qg__pick-text">
-            <div class="rn-qg__pick-label">{{ parentGoalLabel }}</div>
-            <div
-              class="rn-qg__pick-value"
-              :class="{ 'rn-qg__pick-value--empty': !selectedGoalBody }"
-              data-testid="quick-goal-goal-value"
-            >{{ selectedGoalBody || noParentGoal }}</div>
-          </div>
+          <i class="rn-mi rn-qg__pick-glyph">flag</i>
+          <div
+            class="rn-qg__pick-value"
+            :class="{ 'rn-qg__pick-value--empty': !selectedGoalBody }"
+            data-testid="quick-goal-goal-value"
+          >{{ selectedGoalBody || noParentGoal }}</div>
           <i class="rn-mi rn-qg__pick-chev">{{ pickerOpen ? 'expand_less' : 'expand_more' }}</i>
         </div>
 
@@ -381,11 +437,6 @@ export default {
       type: String,
       default: '',
     },
-    /** Period caption on the picker, e.g. "WEEK OF 6 – 12 SEP". */
-    parentGoalPeriodLabel: {
-      type: String,
-      default: '',
-    },
     /**
      * Whether Start Task may start the routine with the input left empty.
      *
@@ -399,6 +450,18 @@ export default {
     allowStartWithoutTask: {
       type: Boolean,
       default: false,
+    },
+    /**
+     * The goal item the routine is already locked in on — `{ body, contribution,
+     * isComplete }`, the routine's FIRST day goal item, which is the one
+     * `{goalId}` resolves to when an agent starts.
+     *
+     * `null` means the routine has nothing on it yet, and the sheet is the
+     * create form it has always been.
+     */
+    lockedItem: {
+      type: Object,
+      default: null,
     },
     /**
      * How many open goal items the routine already has.
@@ -472,10 +535,21 @@ export default {
       if (!name) return null;
       return { name, time: (task && task.time) || this.routineTime || '' };
     },
-    parentGoalLabel() {
-      return this.parentGoalPeriodLabel
-        ? `PARENT GOAL · ${this.parentGoalPeriodLabel}`
-        : 'PARENT GOAL';
+    /** "Type your task" is wrong once there is already one; this adds to it. */
+    bodyPlaceholder() {
+      return this.lockedItem ? 'Add another task' : 'Type your task';
+    },
+    /**
+     * Names the locked item for what it is. With an agent bound it is also the
+     * dispatch target, and saying so is the whole point of showing the row.
+     */
+    lockedItemLabel() {
+      return this.agentAssigned ? 'LOCKED IN · AGENT TARGET' : 'LOCKED IN';
+    },
+    lockedItemLockTitle() {
+      return this.agentAssigned
+        ? 'The agent runs against this goal item'
+        : 'Already on this routine';
     },
     /**
      * The picker's rows: the same list the Vuetify select used to be handed, so
@@ -830,16 +904,67 @@ export default {
   color: rgba(0, 0, 0, .35);
 }
 
-/* PARENT GOAL picker: a bordered row that expands a bordered list. */
+/* The goal item already locked in — the bordered-card grammar the design uses
+   for Related Goals, so the two read as one family rather than two inventions. */
+.rn-qg__item {
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, .08);
+  border-radius: 12px;
+}
+
+.rn-qg__item-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rn-qg__item-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: rgba(0, 0, 0, .45);
+}
+
+.rn-qg__item-lock {
+  font-size: 16px;
+  color: rgba(0, 0, 0, .35);
+}
+
+.rn-qg__item-body {
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: rgba(0, 0, 0, .87);
+}
+
+.rn-qg__item-body--done {
+  color: rgba(0, 0, 0, .45);
+  text-decoration: line-through;
+}
+
+.rn-qg__item-note {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(0, 0, 0, .54);
+}
+
+/* PARENT GOAL picker, to the AI search modal's toolbar-select spec:
+   36px tall, r12, #f5f5f5 on a #e8e8e8 hairline, 12px text and 14px glyphs.
+   See `.prompt-toolbar .selector-item` in AiSearchModal.vue — if those numbers
+   move, these follow. */
 .rn-qg__pick {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 52px;
-  padding: 6px 12px;
-  border: 1px solid rgba(0, 0, 0, .12);
+  gap: 6px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid #e8e8e8;
   border-radius: 12px;
-  background: #fff;
+  background: #f5f5f5;
   cursor: pointer;
 }
 
@@ -847,25 +972,17 @@ export default {
   border-color: #288bd5;
 }
 
-.rn-qg__pick-glyph {
-  font-size: 20px;
-  color: #FF9800;
-}
-
-.rn-qg__pick-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.rn-qg__pick-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .5px;
-  color: rgba(0, 0, 0, .45);
+.rn-qg__pick-glyph,
+.rn-qg__pick-chev {
+  flex: 0 0 auto;
+  font-size: 14px;
+  color: rgba(0, 0, 0, .5);
 }
 
 .rn-qg__pick-value {
-  font-size: 14px;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -873,22 +990,20 @@ export default {
 }
 
 .rn-qg__pick-value--empty {
-  color: rgba(0, 0, 0, .38);
+  color: rgba(0, 0, 0, .45);
   font-weight: 500;
 }
 
-.rn-qg__pick-chev {
-  font-size: 22px;
-  color: rgba(0, 0, 0, .5);
-}
-
+/* The open list is the menu that select drops: its own white surface, lifted
+   off the sheet, rather than a panel tinted like the closed pill. */
 .rn-qg__opts {
-  margin-top: -4px;
+  margin-top: 2px;
   max-height: 210px;
   overflow-y: auto;
   padding: 4px;
   border: 1px solid rgba(0, 0, 0, .08);
   border-radius: 12px;
+  background: #fff;
   box-shadow: 0 6px 16px rgba(0, 0, 0, .08);
 }
 

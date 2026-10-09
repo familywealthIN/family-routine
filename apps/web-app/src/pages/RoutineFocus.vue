@@ -1,5 +1,5 @@
 <template>
-  <div class="rn-home" :class="`rn-home--${shell}`">
+  <div class="rn-home" :class="[`rn-home--${shell}`, { 'rn-home--typing': composerFocused }]">
     <!-- ================= PHONE ================= -->
     <template v-if="shell === 'phone'">
       <routine-top-bar
@@ -43,12 +43,10 @@
         <!-- Pull down from the top of the card to refetch the day. -->
         <pull-to-refresh :refreshing="refreshing" @refresh="pullRefresh">
           <routine-deck
-            :peeks="deckPeeks"
             :has-prev="focusIndex > 0"
             :has-next="focusIndex < rows.length - 1"
             @prev="focusPrev"
             @next="focusNext"
-            @focus-routine="setFocus"
           >
             <routine-focus-card v-if="focusRow" ref="card" v-bind="cardProps" v-on="cardHandlers">
               <template #thread>
@@ -69,8 +67,10 @@
           v-model="chatText"
           variant="phone"
           :placeholder="composerPlaceholder"
+          :disabled="chatDisabled"
           @send="sendChat"
           @focus="onComposerFocus(true)"
+          @blur="onComposerBlur"
           @add-task="openAiSearch"
         />
       </div>
@@ -79,7 +79,10 @@
            v-bottom-nav pinned with position: fixed to the real viewport bottom.
            An in-flow bar under a 100vh/100dvh column fell off-screen in the
            iPhone standalone PWA, whose vh units disagree with the window. -->
+      <!-- Hidden while the chat input has focus, so the input sits right on
+           the keyboard instead of a tab bar's height above it. -->
       <v-bottom-nav
+        v-show="!composerFocused"
         :value="true"
         :active="activeNavRoute"
         fixed
@@ -188,58 +191,72 @@
             @focus-routine="setFocus"
           />
 
-          <div class="rn-home__content">
-            <routine-focus-card v-if="focusRow" ref="card" v-bind="cardProps" v-on="cardHandlers" />
-            <div v-else class="rn-home__empty rn-home__empty--pane">
-              <p>{{ emptyMessage }}</p>
-              <button type="button" class="rn-home__empty-btn" @click="goTo('/settings')">
-                Open Routine Settings
-              </button>
-            </div>
-
-            <section v-if="focusRow" class="rn-home__chat-pane">
-              <header class="rn-home__chat-head">
-                <div
-                  class="rn-home__chat-avatar"
-                  :style="{ background: focusRow.stimulusTint, color: focusRow.stimulusColor }"
-                >
-                  <i class="rn-mi">forum</i>
-                </div>
-                <div class="rn-home__chat-head-text">
-                  <div class="rn-home__chat-name">{{ focusRow.name }}</div>
-                  <div class="rn-home__chat-sub">{{ chatSubline }}</div>
-                </div>
-              </header>
-              <div class="rn-home__chat-body rn-hidescroll">
-                <routine-chat-container v-bind="chatProps" ref="chat" v-on="chatHandlers" />
+          <!-- The installed app has no browser reload: pull down on either pane. -->
+          <pull-to-refresh :refreshing="refreshing" @refresh="pullRefresh">
+            <div class="rn-home__content">
+              <routine-focus-card v-if="focusRow" ref="card" v-bind="cardProps" v-on="cardHandlers" />
+              <div v-else class="rn-home__empty rn-home__empty--pane">
+                <p>{{ emptyMessage }}</p>
+                <button type="button" class="rn-home__empty-btn" @click="goTo('/settings')">
+                  Open Routine Settings
+                </button>
               </div>
-              <routine-composer
-                v-model="chatText"
-                :variant="shell"
-                :placeholder="composerPlaceholder"
-                @send="sendChat"
-                @focus="onComposerFocus(false)"
-                @add-task="openAiSearch"
-              />
-            </section>
-          </div>
+
+              <section v-if="focusRow" class="rn-home__chat-pane">
+                <header class="rn-home__chat-head">
+                  <div
+                    class="rn-home__chat-avatar"
+                    :style="{ background: focusRow.stimulusTint, color: focusRow.stimulusColor }"
+                  >
+                    <i class="rn-mi">forum</i>
+                  </div>
+                  <div class="rn-home__chat-head-text">
+                    <div class="rn-home__chat-name">{{ focusRow.name }}</div>
+                    <div class="rn-home__chat-sub">{{ chatSubline }}</div>
+                  </div>
+                </header>
+                <div class="rn-home__chat-body rn-hidescroll">
+                  <routine-chat-container v-bind="chatProps" ref="chat" v-on="chatHandlers" />
+                </div>
+                <routine-composer
+                  v-model="chatText"
+                  :variant="shell"
+                  :placeholder="composerPlaceholder"
+                  :disabled="chatDisabled"
+                  @send="sendChat"
+                  @focus="onComposerFocus(false)"
+                  @add-task="openAiSearch"
+                />
+              </section>
+            </div>
+          </pull-to-refresh>
         </div>
       </template>
     </app-shell-container>
 
     <!-- ================= SHARED OVERLAYS ================= -->
-    <user-drawer
-      :value="drawerOpen"
-      :name="userName"
-      :email="userEmail"
-      :picture="profileImage"
-      :stimulus-totals="stimulusTotals"
-      :streak-days="streakDays"
-      :streak-hint="streakHint"
-      :nav-items="drawerNavItems"
-      @input="drawerOpen = $event"
-      @navigate="onDrawerNavigate"
-    />
+    <!-- The on-time ribbon is read each time the drawer opens, so it has the latest ticks. -->
+    <routine-timing-container
+      v-slot="{ timing }"
+      :start-date="timingWindow.startDate"
+      :end-date="timingWindow.endDate"
+      :today="todayDate"
+      :paused="!drawerOpen"
+    >
+      <user-drawer
+        :value="drawerOpen"
+        :name="userName"
+        :email="userEmail"
+        :picture="profileImage"
+        :stimulus-totals="stimulusTotals"
+        :streak-days="streakDays"
+        :streak-hint="streakHint"
+        :nav-items="drawerNavItems"
+        :timing="drawerTiming(timing, todayDate)"
+        @input="drawerOpen = $event"
+        @navigate="onDrawerNavigate"
+      />
+    </routine-timing-container>
 
     <!--
       The Start Work sheet. It owns its own chassis sheet now (`sheet` prop) rather
@@ -254,6 +271,12 @@
       the classic dashboard's quick-task modal mounts (inline there — `sheet`
       defaults to false), so it brings the already-passed points note, the Related
       Goals timeline and the action buttons with it.
+
+      `locked-item` is the dashboard's other dialog folded in. There, a routine
+      that ALREADY had a day goal item got a goal-action modal instead of the
+      create form, showing the item itself above Start Task / Start Agent / Build
+      Agent. One sheet does both now: it names what is locked in when there is
+      something, and asks for one when there is not.
 
       `v-if` keeps the mount/unmount semantics `RoutineSheet` had, so the container
       still refetches on each open via the `actionSheetKey` bump.
@@ -276,6 +299,7 @@
       :selectedTaskRef="focusRow ? focusRow.id : ''"
       :redeem-cost="actionRedeemCost"
       :open-item-count="focusOpenItemCount"
+      :locked-item="focusLockedItem"
       allow-start-without-task
       @close="actionSheetOpen = false"
       @start-quick-goal-task="onStartTask"
@@ -304,13 +328,12 @@
       :routine-label="goalSheetRoutineLabel"
       :goal-ref-label="goalSheetGoalRefLabel"
       :date-label="goalSheetDateLabel"
-      :date-locked="isPastDay"
+      :date-locked="goalSheetDateLocked"
       :date-options="goalSheetDateOptions"
       :tag-universe="tagUniverse"
       :tag-usage="tagUsage"
       :reward-meta="goalSheetRewardMeta"
       :reward-new="goalSheetRewardNew"
-      :routines="tasklist"
       @close="closeGoalItem"
       @toggle-item="toggleOpenGoalItem"
       @open-transcript="openTranscript"
@@ -393,6 +416,7 @@ import RoutineRail from '@routine-notes/ui/molecules/RoutineRail/RoutineRail.vue
 import FocusPointsChip from '@routine-notes/ui/molecules/FocusPointsChip/FocusPointsChip.vue';
 import PullToRefresh from '@routine-notes/ui/molecules/PullToRefresh/PullToRefresh.vue';
 import { FOCUS_NAV, agentStageOf, AGENT_LIVE_STAGES } from '@routine-notes/ui/constants/routineFocus';
+import { MORE_NAV } from '@routine-notes/ui/constants/navigation';
 
 import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue';
 import RoutineChatContainer from '../containers/RoutineChatContainer.vue';
@@ -402,6 +426,8 @@ import InboxSheetContainer from '../containers/InboxSheetContainer.vue';
 import SkipDayContainer from '../containers/SkipDayContainer.vue';
 import AgentFormContainer from '../containers/AgentFormContainer.vue';
 import AppShellContainer from '../containers/AppShellContainer.vue';
+import RoutineTimingContainer from '../containers/RoutineTimingContainer.vue';
+import { drawerWindow, drawerTiming } from '../utils/routineTiming';
 import {
   ROUTINE_DATE_QUERY,
   DAILY_GOALS_QUERY,
@@ -427,6 +453,7 @@ import { runNewDayReset } from '../utils/newDay';
 import { describeRedeemFailure, describeRedeemReceipt } from '../utils/routineTaskDisplay';
 import { scopeGoalsToRef } from '../utils/goalRefScope';
 import { threshold } from '../utils/getDates';
+import refuseAgentWithoutPoints from '../utils/agentPointsGuard';
 import {
   buildRoutineRows, findCurrentRoutine, focusWindow, buildCascade, pickCascadeItem,
 } from '../utils/routineFocusModel';
@@ -442,12 +469,20 @@ const HEADER_RING_SIZE = 28;
 // The phone strip's height. The design declares it as a token
 // (`weekMaxH: '80px'`) rather than letting the cells decide, so the card below
 // it does not shift as the rings change size.
+//
+// 68, not the design's 80: the token sizes a box whose CONTENT the design does
+// not pin, and ours came to 73px of label + ring inside 80, leaving a dead band
+// under the rings. With the day cell's 12px vertical padding down to 6px the
+// content is 61px, so 68 keeps the same breathing room the 80 was meant to give
+// — measured, not guessed.
 // TODO move to packages/ui/constants/routineFocus.js — a per-shell token.
-const WEEK_STRIP_OPEN_PX = 80;
+const WEEK_STRIP_OPEN_PX = 68;
 // Which agent transcripts have been looked at, so the orange NEW pill is about
 // this user and not about this page load. Ids only — the transcript itself lives
 // on the goal item.
 const REWARD_SEEN_KEY = 'rn-reward-seen';
+// Shortest time the pull-to-refresh spinner shows, so a fast refetch still reads as one.
+const PULL_MIN_SPIN_MS = 600;
 // Day-goal quick-picks on the goal-item page: today, tomorrow, and the start of
 // next week (the design's "Mon").
 const DATE_PICKS = [
@@ -458,6 +493,7 @@ const DATE_PICKS = [
 export default {
   name: 'RoutineFocus',
   components: {
+    RoutineTimingContainer,
     RoutineFocusCard,
     RoutineDeck,
     RoutineComposer,
@@ -571,12 +607,14 @@ export default {
       todayDate: moment().format('DD-MM-YYYY'),
       now: moment(),
       nowTimerId: null,
+      composerFocused: false,
+      composerBlurTimer: null,
       did: '',
       // Which routine the screen is concentrated on. Empty = "follow the clock".
       focusRoutineId: '',
       period: 'day',
       checklistOpen: true,
-      // Pull-to-refresh refetch in flight (phone).
+      // Pull-to-refresh refetch in flight (phone card, or both panes on tablet/desktop).
       refreshing: false,
       drawerOpen: false,
       actionSheetOpen: false,
@@ -766,9 +804,6 @@ export default {
     showBackToNow() {
       return !!this.currentRoutineId && this.resolvedFocusId !== this.currentRoutineId;
     },
-    deckPeeks() {
-      return this.rows.slice(this.focusIndex + 1, this.focusIndex + 3);
-    },
     emptyMessage() {
       if (this.preparingRoutine) return 'Setting today up…';
       if (this.loadError) {
@@ -853,6 +888,31 @@ export default {
     focusOpenItemCount() {
       return this.focusItems.filter((item) => item && !item.isComplete).length;
     },
+    /**
+     * The goal item the focused routine is already locked in on — the sheet's
+     * LOCKED IN row.
+     *
+     * Resolved through `findFirstGoalIdForRoutine`, which is the SAME function
+     * the agent dispatch reads for `{goalId}` (see `onStartAgent` and
+     * `agentStart`'s `readGoalId`), so the row the sheet shows and the row the
+     * agent is handed cannot be two different items. `null` when the routine has
+     * nothing on it yet, and the sheet is the plain create form.
+     */
+    focusLockedItem() {
+      const row = this.focusRow;
+      if (!row) return null;
+      const goalId = this.findFirstGoalIdForRoutine(row.id);
+      if (!goalId) return null;
+      const found = this.dayGoalItems
+        .find((item) => item && String(item.id) === String(goalId));
+      if (!found) return null;
+      return {
+        id: found.id,
+        body: found.body,
+        contribution: found.contribution || '',
+        isComplete: !!found.isComplete,
+      };
+    },
 
     // --- goal-item page ---------------------------------------------------
     /**
@@ -911,6 +971,14 @@ export default {
      * with a different `date`, which relocates the subdocument and keeps its id;
      * a past day is locked instead (see the sheet's Date row).
      */
+    /**
+     * Only a COMPLETED item on a past day is read-only. An open one keeps its
+     * date chips so a missed item can be carried to today (packages/design
+     * HANDOFF, past-day rule) — the chat's move refusal points at these chips.
+     */
+    goalSheetDateLocked() {
+      return this.isPastDay && !!(this.openGoalItem && this.openGoalItem.isComplete);
+    },
     goalSheetDateOptions() {
       const today = moment(this.todayDate, 'DD-MM-YYYY');
       const current = this.openGoalItemDate;
@@ -1095,7 +1163,6 @@ export default {
         routine: this.focusRow,
         endTime: this.focusWindowInfo.endTime,
         statusLabel: this.focusWindowInfo.statusLabel,
-        leftLabel: this.focusWindowInfo.leftLabel,
         goalItems: this.focusItems,
         scores: this.stimulusTotals,
         // The "Before you start" brief offers to add to today's checklist, so
@@ -1117,8 +1184,19 @@ export default {
       if (!this.focusRow) return '';
       return `${this.focusRow.doneCount} of ${this.focusRow.totalCount} done · ${this.focusWindowInfo.leftLabel}`;
     },
+    /**
+     * The chat opens once the routine has been checked off. Before that the
+     * card's own controls (tick, Break it down, Add task) are the way to work
+     * the routine, and the thread stays shut so it cannot be used to talk
+     * around doing it.
+     */
+    chatDisabled() {
+      return !(this.focusRow && this.focusRow.ticked);
+    },
     composerPlaceholder() {
-      return `Message ${this.focusRow ? this.focusRow.name : 'this routine'}…`;
+      if (!this.focusRow) return 'Message this routine…';
+      if (this.chatDisabled) return `Check off ${this.focusRow.name} to chat…`;
+      return `Message ${this.focusRow.name}…`;
     },
     showGoalsSkeleton() {
       const loading = this.$apollo.queries.goals && this.$apollo.queries.goals.loading;
@@ -1149,13 +1227,19 @@ export default {
       const active = this.navItems.find((item) => item.active);
       return active ? active.route : null;
     },
+    /**
+     * The chassis More list — the same rows every other page's avatar drawer
+     * shows. The four tabs are already in the bottom nav one thumb away, so
+     * the drawer never repeats them.
+     */
+    timingWindow() {
+      return drawerWindow(this.todayDate);
+    },
     drawerNavItems() {
-      return [
-        ...this.navItems,
-        { icon: 'settings', label: 'Settings', route: '/settings' },
-        // No Log out: signing out lives on Profile, as on every other shell.
-        { icon: 'person', label: 'Profile', route: '/settings/profile' },
-      ];
+      return MORE_NAV.map((item) => ({
+        ...item,
+        active: this.$route.path === item.route,
+      }));
     },
 
     // --- fly --------------------------------------------------------------
@@ -1239,6 +1323,21 @@ export default {
       this.rewardSeen = {};
     }
     this.$agent.fetchAll();
+    // Once the day, its goal items and the agents are all in, close any run
+    // left listening with its counter full (see fireDueEndEvents).
+    let swept = false;
+    const unwatchDue = this.$watch(
+      () => this.tasklist.length > 0 && this.dayGoalItems.length > 0 && this.$agent.agents.length > 0,
+      (ready) => {
+        if (!ready || swept) return;
+        swept = true;
+        this.$nextTick(() => {
+          if (unwatchDue) unwatchDue();
+          this.fireDueEndEvents();
+        });
+      },
+      { immediate: true },
+    );
 
     eventBus.$on(EVENTS.REFETCH_DAILY_GOALS, this.refetchGoals);
     eventBus.$on(EVENTS.GOAL_ITEM_CREATED, this.refetchGoals);
@@ -1265,6 +1364,7 @@ export default {
     }, 60 * 1000);
   },
   beforeDestroy() {
+    clearTimeout(this.composerBlurTimer);
     eventBus.$off(EVENTS.REFETCH_DAILY_GOALS, this.refetchGoals);
     eventBus.$off(EVENTS.GOAL_ITEM_CREATED, this.refetchGoals);
     eventBus.$off(EVENTS.TASK_CREATED, this.refetchGoals);
@@ -1277,6 +1377,7 @@ export default {
     if (this.flyTimer) clearTimeout(this.flyTimer);
   },
   methods: {
+    drawerTiming,
     // =====================================================================
     // Navigation / shell
     // =====================================================================
@@ -1349,10 +1450,17 @@ export default {
         .filter((query) => query && !query.skip && typeof query.refetch === 'function');
       const reads = queries.map((query) => query.refetch());
       if (this.$refs.chat && this.$refs.chat.refetch) reads.push(this.$refs.chat.refetch());
+      // Agents too: a run started on another device shows here only once the
+      // agent is re-read.
+      if (this.$agent && this.$agent.fetchAll) reads.push(this.$agent.fetchAll());
+      // A cached day comes back in a few ms; hold the spinner long enough to
+      // be seen, or the pull looks like it did nothing.
+      reads.push(new Promise((resolve) => { setTimeout(resolve, PULL_MIN_SPIN_MS); }));
       eventBus.$emit(EVENTS.DASHBOARD_REFRESH);
       try {
         await Promise.all(reads);
         this.loadError = false;
+        this.fireDueEndEvents();
       } catch (error) {
         console.error('[RoutineFocus] pull-to-refresh failed:', error);
       } finally {
@@ -1494,7 +1602,15 @@ export default {
       }
     },
     openAgentResult() {
-      if (this.resolvedFocusId) this.$agent.openResultModal(this.resolvedFocusId);
+      const id = this.resolvedFocusId;
+      if (!id) return;
+      // A live run leaves its result in memory; after a reopen only the saved
+      // transcript is left, so show that instead of an empty sheet (D-16).
+      if (!this.$agent.lastResultByRoutineId[id] && this.taskAgentReward(id)) {
+        this.$agent.showSavedResult(id, this.taskAgentReward(id));
+        return;
+      }
+      this.$agent.openResultModal(id);
     },
 
     toggleItem(item) {
@@ -1578,8 +1694,17 @@ export default {
      * chat" — `chatFocus` vs `chatFocusLg`).
      */
     onComposerFocus(collapseChecklist) {
+      clearTimeout(this.composerBlurTimer);
+      // Phone only: the tab bar steps aside for the keyboard.
+      if (collapseChecklist) this.composerFocused = true;
       if (collapseChecklist) this.checklistOpen = false;
       if (this.$refs.chat) this.$refs.chat.collapseBrief();
+    },
+    onComposerBlur() {
+      // Deferred: a tap on Send blurs the input first, and bringing the tab bar
+      // back in the same frame would shift the button out from under the tap.
+      clearTimeout(this.composerBlurTimer);
+      this.composerBlurTimer = setTimeout(() => { this.composerFocused = false; }, 200);
     },
     postChatEvent(payload) {
       if (this.$refs.chat) this.$refs.chat.postEvent(payload);
@@ -1591,8 +1716,22 @@ export default {
     /**
      * The ring's one entry point.
      *
-     * Current + unticked → the Start Task / Start-or-Build Agent sheet (that is
-     * where agents get started). Everything else ticks or redeems directly.
+     * An unticked routine ALWAYS opens the sheet — it never ticks through.
+     *
+     * It used to tick directly unless the routine was `isCurrent` or redeemable,
+     * which quietly removed the agent from most of the day: `wait` is cleared
+     * `PROACTIVE_START_TIME` minutes before a routine starts and `passed` is only
+     * stamped `TIMES_UP_TIME` minutes after, so a routine can be perfectly
+     * startable — enabled ring, alarm glyph — while a different one is the clock's
+     * current. Tapping it banked the tick with no way to say "start the agent
+     * too", and nothing on screen said which goal item had just been completed.
+     * That is also what the classic dashboard did (`DashBoard.checkDialogClick`):
+     * every startable circle opened a modal, and the modal was the only place an
+     * agent could be started.
+     *
+     * `buttonDisabled` is the one refusal, and it is the same rule the button's
+     * own `:disabled` uses — a passed-and-locked or still-waiting routine has
+     * nothing to start, so a sheet whose Start Task could not act would be a lie.
      */
     onRingAction() {
       const row = this.focusRow;
@@ -1601,12 +1740,18 @@ export default {
         this.onMiniClick();
         return;
       }
+      if (row.buttonDisabled) return;
       if (this.blockedBySkip()) return;
-      if (row.isCurrent || row.redeemable) {
-        this.actionSheetOpen = true;
+      // Affordability BEFORE the sheet, as the dashboard had it: Start Task can
+      // create a goal item and only then redeem, so an unaffordable redeem must
+      // be stopped here or the failure strands an orphan item on an unticked
+      // routine — and takes its Build Agent path with it.
+      if (row.redeemable && !this.canAffordRedeem(row)) {
+        this.paywallCost = this.getRedeemCost(row);
+        this.paywallDrawerOpen = true;
         return;
       }
-      this.tickRoutine(row);
+      this.actionSheetOpen = true;
     },
     /**
      * The header mini-ring (and a ticked card ring).
@@ -1631,9 +1776,23 @@ export default {
         duration: 3000,
       });
     },
+    /**
+     * Start Task: complete the routine, do NOT fire the agent.
+     *
+     * The redeem branch is not an extra: `tickRoutine` refuses a `passed` task,
+     * so on a redeemable routine Start Task used to do nothing at all while
+     * Start Agent right beside it worked. Both buttons now reach the same two
+     * paths, and only `fireAgent` tells them apart.
+     */
     onStartTask() {
       this.actionSheetOpen = false;
-      if (this.focusRow) this.tickRoutine(this.focusRow, { fireAgent: false });
+      const row = this.focusRow;
+      if (!row) return;
+      if (row.redeemable) {
+        this.redeemRoutine(row, { fireAgent: false });
+        return;
+      }
+      this.tickRoutine(row, { fireAgent: false });
     },
     onStartAgent() {
       this.actionSheetOpen = false;
@@ -1648,6 +1807,9 @@ export default {
         this.redeemRoutine(row, { fireAgent: true, agentImplicit: false });
         return;
       }
+      // Same refusal as the tick/redeem paths — this one dispatches directly
+      // rather than through `fireAgentWhenReady`, so it needs its own guard.
+      if (this.refuseAgentWithoutPoints(row.id)) return;
       const goalId = this.findFirstGoalIdForRoutine(row.id);
       if (goalId && !String(goalId).startsWith('temp-')) {
         this.$agent.fireStartEventIfPresent({
@@ -1854,7 +2016,8 @@ export default {
       });
 
       // Local affordability check — the server re-validates authoritatively.
-      if (balance && !entitled && balance.available < cost) {
+      // Same rule the ring's pre-flight runs, so the two cannot disagree.
+      if (!this.canAffordRedeem(task)) {
         this.paywallCost = cost;
         this.paywallDrawerOpen = true;
         return;
@@ -2059,18 +2222,32 @@ export default {
       // badge set on a previous day never survives into a new one.
       if (!taskRef || !this.isToday) return '';
       const day = this.$agent.statusDay;
-      if (day && day !== this.todayDate) return '';
-      const status = this.$agent.statusByRoutineId[taskRef] || '';
-      // A 'listening' agent whose end event already saved a transcript is done;
-      // never leave the badge stuck when a late start dispatch resolves after.
-      if (status === 'listening' && this.taskAgentEndEventDone(taskRef)) return 'finished';
+      const status = (day && day !== this.todayDate)
+        ? '' : (this.$agent.statusByRoutineId[taskRef] || '');
+      // The saved transcript (today's goal item `reward`) is the authority on
+      // "finished". The badge map is day-scoped localStorage, so a fresh
+      // session reads '' and would lose View result although the server kept
+      // it (D-16); a late start dispatch can also leave it on 'listening'.
+      if ((status === '' || status === 'listening') && this.taskAgentEndEventDone(taskRef)) {
+        return 'finished';
+      }
       return status;
+    },
+    /** Today's saved transcript for a routine, if its agent has finished. */
+    taskAgentReward(taskRef) {
+      const item = this.dayGoalItems.find((gi) => gi.taskRef === taskRef && gi.reward);
+      return item ? item.reward : '';
     },
     taskAgentEndEventDone(taskRef) {
       if (!taskRef) return false;
       return this.dayGoalItems.some((item) => item.taskRef === taskRef && item.reward);
     },
+    /** See utils/agentPointsGuard — the rule is shared with the Start sheet. */
+    refuseAgentWithoutPoints(taskRef) {
+      return refuseAgentWithoutPoints(this.$notify, this.tasklist.find((t) => t.id === taskRef));
+    },
     fireAgentWhenReady(taskRef, { implicit = true } = {}) {
+      if (this.refuseAgentWithoutPoints(taskRef)) return null;
       return startAgentWhenReady({
         taskRef,
         implicit,
@@ -2100,6 +2277,48 @@ export default {
       const completed = this.countTaskCompleted(task);
       if (total <= 0 || completed < total) return;
 
+      // Say nothing unless something is actually going out. `fireEndEvent`
+      // refuses three ways — no end event configured, no run open, or a run
+      // opened on an earlier day — and returned `null` for all of them, which
+      // this swallowed: the thread announced "end event firing", the bolt stage
+      // was switched on, and neither was true. The animation never appeared
+      // either, because the flag was cleared in the same microtask the refusal
+      // resolved in, so it flipped on and off before a single paint.
+      //
+      // "No run open" is only this device's view, though. The agent was loaded
+      // when the page mounted, so a run started since on another device (iPad
+      // starts it, the phone completes it) is invisible here. Ask the server
+      // before concluding there is nothing to close.
+      //
+      // And when the server has no run either, but THIS device's badge says it
+      // started one today, the start's record was lost (the app closed while
+      // the webhook was still answering): the badge is the evidence, so the
+      // run is re-opened and closed.
+      if (!this.$agent.canFireEndEvent(taskRef)) {
+        if (typeof this.$agent.fetchByTaskRef !== 'function') return;
+        this.$agent.fetchByTaskRef(taskRef)
+          .then(() => (this.$agent.canFireEndEvent(taskRef)
+            || (this.$agent.adoptLocalRun && this.$agent.adoptLocalRun(taskRef))))
+          .then(() => {
+            if (this.$agent.canFireEndEvent(taskRef)) this.dispatchAgentEndEvent(taskRef, goalId);
+          })
+          .catch(() => {});
+        return;
+      }
+      this.dispatchAgentEndEvent(taskRef, goalId);
+    },
+    /**
+     * A routine finished while its end event could not go out (or the app
+     * closed first) is still "listening" with a full counter. Re-run the end
+     * rule for those on open and on pull to refresh, so it does not stay stuck.
+     */
+    fireDueEndEvents() {
+      if (!this.isToday) return;
+      this.tasklist.forEach((task) => {
+        if (this.effectiveAgentStatus(task.id) === 'listening') this.maybeFireAgentEndEvent(task.id);
+      });
+    },
+    dispatchAgentEndEvent(taskRef, goalId) {
       const gid = goalId || this.findFirstGoalIdForRoutine(taskRef);
       this.$set(this.endEventFiring, taskRef, true);
       this.postChatEvent({
@@ -2157,6 +2376,18 @@ export default {
     getRedeemCost(task) {
       if (!task) return 0;
       return typeof task.passedPoints === 'number' ? task.passedPoints : (task.points || 0);
+    },
+    /**
+     * Whether the balance covers rescuing this routine.
+     *
+     * One rule, read twice: the ring's pre-flight and `redeemRoutine`'s own
+     * check. The server re-validates authoritatively either way.
+     */
+    canAffordRedeem(task) {
+      const balance = this.xpBalance;
+      if (!balance) return true;
+      if (balance.entitled) return true;
+      return balance.available >= this.getRedeemCost(task);
     },
     /** What pressing Start on this routine will actually cost. */
     redeemCostForTask(task) {
@@ -2345,9 +2576,16 @@ export default {
   color: rgba(0, 0, 0, .87);
 }
 
-.capacitor-native .rn-home {
-  --rn-safe-bottom: 0px;
-}
+/* There is deliberately no `.capacitor-native` override zeroing --rn-safe-bottom.
+   It used to be zeroed on the theory that "Capacitor already insets the web
+   view", but that does not hold for this shell: `.rn-home--phone` is
+   `position: fixed; inset: 0`, and a fixed element anchors to the whole window,
+   underneath WKWebView's contentInset. The nav therefore sits on the very bottom
+   of the screen on both platforms, and zeroing the inset drew its labels beneath
+   the home indicator / gesture pill. Verified on an iPhone 16 Pro Max simulator
+   and an API 36 emulator (inset 24px; the bar grew by exactly that). It also beat
+   android-safe-area.css's correct `.capacitor-native .v-bottom-nav` handling on
+   specificity, so Android lost its padding twice over. */
 
 /* Fixed to the window, not sized by vh: in an iPhone standalone PWA 100vh /
    100dvh can be taller than the window (by the status bar), which pushed the
@@ -2421,14 +2659,23 @@ export default {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 8px 16px calc(56px + var(--rn-safe-bottom));
+  padding: 8px 16px calc(64px + var(--rn-safe-bottom));
   overflow: hidden;
+}
+
+/* Typing: the tab bar is hidden, so the composer drops onto the keyboard. */
+.rn-home--typing .rn-home__phone-body {
+  padding-bottom: 8px;
 }
 
 /* The MobileLayout bottom nav: fixed to the viewport bottom, grown by the
    home-indicator inset with the buttons padded above it. */
+/* 64px of tabs, matching AppShell's `.rn-shell__tabbar` and the phone chassis
+   ("64px header + 64px bottom bar", docs/redesign/chassis.md). Home used to be
+   56px, which made the bar visibly change height when moving between Home and
+   every other page. */
 .rn-home .rn-home__nav.v-bottom-nav {
-  height: calc(56px + var(--rn-safe-bottom)) !important;
+  height: calc(64px + var(--rn-safe-bottom)) !important;
   padding-bottom: var(--rn-safe-bottom);
   box-sizing: border-box;
   box-shadow: 0 -1px 3px rgba(0, 0, 0, .08);
@@ -2436,7 +2683,7 @@ export default {
 }
 
 .rn-home .rn-home__nav .v-btn {
-  height: 56px;
+  height: 64px;
 }
 
 /* ---- tablet / desktop ---- */
