@@ -37,7 +37,7 @@ const jsonResponse = () => Promise.resolve({
   status: 200,
   statusText: 'OK',
   headers: { get: () => 'application/json' },
-  json: () => Promise.resolve({ done: true }),
+  text: () => Promise.resolve('{"done":true}'),
 });
 
 // Seeds the store the way the app does — through the agents query.

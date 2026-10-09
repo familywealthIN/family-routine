@@ -2,6 +2,7 @@ import Vue from 'vue';
 import moment from 'moment';
 import { ranToday } from '@routine-notes/ui/constants/agents';
 import eventBus, { EVENTS } from '../utils/eventBus';
+import readResponseBody from '../utils/responseBody';
 import {
   AGENTS_QUERY,
   AGENT_BY_TASK_REF_QUERY,
@@ -348,12 +349,7 @@ const dispatchEvent = async ({ vm, event, goalId }) => {
   if (kind === 'url' || isHttpUrl(value)) {
     const response = await fetch(value, { method: 'GET' });
     const ct = response.headers.get('content-type') || '';
-    let data;
-    if (ct.toLowerCase().includes('json')) {
-      data = await response.json();
-    } else {
-      data = await response.text();
-    }
+    const data = await readResponseBody(response);
     const wrapped = {
       ok: response.ok,
       status: response.status,

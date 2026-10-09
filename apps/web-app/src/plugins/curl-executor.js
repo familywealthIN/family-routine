@@ -1,4 +1,5 @@
 import Vue from 'vue';
+import readResponseBody from '../utils/responseBody';
 
 // Curl command parser and executor plugin
 const CurlExecutor = {
@@ -14,16 +15,7 @@ const CurlExecutor = {
         try {
           const parsedOptions = this.parseCurlCommand(curlCommand);
           const response = await fetch(parsedOptions.url, parsedOptions.options);
-
-          // Try to parse response as JSON, fallback to text
-          let responseData;
-          const contentType = response.headers.get('content-type');
-
-          if (contentType && contentType.includes('application/json')) {
-            responseData = await response.json();
-          } else {
-            responseData = await response.text();
-          }
+          const responseData = await readResponseBody(response);
 
           return {
             ok: response.ok,
