@@ -48,15 +48,17 @@
           -->
           <div
             class="rn-gis__status"
+            :class="{ 'rn-gis__status--readonly': readonly }"
             :style="{ background: statusTint, color: statusColor }"
-            :title="item && item.isComplete ? 'Mark as open' : 'Mark complete'"
+            :title="readonly ? '' : (item && item.isComplete ? 'Mark as open' : 'Mark complete')"
             data-testid="goal-sheet-status"
-            @click="$emit('toggle-status', item)"
+            @click="!readonly && $emit('toggle-status', item)"
           >
             <span class="rn-gis__status-dot" :style="{ background: statusColor }"></span>
             {{ statusLabel }}
           </div>
           <i
+            v-if="!readonly"
             class="rn-mi rn-gis__icon-btn rn-gis__icon-btn--danger"
             title="Delete goal item"
             data-testid="goal-sheet-delete"
@@ -72,13 +74,18 @@
       </div>
     </template>
 
-    <div v-if="current" class="rn-gis">
+    <div v-if="current" class="rn-gis" :class="{ 'rn-gis--readonly': readonly }">
+      <div v-if="readonly" class="rn-gis__view-note" data-testid="goal-sheet-readonly">
+        <i class="rn-mi rn-gis__locked-icon">visibility</i>{{ readonlyNote }}
+      </div>
       <textarea
         ref="title"
         class="rn-gis__title"
         rows="1"
         :placeholder="creating ? titlePlaceholder : 'Untitled'"
         :value="current.body"
+        :readonly="readonly"
+        :disabled="readonly"
         data-testid="goal-sheet-title"
         @input="onTitleInput"
         @change="onTitleChange"
@@ -87,6 +94,8 @@
 
       <markdown-field
         ref="contribution"
+        class="rn-gis__lockable"
+        v-bind="lockAttrs"
         :value="current.contribution || ''"
         :editor-key="creating ? `new-${createKey}` : current.id"
         @input="onContributionInput"
@@ -214,7 +223,7 @@
             </div>
           </template>
           <span v-else class="rn-gis__muted" data-testid="goal-sheet-no-goal-ref">
-            Not linked to a week goal
+            Not linked to a {{ parentNoun }}
           </span>
         </div>
       </div>
@@ -262,7 +271,7 @@
           <div v-if="dateLocked" class="rn-gis__locked" data-testid="goal-sheet-date-locked">
             <i class="rn-mi rn-gis__locked-icon">lock</i>past dates can’t change
           </div>
-          <div v-else class="rn-gis__date-opts">
+          <div v-else-if="!readonly" class="rn-gis__date-opts">
             <div
               v-for="option in dateOptions"
               :key="option.key"
@@ -280,7 +289,7 @@
         <div class="rn-gis__field-label">
           <i class="rn-mi rn-gis__field-icon">tag</i>Tags
         </div>
-        <div class="rn-gis__field-value rn-gis__field-value--grow">
+        <div class="rn-gis__field-value rn-gis__field-value--grow rn-gis__lockable" v-bind="lockAttrs">
           <hierarchical-tag-input
             :value="current.tags || []"
             :universe="tagUniverse"
@@ -294,6 +303,8 @@
       <!-- Subtasks belong to a saved item; a new one gets them once it exists. -->
       <subtask-editor
         v-if="!creating"
+        class="rn-gis__lockable"
+        v-bind="lockAttrs"
         :subtasks="item.subTasks || []"
         @add="$emit('add-subtask', { item, body: $event })"
         @toggle="$emit('toggle-subtask', { item, subtask: $event })"
@@ -387,7 +398,7 @@ export default {
     periodLabel: { type: String, default: '' },
     /** "Start Work · 09:00", or "Inbox" for an item with no routine. */
     routineLabel: { type: String, default: 'Inbox' },
-    /** The parent week goal's body. Empty renders "Not linked to a week goal". */
+    /** The parent goal's body. Empty renders "Not linked to a week goal" (month, year… by period). */
     goalRefLabel: { type: String, default: '' },
     dateLabel: { type: String, default: '' },
     dateLocked: { type: Boolean, default: false },
@@ -395,6 +406,13 @@ export default {
     dateOptions: { type: Array, default: () => [] },
     tagUniverse: { type: Array, default: () => [] },
     tagUsage: { type: Object, default: () => ({}) },
+    /**
+     * View only: the same sheet with every input disabled, no status toggle and
+     * no delete. Year Goals opens a past month's goals this way.
+     */
+    readonly: { type: Boolean, default: false },
+    /** The line that says why it is view only. */
+    readonlyNote: { type: String, default: 'View only' },
     /** "Updated by PR Summarizer · end event · Today 11:42". */
     rewardMeta: { type: String, default: '' },
     /** The transcript has not been looked at yet. */
@@ -413,6 +431,14 @@ export default {
     creating() {
       return this.mode === 'create';
     },
+    /**
+     * `inert` takes a block out of focus and pointer input entirely, so a
+     * disabled MarkdownField, tag input or subtask list cannot be typed into
+     * however it is built. The class only greys it.
+     */
+    lockAttrs() {
+      return this.readonly ? { inert: '', 'aria-disabled': 'true' } : {};
+    },
     /** What the fields read: the draft when adding, the item when editing. */
     current() {
       return this.creating ? this.form : this.item;
@@ -422,6 +448,11 @@ export default {
     },
     isPhone() {
       return this.shell === 'phone';
+    },
+    /** "week goal" for a day item, "month goal" for a week item, … */
+    parentNoun() {
+      const period = this.creating ? this.form.period : this.period;
+      return PARENT_NOUN[period] || 'goal';
     },
     goalRefPlaceholder() {
       const period = this.creating ? this.form.period : this.period;
@@ -581,6 +612,27 @@ export default {
 .rn-gis {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   padding-bottom: 12px;
+}
+
+/* View only: every input greyed and out of reach (`inert` does the blocking). */
+.rn-gis--readonly .rn-gis__lockable,
+.rn-gis--readonly .rn-gis__title {
+  opacity: .55;
+  pointer-events: none;
+}
+
+.rn-gis__status--readonly {
+  cursor: default;
+}
+
+.rn-gis__view-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .54);
 }
 
 .rn-gis__head {

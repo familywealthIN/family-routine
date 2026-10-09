@@ -139,6 +139,7 @@ const page = (over = {}) => {
     menu: null,
     editorOpen: false,
     editItem: null,
+    editorReadonly: false,
     chatText: '',
     toast: {
       title: '', sub: '', icon: 'check_circle', color: '#4CAF50', seq: 0,
@@ -352,6 +353,27 @@ describe('YearGoalsTime — a month that is over takes no new goals', () => {
     const done = jest.fn();
     await vm.onCreateWeeksFromChat({ bodies: ['A week'], done });
     expect(done).toHaveBeenCalledWith([]);
+  });
+
+  it('opens a past month’s goals view only, from the menu and the day glyph', () => {
+    const vm = page({ selectedMonth: SEP });
+    Object.defineProperty(vm, 'focusedMonth', { get: () => ({ ...vm.tree.months[SEP], isPast: true }) });
+    vm.openMenu({ kind: 'week', week: vm.tree.months[SEP].weeks[1] });
+    expect(vm.menuItems[0]).toMatchObject({ key: 'edit', icon: 'visibility', label: 'View week goal' });
+    vm.onMenuSelect('edit');
+    expect(vm.editorOpen).toBe(true);
+    expect(vm.editorReadonly).toBe(true);
+    expect(vm.editorReadonlyNote).toBe('View only · September is over');
+    vm.closeEditor();
+    expect(vm.editorReadonly).toBe(false);
+  });
+
+  it('keeps Edit for a current month', () => {
+    const vm = page();
+    vm.openMenu({ kind: 'week', week: vm.tree.months[SEP].weeks[1] });
+    expect(vm.menuItems[0]).toMatchObject({ icon: 'edit', label: 'Edit week goal' });
+    vm.onMenuSelect('edit');
+    expect(vm.editorReadonly).toBe(false);
   });
 
   it('offers no Add in a past month’s menu', () => {

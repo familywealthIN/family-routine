@@ -173,3 +173,17 @@ export const GOAL_ITEM_LIVE_QUERY = gql`
     }
   }
 `;
+
+/**
+ * The goal one period up that an item rolls up into, by id alone: the editor
+ * shows its title in Linked to. Only `id` and `body`, merged onto the
+ * normalized GoalItem, so it never stands in for a fuller read.
+ */
+export const GOAL_ITEM_PARENT_QUERY = gql`
+  query goalItemParent($id: ID!) {
+    goalItemById(id: $id) {
+      id
+      body
+    }
+  }
+`;

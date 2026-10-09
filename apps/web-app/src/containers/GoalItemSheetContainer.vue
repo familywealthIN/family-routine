@@ -25,6 +25,8 @@
       :period-label="periodLabel"
       :routine-label="routineLabel"
       :goal-ref-label="goalRefLabel"
+      :readonly="readonly"
+      :readonly-note="readonlyNote"
       :date-label="dateLabel"
       :date-locked="dateLocked"
       :date-options="dateOptions"
@@ -78,6 +80,9 @@ export default {
     periodLabel: { type: String, default: '' },
     routineLabel: { type: String, default: 'Inbox' },
     goalRefLabel: { type: String, default: '' },
+    /** View only — see GoalItemSheet `readonly`. */
+    readonly: { type: Boolean, default: false },
+    readonlyNote: { type: String, default: 'View only' },
     dateLabel: { type: String, default: '' },
     dateLocked: { type: Boolean, default: false },
     /** `[{ key, label, active, date }]`. `date` is the move target. */

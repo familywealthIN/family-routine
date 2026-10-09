@@ -194,11 +194,11 @@
             <button
               type="button"
               class="rn-mfc__day-edit"
-              title="Edit day goal"
-              aria-label="Edit day goal"
+              :title="month.isPast ? 'View day goal' : 'Edit day goal'"
+              :aria-label="month.isPast ? 'View day goal' : 'Edit day goal'"
               :data-testid="`day-edit-${day.id}`"
               @click.stop="$emit('edit-day', { day, week })"
-            ><i class="rn-mi">edit</i></button>
+            ><i class="rn-mi">{{ month.isPast ? 'visibility' : 'edit' }}</i></button>
           </div>
 
           <div v-if="!week.days.length" class="rn-mfc__empty-days">

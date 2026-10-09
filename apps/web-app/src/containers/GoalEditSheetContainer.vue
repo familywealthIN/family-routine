@@ -21,6 +21,9 @@
     :period="address.period"
     :period-label="periodLabel"
     :routine-label="routineLabel"
+    :goal-ref-label="goalRefLabel"
+    :readonly="readonly"
+    :readonly-note="readonlyNote"
     :date-label="dateLabel"
     :date-locked="dateLocked"
     :date-options="dateOptions"
@@ -34,7 +37,7 @@
 <script>
 import moment from 'moment';
 import GoalItemSheetContainer from './GoalItemSheetContainer.vue';
-import { GOAL_ITEM_LIVE_QUERY } from '../composables/graphql/goalItemQueries';
+import { GOAL_ITEM_LIVE_QUERY, GOAL_ITEM_PARENT_QUERY } from '../composables/graphql/goalItemQueries';
 
 const PERIOD_NAMES = {
   day: 'Day goal', week: 'Week goal', month: 'Month goal', year: 'Year goal',
@@ -54,6 +57,9 @@ export default {
     item: { type: Object, default: null },
     /** `[{ id, name, time }]`, for the routine row. */
     routines: { type: Array, default: () => [] },
+    /** View only: the same sheet, every input disabled. */
+    readonly: { type: Boolean, default: false },
+    readonlyNote: { type: String, default: 'View only' },
   },
   apollo: {
     liveItem: {
@@ -69,9 +75,28 @@ export default {
       },
       fetchPolicy: 'cache-and-network',
     },
+    // What the item rolls up into, for Linked to. Without it the sheet said
+    // "Not linked" for every week and day goal on Goals and Year Goals, even
+    // though those pages draw them under their parent.
+    parentItem: {
+      query: GOAL_ITEM_PARENT_QUERY,
+      variables() {
+        return { id: this.parentId };
+      },
+      skip() {
+        return !this.open || !this.parentId;
+      },
+      update(data) {
+        return data && data.goalItemById ? data.goalItemById : null;
+      },
+      error() {
+        // A parent that is gone reads as not linked; nothing to tell the user.
+        this.parentItem = null;
+      },
+    },
   },
   data() {
-    return { liveItem: null };
+    return { liveItem: null, parentItem: null };
   },
   computed: {
     address() {
@@ -84,6 +109,14 @@ export default {
     periodLabel() {
       const name = PERIOD_NAMES[this.address.period] || 'Goal';
       return this.when.isValid() ? `${name} · ${this.when.format('D MMM YYYY')}` : name;
+    },
+    parentId() {
+      const item = this.liveItem || this.item;
+      return (item && item.goalRef) || '';
+    },
+    goalRefLabel() {
+      const parent = this.parentItem;
+      return parent && String(parent.id) === String(this.parentId) ? parent.body || '' : '';
     },
     routineLabel() {
       const ref = this.liveItem && this.liveItem.taskRef;

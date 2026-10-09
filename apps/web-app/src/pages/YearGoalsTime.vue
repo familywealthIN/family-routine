@@ -153,6 +153,8 @@
         :shell="shell"
         :item="editItem"
         :routines="routines"
+        :readonly="editorReadonly"
+        :readonly-note="editorReadonlyNote"
         @close="closeEditor"
         @toggle="applyTick(($event && $event.period) || 'day', $event && $event.id)"
         @changed="refetchTree"
@@ -305,6 +307,8 @@ export default {
       editorOpen: false,
       /** The COMPLETE goal-item record being edited, never a row view-model. */
       editItem: null,
+      /** The editor opened on a past month's goal: same sheet, view only. */
+      editorReadonly: false,
       chatText: '',
       toast: noToast(),
     };
@@ -373,6 +377,10 @@ export default {
       }
       return this.menu.item.body;
     },
+    editorReadonlyNote() {
+      const month = this.focusedMonth;
+      return month ? `View only · ${month.name} is over` : 'View only';
+    },
     menuItems() {
       if (!this.menu) return [];
       if (this.sheet === 'confirm') {
@@ -388,8 +396,13 @@ export default {
       const add = (this.focusedMonth && this.focusedMonth.isPast) ? [] : [
         { key: 'add', icon: 'add_task', label: isMonth ? 'Add week goal' : 'Add day goal' },
       ];
+      const noun = isMonth ? 'month goal' : 'week goal';
+      // A month that is over is history: its goals open view only.
+      const view = (this.focusedMonth && this.focusedMonth.isPast)
+        ? { key: 'edit', icon: 'visibility', label: `View ${noun}` }
+        : { key: 'edit', icon: 'edit', label: `Edit ${noun}` };
       return [
-        { key: 'edit', icon: 'edit', label: isMonth ? 'Edit month goal' : 'Edit week goal' },
+        view,
         ...add,
         {
           key: 'delete',
@@ -668,12 +681,15 @@ export default {
       // leaving a sheet open underneath it would be two forms for one goal.
       this.closeSheet();
       this.editItem = item;
+      // A month that is over opens its goals view only, every input disabled.
+      this.editorReadonly = !!(this.focusedMonth && this.focusedMonth.isPast);
       this.editorOpen = true;
       return undefined;
     },
     closeEditor() {
       this.editorOpen = false;
       this.editItem = null;
+      this.editorReadonly = false;
     },
     /**
      * A save went through the same mutation the dashboard runs, so the normalized

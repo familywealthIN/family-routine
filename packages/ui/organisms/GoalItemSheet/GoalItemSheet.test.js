@@ -543,3 +543,23 @@ describe('GoalItemSheet — closed', () => {
     expect(el.nodeType).toBe(8);
   });
 });
+
+describe('GoalItemSheet — view only', () => {
+  it('is the same sheet with every input disabled, no toggle and no delete', () => {
+    const { el, events } = render({ readonly: true, readonlyNote: 'View only · August is over' });
+    expect(q(el, 'goal-sheet-readonly').textContent).toContain('August is over');
+    expect(q(el, 'goal-sheet-title').disabled).toBe(true);
+    expect(q(el, 'goal-sheet-delete')).toBeNull();
+    expect(q(el, 'goal-sheet-date-today')).toBeNull();
+    const locked = el.querySelectorAll('.rn-gis__lockable');
+    expect(locked.length).toBeGreaterThanOrEqual(3);
+    locked.forEach((node) => expect(node.hasAttribute('inert')).toBe(true));
+    q(el, 'goal-sheet-status').click();
+    expect(events['toggle-status']).toHaveLength(0);
+  });
+
+  it('names the parent noun by period when nothing is linked', () => {
+    const { el } = render({ period: 'week', goalRefLabel: '', linkLocked: true });
+    expect(q(el, 'goal-sheet-no-goal-ref').textContent.trim()).toBe('Not linked to a month goal');
+  });
+});
