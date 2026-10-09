@@ -2257,8 +2257,23 @@ export default {
       // was switched on, and neither was true. The animation never appeared
       // either, because the flag was cleared in the same microtask the refusal
       // resolved in, so it flipped on and off before a single paint.
-      if (!this.$agent.canFireEndEvent(taskRef)) return;
-
+      //
+      // "No run open" is only this device's view, though. The agent was loaded
+      // when the page mounted, so a run started since on another device (iPad
+      // starts it, the phone completes it) is invisible here. Ask the server
+      // before concluding there is nothing to close.
+      if (!this.$agent.canFireEndEvent(taskRef)) {
+        if (typeof this.$agent.fetchByTaskRef !== 'function') return;
+        this.$agent.fetchByTaskRef(taskRef)
+          .then(() => {
+            if (this.$agent.canFireEndEvent(taskRef)) this.dispatchAgentEndEvent(taskRef, goalId);
+          })
+          .catch(() => {});
+        return;
+      }
+      this.dispatchAgentEndEvent(taskRef, goalId);
+    },
+    dispatchAgentEndEvent(taskRef, goalId) {
       const gid = goalId || this.findFirstGoalIdForRoutine(taskRef);
       this.$set(this.endEventFiring, taskRef, true);
       this.postChatEvent({

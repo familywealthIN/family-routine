@@ -1655,15 +1655,20 @@ describe('RoutineFocus end-event dispatch', () => {
     $delete: (o, k) => { delete o[k]; },
     $agent: {
       canFireEndEvent: jest.fn(() => canFire),
+      fetchByTaskRef: jest.fn(() => Promise.resolve(null)),
       fireEndEvent: jest.fn(() => Promise.resolve(canFire ? { ok: true } : null)),
     },
     countTaskTotal: methods.countTaskTotal,
     countTaskCompleted: methods.countTaskCompleted,
+    dispatchAgentEndEvent: methods.dispatchAgentEndEvent,
   });
+  const flush = () => [1, 2, 3, 4, 5].reduce((p) => p.then(() => {}), Promise.resolve());
 
-  it('says nothing and animates nothing when no end event would go out', () => {
+  it('says nothing and animates nothing when no end event would go out', async () => {
     const vm = vmFor(false);
     methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    await flush();
+    expect(vm.$agent.fetchByTaskRef).toHaveBeenCalledWith('sw');
     expect(vm.$agent.fireEndEvent).not.toHaveBeenCalled();
     expect(vm.postChatEvent).not.toHaveBeenCalled();
     expect(vm.endEventFiring.sw).toBeUndefined();
@@ -1679,6 +1684,23 @@ describe('RoutineFocus end-event dispatch', () => {
     }));
     // Set synchronously, so the stage is on screen before the dispatch settles.
     expect(vm.endEventFiring.sw).toBe(true);
+  });
+
+  // Started on the iPad, completed on the phone: the phone's copy of the agent
+  // predates the run, so it must ask the server before giving up.
+  it('closes a run another device opened once the server confirms it', async () => {
+    const vm = vmFor(false);
+    vm.$agent.fetchByTaskRef = jest.fn(() => {
+      vm.$agent.canFireEndEvent.mockReturnValue(true);
+      return Promise.resolve({ id: 'a1' });
+    });
+    vm.dispatchAgentEndEvent = methods.dispatchAgentEndEvent.bind(vm);
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    expect(vm.$agent.fireEndEvent).not.toHaveBeenCalled();
+    await flush();
+    expect(vm.$agent.fetchByTaskRef).toHaveBeenCalledWith('sw');
+    expect(vm.$agent.fireEndEvent).toHaveBeenCalledWith({ taskRef: 'sw', goalId: 'g1' });
+    expect(vm.postChatEvent).toHaveBeenCalled();
   });
 
   // The counter gate still comes first: a routine whose slots are not full has
