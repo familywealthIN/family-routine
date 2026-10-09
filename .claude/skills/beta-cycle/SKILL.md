@@ -242,8 +242,8 @@ one wave both land there before dispatching them concurrently.
 
 After each wave, commit or merge its work one piece at a time and run the touched workspace's
 checks before starting the next — a wave that lands on a broken tree wastes the next wave.
-Baseline for comparison: `packages/ui` 221 tests, `apps/web-app` 561, `apps/server` 207, all
-green as of 2 Oct 2026. Jest's `testMatch` excludes `apps/web-app/e2e/`, so `yarn test` is
+Baseline for comparison: `packages/ui` 1484 tests, `apps/web-app` 1670, `apps/server` 359, all
+green as of 9 Oct 2026. Jest's `testMatch` excludes `apps/web-app/e2e/`, so `yarn test` is
 safe to run while a beta session is live; **never** run the Playwright e2e specs then —
 `cache-integrity.spec.js` deletes today's Routine document out from under the run.
 

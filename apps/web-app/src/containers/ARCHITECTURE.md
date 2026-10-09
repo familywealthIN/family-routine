@@ -285,21 +285,27 @@ this provider approach deliberately avoids.)
 
 ## 7. Container catalog (dashboard)
 
+> **Historical.** This catalog was written for `DashBoard.vue`, which was removed on
+> 4 Oct 2026 when Routine Focus became the only home screen. As of 9 Oct only
+> `AgentEditModalContainer` (Priority) is still imported; every row marked
+> *unused* has no importer left and is a candidate for deletion. Routine Focus
+> composes its own containers (see `docs/routine-focus-home.md`).
+
 | Container | Organism | Owns | Status |
 |-----------|----------|------|--------|
-| `GoalItemListContainer` | `GoalItemList` | goal-item write CRUD (entity-cache) | built + wired (GoalsTime) |
-| `CurrentTaskContainer` | `CurrentTaskCard` | **derives** current-task read via inject | built + wired (DashBoard) |
-| `UpcomingPastTasksContainer` | `UpcomingPastTasks` | **derives** upcoming/past meta via inject | built + wired (DashBoard) |
-| `WeekGoalStreakContainer` | `WeekGoalStreak` | **derives** week-goal read + show/hide via inject | built + wired (DashBoard) |
-| `AgendaTaskListContainer` | `AgendaTaskList` | **derives** grouped goals via inject (`mode`); **owns** agenda-mode goal writes (emits `changed`), forwards today-mode writes | built + wired (DashBoard, both views) |
-| `StimulusSummaryContainer` | `StimulusSummary` (new organism) | **derives** D/K/G totals via inject (utils/stimulusTotals) | built + wired (DashBoard) |
-| `MissedDayRecoveryContainer` | `MissedDayRecovery` | week-strip read (`weekStimuli`, same variables as `WeekdaySelectorContainer` → one cache entry) + missed-day derivation (utils/missedDay) | built + wired (DashBoard) |
-| `AgentEditModalContainer` | `AgentEditModal` | **agent domain** (routine options + save refetch); imperative `open(taskRef)` | built + wired |
-| `PaywallDrawerContainer` | `PaywallDrawer` | drawer open/cost state; imperative `open(cost)` | built + wired |
-| `StepModalContainer` | (routine-steps dialog) | modal home (no GraphQL); `open(task)` | built + wired |
-| `GoalDetailsModalContainer` | `GoalListContainer` | "Add Goal" dialog chrome (v-model) | built + wired |
-| `GoalDisplayModalContainer` | `GoalCreationContainer` | goal-editor dialog chrome (v-model) | built + wired |
-| `QuickTaskModalContainer` | `QuickGoalCreationContainer` | quick-task dialog chrome (v-model) | built + wired |
+| `GoalItemListContainer` | `GoalItemList` | goal-item write CRUD (entity-cache) | unused (Goals now uses `GoalsCascadeContainer`) |
+| `CurrentTaskContainer` | `CurrentTaskCard` | **derives** current-task read via inject | unused (DashBoard removed) |
+| `UpcomingPastTasksContainer` | `UpcomingPastTasks` | **derives** upcoming/past meta via inject | unused (DashBoard removed) |
+| `WeekGoalStreakContainer` | `WeekGoalStreak` | **derives** week-goal read + show/hide via inject | unused (DashBoard removed) |
+| `AgendaTaskListContainer` | `AgendaTaskList` | **derives** grouped goals via inject (`mode`); **owns** agenda-mode goal writes (emits `changed`), forwards today-mode writes | unused (DashBoard removed) |
+| `StimulusSummaryContainer` | `StimulusSummary` (new organism) | **derives** D/K/G totals via inject (utils/stimulusTotals) | unused (DashBoard removed) |
+| `MissedDayRecoveryContainer` | `MissedDayRecovery` | week-strip read (`weekStimuli`, same variables as `WeekdaySelectorContainer` → one cache entry) + missed-day derivation (utils/missedDay) | unused (DashBoard removed) |
+| `AgentEditModalContainer` | `AgentEditModal` | **agent domain** (routine options + save refetch); imperative `open(taskRef)` | built + wired (PriorityTime) |
+| `PaywallDrawerContainer` | `PaywallDrawer` | drawer open/cost state; imperative `open(cost)` | unused |
+| `StepModalContainer` | (routine-steps dialog) | modal home (no GraphQL); `open(task)` | unused |
+| `GoalDetailsModalContainer` | `GoalListContainer` | "Add Goal" dialog chrome (v-model) | unused |
+| `GoalDisplayModalContainer` | `GoalCreationContainer` | goal-editor dialog chrome (v-model) | unused |
+| `QuickTaskModalContainer` | `QuickGoalCreationContainer` | quick-task dialog chrome (v-model) | unused |
 
 **Modal container convention:** an isolated-domain modal (agent) uses an
 imperative `open()/close()` API so the page holds *no* modal state. A modal

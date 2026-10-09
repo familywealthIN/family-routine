@@ -614,7 +614,7 @@ export default {
       focusRoutineId: '',
       period: 'day',
       checklistOpen: true,
-      // Pull-to-refresh refetch in flight (phone).
+      // Pull-to-refresh refetch in flight (phone card, or both panes on tablet/desktop).
       refreshing: false,
       drawerOpen: false,
       actionSheetOpen: false,

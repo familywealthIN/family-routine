@@ -9,11 +9,11 @@ Implementation of `packages/design/*.dc.html`. The shared contract is in
 |---|---|---|
 | Home | `pages/RoutineFocus.vue` | already existed; this round added the goal-item page, Inbox, Skip-day long-press and the Start Work -> Build Agent chain |
 | Priority | `pages/PriorityTime.vue` | 2x2 map is navigation on phone only; all four quadrants render at once on tablet/desktop |
-| Agents | `pages/AgentsBoard.vue` (via `views/Agents.vue`) | rewrite of the existing data-table page; list+detail 2:3 on tablet/desktop |
-| Goals | `pages/GoalsTime.vue` | cascade ladder is the navigation |
-| Year Goals | `pages/YearGoalsTime.vue` | reuses Home's chat thread, one thread per goal |
-| Routines | `pages/SettingsTime.vue` | 24h dial + editable timeline; delete moved into the editor |
-| Progress | `pages/ProgressTime.vue` | efficiency hero + sparkline + D/K/G trio |
+| Agents | `pages/AgentsBoard.vue` (via `views/Agents.vue`) | rewrite of the existing data-table page; list+detail 2:3 on tablet/desktop, list pane `position: sticky` |
+| Goals | `pages/GoalsTime.vue` | cascade ladder is the navigation; left pane `position: sticky` on tablet/desktop; add row + New goal disabled once the period shown has ended (`goalCascade.periodIsOver`) |
+| Year Goals | `pages/YearGoalsTime.vue` | reuses Home's chat thread, one thread per goal; every level adds and edits in the shared goal-item sheet; a past month takes no new goals and its goals open view-only |
+| Routines | `pages/SettingsTime.vue` | 24h dial + editable timeline; delete moved into the editor; left pane `position: sticky` on tablet/desktop |
+| Progress | `pages/ProgressTime.vue` | efficiency hero + sparkline + D/K/G trio; "On the clock" card (`TimingReportCard`, `routineTiming` query), full-width row on tablet/desktop |
 | Groups | `pages/FamilyRoutine.vue` | group pulse, member week grid; `confirm()` replaced by a sheet |
 | Profile / About | `pages/ProfileTime.vue`, `pages/AboutTime.vue` | lock icons replace the read-only banner; About trimmed per the design |
 

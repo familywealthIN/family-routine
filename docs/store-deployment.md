@@ -205,6 +205,12 @@ Console forms, one-time: Data Safety (declare the FCM token, Google/Apple
 sign-in, analytics), content rating questionnaire, target audience, ads
 declaration (none), and **test account credentials for review**.
 
+Tablets and laptops: `AndroidManifest.xml` declares
+`android.hardware.touchscreen` with `required="false"`. Every Android app
+implicitly requires a touchscreen, and Play hides such apps from laptops without
+one (Googlebooks, most Chromebooks). The full description and changelog say it
+runs on tablets and laptops.
+
 ### App Store — two screenshot sets
 
 | Platform | Required |
