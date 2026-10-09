@@ -299,3 +299,4 @@ export default {
   padding: 8px 20px 20px;
   animation: rn-fade .25s ease;
 }
+</style>

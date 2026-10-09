@@ -656,3 +656,4 @@ export default {
   line-height: 1.5;
   color: rgba(0, 0, 0, .55);
 }
+</style>
