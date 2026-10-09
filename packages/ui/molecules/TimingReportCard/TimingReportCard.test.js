@@ -60,6 +60,30 @@ describe('MoleculeTimingReportCard', () => {
     expect(opened).toEqual(['r0']);
   });
 
+  it('labels a month of bars 1, 5, 10 … rather than all 31', () => {
+    const buckets = Array.from({ length: 31 }, (_, i) => ({
+      key: `d${i}`, label: String(i + 1), title: `Day ${i + 1}`, onTime: 1, late: 0, missed: 0, pending: 0,
+    }));
+    const { el } = mount({ ...base, buckets });
+    const bars = q(el, 'timing-report-bars');
+    expect(bars.className).toContain('rn-ptime__bars--dense');
+    const labels = Array.from(bars.querySelectorAll('.rn-ptime__bar-label'))
+      .map((n) => n.textContent.trim()).filter(Boolean);
+    expect(labels).toEqual(['1', '5', '10', '15', '20', '25', '30']);
+  });
+
+  it('keeps every label on a week', () => {
+    const { el } = mount(base);
+    expect(q(el, 'timing-report-bars').className).not.toContain('rn-ptime__bars--dense');
+    expect(Array.from(el.querySelectorAll('.rn-ptime__bar-label')).map((n) => n.textContent.trim()))
+      .toEqual(['M', 'T']);
+  });
+
+  it('lays out wide only when asked', () => {
+    expect(mount(base).el.className).not.toContain('rn-ptime--wide');
+    expect(mount({ ...base, wide: true }).el.className).toContain('rn-ptime--wide');
+  });
+
   it('says when there is nothing yet', () => {
     const { el } = mount({ totals: {}, period: 'week' });
     expect(q(el, 'timing-report-empty').textContent).toContain('No check-ins in this week yet');

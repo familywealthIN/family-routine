@@ -359,6 +359,32 @@ describe('ProgressReport — layout', () => {
     });
   });
 
+  it('gives On the clock a full-width row under both columns, and says wide', () => {
+    const seen = [];
+    const withTiming = (shell) => new Vue({
+      render: (h) => h(ProgressReport, {
+        props: { shell, period: 'week' },
+        scopedSlots: {
+          timing: ({ wide } = {}) => {
+            seen.push([shell, !!wide]);
+            return h('div', { attrs: { 'data-testid': 'timing-stub' } });
+          },
+        },
+      }),
+    }).$mount().$el;
+
+    const desktop = withTiming('desktop');
+    const grid = desktop.querySelector('.rn-prog__grid');
+    expect(grid.children).toHaveLength(3);
+    expect(grid.children[2].className).toContain('rn-prog__wide');
+    expect(grid.children[2].querySelector('[data-testid="timing-stub"]')).not.toBeNull();
+
+    const phone = withTiming('phone');
+    expect(phone.querySelector('.rn-prog__wide')).toBeNull();
+    expect(q(phone, 'timing-stub')).not.toBeNull();
+    expect(seen).toEqual([['desktop', true], ['phone', false]]);
+  });
+
   it('offers the routine history row with a real href', () => {
     const opened = [];
     const { el } = render({ historyRoute: '/history' }, { 'open-history': () => opened.push(true) });

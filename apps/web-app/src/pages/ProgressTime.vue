@@ -29,8 +29,12 @@
       @open-routine="openRoutine"
       @open-history="goTo(HISTORY_ROUTE)"
     >
-      <!-- On the clock: on time / late / missed for the period on screen. -->
-      <template v-slot:timing>
+      <!--
+        On the clock: on time / late / missed for the period on screen. The
+        report says `wide` when it gives the card a full-width row (tablet and
+        desktop); the phone stacks it in its single column.
+      -->
+      <template v-slot:timing="{ wide }">
         <RoutineTimingContainer
           v-slot="{ timing, loading, error }"
           :start-date="periodRange.startDate"
@@ -42,6 +46,7 @@
             :period="safePeriod"
             :loading="loading"
             :error="error"
+            :wide="!!wide"
             @open-routine="openRoutine"
           />
         </RoutineTimingContainer>

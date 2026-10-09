@@ -7,8 +7,12 @@
       - the weekday rhythm, coloured by each day's on-time rate;
       - every routine, the ones slipping first.
     Pure: props in, `open-routine` out.
+
+    `wide` is for a full-width row (tablet / desktop): the read-outs sit on the
+    left and the routine list on the right, split on the page's own 3fr / 2fr
+    gutter so the list lines up with the cards above it.
   -->
-  <section class="rn-ptime" data-testid="timing-report">
+  <section class="rn-ptime" :class="{ 'rn-ptime--wide': wide }" data-testid="timing-report">
     <div class="rn-ptime__head">
       <i class="rn-mi rn-ptime__glyph">schedule</i>
       <div class="rn-ptime__title">On the clock</div>
@@ -23,64 +27,71 @@
       No check-ins in this {{ periodNoun }} yet.
     </div>
 
-    <template v-else>
-      <!-- The whole period as one split bar. -->
-      <div class="rn-ptime__split" role="img" :aria-label="splitLabel">
-        <span
-          v-for="key in splitKeys"
-          :key="key"
-          class="rn-ptime__split-part"
-          :style="{ flexGrow: totals[key], background: TIMING[key].color }"
-        ></span>
-      </div>
-      <div class="rn-ptime__legend">
-        <span v-for="key in legendKeys" :key="key" class="rn-ptime__key" :data-testid="`timing-report-${key}`">
-          <i class="rn-ptime__dot" :style="{ background: TIMING[key].color }"></i>
-          <b>{{ totals[key] }}</b> {{ TIMING[key].label }}
-        </span>
-      </div>
+    <div v-else class="rn-ptime__body">
+      <div class="rn-ptime__main">
+        <!-- The whole period as one split bar. -->
+        <div class="rn-ptime__split" role="img" :aria-label="splitLabel">
+          <span
+            v-for="key in splitKeys"
+            :key="key"
+            class="rn-ptime__split-part"
+            :style="{ flexGrow: totals[key], background: TIMING[key].color }"
+          ></span>
+        </div>
+        <div class="rn-ptime__legend">
+          <span v-for="key in legendKeys" :key="key" class="rn-ptime__key" :data-testid="`timing-report-${key}`">
+            <i class="rn-ptime__dot" :style="{ background: TIMING[key].color }"></i>
+            <b>{{ totals[key] }}</b> {{ TIMING[key].label }}
+          </span>
+        </div>
 
-      <!-- Bars: stacked, shared scale. -->
-      <div v-if="buckets.length > 1" class="rn-ptime__bars" data-testid="timing-report-bars">
+        <!-- Bars: stacked, shared scale. -->
         <div
-          v-for="bucket in buckets"
-          :key="bucket.key"
-          class="rn-ptime__bar-col"
-          :title="barTitle(bucket)"
+          v-if="buckets.length > 1"
+          class="rn-ptime__bars"
+          :class="{ 'rn-ptime__bars--dense': dense }"
+          data-testid="timing-report-bars"
         >
-          <div class="rn-ptime__bar">
-            <span
-              v-for="key in barKeys"
-              :key="key"
-              class="rn-ptime__bar-part"
-              :style="{ height: `${(bucket[key] / maxBucket) * 100}%`, background: TIMING[key].color }"
-            ></span>
-            <span v-if="bucket.skip" class="rn-ptime__bar-rest" title="Rest day">·</span>
-          </div>
-          <div class="rn-ptime__bar-label">{{ bucket.label }}</div>
-        </div>
-      </div>
-
-      <!-- Weekday rhythm. -->
-      <div v-if="showWeekdays" class="rn-ptime__section">
-        <div class="rn-ptime__section-title">Your weekly rhythm</div>
-        <div class="rn-ptime__week">
           <div
-            v-for="day in weekdays"
-            :key="day.index"
-            class="rn-ptime__day"
-            :style="dayStyle(day)"
-            :data-testid="`timing-weekday-${day.label}`"
+            v-for="(bucket, i) in buckets"
+            :key="bucket.key"
+            class="rn-ptime__bar-col"
+            :title="barTitle(bucket)"
           >
-            <div class="rn-ptime__day-label">{{ day.label }}</div>
-            <div class="rn-ptime__day-rate">{{ day.rate == null ? '–' : `${day.rate}%` }}</div>
+            <div class="rn-ptime__bar">
+              <span
+                v-for="key in barKeys"
+                :key="key"
+                class="rn-ptime__bar-part"
+                :style="{ height: `${(bucket[key] / maxBucket) * 100}%`, background: TIMING[key].color }"
+              ></span>
+              <span v-if="bucket.skip" class="rn-ptime__bar-rest" title="Rest day">·</span>
+            </div>
+            <div class="rn-ptime__bar-label">{{ barLabel(bucket, i) }}</div>
           </div>
         </div>
-        <div v-if="rhythmLine" class="rn-ptime__hint" data-testid="timing-rhythm">{{ rhythmLine }}</div>
+
+        <!-- Weekday rhythm. -->
+        <div v-if="showWeekdays" class="rn-ptime__section">
+          <div class="rn-ptime__section-title">Your weekly rhythm</div>
+          <div class="rn-ptime__week">
+            <div
+              v-for="day in weekdays"
+              :key="day.index"
+              class="rn-ptime__day"
+              :style="dayStyle(day)"
+              :data-testid="`timing-weekday-${day.label}`"
+            >
+              <div class="rn-ptime__day-label">{{ day.label }}</div>
+              <div class="rn-ptime__day-rate">{{ day.rate == null ? '–' : `${day.rate}%` }}</div>
+            </div>
+          </div>
+          <div v-if="rhythmLine" class="rn-ptime__hint" data-testid="timing-rhythm">{{ rhythmLine }}</div>
+        </div>
       </div>
 
       <!-- Routines, slipping first. -->
-      <div v-if="routines.length" class="rn-ptime__section">
+      <div v-if="routines.length" class="rn-ptime__section rn-ptime__routines">
         <div class="rn-ptime__section-title">By routine</div>
         <a
           v-for="row in shownRoutines"
@@ -110,7 +121,7 @@
           @click="expanded = !expanded"
         >{{ expanded ? 'Show fewer' : `Show all ${routines.length}` }}</button>
       </div>
-    </template>
+    </div>
   </section>
 </template>
 
@@ -118,6 +129,8 @@
 import { TIMING } from '../../constants/timing';
 
 const SPLIT = ['onTime', 'late', 'missed'];
+/** Past this many bars a label under every one collides (a month's day numbers). */
+const DENSE_BARS = 14;
 
 export default {
   name: 'MoleculeTimingReportCard',
@@ -136,6 +149,8 @@ export default {
     period: { type: String, default: 'week' },
     loading: { type: Boolean, default: false },
     error: { type: Boolean, default: false },
+    /** Laid out across a full-width row (tablet / desktop) rather than a phone column. */
+    wide: { type: Boolean, default: false },
   },
   data() {
     return { TIMING, expanded: false, limit: 5 };
@@ -177,11 +192,20 @@ export default {
       if (best.rate === worst.rate) return '';
       return `Strongest on ${best.label} (${best.rate}%), most slips on ${worst.label} (${worst.rate}%)`;
     },
+    /** A month's 31 bars are too narrow for 31 labels; they get every fifth. */
+    dense() {
+      return this.buckets.length > DENSE_BARS;
+    },
     shownRoutines() {
       return this.expanded ? this.routines : this.routines.slice(0, this.limit);
     },
   },
   methods: {
+    /** Every label on a short run; the first and every fifth on a dense one (1, 5, 10 …). */
+    barLabel(bucket, i) {
+      if (!this.dense || i === 0 || (i + 1) % 5 === 0) return bucket.label;
+      return '';
+    },
     barTitle(bucket) {
       if (bucket.skip) return `${bucket.title} · rest day`;
       const parts = this.barKeys
@@ -321,12 +345,26 @@ export default {
 }
 
 .rn-ptime__bar-label {
+  height: 13px;
   margin-top: 4px;
   font-size: 10px;
+  line-height: 13px;
   text-align: center;
   color: rgba(0, 0, 0, .45);
   white-space: nowrap;
   overflow: hidden;
+}
+
+/* A month: thinner gaps, and the few labels left may spill over their empty
+   neighbours, centred on their own bar. */
+.rn-ptime__bars--dense {
+  gap: 2px;
+}
+
+.rn-ptime__bars--dense .rn-ptime__bar-label {
+  display: flex;
+  justify-content: center;
+  overflow: visible;
 }
 
 .rn-ptime__section {
@@ -338,9 +376,9 @@ export default {
 .rn-ptime__section-title {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: .06em;
+  letter-spacing: .5px;
   text-transform: uppercase;
-  color: rgba(0, 0, 0, .54);
+  color: rgba(0, 0, 0, .45);
 }
 
 .rn-ptime__week {
@@ -378,9 +416,20 @@ export default {
   align-items: center;
   gap: 10px;
   min-height: 40px;
+  margin: 0 -8px;
+  padding: 0 8px;
+  border-radius: 10px;
   color: inherit;
   text-decoration: none;
   border-bottom: 1px solid rgba(0, 0, 0, .06);
+}
+
+.rn-ptime__row:hover {
+  background: #fafafa;
+}
+
+.rn-ptime__row:last-of-type {
+  border-bottom: 0;
 }
 
 .rn-ptime__row-name {
@@ -413,6 +462,29 @@ export default {
   font-size: 13px;
   font-weight: 700;
   text-align: right;
+}
+
+/* ---------------- wide: a full-width row on tablet / desktop ----------------
+   The page grid is minmax(0,3fr) minmax(0,2fr) with a 12px gutter and 16px card
+   padding. Inside this card's content box (C) the left column ends 16px short of
+   that gutter and the right one starts 16px past it, so "By routine" lines up
+   with the cards above: left = 0.6C - 20px, gap = 12 + 16 + 16 = 44px. */
+.rn-ptime--wide .rn-ptime__body {
+  display: grid;
+  grid-template-columns: minmax(0, calc(60% - 20px)) minmax(0, 1fr);
+  column-gap: 44px;
+  align-items: start;
+}
+
+/* No routine list yet: the read-outs take the whole row. */
+.rn-ptime--wide .rn-ptime__main:only-child {
+  grid-column: 1 / -1;
+}
+
+.rn-ptime--wide .rn-ptime__routines {
+  margin-top: 12px;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .rn-ptime__more {
