@@ -400,8 +400,9 @@ describe('OrganismAppShell — the main-column slot', () => {
     expect(render({ shell: 'tablet', statusBar: true }).el.classList.contains('rn-shell--no-status')).toBe(false);
     const css = fs.readFileSync(path.join(__dirname, 'AppShell.vue'), 'utf8');
     const rule = css.slice(css.indexOf('.rn-shell--tablet.rn-shell--no-status .rn-shell__head {'));
-    // The design's 4px head padding + the 24px strip it sits under, +1 to centre.
-    expect(rule.match(/padding-top:\s*(\d+)px/)[1]).toBe('29');
+    // Measured in WebKit: the middle of the 22px title's capitals lands on the
+    // logo's centre (41px). 29px, sized for a 24px line, left it ~3px low.
+    expect(rule.match(/padding-top:\s*(\d+)px/)[1]).toBe('26');
   });
 
   it('runs the tablet rail at 77px so the main column is the design 1056', () => {

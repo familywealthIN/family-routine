@@ -919,10 +919,13 @@ export default {
 
 /* The design's 4px head padding sits under its 24px status strip, which is
    what puts the title level with the rail's logo (22px down, 38 tall, centred
-   at 41). With the strip off — every real app — the head keeps those 24px (plus 1 to centre the 24px title line exactly), or
-   the title rides up to the top edge, 25px above the logo it should line up with. */
+   at 41). With the strip off — every real app — the head has to make up that
+   space itself, or the title rides up to the top edge. 26px, measured in
+   WebKit: the title is 22px on a 28.6px line, and the middle of its capitals
+   sits ~15px below the line's top, so a 26px pad puts them on the logo's
+   centre. 29px (sized for a 24px line) left the title visibly ~3px low. */
 .rn-shell--tablet.rn-shell--no-status .rn-shell__head {
-  padding-top: 29px;
+  padding-top: 26px;
 }
 
 .rn-shell--tablet .rn-shell__body {
