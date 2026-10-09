@@ -128,14 +128,14 @@ export default {
       return monthTiles(this.tree, this.safeMonthIndex);
     },
     /**
-     * The empty month's explanation. Past reads as a gap you can still fill;
-     * future as an invitation, with how many months the year still needs.
+     * The empty month's explanation. Past reads as closed (no adding into a
+     * month that is over); future as an invitation, with how many months the
+     * year still needs.
      */
     emptySub() {
       if (!this.tree || !this.month) return '';
       if (this.month.isPast) {
-        return `${this.month.name} passed without a month goal.`
-          + ' You can still add one; it counts toward the year.';
+        return `${this.month.name} passed without a month goal.`;
       }
       const left = Math.max(0, TH.year - this.tree.monthsDone);
       return `Months roll up into “${this.tree.body}”. ${left} more needed this year.`;

@@ -297,10 +297,11 @@ describe('GoalItemSheet — Linked to while ADDING', () => {
     expect(pickers(sheet).goalRef.label).toBe('Rolls up into a month goal');
   });
 
-  it('still locks the pickers away when the caller fixes the link (Year Goals)', () => {
+  it('keeps the routine picker but locks the parent when the caller fixes it (Year Goals)', () => {
     const { el } = adding({ linkLocked: true });
-    expect(q(el, 'goal-sheet-routine-picker')).toBeNull();
-    expect(q(el, 'goal-sheet-routine').textContent).toContain('Start Work · 09:00');
+    expect(q(el, 'goal-sheet-routine-picker').getAttribute('data-value')).toBe('sw');
+    expect(q(el, 'goal-sheet-goal-ref-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-goal-ref').textContent).toContain('Ship the dashboard');
   });
 });
 
@@ -395,7 +396,8 @@ describe('GoalItemSheet — create mode', () => {
       goalRefLabel: 'Ship the dashboard',
     });
     expect(q(el, 'goal-sheet-date-picker')).toBeNull();
-    expect(q(el, 'goal-sheet-routine-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-goal-ref-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-routine-picker')).not.toBeNull();
     expect(q(el, 'goal-sheet-date').textContent).toContain('Week 37');
     type(el, 'Day goal');
     await Vue.nextTick();

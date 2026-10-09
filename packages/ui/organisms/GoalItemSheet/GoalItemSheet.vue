@@ -153,11 +153,12 @@
           are computed from what hangs off each parent. There was no confirm and
           no undo, just two dropdowns on an otherwise read-only summary.
 
-          `linkLocked` stays, and still locks the ADD case too: Year Goals fixes
-          what a new goal rolls up into, so its sheet has nothing to pick either.
+          `linkLocked` locks only the PARENT while adding: Year Goals fixes what a
+          new goal rolls up into, but which routine does the work is still the
+          user's call, so the routine picker stays.
         -->
         <div
-          v-if="creating && !linkLocked"
+          v-if="creating"
           class="rn-gis__field-value rn-gis__field-value--grow rn-gis__link-pickers"
         >
           <goal-task-selector
@@ -175,7 +176,16 @@
             data-testid="goal-sheet-routine-picker"
             @input="setLink({ taskRef: $event || '' })"
           />
+          <div
+            v-if="linkLocked"
+            class="rn-gis__chip rn-gis__chip--goal rn-gis__picker"
+            data-testid="goal-sheet-goal-ref"
+          >
+            <i class="rn-mi">timeline</i>
+            <span class="rn-gis__chip-text">{{ goalRefLabel }}</span>
+          </div>
           <goal-ref-selector
+            v-else
             class="rn-gis__picker"
             :items="goalRefOptions"
             :tasklist="routines"
@@ -368,9 +378,9 @@ export default {
     /** Goal items one period up — the parent-goal picker's choices. */
     goalRefOptions: { type: Array, default: () => [] },
     /**
-     * Show Linked to as read-only chips even while ADDING. Year Goals sets it:
-     * there the plan decides what a new goal rolls up into. Editing is already
-     * read-only without this — see the template.
+     * Show the parent goal as a read-only chip even while ADDING; the routine
+     * picker stays. Year Goals sets it: there the plan decides what a new goal
+     * rolls up into. Editing is already read-only without this — see the template.
      */
     linkLocked: { type: Boolean, default: false },
     /** "Day goal · 12 Sep 2026". */

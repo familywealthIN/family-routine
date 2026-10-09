@@ -208,6 +208,7 @@
           <button
             type="button"
             class="rn-mfc__add rn-mfc__add--day"
+            :disabled="month.isPast"
             :data-testid="`add-day-${week.id}`"
             @click="$emit('add-day', week)"
           >
@@ -219,6 +220,7 @@
       <button
         type="button"
         class="rn-mfc__add rn-mfc__add--week"
+        :disabled="month.isPast"
         data-testid="add-week-goal"
         @click="$emit('add-week', month)"
       >
@@ -232,6 +234,7 @@
       <div class="rn-mfc__blank-sub">{{ emptySub }}</div>
       <button
         type="button"
+        v-if="!month.isPast"
         class="rn-mfc__blank-cta"
         data-testid="add-month-goal"
         @click="$emit('add-month', month)"
@@ -605,6 +608,12 @@ export default {
   cursor: pointer;
   padding: 0;
   text-align: left;
+}
+
+/* A past month is closed: its goals stay, but nothing new can be added. */
+.rn-mfc__add:disabled {
+  color: rgba(0, 0, 0, .38);
+  cursor: default;
 }
 
 .rn-mfc__add--day {

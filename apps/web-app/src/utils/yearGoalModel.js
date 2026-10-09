@@ -303,9 +303,11 @@ function buildWeek(weekItem, today) {
   };
 }
 
-function buildMonth(monthItem, index, today) {
+function buildMonth(monthItem, index, today, year = today.year()) {
   const isCurrent = index === today.month();
-  const isPast = index < today.month();
+  // Past is the calendar month, not the index: every month of last year's goal
+  // is past and none of next year's is. A past month takes no new goals.
+  const isPast = year < today.year() || (year === today.year() && index < today.month());
   const weeks = monthItem ? childrenOf(monthItem, 'week').map((w) => buildWeek(w, today)) : [];
   const weeksDone = weeks.filter((w) => w.isComplete).length;
   const autoTicked = !!monthItem && weeksDone >= TH.month;
@@ -405,10 +407,11 @@ export function buildYearGoal(goalItem, todayDate) {
     if (parsed && !byIndex[parsed.month()]) byIndex[parsed.month()] = item;
   });
 
-  const months = MONTH_NAMES.map((name, i) => buildMonth(byIndex[i] || null, i, today));
+  const parsedDate = parseDate(goalItem.date);
+  const year = parsedDate ? parsedDate.year() : today.year();
+  const months = MONTH_NAMES.map((name, i) => buildMonth(byIndex[i] || null, i, today, year));
   const monthsDone = months.filter((m) => m.isComplete).length;
   const isComplete = isDone(goalItem) || monthsDone >= TH.year;
-  const parsedDate = parseDate(goalItem.date);
 
   return {
     id: String(goalItem.id),
@@ -504,8 +507,7 @@ export function monthTile(month, selectedIndex) {
     track: 'rgba(0,0,0,.22)',
     trackDash: '3 3',
     fill: 'transparent',
-    // Past without a goal reads as a gap you can still fill; future as an
-    // invitation. Same tap either way.
+    // Past without a goal reads as a closed gap; future as an invitation.
     icon: month.isPast ? 'remove' : 'add',
     iconColor: 'rgba(0,0,0,.3)',
     text: '',
@@ -825,6 +827,7 @@ export function createDraft(tree, kind, context) {
       period: 'month',
       date: monthEndDate(tree.year, month.index),
       goalRef: tree.id,
+      taskRef: tree.taskRef || '',
       parentLabel: tree.body,
       periodIcon: 'calendar_month',
       periodLabel: `${month.name} ${tree.year}`,
@@ -845,6 +848,7 @@ export function createDraft(tree, kind, context) {
       period: 'week',
       date,
       goalRef: month.goal.id,
+      taskRef: month.goal.taskRef || tree.taskRef || '',
       parentLabel: month.goal.body,
       periodIcon: 'view_week',
       periodLabel: `Week ${parsed ? parsed.week() : ''} · ${weekRangeLabel(date)}`,
