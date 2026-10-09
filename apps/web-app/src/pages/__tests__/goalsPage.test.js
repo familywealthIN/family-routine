@@ -41,6 +41,7 @@ const page = (overrides = {}) => {
     tab: 'day',
     today: '12-09-2026',
     selectedDate: '12-09-2026',
+    canAdd: true,
     monthDate: '12-09-2026',
     switcherOpen: false,
     sheetOpen: false,
@@ -339,6 +340,14 @@ describe('GoalsTime — adding a goal', () => {
     vm.openSheet();
     expect(vm.sheetOpen).toBe(true);
     expect(vm.sheetPeriod).toBe('year');
+  });
+
+  it('opens nothing for a period that has ended', () => {
+    const { vm } = page({ tab: 'month', canAdd: false });
+    vm.openSheet();
+    expect(vm.sheetOpen).toBe(false);
+    expect(computed.canAdd.call({ tab: 'month', selectedDate: '15-08-2026', today: '12-09-2026' })).toBe(false);
+    expect(computed.canAdd.call({ tab: 'month', selectedDate: '01-09-2026', today: '12-09-2026' })).toBe(true);
   });
 
   it('switches to the level the new goal landed on and re-reads', () => {

@@ -307,6 +307,15 @@ describe('GoalCascade — empty and add', () => {
     q(el, 'goal-cascade-add').click();
     expect(events.add).toBe(1);
   });
+
+  it('greys the add row out for a period that has ended', () => {
+    const { el, events } = render({ groups: [], empty: true, canAdd: false });
+    const add = q(el, 'goal-cascade-add');
+    expect(add.className).toContain('rn-gcas__add--disabled');
+    expect(add.getAttribute('aria-disabled')).toBe('true');
+    add.click();
+    expect(events.add || 0).toBe(0);
+  });
 });
 
 describe('GoalCascade — the three shells', () => {

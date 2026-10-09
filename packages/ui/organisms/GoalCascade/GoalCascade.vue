@@ -93,6 +93,7 @@ const GoalGroups = {
     empty: { type: Boolean, default: false },
     emptyText: { type: String, default: '' },
     addLabel: { type: String, default: '' },
+    canAdd: { type: Boolean, default: true },
     /** The read failed AND nothing is cached — see the render below (D-10). */
     loadError: { type: Boolean, default: false },
     retrying: { type: Boolean, default: false },
@@ -273,11 +274,16 @@ const GoalGroups = {
       }, this.emptyText));
     }
 
+    // A period that has ended takes nothing new: the row stays, greyed.
     nodes.push(h('div', {
       key: 'add',
-      class: 'rn-gcas__add',
-      attrs: { 'data-testid': 'goal-cascade-add' },
-      on: { click: () => this.$emit('add') },
+      class: ['rn-gcas__add', { 'rn-gcas__add--disabled': !this.canAdd }],
+      attrs: {
+        'data-testid': 'goal-cascade-add',
+        'aria-disabled': this.canAdd ? null : 'true',
+        title: this.canAdd ? null : 'This period is over',
+      },
+      on: { click: () => { if (this.canAdd) this.$emit('add'); } },
     }, [
       h('i', { class: 'rn-mi rn-gcas__add-glyph' }, 'add_circle_outline'),
       this.addLabel,
@@ -305,6 +311,8 @@ export default {
     empty: { type: Boolean, default: false },
     emptyText: { type: String, default: '' },
     addLabel: { type: String, default: '' },
+    /** False once the period shown has ended: the add row greys out. */
+    canAdd: { type: Boolean, default: true },
     /** The read failed AND nothing is cached. Never "a request is in flight". */
     loadError: { type: Boolean, default: false },
     retrying: { type: Boolean, default: false },
@@ -319,6 +327,7 @@ export default {
         empty: this.empty,
         emptyText: this.emptyText,
         addLabel: this.addLabel,
+        canAdd: this.canAdd,
         loadError: this.loadError,
         retrying: this.retrying,
       };
@@ -608,6 +617,11 @@ export default {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.rn-gcas__add--disabled {
+  color: rgba(0, 0, 0, .3);
+  cursor: default;
 }
 
 .rn-gcas__add-glyph {

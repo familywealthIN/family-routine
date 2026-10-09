@@ -12,6 +12,7 @@
     :empty="view.empty"
     :empty-text="pendingDate ? LOADING_TEXT : view.emptyText"
     :add-label="view.addLabel"
+    :can-add="view.canAdd"
     :load-error="loadError"
     :retrying="retrying"
     @select-step="$emit('select-step', $event)"

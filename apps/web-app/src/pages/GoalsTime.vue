@@ -52,7 +52,8 @@
         type="button"
         class="rn-shell__act rn-shell__act--primary"
         :class="labelledActions ? 'rn-shell__act--label' : 'rn-shell__act--icon'"
-        title="New goal"
+        :title="canAdd ? 'New goal' : 'This period is over'"
+        :disabled="!canAdd"
         data-testid="goals-new"
         @click="openSheet"
       >
@@ -195,7 +196,7 @@ import GoalDeleteConfirmContainer from '../containers/GoalDeleteConfirmContainer
 import YearGoalListContainer from '../containers/YearGoalListContainer.vue';
 import { signOut } from '../utils/signOut';
 import {
-  DATE_FORMAT, currentRoutineId, goalDateFor, normaliseTab,
+  DATE_FORMAT, currentRoutineId, goalDateFor, normaliseTab, periodIsOver,
 } from '../utils/goalCascade';
 
 /** Routes this page can leave by. One place, so one line changes per route. */
@@ -290,6 +291,10 @@ export default {
     editorDate() {
       return goalDateFor(normaliseTab(this.tab), this.selectedDate);
     },
+    /** A past day, week, month or year takes no new goals (same rule as the list's add row). */
+    canAdd() {
+      return !periodIsOver(this.tab, this.selectedDate, this.today);
+    },
   },
 
   mounted() {
@@ -365,6 +370,7 @@ export default {
       this.monthDate = next.format(DATE_FORMAT);
     },
     openSheet() {
+      if (!this.canAdd) return;
       this.trackUserInteraction('add_goal_dialog_open', 'button_click', {
         from_page: 'goals',
         period: normaliseTab(this.tab),

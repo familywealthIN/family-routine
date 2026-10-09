@@ -58,6 +58,21 @@ export function normaliseTab(key) {
 }
 
 /**
+ * Whether the period the tab shows around `selectedDate` has already ended: a
+ * past day, or a week, month or year that finished before today. Nothing new
+ * is filed into one. Lifetime never ends.
+ */
+const PERIOD_UNIT = {
+  [DAY]: 'day', [WEEK]: 'week', [MONTH]: 'month', [YEAR]: 'year',
+};
+export function periodIsOver(tab, selectedDate, today) {
+  const unit = PERIOD_UNIT[normaliseTab(tab)];
+  if (!unit) return false;
+  const end = moment(selectedDate, DATE_FORMAT).endOf(unit);
+  return end.isValid() && end.isBefore(moment(today, DATE_FORMAT).startOf('day'));
+}
+
+/**
  * The date a goal of `period` is filed under, given the day in view. The Goal
  * document's `date` is the END of its period (the week's Friday, the month's last
  * day, 31 December, and `01-01-1970` for a lifetime goal, which has no date at
@@ -743,6 +758,7 @@ export function buildCascade({
     empty: !loadError && !rows.length,
     emptyText: active === DAY && future ? 'Nothing planned yet for this day.' : 'No goals here yet.',
     addLabel: addLabelFor(active),
+    canAdd: !periodIsOver(active, selectedDate, today),
     // The nav glyph's ring and the Year ladder step read ONE figure, so the page
     // takes it from here rather than computing a second year average.
     yearAverage,

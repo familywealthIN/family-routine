@@ -705,7 +705,17 @@ export default {
   color: #288bd5;
 }
 
-/* Groups' invite button when the group is full or failed to load. */
+/* Groups' invite button when the group is full or failed to load, and any
+   action that is disabled (Goals' New goal on a period that has ended). */
+.rn-shell__act:disabled {
+  cursor: default;
+}
+
+.rn-shell__act--primary.rn-shell__act--icon:disabled {
+  color: rgba(0, 0, 0, .25);
+}
+
+.rn-shell__act--primary.rn-shell__act--label:disabled,
 .rn-shell__act--muted.rn-shell__act--label {
   border-color: transparent;
   background: rgba(0, 0, 0, .25);
