@@ -396,7 +396,6 @@ export default {
 .rn-routines--desktop {
   flex: 1;
   height: 100%;
-  overflow: hidden;
 }
 
 .rn-routines--tablet > *,

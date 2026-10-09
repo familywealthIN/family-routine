@@ -548,7 +548,6 @@ export default {
 .goals-page--tablet,
 .goals-page--desktop {
   height: 100%;
-  overflow: hidden;
 }
 
 .goals-page--tablet > .rn-gcas,

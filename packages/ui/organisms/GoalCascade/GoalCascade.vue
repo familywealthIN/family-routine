@@ -633,6 +633,20 @@ export default {
   overflow-y: auto;
 }
 
+/* The left pane stays put while the right one scrolls. Sticky, not just a
+   height chain: iPad WebKit can leave the chain's `height: 100%` unresolved,
+   and then the whole body scrolls. Sticky holds in both cases; the max-height
+   (viewport less the shell's head and padding) keeps a tall pane scrollable. */
+.rn-gcas--tablet .rn-gcas__side,
+.rn-gcas--desktop .rn-gcas__side {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  max-height: calc(100vh - 120px);
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+}
+
 .rn-gcas--desktop .rn-gcas__split {
   gap: 20px;
 }

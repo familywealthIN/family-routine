@@ -647,7 +647,6 @@ export default {
   gap: 14px;
   height: 100%;
   min-height: 0;
-  overflow: hidden;
 }
 
 .rn-day--tablet .rn-day__card,
@@ -661,6 +660,21 @@ export default {
   width: 380px;
   flex-shrink: 0;
 }
+
+/* The left pane stays put while the right one scrolls. Sticky, not just a
+   height chain: iPad WebKit can leave the chain's `height: 100%` unresolved,
+   and then the whole body scrolls. Sticky holds in both cases; the max-height
+   (viewport less the shell's head and padding) keeps a tall pane scrollable. */
+.rn-day--tablet .rn-day__dial-col,
+.rn-day--desktop .rn-day__dial-col {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  max-height: calc(100vh - 120px);
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+}
+
 
 /* 440 beside a 360 dial, against tablet's 380 beside a 300 — the design's own
    two splits, not one scaled guess. */
