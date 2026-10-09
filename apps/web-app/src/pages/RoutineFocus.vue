@@ -191,42 +191,45 @@
             @focus-routine="setFocus"
           />
 
-          <div class="rn-home__content">
-            <routine-focus-card v-if="focusRow" ref="card" v-bind="cardProps" v-on="cardHandlers" />
-            <div v-else class="rn-home__empty rn-home__empty--pane">
-              <p>{{ emptyMessage }}</p>
-              <button type="button" class="rn-home__empty-btn" @click="goTo('/settings')">
-                Open Routine Settings
-              </button>
-            </div>
-
-            <section v-if="focusRow" class="rn-home__chat-pane">
-              <header class="rn-home__chat-head">
-                <div
-                  class="rn-home__chat-avatar"
-                  :style="{ background: focusRow.stimulusTint, color: focusRow.stimulusColor }"
-                >
-                  <i class="rn-mi">forum</i>
-                </div>
-                <div class="rn-home__chat-head-text">
-                  <div class="rn-home__chat-name">{{ focusRow.name }}</div>
-                  <div class="rn-home__chat-sub">{{ chatSubline }}</div>
-                </div>
-              </header>
-              <div class="rn-home__chat-body rn-hidescroll">
-                <routine-chat-container v-bind="chatProps" ref="chat" v-on="chatHandlers" />
+          <!-- The installed app has no browser reload: pull down on either pane. -->
+          <pull-to-refresh :refreshing="refreshing" @refresh="pullRefresh">
+            <div class="rn-home__content">
+              <routine-focus-card v-if="focusRow" ref="card" v-bind="cardProps" v-on="cardHandlers" />
+              <div v-else class="rn-home__empty rn-home__empty--pane">
+                <p>{{ emptyMessage }}</p>
+                <button type="button" class="rn-home__empty-btn" @click="goTo('/settings')">
+                  Open Routine Settings
+                </button>
               </div>
-              <routine-composer
-                v-model="chatText"
-                :variant="shell"
-                :placeholder="composerPlaceholder"
-                :disabled="chatDisabled"
-                @send="sendChat"
-                @focus="onComposerFocus(false)"
-                @add-task="openAiSearch"
-              />
-            </section>
-          </div>
+
+              <section v-if="focusRow" class="rn-home__chat-pane">
+                <header class="rn-home__chat-head">
+                  <div
+                    class="rn-home__chat-avatar"
+                    :style="{ background: focusRow.stimulusTint, color: focusRow.stimulusColor }"
+                  >
+                    <i class="rn-mi">forum</i>
+                  </div>
+                  <div class="rn-home__chat-head-text">
+                    <div class="rn-home__chat-name">{{ focusRow.name }}</div>
+                    <div class="rn-home__chat-sub">{{ chatSubline }}</div>
+                  </div>
+                </header>
+                <div class="rn-home__chat-body rn-hidescroll">
+                  <routine-chat-container v-bind="chatProps" ref="chat" v-on="chatHandlers" />
+                </div>
+                <routine-composer
+                  v-model="chatText"
+                  :variant="shell"
+                  :placeholder="composerPlaceholder"
+                  :disabled="chatDisabled"
+                  @send="sendChat"
+                  @focus="onComposerFocus(false)"
+                  @add-task="openAiSearch"
+                />
+              </section>
+            </div>
+          </pull-to-refresh>
         </div>
       </template>
     </app-shell-container>
@@ -478,6 +481,8 @@ const WEEK_STRIP_OPEN_PX = 68;
 // this user and not about this page load. Ids only — the transcript itself lives
 // on the goal item.
 const REWARD_SEEN_KEY = 'rn-reward-seen';
+// Shortest time the pull-to-refresh spinner shows, so a fast refetch still reads as one.
+const PULL_MIN_SPIN_MS = 600;
 // Day-goal quick-picks on the goal-item page: today, tomorrow, and the start of
 // next week (the design's "Mon").
 const DATE_PICKS = [
@@ -1430,6 +1435,12 @@ export default {
         .filter((query) => query && !query.skip && typeof query.refetch === 'function');
       const reads = queries.map((query) => query.refetch());
       if (this.$refs.chat && this.$refs.chat.refetch) reads.push(this.$refs.chat.refetch());
+      // Agents too: a run started on another device shows here only once the
+      // agent is re-read.
+      if (this.$agent && this.$agent.fetchAll) reads.push(this.$agent.fetchAll());
+      // A cached day comes back in a few ms; hold the spinner long enough to
+      // be seen, or the pull looks like it did nothing.
+      reads.push(new Promise((resolve) => { setTimeout(resolve, PULL_MIN_SPIN_MS); }));
       eventBus.$emit(EVENTS.DASHBOARD_REFRESH);
       try {
         await Promise.all(reads);
