@@ -129,7 +129,9 @@ const decryptGoalData = function decryptGoal(docs) {
 GoalSchema.post(['find', 'findOne', 'findOneAndUpdate'], decryptGoalData);
 
 // One node of a period goal's calendar streak: every child date of the period,
-// with what happened on it ('complete' | 'missed' | 'upcoming' | 'none').
+// with what happened on it ('complete' | 'partial' | 'missed' | 'upcoming' |
+// 'none'). 'partial' is a past date some, but not all, of whose milestones were
+// met — it is not a miss, and `milestonesComplete` counts the ones that landed.
 const GoalMilestoneDayType = new GraphQLObjectType({
   name: 'GoalMilestoneDay',
   fields: {

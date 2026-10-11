@@ -177,6 +177,15 @@ event firing — so the thread is a record of the day, not a reconstruction.
   routine's completed goal items. It must not be inverted out of the K ledger
   (`slots × K.earned / points`): a 0-point routine never moves `K.earned`, so
   that ratio pinned the agent in `listening` forever (D-03).
+- **The cascade counter and the cascade grid** count different things on
+  purpose (D-02). The counter is in **milestones** — the server's own
+  `milestonesComplete` over every milestone the goal holds, floored at the
+  threshold — because that is the unit `evaluateAutoComplete` gates on. The grid
+  is in **calendar cells**, and one cell can hold several milestones, which is
+  why a day can be `partial`. `GoalItem.progress` is a third unit again (one win
+  per child *document*); it is the streak count the Goals screen renders and the
+  focus screen never shows it. Only the server's `isComplete` sets the card's
+  "Done" — the panel must never tick a goal off its own arithmetic.
 - **`countTotal('G')`** multiplies by 4 / 2 / 1.334 depending on how far into the
   week, month and year the day sits. The drawer's donuts clamp at 100%, because
   the raw value legitimately exceeds it early in the week.

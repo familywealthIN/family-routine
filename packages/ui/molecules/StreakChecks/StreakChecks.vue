@@ -28,6 +28,7 @@ import { AtomAvatar, AtomDivider, AtomIcon } from '../../atoms';
 // outlines, which read as "done" at a glance and hid the break entirely.
 const STATUS_VISUALS = {
   complete: { icon: 'check_circle', color: 'green', title: 'completed' },
+  partial: { icon: 'donut_large', color: 'green lighten-2', title: 'partly completed' },
   missed: { icon: 'cancel', color: 'red', title: 'missed' },
   upcoming: { icon: 'radio_button_unchecked', color: 'grey', title: 'still to do' },
   none: { icon: 'remove', color: 'grey lighten-1', title: 'no milestone' },
