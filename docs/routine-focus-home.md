@@ -172,7 +172,11 @@ event firing — so the thread is a record of the day, not a reconstruction.
 - **The agent's end-event rule** counts *slots*: `D.splitRate / K.splitRate`,
   derived from the routine's time gap, not from the checklist length (D-20). A
   listening agent completes when that counter fills. Do not unify these two —
-  the first is what the user sees, the second is what the economy counts.
+  the first is what the user sees, the second is what the economy counts. The
+  *total* is that slot count; the *filled* side is a plain count of the
+  routine's completed goal items. It must not be inverted out of the K ledger
+  (`slots × K.earned / points`): a 0-point routine never moves `K.earned`, so
+  that ratio pinned the agent in `listening` forever (D-03).
 - **`countTotal('G')`** multiplies by 4 / 2 / 1.334 depending on how far into the
   week, month and year the day sits. The drawer's donuts clamp at 100%, because
   the raw value legitimately exceeds it early in the week.
