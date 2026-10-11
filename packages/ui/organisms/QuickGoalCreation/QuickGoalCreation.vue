@@ -15,8 +15,9 @@
     It is also where the classic dashboard's SECOND dialog went. There, a check
     circle on a routine that already had a day goal item opened a goal-action
     modal instead of this form, so the user could see the item Start Task would
-    complete and the agent would be handed. That is the `lockedItem` block below:
-    one sheet, which either has an item locked in or does not.
+    complete and the agent would be handed. That card (LOCKED IN) was removed on
+    11 Oct 2026 at the owner's ask: it popped in after Start Agent created the
+    item and shifted the sheet. `lockedItem` now only switches the placeholder.
 
     `sheet` is the switch, and it is off by default: the classic dashboard's
     quick-task dialog and `QuickTaskModalContainer` already supply their own
@@ -107,52 +108,6 @@
             aria-label="Routine is fixed for this sheet"
             data-testid="quick-goal-routine-lock"
           >lock</i>
-        </div>
-
-        <!--
-          The goal item this routine is already locked in on.
-
-          The classic dashboard branched to a SECOND dialog here
-          (`DashBoard.openGoalActionModal`): tapping the check circle on a
-          routine that already had a day goal item opened a goal-action modal
-          showing that item plus Start Task / Start Agent / Build Agent, and only
-          a routine with nothing on it got the create form. The branch is folded
-          into this one sheet rather than restored as a second modal — the sheet
-          already carries both actions, so the only thing it was missing is the
-          item itself.
-
-          It matters because of the agent: `{goalId}` in an agent's start URL
-          resolves to the routine's FIRST day goal item, so Start Agent acts on
-          exactly this row. With it off-screen there was no way to tell what was
-          about to be dispatched, which is what the lock and the overline say.
-
-          Plain text, not markdown: the dashboard ran the contribution through
-          `vue-markdown`, and `packages/ui` carries no markdown dependency.
-        -->
-        <div
-          v-if="lockedItem"
-          class="rn-qg__item"
-          data-testid="quick-goal-locked-item"
-        >
-          <div class="rn-qg__item-head">
-            <span class="rn-qg__item-label">{{ lockedItemLabel }}</span>
-            <i
-              class="rn-mi rn-qg__item-lock"
-              :title="lockedItemLockTitle"
-              :aria-label="lockedItemLockTitle"
-              data-testid="quick-goal-item-lock"
-            >lock</i>
-          </div>
-          <div
-            class="rn-qg__item-body"
-            :class="{ 'rn-qg__item-body--done': !!lockedItem.isComplete }"
-            data-testid="quick-goal-locked-item-body"
-          >{{ lockedItem.body }}</div>
-          <div
-            v-if="lockedItem.contribution"
-            class="rn-qg__item-note"
-            data-testid="quick-goal-locked-item-note"
-          >{{ lockedItem.contribution }}</div>
         </div>
 
         <!--
@@ -540,18 +495,6 @@ export default {
       return this.lockedItem ? 'Add another task' : 'Type your task';
     },
     /**
-     * Names the locked item for what it is. With an agent bound it is also the
-     * dispatch target, and saying so is the whole point of showing the row.
-     */
-    lockedItemLabel() {
-      return this.agentAssigned ? 'LOCKED IN · AGENT TARGET' : 'LOCKED IN';
-    },
-    lockedItemLockTitle() {
-      return this.agentAssigned
-        ? 'The agent runs against this goal item'
-        : 'Already on this routine';
-    },
-    /**
      * The picker's rows: the same list the Vuetify select used to be handed, so
      * the grouping headers and the "no parent" row are unchanged — it is the
      * presentation that moved, not the data.
@@ -902,54 +845,6 @@ export default {
 .rn-qg__locked-lock {
   font-size: 16px;
   color: rgba(0, 0, 0, .35);
-}
-
-/* The goal item already locked in — the bordered-card grammar the design uses
-   for Related Goals, so the two read as one family rather than two inventions. */
-.rn-qg__item {
-  padding: 10px 12px;
-  border: 1px solid rgba(0, 0, 0, .08);
-  border-radius: 12px;
-}
-
-.rn-qg__item-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.rn-qg__item-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .5px;
-  color: rgba(0, 0, 0, .45);
-}
-
-.rn-qg__item-lock {
-  font-size: 16px;
-  color: rgba(0, 0, 0, .35);
-}
-
-.rn-qg__item-body {
-  margin-top: 2px;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.35;
-  color: rgba(0, 0, 0, .87);
-}
-
-.rn-qg__item-body--done {
-  color: rgba(0, 0, 0, .45);
-  text-decoration: line-through;
-}
-
-.rn-qg__item-note {
-  margin-top: 4px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: rgba(0, 0, 0, .54);
 }
 
 /* PARENT GOAL picker, to the AI search modal's toolbar-select spec:

@@ -247,87 +247,33 @@ describe('QuickGoalCreation — locked routine', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4b — the goal item already locked in
+// 4b — a routine that already has a goal item
 // ---------------------------------------------------------------------------
 /**
- * The classic dashboard had TWO dialogs behind the check circle: this create
- * form when the routine had nothing on it, and a goal-action modal
- * (`DashBoard.openGoalActionModal`) when it already had a day goal item —
- * showing that item above Start Task / Start Agent / Build Agent. Only the
- * create form survived the redesign, so a routine that already had a task
- * offered no sight of what Start Task would complete or what the agent would be
- * handed.
- *
- * Folded into this one sheet as `lockedItem`, because the sheet already carries
- * both actions.
+ * The LOCKED IN card that named the item was removed (owner, 11 Oct 2026): it
+ * appeared mid-gesture once Start Agent created the item and shifted the sheet.
+ * Only the placeholder still says a second item is being added.
  */
-describe('QuickGoalCreation — the locked-in goal item', () => {
+describe('QuickGoalCreation — a routine that already has a goal item', () => {
   const ITEM = { id: 'gi1', body: 'Ship the sheet', contribution: 'Unblocks the beta' };
 
-  it('is absent when the routine has nothing on it yet', () => {
+  it('asks for a task when the routine has nothing on it yet', () => {
     const { el } = render();
-    expect(q(el, 'quick-goal-locked-item')).toBeNull();
     expect(el.querySelector('#newGoalItemBody').getAttribute('placeholder'))
       .toBe('Type your task');
   });
 
-  it('names the item and its contribution, and carries the lock', () => {
-    const { el } = render({ lockedItem: ITEM });
-    const row = q(el, 'quick-goal-locked-item');
-    expect(text(q(el, 'quick-goal-locked-item-body'))).toBe('Ship the sheet');
-    expect(text(q(el, 'quick-goal-locked-item-note'))).toBe('Unblocks the beta');
-    expect(row.querySelector('.rn-qg__item-lock')).toBeTruthy();
+  it('draws no locked-in card, so nothing pops in after Start Agent', () => {
+    const { el } = render({ lockedItem: ITEM, agentState: 'assigned' });
+    expect(q(el, 'quick-goal-locked-item')).toBeNull();
+    expect(el.textContent).not.toContain('LOCKED IN');
   });
 
-  // Typing is still offered — it adds a SECOND item rather than replacing the
-  // locked one, and the placeholder has to say so.
-  it('turns the input into "add another" once something is locked in', () => {
+  // Typing still adds a SECOND item rather than replacing the first.
+  it('turns the input into "add another" once the routine has an item', () => {
     const { el } = render({ lockedItem: ITEM });
     expect(el.querySelector('#newGoalItemBody').getAttribute('placeholder'))
       .toBe('Add another task');
-  });
-
-  /**
-   * `{goalId}` in an agent's start URL resolves to exactly this item, so with an
-   * agent bound the overline has to say that — it is the only thing on the sheet
-   * that tells the user what Start Agent is about to act on.
-   */
-  it('calls itself the agent target only when an agent is bound', () => {
-    const plain = render({ lockedItem: ITEM, agentState: 'none' });
-    expect(text(plain.el.querySelector('.rn-qg__item-label'))).toBe('LOCKED IN');
-
-    const bound = render({ lockedItem: ITEM, agentState: 'assigned' });
-    expect(text(bound.el.querySelector('.rn-qg__item-label')))
-      .toBe('LOCKED IN · AGENT TARGET');
-    expect(q(bound.el, 'quick-goal-item-lock').getAttribute('title'))
-      .toBe('The agent runs against this goal item');
-  });
-
-  it('strikes an item that is already done, so it cannot read as pending', () => {
-    const open = render({ lockedItem: ITEM });
-    expect(q(open.el, 'quick-goal-locked-item-body').className)
-      .not.toContain('rn-qg__item-body--done');
-
-    const done = render({ lockedItem: { ...ITEM, isComplete: true } });
-    expect(q(done.el, 'quick-goal-locked-item-body').className)
-      .toContain('rn-qg__item-body--done');
-    expect(ruleFor('.rn-qg__item-body--done')).toContain('line-through');
-  });
-
-  // Same bordered card as Related Goals, so the two read as one family.
-  it('is the design bordered-card, radius 12', () => {
-    const rule = ruleFor('.rn-qg__item');
-    expect(rule).toContain('border-radius: 12px');
-    expect(rule).toContain('border: 1px solid rgba(0, 0, 0, .08)');
-  });
-
-  // The note is plain text: packages/ui carries no markdown dependency, and the
-  // dashboard's vue-markdown render of the contribution cannot come with it.
-  it('renders the contribution as text, not markup', () => {
-    const { el } = render({ lockedItem: { ...ITEM, contribution: '<b>bold</b>' } });
-    const note = q(el, 'quick-goal-locked-item-note');
-    expect(note.querySelector('b')).toBeNull();
-    expect(text(note)).toBe('<b>bold</b>');
   });
 });
 
