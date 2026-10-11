@@ -345,32 +345,52 @@ describe('RoutineFocus redeem price', () => {
 });
 
 describe('RoutineFocus slot counters (the agent end-event rule)', () => {
-  // D-20: the counter is points-derived slots from the routine's time gap, not
-  // a checkbox count — and it is what gates the agent's end event.
+  // D-20: the TOTAL is points-derived slots from the routine's time gap, not a
+  // checkbox count — and it is what gates the agent's end event.
   const task = (dSplit, kSplit, points, kEarned) => ({
+    id: 'sw',
     points,
     stimuli: [
       { name: 'D', splitRate: dSplit, earned: 0 },
       { name: 'K', splitRate: kSplit, earned: kEarned },
     ],
   });
+  // The completed side is a count of the routine's own day goal items.
+  const ctxWith = (...items) => ({
+    countTaskTotal: methods.countTaskTotal,
+    dayGoalItems: items,
+  });
+  const item = (isComplete, taskRef = 'sw') => ({ taskRef, isComplete });
 
   it('derives the total from the D/K split rates', () => {
     expect(methods.countTaskTotal(task(6, 1, 12, 0))).toBe(6);
     expect(methods.countTaskTotal(task(4, 1, 10, 0))).toBe(4);
   });
 
-  it('derives the completed count from K earned over the task points', () => {
-    const ctx = { countTaskTotal: methods.countTaskTotal };
+  it('counts the routine’s completed day goal items', () => {
+    const ctx = ctxWith(item(true), item(true), item(true), item(false));
     expect(methods.countTaskCompleted.call(ctx, task(6, 1, 12, 6))).toBe(3);
-    expect(methods.countTaskCompleted.call(ctx, task(6, 1, 12, 12))).toBe(6);
-    expect(methods.countTaskCompleted.call(ctx, task(6, 1, 12, 0))).toBe(0);
+    expect(methods.countTaskCompleted.call(ctxWith(), task(6, 1, 12, 0))).toBe(0);
+  });
+
+  it('ignores items belonging to another routine', () => {
+    const ctx = ctxWith(item(true), item(true, 'lw'), item(true, 'lw'));
+    expect(methods.countTaskCompleted.call(ctx, task(6, 1, 12, 2))).toBe(1);
+  });
+
+  // D-03: the server adds points/slots to K.earned per completion, so a
+  // 0-point routine never moves K.earned; inverting that ledger pinned the
+  // completed count at 0 and the listening agent never reached its total.
+  it('still reaches the total on a 0-point routine', () => {
+    const zero = task(7 / 3, 2, 0, 0); // a 1-slot window worth no points
+    const ctx = ctxWith(item(true), item(true));
+    expect(methods.countTaskTotal(zero)).toBe(1);
+    expect(methods.countTaskCompleted.call(ctx, zero)).toBe(2);
   });
 
   it('is zero rather than NaN for a task with no stimuli', () => {
-    const ctx = { countTaskTotal: methods.countTaskTotal };
     expect(methods.countTaskTotal({ stimuli: [] })).toBe(0);
-    expect(methods.countTaskCompleted.call(ctx, { stimuli: [] })).toBe(0);
+    expect(methods.countTaskCompleted.call(ctxWith(item(true)), { id: 'sw', stimuli: [] })).toBe(0);
   });
 });
 
@@ -467,6 +487,8 @@ describe('RoutineFocus computed graph', () => {
         countTotal: RoutineFocus.methods.countTotal,
         countTaskTotal: RoutineFocus.methods.countTaskTotal,
         countTaskCompleted: RoutineFocus.methods.countTaskCompleted,
+        maybeFireAgentEndEvent: RoutineFocus.methods.maybeFireAgentEndEvent,
+        postChatEvent: () => {},
         weekOfMonth: RoutineFocus.methods.weekOfMonth,
         effectiveAgentStatus: () => '',
         redeemCostForTask: () => 0,
@@ -512,6 +534,25 @@ describe('RoutineFocus computed graph', () => {
     const vm = graph({ routineDate: { id: 'r1', tasklist } });
     expect(vm.rows.map((r) => r.totalCount)).toEqual([1, 2, 2]);
     expect(vm.daySummary).toContain('1/5 tasks');
+  });
+
+  // D-03: Start Work worth 0 points earns nothing into K, so the old
+  // points-derived completed count could never reach its slot total and the
+  // listening agent was stuck forever.
+  it('fires the end event for a 0-point routine once its items are complete', () => {
+    const tasklist = [
+      TASKS[0],
+      { ...TASKS[1], points: 0, stimuli: split(7 / 3, 2) }, // 1 slot, 0 points
+      TASKS[2],
+    ];
+    const vm = graph({ routineDate: { id: 'r1', tasklist } });
+    vm.$agent.fireEndEvent = jest.fn(() => Promise.resolve());
+    // The checklist header reads "2 of 2 done" against a 1-slot window.
+    vm.goals[0].goalItems = vm.goals[0].goalItems.map((i) => ({ ...i, isComplete: true }));
+
+    vm.maybeFireAgentEndEvent('sw', 'g2');
+
+    expect(vm.$agent.fireEndEvent).toHaveBeenCalledWith({ taskRef: 'sw', goalId: 'g2' });
   });
 
   it('reports the focused routine’s window and the deck counters', () => {
