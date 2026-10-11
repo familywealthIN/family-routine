@@ -15,7 +15,10 @@
  *      iframe behind "Full transcript" is for.
  *
  * `MarkdownField` is stubbed: EasyMDE is tested where it lives, and loading it
- * here would drag CodeMirror into every assertion.
+ * here would drag CodeMirror into every assertion. The stub owns a `draft` and
+ * commits THAT, exactly as the real field does — a stub that commits its
+ * `value` prop instead would let the sheet pass while every contribution edit
+ * was silently discarded (D-05).
  */
 jest.mock(
   '../../molecules/MarkdownField/MarkdownField.vue',
@@ -24,9 +27,18 @@ jest.mock(
     default: {
       name: 'MarkdownField',
       props: ['value', 'editorKey'],
-      methods: { flush() { this.$emit('commit', this.value); } },
+      data() {
+        return { draft: this.value };
+      },
+      methods: {
+        type(text) {
+          this.draft = text;
+          this.$emit('input', text);
+        },
+        flush() { this.$emit('commit', this.draft); },
+      },
       render(h) {
-        return h('div', { attrs: { 'data-testid': 'stub-markdown' } }, this.value);
+        return h('div', { attrs: { 'data-testid': 'stub-markdown' } }, this.draft);
       },
     },
   }),
@@ -72,7 +84,8 @@ const ITEM = {
 };
 
 const EVENTS = [
-  'close', 'toggle-status', 'delete', 'update-title', 'commit-contribution',
+  'close', 'toggle-status', 'delete', 'update-title',
+  'input-contribution', 'commit-contribution',
   'update-tags', 'pick-date', 'open-transcript', 'reward-seen',
   'add-subtask', 'toggle-subtask', 'rename-subtask', 'move-subtask-up', 'remove-subtask',
 ];
@@ -178,6 +191,41 @@ describe('GoalItemSheet — title', () => {
     title.value = '   ';
     title.dispatchEvent(new Event('change'));
     expect(events['update-title']).toEqual([]);
+  });
+});
+
+describe('GoalItemSheet — contribution', () => {
+  /**
+   * The save signal is the field's `commit`, and it carries what was typed. The
+   * sheet must forward that text rather than the item's own — the container
+   * writes nothing when the two are equal, so re-emitting the item's value is
+   * indistinguishable from discarding the edit.
+   */
+  it('forwards the typed text on commit, not the item it was typed over', () => {
+    const { sheet, events } = render();
+    const field = findByName(sheet, 'MarkdownField');
+    field.type('Closes the last blocker.\n- and the new bullet');
+    field.flush();
+    expect(events['commit-contribution']).toEqual([
+      { item: ITEM, contribution: 'Closes the last blocker.\n- and the new bullet' },
+    ]);
+  });
+
+  it('reports every keystroke as input-contribution for a live preview', () => {
+    const { sheet, events } = render();
+    findByName(sheet, 'MarkdownField').type('Half a bull');
+    expect(events['input-contribution']).toEqual([
+      { item: ITEM, contribution: 'Half a bull' },
+    ]);
+  });
+
+  it('closing the sheet flushes the typed text instead of dropping it', () => {
+    const { el, sheet, events } = render();
+    findByName(sheet, 'MarkdownField').type('Typed, then closed');
+    q(el, 'goal-sheet-close').click();
+    expect(events['commit-contribution']).toEqual([
+      { item: ITEM, contribution: 'Typed, then closed' },
+    ]);
   });
 });
 

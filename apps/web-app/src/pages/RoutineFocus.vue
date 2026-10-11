@@ -1177,6 +1177,10 @@ export default {
         'toggle-item': this.toggleItem,
         'complete-item': this.completeItemFromChat,
         'items-created': this.onChatItemsCreated,
+        // A deferred item leaves this day's list, and list membership is the one
+        // thing the entity-level write cannot express — same as the goal sheet's
+        // `move-date`.
+        'items-moved': this.refetchGoals,
       };
     },
     chatSubline() {
@@ -2266,7 +2270,7 @@ export default {
     },
     /**
      * End-event rule: a listening agent completes when the routine task's
-     * SLOT counter is full — the stimulus-derived numbers, not the checklist
+     * SLOT counter is full — a stimulus-derived total, not the checklist
      * length (D-20). The checklist is what the user sees; the slots are what
      * the economy counts.
      */
@@ -2366,12 +2370,25 @@ export default {
       if (!d || !k || !k.splitRate) return 0;
       return Number((d.splitRate / k.splitRate).toFixed(0));
     },
+    /**
+     * How many of the routine's slots are filled. The TOTAL stays the
+     * points-derived slot count from the routine's time gap (countTaskTotal,
+     * D-20); only this side is a count, taken from the routine's own completed
+     * day goal items.
+     *
+     * It used to invert the K ledger — total * (K.earned / task.points) — which
+     * agrees with the count for every points > 0 routine but short-circuits to
+     * 0 on a 0-point one: the server adds points/slots to K.earned per
+     * completion (utils/stimulusPoints.js), so a routine worth 0 never moves
+     * K.earned and the ratio stayed 0 however many items were done. A
+     * listening agent there never reached its total and sat in 'listening'
+     * forever (D-03). points = 0 is legitimate data, not a bad input.
+     */
     countTaskCompleted(task) {
-      const total = this.countTaskTotal(task);
-      const k = (task.stimuli || []).find((st) => st.name === 'K');
-      if (!total || !k || !task.points) return 0;
-      const completed = Number((total * (Number(k.earned) / Number(task.points))).toFixed(0));
-      return Number.isNaN(completed) ? 0 : completed;
+      if (!task || !task.id) return 0;
+      if (!this.countTaskTotal(task)) return 0;
+      return this.dayGoalItems
+        .filter((item) => item && item.taskRef === task.id && item.isComplete).length;
     },
     getRedeemCost(task) {
       if (!task) return 0;

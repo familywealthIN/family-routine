@@ -17,6 +17,7 @@
 </template>
 
 <script>
+import moment from 'moment';
 import RoutineChatThread from '@routine-notes/ui/organisms/RoutineChatThread/RoutineChatThread.vue';
 import { getCachedDashboard, filterAreaProjectTags, isCacheValid } from '../utils/dashboardCache';
 import { ensureTagContext } from '../composables/useDashboardCaching';
@@ -34,6 +35,8 @@ import {
   MARK_ROUTINE_CHAT_ADDED_MUTATION,
   ROUTINE_INSIGHT_MUTATION,
 } from '../composables/graphql/chatQueries';
+import { UPDATE_GOAL_ITEM_FIELDS_MUTATION } from '../composables/graphql/goalItemQueries';
+import { MARK_GOAL_ITEM_MISSED_MUTATION } from '../composables/useGoalMutations';
 
 /** Client-only messages (the brief, a brief quick reply) are never persisted. */
 /**
@@ -483,7 +486,7 @@ export default {
         if (!result) return;
 
         if (result.intent === 'add_tasks' && result.tasks && result.tasks.length) {
-          const ids = await this.createItems(result.tasks, { taskRef, date });
+          const { ids } = await this.createItems(result.tasks, { taskRef, date });
           if (ids.length && result.replyMessage) {
             await this.attachItems(result.replyMessage.id, ids);
           }
@@ -505,6 +508,10 @@ export default {
             this.$emit('complete-item', item);
             if (result.replyMessage) await this.attachItems(result.replyMessage.id, [item.id]);
           }
+        } else if (result.intent === 'defer_task' && result.targetItemId) {
+          await this.deferItem(result.targetItemId);
+        } else if (result.intent === 'skip_task' && result.targetItemId) {
+          await this.skipItem(result.targetItemId);
         }
 
         if (result.error) {
@@ -624,10 +631,10 @@ export default {
       // Flip the pill before the round trip, and keep it flipped: the guard
       // against adding twice is this record, not a disabled control.
       this.rememberStep(text);
-      const ids = await this.createItems([text]);
+      const { ids } = await this.createItems([text]);
+      // The create did not land, so the pill goes back to Add: leaving it
+      // flipped would offer a tick for a task that does not exist.
       if (!ids.length) {
-        // Nothing was created, so the pill is claiming something that did not
-        // happen AND the step can never be retried this session. Give it back.
         this.forgetStep(text);
         return;
       }
@@ -683,7 +690,7 @@ export default {
     /** Accept a break-down turn's three proposals as real checklist items. */
     async addProposals(message) {
       if (!message || !message.proposals || !message.proposals.length) return;
-      const ids = await this.createItems(message.proposals);
+      const { ids, failed } = await this.createItems(message.proposals);
       if (!ids.length) return;
       // Pressed inside a chat bubble, so following its confirmation keeps the
       // user where they already were. Adding a brief step does NOT set this: the
@@ -692,8 +699,11 @@ export default {
       this.userScrollIntent = true;
       if (isLocal(message.id)) {
         // "Plan from next steps" — its proposals ARE the brief's steps, so the
-        // pills have to flip too or the same step could be added again.
-        message.proposals.forEach((step) => this.rememberStep(step));
+        // pills have to flip too or the same step could be added again. A step
+        // whose create failed keeps its Add pill.
+        message.proposals
+          .filter((step) => failed.indexOf(String(step || '').trim()) === -1)
+          .forEach((step) => this.rememberStep(step));
         this.markLocalAdded(message.id);
       } else {
         await this.attachItems(message.id, ids);
@@ -725,6 +735,9 @@ export default {
      *
      * `taskRef`/`date` are PARAMETERS, not reads of `this`: the caller may have
      * been awaiting the model while the user swiped to another routine.
+     *
+     * Resolves `{ ids, failed }`: every caller announces what it added, so it
+     * has to be able to tell a create that landed from one that did not.
      */
     async createItems(bodies, { taskRef = this.taskRef, date = this.date } = {}) {
       // Nothing can be added to a checklist that has already closed — the same
@@ -732,10 +745,10 @@ export default {
       // chatting on yesterday wrote real items onto yesterday.
       if (this.isPastDay) {
         this.notifyPastDay();
-        return [];
+        return { ids: [], failed: [] };
       }
       const ids = [];
-      let failed = 0;
+      const failed = [];
       // Sequential: addGoalItem's optimistic cache write reads the day goal it
       // just wrote to, so concurrent creates race each other's reads.
       for (let i = 0; i < bodies.length; i += 1) {
@@ -752,10 +765,10 @@ export default {
               isMilestone: false,
             });
             if (created && created.id) ids.push(created.id);
-            else failed += 1;
+            else failed.push(body);
           } catch (error) {
-            failed += 1;
             console.error('[RoutineChat] createItems failed:', error);
+            failed.push(body);
           }
         }
       }
@@ -763,9 +776,116 @@ export default {
       // the user the tasks were added, so a create that fails without saying so
       // leaves the thread asserting something the checklist contradicts — which
       // is exactly how the goalRef bug stayed invisible.
-      if (failed) this.notifyCreateFailed(failed, ids.length);
+      if (failed.length) this.notifyCreateFailed(failed.length, ids.length);
       if (ids.length) this.$emit('items-created', ids);
-      return ids;
+      if (failed.length) await this.reportCreateFailure(failed);
+      return { ids, failed };
+    },
+
+    /**
+     * Say so when a write the reply already announced did not land. The reply
+     * bubble's text came from the model before the write was attempted, so an
+     * event pill under it is the honest record, written the same way every
+     * other thread write logs itself.
+     */
+    reportFailure(text) {
+      return this.postEvent({ text, tone: 'orange', icon: 'error_outline' });
+    },
+
+    reportCreateFailure(failed) {
+      return this.reportFailure(failed.length === 1
+        ? `Couldn’t add “${failed[0]}” to the checklist. Try again.`
+        : `Couldn’t add ${failed.length} tasks to the checklist. Try again.`);
+    },
+
+    /**
+     * The item a `defer_task` / `skip_task` turn named, re-resolved against the
+     * checklist this container is actually holding.
+     *
+     * The id is already validated against the routine's open items server-side
+     * (`chatApi.js`), and is checked again here for the same reason a
+     * `completeItemId` is: an item this client has since dropped must not be
+     * written to blind.
+     */
+    targetItem(id) {
+      return this.goalItems.find((item) => item
+        && String(item.id) === String(id)
+        && !item.isComplete) || null;
+    },
+
+    /**
+     * Move the named item to tomorrow.
+     *
+     * One `updateGoalItem` carrying a different `date` — the same single write
+     * the goal sheet's date chips use. The resolver relocates the subdocument,
+     * keeps its `_id` and stamps the `rescheduled` status, and it `$set`s every
+     * field it is handed, so the item's current values go with the change (see
+     * GoalItemSheetContainer.writeItem). `goalRef`/`isMilestone` travel as a
+     * pair and the period does not change, so the link stays valid on the
+     * target day.
+     */
+    async deferItem(id) {
+      const item = this.targetItem(id);
+      if (!item) return;
+      const target = moment(this.date, 'DD-MM-YYYY').add(1, 'days').format('DD-MM-YYYY');
+      try {
+        await this.$apollo.mutate({
+          mutation: UPDATE_GOAL_ITEM_FIELDS_MUTATION,
+          variables: {
+            id: item.id,
+            date: target,
+            period: 'day',
+            body: item.body || '',
+            contribution: item.contribution || '',
+            reward: item.reward || '',
+            deadline: item.deadline || '',
+            isMilestone: !!item.isMilestone,
+            taskRef: item.taskRef || '',
+            goalRef: item.goalRef || '',
+            tags: (item.tags || []).slice(),
+          },
+        });
+      } catch (error) {
+        console.error('[RoutineChat] deferItem failed:', error);
+        await this.reportFailure(`Couldn’t move “${item.body}” to tomorrow. Try again.`);
+        return;
+      }
+      // A date move changes which day's list the item is in, and list membership
+      // is the one thing an entity-level write cannot express: the page re-reads.
+      this.$emit('items-moved', [item.id]);
+      await this.postEvent({
+        text: `“${item.body}” moved to tomorrow`,
+        tone: 'blue',
+        icon: 'event',
+      });
+    },
+
+    /**
+     * Record the named item as missed for today.
+     *
+     * `markGoalItemMissed` writes the status D-07 added for a day that did not
+     * happen and deliberately leaves `isComplete` alone, so the item still
+     * counts as outstanding — nothing is created on another day, which is why
+     * the pill says "missed" and not "carried over".
+     */
+    async skipItem(id) {
+      const item = this.targetItem(id);
+      if (!item) return;
+      try {
+        await this.$apollo.mutate({
+          mutation: MARK_GOAL_ITEM_MISSED_MUTATION,
+          variables: { id: item.id, isMissed: true },
+        });
+      } catch (error) {
+        console.error('[RoutineChat] skipItem failed:', error);
+        await this.reportFailure(`Couldn’t mark “${item.body}” missed. Try again.`);
+        return;
+      }
+      await this.postEvent({
+        text: `“${item.body}” marked missed for today`,
+        tone: 'orange',
+        icon: 'remove_circle_outline',
+      });
     },
 
     /** Say that the chat could not add what its reply already claimed. */

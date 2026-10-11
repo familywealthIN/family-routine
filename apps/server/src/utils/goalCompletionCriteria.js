@@ -67,12 +67,17 @@ const sortableDate = (date) => String(date || '').split('-').reverse().join('');
  * A child date the user declared no milestone on is still emitted, as 'none':
  * dropping it would shift the later days leftwards and re-create that bug.
  *
+ * A past date carrying several milestones is 'partial' when some but not all of
+ * them were met. Collapsing it to 'missed' told the user a day they had won a
+ * milestone on counted for nothing, and contradicted `milestonesComplete`,
+ * which had already counted that milestone — one goal, two stories.
+ *
  * @param {Array<string>} childDates    DD-MM-YYYY, calendar order (periodChildDates)
  * @param {Array}         criteria      from collectPeriodCriteria
  * @param {string}        referenceDate DD-MM-YYYY the period is being read for;
  *                                      dates before it can be missed, dates from
  *                                      it onwards are still winnable
- * @returns {Array<{ date: string, status: 'complete'|'missed'|'upcoming'|'none' }>}
+ * @returns {Array<{ date: string, status: 'complete'|'partial'|'missed'|'upcoming'|'none' }>}
  */
 function buildMilestoneDays(childDates, criteria, referenceDate) {
   const reference = sortableDate(referenceDate);
@@ -82,12 +87,13 @@ function buildMilestoneDays(childDates, criteria, referenceDate) {
 
     if (!onThisDate.length) return { date: childDate, status: 'none' };
     if (onThisDate.every((criterion) => criterion.isComplete)) return { date: childDate, status: 'complete' };
-    // A late tick can no longer be made on time, so the day is lost even today.
-    if (onThisDate.some((criterion) => criterion.late)) return { date: childDate, status: 'missed' };
+    // A late tick can no longer be made on time, so the day is settled even today.
+    const settled = onThisDate.some((criterion) => criterion.late);
+    if (!settled && sortableDate(childDate) >= reference) return { date: childDate, status: 'upcoming' };
 
     return {
       date: childDate,
-      status: sortableDate(childDate) < reference ? 'missed' : 'upcoming',
+      status: onThisDate.some((criterion) => criterion.isComplete) ? 'partial' : 'missed',
     };
   });
 }

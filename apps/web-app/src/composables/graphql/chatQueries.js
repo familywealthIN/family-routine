@@ -46,6 +46,7 @@ export const SEND_ROUTINE_CHAT_MUTATION = gql`
       intent
       tasks
       completeItemId
+      targetItemId
       model
       error
     }

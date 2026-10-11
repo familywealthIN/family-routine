@@ -289,6 +289,10 @@ describe('buildCascade', () => {
       date: '12-09-2026',
       isComplete: false,
       taskRef: 'sw',
+      // The server's own tally for this goal: six declared day milestones, four
+      // met. The counter reads these, not the grid below.
+      milestonesTotal: 6,
+      milestonesComplete: 4,
       milestoneDays: [
         { date: '06-09-2026', status: 'none' },
         { date: '07-09-2026', status: 'complete' },
@@ -311,24 +315,49 @@ describe('buildCascade', () => {
     }],
   });
 
-  it('counts met day milestones against the week threshold', () => {
+  // The gate is evaluateAutoComplete: every declared milestone met, and never
+  // fewer than the threshold. So the counter is the server's milestone tally
+  // over all the milestones the goal holds, floored at the threshold.
+  it('counts the server’s met milestones against every milestone it holds', () => {
     expect(cascade.done).toBe(4);
-    expect(cascade.threshold).toBe(5);
+    expect(cascade.threshold).toBe(6);
+    expect(cascade.unitName).toBe('milestones');
     expect(cascade.complete).toBe(false);
     expect(cascade.statusLabel).toBe('Active');
-    expect(cascade.pct).toBe(80);
-    expect(cascade.rule).toBe('Week auto-ticks after 5 day goals');
+    expect(cascade.pct).toBe(67);
+    expect(cascade.rule).toBe('Needs all 6 day milestones met (min 5)');
+  });
+
+  it('keeps the threshold as the floor when fewer milestones were declared', () => {
+    const thin = buildCascade({
+      period: 'week',
+      goals: [{
+        id: 'wk',
+        period: 'week',
+        date: '12-09-2026',
+        goalItems: [{
+          id: 'wg', body: 'Thin week', taskRef: 'sw', isComplete: false, milestonesTotal: 3, milestonesComplete: 3, milestoneDays: [],
+        }],
+      }],
+      focusRow: { id: 'sw', items: [] },
+      date: '12-09-2026',
+    });
+
+    expect(thin.done).toBe(3);
+    expect(thin.threshold).toBe(5);
+    expect(thin.statusLabel).toBe('Active');
   });
 
   // D-02: the threshold alone must not declare 'Done' while the server, which
   // also requires every linked criterion to be met, has not completed the goal.
   it('does not show Done at the threshold while the server goal is still open', () => {
     const atThreshold = JSON.parse(JSON.stringify(weekGoals));
-    atThreshold[0].goalItems[0].milestoneDays[0].status = 'complete';
+    // Every milestone the server counted is met, but its gate is still shut.
+    atThreshold[0].goalItems[0].milestonesComplete = atThreshold[0].goalItems[0].milestonesTotal;
     const c = buildCascade({
       period: 'week', goals: atThreshold, focusRow: { id: 'sw', items: [] }, date: '12-09-2026',
     });
-    expect(c.done).toBe(5);
+    expect(c.done).toBe(c.threshold);
     expect(c.complete).toBe(false);
     expect(c.statusLabel).toBe('Active');
 
@@ -355,6 +384,86 @@ describe('buildCascade', () => {
     expect(cascade.units[5].state).toBe('missed');
     expect(cascade.units[1].state).toBe('done');
     expect(cascade.units[0].state).toBe('none');
+  });
+
+  // D-02, the beta case: Sunday and Monday each carried a met milestone and an
+  // open sibling, so the grid cells were 'partial'. Counting grid cells read
+  // "1 / 5 days" against a server that had scored 7 of 15 milestones.
+  it('tells the same story as the server for a half-won day', () => {
+    const beta = buildCascade({
+      period: 'week',
+      goals: [{
+        id: 'wk',
+        period: 'week',
+        date: '09-10-2026',
+        goalItems: [{
+          id: '6ac28b450f5ccb1f4455adc4',
+          body: 'Beta week',
+          taskRef: 'sw',
+          isComplete: false,
+          progress: 3,
+          milestonesTotal: 15,
+          milestonesComplete: 7,
+          milestoneDays: [
+            { date: '04-10-2026', status: 'partial' },
+            { date: '05-10-2026', status: 'partial' },
+            { date: '06-10-2026', status: 'complete' },
+            { date: '07-10-2026', status: 'missed' },
+            { date: '08-10-2026', status: 'upcoming' },
+            { date: '09-10-2026', status: 'upcoming' },
+            { date: '10-10-2026', status: 'upcoming' },
+          ],
+        }],
+      }],
+      focusRow: { id: 'sw', items: [] },
+      date: '08-10-2026',
+    });
+
+    expect(beta.done).toBe(7);
+    expect(beta.threshold).toBe(15);
+    expect(beta.units.map((u) => u.state))
+      .toEqual(['partial', 'partial', 'done', 'missed', 'active', 'none', 'none']);
+    // Not the red cancel the half-won days used to draw.
+    expect(beta.units[0].icon).toBe('donut_large');
+    expect(beta.statusLabel).toBe('Active');
+  });
+
+  // The old `complete = !!item.isComplete || done >= limit` let the card tick
+  // the goal off its own grid count while the server had not completed it.
+  it('never declares Done while the server has not completed the goal', () => {
+    const outvoting = buildCascade({
+      period: 'week',
+      goals: [{
+        id: 'wk',
+        period: 'week',
+        date: '09-10-2026',
+        goalItems: [{
+          id: 'wg',
+          body: 'Beta week',
+          taskRef: 'sw',
+          isComplete: false,
+          milestonesTotal: 15,
+          milestonesComplete: 13,
+          // Five calendar days fully won — the old count's five-of-five.
+          milestoneDays: [
+            { date: '04-10-2026', status: 'complete' },
+            { date: '05-10-2026', status: 'complete' },
+            { date: '06-10-2026', status: 'complete' },
+            { date: '07-10-2026', status: 'complete' },
+            { date: '08-10-2026', status: 'complete' },
+            { date: '09-10-2026', status: 'partial' },
+            { date: '10-10-2026', status: 'partial' },
+          ],
+        }],
+      }],
+      focusRow: { id: 'sw', items: [] },
+      date: '10-10-2026',
+    });
+
+    expect(outvoting.complete).toBe(false);
+    expect(outvoting.statusLabel).toBe('Active');
+    expect(outvoting.done).toBe(13);
+    expect(outvoting.threshold).toBe(15);
   });
 
   it('lists the linked lower-level goals it was given, with a detail summary', () => {
@@ -432,7 +541,7 @@ describe('buildCascade', () => {
     expect(cascade.range).toBe('Week of 6 – 12 Sep');
   });
 
-  it('counts a month in weeks and a year in months', () => {
+  it('lays a month out in weeks and a year in months', () => {
     const monthGoals = [{
       id: 'mo',
       period: 'month',
@@ -444,7 +553,7 @@ describe('buildCascade', () => {
     const month = buildCascade({
       period: 'month', goals: monthGoals, focusRow: { id: 'sw', items: [] }, date: '12-09-2026',
     });
-    expect(month.unitName).toBe('weeks');
+    expect(month.rule).toBe('Needs 3 week milestones met');
     expect(month.threshold).toBe(3);
     expect(month.cols).toBe(5);
     expect(month.units[0].label).toBe('W1');
@@ -461,7 +570,7 @@ describe('buildCascade', () => {
     const year = buildCascade({
       period: 'year', goals: yearGoals, focusRow: { id: 'sw', items: [] }, date: '12-09-2026',
     });
-    expect(year.unitName).toBe('months');
+    expect(year.rule).toBe('Needs 6 month milestones met');
     expect(year.threshold).toBe(6);
     expect(year.cols).toBe(6);
     expect(year.units[0].label).toBe('Mar');

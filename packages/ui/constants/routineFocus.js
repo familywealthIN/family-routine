@@ -159,6 +159,10 @@ export const FOCUS_NAV = [
 /** Cascade unit states, shared by the week/month/year grids. */
 export const CASCADE_UNIT_STYLE = {
   done: { icon: 'check_circle', color: '#4CAF50', bg: 'transparent' },
+  // Some of the cell's milestones were met, not all — a half-won day, which the
+  // red cancel glyph used to write off entirely. Only `active` carries a
+  // background, so the tinted cell stays "this is today".
+  partial: { icon: 'donut_large', color: 'rgba(76,175,80,.6)', bg: 'transparent' },
   missed: { icon: 'cancel', color: 'rgba(229,57,53,.55)', bg: 'transparent' },
   active: { icon: 'radio_button_checked', color: '#FF9800', bg: 'rgba(255,152,0,.12)' },
   none: { icon: 'radio_button_unchecked', color: 'rgba(0,0,0,.25)', bg: 'transparent' },

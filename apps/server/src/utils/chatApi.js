@@ -220,10 +220,51 @@ async function completeChat(messages, {
   throw new Error(`All OpenRouter models failed — ${failures.join(' | ')}`);
 }
 
-const INTENTS = ['add_tasks', 'break_down', 'complete_task', 'status', 'chat'];
+const INTENTS = [
+  'add_tasks', 'break_down', 'complete_task', 'defer_task', 'skip_task', 'status', 'chat',
+];
+
+// The two intents that act on an item the user named rather than creating one,
+// so both need an id the client can resolve before it writes anything.
+const TARGET_INTENTS = ['defer_task', 'skip_task'];
 
 const FALLBACK_REPLY = "I didn't get that one cleanly — try asking again, or say "
   + '"add …" to put something on the checklist.';
+
+/**
+ * What to say instead when a defer or a skip cannot be carried out.
+ *
+ * Points at the goal sheet's date chips, which are the real move path, and says
+ * plainly that nothing moved — the reply it replaces promised a carry-over.
+ */
+const NO_RESCHEDULE_REPLY = "I can't reschedule that one from here, so nothing moved — open "
+  + 'the task on the checklist and use its date chips to put it on another day.';
+
+// Phrasings that assert an item is now on another day. A model will write one
+// of these under any intent, including the ones that perform nothing
+// (docs/chat-coverage-report.md B-1), and the bubble's text is composed before
+// any write is attempted — so a claim with no defer behind it is replaced here
+// rather than corrected afterwards.
+const CARRY_OVER_CLAIMS = [
+  /carr(?:y|ies|ied|ying)\b[^.!?]{0,30}\bover\b/i,
+  /\b(?:mov(?:e|es|ed|ing)|push(?:es|ed|ing)?|reschedul\w+|defer\w*)\b[^.!?]{0,60}\b(?:tomorrow|next day|another day|monday)\b/i,
+  /\btomorrow'?s?\b[^.!?]{0,40}\b(?:checklist|slot|list|routine)\b/i,
+];
+
+// A reply already admitting it cannot do this says the same words, so a denial
+// anywhere in it takes it out of scope.
+const CAPABILITY_DENIAL = /\b(?:can'?t|cannot|can not|won'?t|will not|unable|don'?t|do not|does ?n'?t|no way to)\b/i;
+
+// "Try moving it to tomorrow" is advice, not a claim that it moved.
+const ADVICE_CLAUSE = /\b(?:try|consider|you (?:can|could|might))\b[^.!?]*/gi;
+
+/** Whether this reply tells the user something was moved to another day. */
+function claimsCarryOver(reply) {
+  const text = String(reply || '');
+  if (!text || CAPABILITY_DENIAL.test(text)) return false;
+  const claims = text.replace(ADVICE_CLAUSE, '');
+  return CARRY_OVER_CLAIMS.some((re) => re.test(claims));
+}
 
 // Giveaways that a model answered with its own thinking instead of a reply:
 // a numbered deliberation, an explicit preamble, or quoting the contract back.
@@ -263,9 +304,10 @@ markdown headings, no emoji. Never invent checklist items that were not given to
 You MUST reply with a single JSON object and nothing else:
 {
   "reply": "the message shown in the chat bubble",
-  "intent": "add_tasks | break_down | complete_task | status | chat",
+  "intent": "add_tasks | break_down | complete_task | defer_task | skip_task | status | chat",
   "tasks": ["new checklist item", "..."],
-  "completeItemId": "id of the checklist item the user says is done, or null"
+  "completeItemId": "id of the checklist item the user says is done, or null",
+  "targetItemId": "id of the checklist item a defer_task or skip_task acts on, or null"
 }
 
 Rules for the fields:
@@ -277,17 +319,21 @@ Rules for the fields:
 - intent "complete_task": the user says something is finished. Set "completeItemId" to the id
   of the single best matching OPEN checklist item. If nothing matches, use intent "chat" and
   ask which one.
+- intent "defer_task": the user wants an item moved to TOMORROW ("move X to tomorrow", "I ran
+  out of time, push X"). Set "targetItemId" to the id of the single best matching OPEN item.
+  "reply" names the item and says it moves to tomorrow.
+- intent "skip_task": the user says they will not do an item today ("skip X", "I won't get to
+  X"). Set "targetItemId" the same way. "reply" says it is recorded as missed for today — it
+  is NOT carried over, nothing is created on another day.
+- Tomorrow is the only day you can reach. If the user names any other day, use intent "chat"
+  and tell them to use the task's own date chips on the checklist.
 - intent "status": the user asked how they are doing. Quote the D/K/G percentages you were
   given, verbatim.
-- intent "chat": anything else. Leave "tasks" empty and "completeItemId" null.
-
-What you CANNOT do — never claim otherwise:
-- You cannot move, reschedule, defer, postpone or carry over a checklist item to another day.
-- You cannot skip, cancel or delete a checklist item or a routine.
-- You cannot change an item's date, points, tags or parent goal.
-If the user asks for any of these, use intent "chat" and say plainly that you cannot do it
-from here, then point them at the item's date chips in its goal sheet (tap the checklist row
-to open it). Never reply as though the move already happened.`;
+- intent "chat": anything else. Leave "tasks" empty and both ids null.
+- Never say an item was moved, carried over, skipped, deleted, renamed or completed unless you
+  set the matching intent and id above. If nothing matches, say you could not do it.
+- You cannot delete a checklist item or a routine, or change an item's points, tags or parent
+  goal. If asked, use intent "chat" and say plainly that you cannot do it from here.`;
 
 function describeContext(context = {}) {
   const {
@@ -367,7 +413,8 @@ const CANNOT_MOVE_REPLY = "I can't move or skip items from here. Tap the item in
 
 /**
  * Turn the user's message into a reply plus a machine-readable intent the
- * client can act on (create goal items, tick one off, or nothing at all).
+ * client can act on (create goal items, tick one off, move one to tomorrow,
+ * record one as missed, or nothing at all).
  *
  * Never throws: a model outage degrades to a plain `chat` reply that says so,
  * because a dead chat must not break the dashboard around it.
@@ -377,7 +424,7 @@ const CANNOT_MOVE_REPLY = "I can't move or skip items from here. Tap the item in
  * @param {Array<{from: string, text: string}>} params.history Prior turns, oldest first.
  * @param {Object} params.context Routine/checklist/stimulus snapshot.
  * @returns {Promise<{reply: string, intent: string, tasks: string[],
- *   completeItemId: ?string, model: ?string, error: ?string}>}
+ *   completeItemId: ?string, targetItemId: ?string, model: ?string, error: ?string}>}
  */
 async function chatWithRoutine({ text, history = [], context = {} }) {
   const trimmed = String(text || '').trim();
@@ -387,6 +434,7 @@ async function chatWithRoutine({ text, history = [], context = {} }) {
       intent: 'chat',
       tasks: [],
       completeItemId: null,
+      targetItemId: null,
       model: null,
       error: null,
     };
@@ -419,11 +467,13 @@ async function chatWithRoutine({ text, history = [], context = {} }) {
       // useful — keep its prose, but only if it IS prose. Reasoning models
       // answer with their own chain of thought, and dumping that into a chat
       // bubble is worse than saying nothing.
+      const prose = usableProse(content) || FALLBACK_REPLY;
       return {
-        reply: usableProse(content) || FALLBACK_REPLY,
+        reply: claimsCarryOver(prose) ? NO_RESCHEDULE_REPLY : prose,
         intent: 'chat',
         tasks: [],
         completeItemId: null,
+        targetItemId: null,
         model,
         error: null,
       };
@@ -438,21 +488,37 @@ async function chatWithRoutine({ text, history = [], context = {} }) {
     // Only honour an id that is actually an open item on this routine — a
     // hallucinated id would otherwise complete nothing and report success.
     const completeItemId = claimed && openIds.includes(claimed) ? claimed : null;
+    // Same rule for the item a defer or a skip names: moving the wrong task is
+    // worse than not moving one.
+    const named = parsed.targetItemId ? String(parsed.targetItemId) : null;
+    const targetItemId = TARGET_INTENTS.includes(intent) && named && openIds.includes(named)
+      ? named
+      : null;
+
+    let resolvedIntent = intent;
+    if (intent === 'complete_task' && !completeItemId) resolvedIntent = 'chat';
+    if (TARGET_INTENTS.includes(intent) && !targetItemId) resolvedIntent = 'chat';
+
+    // No defer is going to run, so a reply promising one is a claim the client
+    // cannot take back once the bubble is saved (D-04). Deferring is the only
+    // intent that moves an item: a skip records a miss on today's item and
+    // creates nothing on another day, so it must not promise a carry-over either.
+    const deferring = resolvedIntent === 'defer_task';
 
     // An intent that will change nothing must not carry a reply claiming it
     // did. Same rule as `completeItemId` above, applied to the prose: the chat
     // never asserts an action the system did not take.
-    const settledIntent = intent === 'complete_task' && !completeItemId ? 'chat' : intent;
     const rawReply = String(parsed.reply || '').trim() || 'Noted.';
-    const reply = settledIntent === 'chat' && FALSE_ACTION_CLAIM.test(rawReply)
-      ? CANNOT_MOVE_REPLY
-      : rawReply;
+    let reply = rawReply;
+    if (resolvedIntent === 'chat' && FALSE_ACTION_CLAIM.test(rawReply)) reply = CANNOT_MOVE_REPLY;
+    else if (!deferring && claimsCarryOver(rawReply)) reply = NO_RESCHEDULE_REPLY;
 
     return {
       reply,
-      intent: settledIntent,
+      intent: resolvedIntent,
       tasks: intent === 'add_tasks' || intent === 'break_down' ? tasks : [],
       completeItemId,
+      targetItemId,
       model,
       error: null,
     };
@@ -463,6 +529,7 @@ async function chatWithRoutine({ text, history = [], context = {} }) {
       intent: 'chat',
       tasks: [],
       completeItemId: null,
+      targetItemId: null,
       model: null,
       error: error.message,
     };
@@ -478,10 +545,13 @@ module.exports = {
   resolveFreeModels,
   modelRank,
   usableProse,
+  claimsCarryOver,
   clearModelCache,
   cleanJson,
   describeContext,
   FALLBACK_FREE_MODELS,
   MAX_ATTEMPTS,
   INTENTS,
+  TARGET_INTENTS,
+  NO_RESCHEDULE_REPLY,
 };

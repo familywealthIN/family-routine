@@ -270,13 +270,13 @@ const CASCADE_UNIT_GRANULARITY = { week: 'day', month: 'isoWeek', year: 'month' 
 
 const CASCADE_META = {
   week: {
-    unitName: 'days', stepDown: 'day', cols: 7, thresholdKey: 'weekDays', linkedLabel: 'Linked day goals',
+    stepDown: 'day', cols: 7, thresholdKey: 'weekDays', linkedLabel: 'Linked day goals',
   },
   month: {
-    unitName: 'weeks', stepDown: 'week', cols: 5, thresholdKey: 'monthWeeks', linkedLabel: 'Linked week goals',
+    stepDown: 'week', cols: 5, thresholdKey: 'monthWeeks', linkedLabel: 'Linked week goals',
   },
   year: {
-    unitName: 'months', stepDown: 'month', cols: 6, thresholdKey: 'yearMonths', linkedLabel: 'Linked month goals',
+    stepDown: 'month', cols: 6, thresholdKey: 'yearMonths', linkedLabel: 'Linked month goals',
   },
 };
 
@@ -297,10 +297,13 @@ function unitLabel(period, dateStr, index) {
  * Only 'upcoming' needs splitting: the child period the viewed day sits in is
  * ACTIVE (orange), later ones are merely future. 'none' means the goal had
  * nothing scheduled on that date — an empty cell, never a miss, or a week that
- * simply started on Monday would read as having broken on Sunday.
+ * simply started on Monday would read as having broken on Sunday. 'partial' is
+ * its own cell: a date that won some of its milestones is not a miss, and
+ * drawing it as one is what made the grid disagree with the counter.
  */
 function unitState(status, dateStr, period, today) {
   if (status === 'complete') return 'done';
+  if (status === 'partial') return 'partial';
   if (status === 'missed') return 'missed';
   if (status !== 'upcoming') return 'none';
   const m = moment(dateStr, DAY_FORMAT);
@@ -468,11 +471,19 @@ export function buildCascade({
   }));
 
   const limit = threshold[meta.thresholdKey];
-  const done = units.filter((unit) => unit.state === 'done').length;
-  // 'Done' is the server's call alone. evaluateAutoComplete
-  // (apps/server/src/utils/goalCompletionCriteria.js) also requires no
-  // outstanding criterion, so reaching the threshold here while a linked task is
-  // still open would declare a goal the server never completed (D-02).
+  // The server's own tally, not a re-count of the grid. `milestoneDays` calls a
+  // DATE complete only when every milestone on it is, so counting 'done' cells
+  // reported 1 of 5 for a week the server had already scored 7 met milestones
+  // on — the counter and the dots were answering different questions.
+  const done = Number(item.milestonesComplete) || 0;
+  const total = Number(item.milestonesTotal) || 0;
+  // What the real gate waits for: evaluateAutoComplete ticks on
+  // `met >= completionThreshold && !outstanding.length`, so the goal needs
+  // every milestone it holds, and never fewer than the threshold.
+  const required = Math.max(total, limit);
+  // The server owns completion. `|| done >= limit` here let the card declare
+  // "Done" off its own arithmetic while autoCheckTaskPeriod had not ticked the
+  // goal — a client must not out-vote the server on whether a goal is met.
   const complete = !!item.isComplete;
 
   const linked = linkedGoals({
@@ -482,14 +493,18 @@ export function buildCascade({
   return {
     title: item.body,
     range: rangeLabel(period, item.date || date),
-    unitName: meta.unitName,
+    // The counter is in milestones because the gate is: the grid still counts
+    // calendar cells, but a cell can hold more than one milestone.
+    unitName: 'milestones',
     done,
-    threshold: limit,
+    threshold: required,
     complete,
     statusLabel: complete ? 'Done' : 'Active',
     statusColor: complete ? '#4CAF50' : '#FF9800',
-    pct: Math.min(100, Math.round((done / Math.max(limit, 1)) * 100)),
-    rule: `${period[0].toUpperCase()}${period.slice(1)} auto-ticks after ${limit} ${meta.stepDown} goals`,
+    pct: Math.min(100, Math.round((done / Math.max(required, 1)) * 100)),
+    rule: total
+      ? `Needs all ${total} ${meta.stepDown} milestones met (min ${limit})`
+      : `Needs ${limit} ${meta.stepDown} milestones met`,
     cols: meta.cols,
     units,
     linked,

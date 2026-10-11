@@ -105,7 +105,30 @@ describe('buildMilestoneDays', () => {
       { date: '16-08-2026', isComplete: false },
     ];
 
-    expect(buildMilestoneDays(['16-08-2026'], criteria, '22-08-2026')[0].status).toBe('missed');
+    expect(buildMilestoneDays(['16-08-2026'], criteria, '22-08-2026')[0].status).not.toBe('complete');
+  });
+
+  // D-02: the cascade grid drew this day as a red cancel while
+  // `milestonesComplete` had already counted the milestone that landed on it.
+  it('calls a past day with some milestones met partial, not missed', () => {
+    const criteria = [
+      { date: '16-08-2026', isComplete: true },
+      { date: '16-08-2026', isComplete: false },
+      { date: '17-08-2026', isComplete: false },
+      { date: '17-08-2026', isComplete: false },
+    ];
+    const days = buildMilestoneDays(['16-08-2026', '17-08-2026'], criteria, '22-08-2026');
+
+    expect(days.map((day) => day.status)).toEqual(['partial', 'missed']);
+  });
+
+  it('does not call a day partial while it is still winnable', () => {
+    const criteria = [
+      { date: '22-08-2026', isComplete: true },
+      { date: '22-08-2026', isComplete: false },
+    ];
+
+    expect(buildMilestoneDays(['22-08-2026'], criteria, '22-08-2026')[0].status).toBe('upcoming');
   });
 });
 

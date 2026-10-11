@@ -36,19 +36,30 @@ const {
   POST_ROUTINE_CHAT_EVENT_MUTATION,
   ROUTINE_INSIGHT_MUTATION,
 } = require('../../composables/graphql/chatQueries');
+const {
+  UPDATE_GOAL_ITEM_FIELDS_MUTATION,
+} = require('../../composables/graphql/goalItemQueries');
+const { MARK_GOAL_ITEM_MISSED_MUTATION } = require('../../composables/useGoalMutations');
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const ITEMS = [
   {
-    id: 'g1', body: 'Ship dashboard PR', isComplete: false, goalRef: 'wg_sw',
+    id: 'g1', body: 'Ship dashboard PR', isComplete: false, goalRef: 'wg_sw', taskRef: 'sw',
   },
   {
-    id: 'g2', body: 'Reply to Ana', isComplete: true, goalRef: 'wg_sw',
+    id: 'g2', body: 'Reply to Ana', isComplete: true, goalRef: 'wg_sw', taskRef: 'sw',
   },
 ];
 
-const makeCtx = (sendResult, over = {}) => {
+/**
+ * @param {Object} sendResult what `sendRoutineChat` resolves with.
+ * @param {Object} over context fields to replace.
+ * @param {Array} rejected mutation documents whose write should fail — the
+ *   thread's own `postRoutineChatEvent` has to keep working, so the failing
+ *   write is named rather than failing every mutation.
+ */
+const makeCtx = (sendResult, over = {}, rejected = []) => {
   const ctx = {
     date: '12-09-2026',
     taskRef: 'sw',
@@ -69,6 +80,9 @@ const makeCtx = (sendResult, over = {}) => {
         if (options.mutation === SEND_ROUTINE_CHAT_MUTATION) {
           return Promise.resolve({ data: { sendRoutineChat: sendResult } });
         }
+        if (rejected.indexOf(options.mutation) >= 0) {
+          return Promise.reject(new Error('GraphQL error: nope'));
+        }
         return Promise.resolve({ data: {} });
       }),
     },
@@ -85,6 +99,8 @@ const makeCtx = (sendResult, over = {}) => {
 const sent = (ctx) => ctx.mutations.find((m) => m.mutation === SEND_ROUTINE_CHAT_MUTATION);
 const marked = (ctx) => ctx.mutations.filter((m) => m.mutation === MARK_ROUTINE_CHAT_ADDED_MUTATION);
 const events = (ctx) => ctx.mutations.filter((m) => m.mutation === POST_ROUTINE_CHAT_EVENT_MUTATION);
+const moves = (ctx) => ctx.mutations.filter((m) => m.mutation === UPDATE_GOAL_ITEM_FIELDS_MUTATION);
+const misses = (ctx) => ctx.mutations.filter((m) => m.mutation === MARK_GOAL_ITEM_MISSED_MUTATION);
 
 /**
  * Chips are questions the model answers — except one.
@@ -211,9 +227,10 @@ describe('RoutineChatContainer.send', () => {
       type: 'error',
       title: "Couldn't add that task",
     }));
-    // Nothing to attach and nothing to log when nothing was created.
+    // Nothing to attach when nothing was created; the thread records the failure.
     expect(marked(ctx)).toHaveLength(0);
-    expect(events(ctx)).toHaveLength(0);
+    expect(events(ctx)).toHaveLength(1);
+    expect(events(ctx)[0].variables.tone).toBe('orange');
   });
 
   it('reports a partial add by its real numbers', async () => {
@@ -371,6 +388,244 @@ describe('RoutineChatContainer.send', () => {
   });
 });
 
+/**
+ * The create path, against the server's actual rule.
+ *
+ * `resolveDayGoalLink` links every day goal of a routine that has a week goal,
+ * so a checklist whose items carry a `goalRef` is the DEFAULT state, and the
+ * resolver refuses a `goalRef` without `isMilestone`
+ * (apps/server/src/resolvers/goal.js, addGoalItem). The chat sends no `goalRef`
+ * at all and lets the server link the item, so this mock rejecting the bad pair
+ * proves the create succeeds where the old copied-ref create threw.
+ */
+const serverLikeAddGoalItem = () => jest.fn((input) => {
+  if (input.goalRef && !input.isMilestone) {
+    return Promise.reject(new Error(
+      'GraphQL error: When goalRef is provided, isMilestone must be true',
+    ));
+  }
+  return Promise.resolve({ id: `new-${input.body}`, ...input });
+});
+
+describe('RoutineChatContainer.createItems — the week-goal link', () => {
+  let consoleError;
+
+  beforeEach(() => {
+    consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => consoleError.mockRestore());
+
+  it('creates under a routine whose items already carry a goalRef', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks',
+      reply: "Added 'Draft the beta v2 scope doc' to your checklist.",
+      tasks: ['Draft the beta v2 scope doc'],
+      replyMessage: { id: 'reply-1' },
+    }, { $goals: { addGoalItem: serverLikeAddGoalItem() } });
+    await Container.methods.send.call(ctx, 'add a task: Draft the beta v2 scope doc');
+    await flush();
+
+    const [created] = ctx.$goals.addGoalItem.mock.calls[0];
+    expect(created).not.toHaveProperty('goalRef');
+    expect(created.isMilestone).toBe(false);
+    // The id lands on the reply bubble, which is what gives it a live checkbox.
+    expect(marked(ctx)[0].variables).toEqual({
+      id: 'reply-1',
+      items: ['new-Draft the beta v2 scope doc'],
+    });
+    // Only the add's own pill: no failure was recorded.
+    expect(events(ctx).map((e) => e.variables.tone)).toEqual(['blue']);
+  });
+
+  it('creates the same way when the routine has no week-goal link', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks', reply: 'Added it.', tasks: ['Water the plants'], replyMessage: { id: 'r' },
+    }, {
+      goalItems: [{ id: 'g1', body: 'Ship dashboard PR', isComplete: false }],
+      $goals: { addGoalItem: serverLikeAddGoalItem() },
+    });
+    await Container.methods.send.call(ctx, 'add water the plants');
+    await flush();
+
+    const [created] = ctx.$goals.addGoalItem.mock.calls[0];
+    expect(created).not.toHaveProperty('goalRef');
+    expect(created.isMilestone).toBe(false);
+    expect(marked(ctx)[0].variables.items).toEqual(['new-Water the plants']);
+  });
+
+  it('says so in the thread rather than letting the bubble claim it added one', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks',
+      reply: "Added 'Draft the beta v2 scope doc' to your checklist.",
+      tasks: ['Draft the beta v2 scope doc'],
+      replyMessage: { id: 'reply-1' },
+    }, {
+      $goals: { addGoalItem: jest.fn(() => Promise.reject(new Error('GraphQL error: nope'))) },
+    });
+    await Container.methods.send.call(ctx, 'add a task: Draft the beta v2 scope doc');
+    await flush();
+
+    // Nothing was created, so nothing is attached — and the thread carries the
+    // correction, because the bubble's own text came from the model.
+    expect(marked(ctx)).toHaveLength(0);
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: 'Couldn’t add “Draft the beta v2 scope doc” to the checklist. Try again.',
+      tone: 'orange',
+      icon: 'error_outline',
+    }));
+    expect(ctx.$emit).not.toHaveBeenCalledWith('items-created', expect.anything());
+  });
+
+  it('does not drop a failed "Add all to checklist" silently', async () => {
+    const ctx = makeCtx({}, {
+      $goals: { addGoalItem: jest.fn(() => Promise.reject(new Error('GraphQL error: nope'))) },
+    });
+    await Container.methods.addProposals.call(ctx, {
+      id: 'reply-2',
+      proposals: ['Write the PR description', 'Request review', 'Get CI green'],
+    });
+    await flush();
+
+    expect(marked(ctx)).toHaveLength(0);
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: 'Couldn’t add 3 tasks to the checklist. Try again.',
+      tone: 'orange',
+    }));
+    // And no "3 tasks added" pill for three tasks that do not exist.
+    expect(events(ctx).some((e) => /added to the checklist/.test(e.variables.text))).toBe(false);
+  });
+});
+
+/**
+ * Defer and skip (D-04).
+ *
+ * The chat used to answer "that item will be carried over to tomorrow" with no
+ * intent behind it at all, so nothing moved and the thread said otherwise. The
+ * two intents now do the real thing — `updateGoalItem` with tomorrow's date is
+ * the goal sheet's own move, `markGoalItemMissed` is D-07's — and the invariant
+ * that matters is the same one D-01 established: no success pill without a
+ * write that landed.
+ */
+describe('RoutineChatContainer — defer and skip', () => {
+  it('moves the item a defer_task names to tomorrow, carrying its current fields', async () => {
+    const ctx = makeCtx({
+      intent: 'defer_task',
+      reply: 'Moving “Ship dashboard PR” to tomorrow.',
+      targetItemId: 'g1',
+      replyMessage: { id: 'reply-1' },
+    });
+    await Container.methods.send.call(ctx, 'move the dashboard PR to tomorrow');
+    await flush();
+
+    // `updateGoalItem` is a full replace, so the item's own values travel with
+    // the new date or the move wipes them.
+    expect(moves(ctx)[0].variables).toEqual({
+      id: 'g1',
+      date: '13-09-2026',
+      period: 'day',
+      body: 'Ship dashboard PR',
+      contribution: '',
+      reward: '',
+      deadline: '',
+      isMilestone: false,
+      taskRef: 'sw',
+      goalRef: 'wg_sw',
+      tags: [],
+    });
+    // The item left this day's list, so the page has to re-read it.
+    expect(ctx.$emit).toHaveBeenCalledWith('items-moved', ['g1']);
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: '“Ship dashboard PR” moved to tomorrow',
+      tone: 'blue',
+    }));
+  });
+
+  it('records the item a skip_task names as missed, and does not call it a carry-over', async () => {
+    const ctx = makeCtx({
+      intent: 'skip_task',
+      reply: 'Noted — “Ship dashboard PR” is down as missed for today.',
+      targetItemId: 'g1',
+      replyMessage: { id: 'reply-2' },
+    });
+    await Container.methods.send.call(ctx, "skip the dashboard PR, I won't get to it");
+    await flush();
+
+    expect(misses(ctx)[0].variables).toEqual({ id: 'g1', isMissed: true });
+    // A miss stays on today's checklist, so nothing moved and nothing refetches.
+    expect(moves(ctx)).toHaveLength(0);
+    expect(ctx.$emit).not.toHaveBeenCalledWith('items-moved', expect.anything());
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: '“Ship dashboard PR” marked missed for today',
+      tone: 'orange',
+    }));
+    expect(events(ctx).some((e) => /carried over|tomorrow/.test(e.variables.text))).toBe(false);
+  });
+
+  // The server drops an id that is not open on this routine, but an item this
+  // client has since ticked or dropped must not be written to blind either.
+  it('writes nothing for a targetItemId that is not an open item here', async () => {
+    const done = makeCtx({
+      intent: 'defer_task', reply: 'Moved it.', targetItemId: 'g2', replyMessage: { id: 'r' },
+    });
+    await Container.methods.send.call(done, 'move the Ana reply to tomorrow');
+    await flush();
+    expect(moves(done)).toHaveLength(0);
+    expect(events(done)).toHaveLength(0);
+
+    const unknown = makeCtx({
+      intent: 'skip_task', reply: 'Skipped it.', targetItemId: 'nope', replyMessage: { id: 'r' },
+    });
+    await Container.methods.send.call(unknown, 'skip the thing with the dentist');
+    await flush();
+    expect(misses(unknown)).toHaveLength(0);
+    expect(events(unknown)).toHaveLength(0);
+  });
+
+  it('says so in the thread rather than letting the bubble claim a carry-over', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const ctx = makeCtx({
+      intent: 'defer_task',
+      reply: 'Understood. That item will be carried over to tomorrow.',
+      targetItemId: 'g1',
+      replyMessage: { id: 'reply-3' },
+    }, {}, [UPDATE_GOAL_ITEM_FIELDS_MUTATION]);
+    await Container.methods.send.call(ctx, 'move the dashboard PR to tomorrow');
+    await flush();
+
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: 'Couldn’t move “Ship dashboard PR” to tomorrow. Try again.',
+      tone: 'orange',
+      icon: 'error_outline',
+    }));
+    // And no "moved to tomorrow" pill, and no refetch for a move that did not
+    // happen — the reply bubble's own claim is all that is left, which is why
+    // the orange pill has to be there.
+    expect(events(ctx).some((e) => /moved to tomorrow/.test(e.variables.text))).toBe(false);
+    expect(ctx.$emit).not.toHaveBeenCalledWith('items-moved', expect.anything());
+    consoleError.mockRestore();
+  });
+
+  it('does not record a miss the write refused', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const ctx = makeCtx({
+      intent: 'skip_task',
+      reply: "I'll skip that for today and carry it over to tomorrow.",
+      targetItemId: 'g1',
+      replyMessage: { id: 'reply-4' },
+    }, {}, [MARK_GOAL_ITEM_MISSED_MUTATION]);
+    await Container.methods.send.call(ctx, 'skip the dashboard PR');
+    await flush();
+
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: 'Couldn’t mark “Ship dashboard PR” missed. Try again.',
+      tone: 'orange',
+    }));
+    expect(events(ctx).some((e) => /marked missed/.test(e.variables.text))).toBe(false);
+    consoleError.mockRestore();
+  });
+});
+
 describe('RoutineChatContainer.addProposals', () => {
   it('turns the three proposals into items, marks the bubble and logs an event', async () => {
     const ctx = makeCtx({});
@@ -469,7 +724,7 @@ const FITNESS = {
   ],
 };
 
-const mountContainer = (props = {}, { email = 'user@example.com' } = {}) => {
+const mountContainer = (props = {}, { email = 'user@example.com', failCreate = false } = {}) => {
   const mutations = [];
   const created = [];
   const notified = [];
@@ -496,6 +751,7 @@ const mountContainer = (props = {}, { email = 'user@example.com' } = {}) => {
   vm.$goals = {
     addGoalItem: (input) => {
       created.push(input);
+      if (failCreate) return Promise.reject(new Error('GraphQL error: nope'));
       return Promise.resolve({ id: `new-${created.length}`, ...input });
     },
   };
@@ -607,6 +863,25 @@ describe('RoutineChatContainer — the brief card', () => {
     const { vm, created } = mountContainer({ isPastDay: true });
     await vm.addBriefStep({ tag: 'area:health:fitness', text: 'Try the river loop' });
     expect(created).toHaveLength(0);
+  });
+
+  // The pill flips before the round trip, so a create that fails has to flip it
+  // back — a disabled "Added" tick for a task that does not exist is the worst
+  // of the two failures.
+  it('puts the pill back and says so when the create fails', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const { vm, logged } = mountContainer({}, { failCreate: true });
+    await vm.addBriefStep({ tag: 'area:health:fitness', text: 'Try the river loop' });
+    await flush();
+    await Vue.nextTick();
+
+    expect(vm.briefBlocks[0].steps[0].added).toBe(false);
+    expect(logged()[0].variables).toEqual(expect.objectContaining({
+      text: 'Couldn’t add “Try the river loop” to the checklist. Try again.',
+      tone: 'orange',
+    }));
+    expect(logged().some((e) => /^Added /.test(e.variables.text))).toBe(false);
+    consoleError.mockRestore();
   });
 });
 

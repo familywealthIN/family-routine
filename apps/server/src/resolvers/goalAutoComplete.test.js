@@ -132,6 +132,32 @@ describe('autoCheckTaskPeriod week auto-complete', () => {
     ]);
   });
 
+  // D-02: the beta week had two milestones on Sunday, one met and one left
+  // open. The day was published as a flat 'missed' while `milestonesComplete`
+  // had already counted the one that landed — one goal, two stories.
+  it('publishes a half-won past day as partial and still counts its met milestone', async () => {
+    primeFind([weekDoc()], [{
+      id: 'D0',
+      date: '06-09-2026',
+      period: 'day',
+      goalItems: [
+        { id: 'd0a', goalRef: 'W1', taskRef: 't0', isComplete: true },
+        { id: 'd0b', goalRef: 'W1', taskRef: 't0', isComplete: false },
+      ],
+    }]);
+
+    const [weekGoal] = await runWeek();
+    const [item] = weekGoal.goalItems;
+
+    expect(item.milestoneDays.find((day) => day.date === '06-09-2026').status).toBe('partial');
+    expect(item.milestonesComplete).toBe(1);
+    expect(item.milestonesTotal).toBe(2);
+    expect(item.isComplete).toBe(false);
+    // `progress` counts only fully won days (the owner's on-time rule, D-02),
+    // so a half-won day adds nothing to it.
+    expect(item.progress).toBe(0);
+  });
+
   it('completes on the threshold when the declared milestones match it', async () => {
     const declared = WEEK_DAYS.slice(0, 5);
     primeFind([weekDoc()], dayDocs(declared, declared));
