@@ -166,6 +166,14 @@ jobs:
           echo "sdk.dir=$ANDROID_HOME" > apps/android/local.properties
           cat apps/android/local.properties
 
+      # Testers see the same version on both platforms: the APK takes the iOS
+      # project's MARKETING_VERSION, and the run number tells PR builds apart.
+      - name: Stamp version from iOS
+        run: |
+          set -e
+          VERSION=$(grep -m1 -oE 'MARKETING_VERSION = [0-9.]+' apps/ios/App/App.xcodeproj/project.pbxproj | awk '{print $3}')
+          VERSION="$VERSION" BUILD_NUMBER="${{ github.run_number }}" node scripts/stamp-version.mjs
+
       - name: Capacitor sync (android)
         working-directory: apps/web-app
         run: npx cap sync android
