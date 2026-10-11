@@ -157,6 +157,32 @@ describe('GoalItemSheetContainer — writeItem sends the whole field set', () =>
     call('onCommitContribution', vm, { item: ITEM, contribution: 'Closes the last blocker.' });
     expect(vm.$apollo.mutate).not.toHaveBeenCalled();
   });
+
+  /**
+   * The other side of that guard. It compares against the item's CURRENT text,
+   * so it only holds a write back when the field commits text that really is
+   * unchanged — an edited contribution must go, and must go with the whole
+   * field set like every other write here (D-05).
+   */
+  it('an edited contribution is written, and still carries the title and tags', () => {
+    const vm = ctx();
+    const edited = 'Closes the last blocker.\n- and the new bullet';
+    call('onCommitContribution', vm, { item: ITEM, contribution: edited });
+    expect(varsOf(vm)).toMatchObject({
+      id: 'g1',
+      date: '12-09-2026',
+      contribution: edited,
+      body: 'Ship dashboard PR',
+      tags: ['project:dashboard'],
+    });
+    expect(guardFields).toHaveBeenCalledWith('GoalItem', 'g1', ['contribution']);
+  });
+
+  it('an emptied contribution is written as an empty string, not dropped', () => {
+    const vm = ctx();
+    call('onCommitContribution', vm, { item: ITEM, contribution: '' });
+    expect(varsOf(vm).contribution).toBe('');
+  });
 });
 
 describe('GoalItemSheetContainer — Linked to is editable', () => {

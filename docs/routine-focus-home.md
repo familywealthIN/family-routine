@@ -202,6 +202,19 @@ event firing — so the thread is a record of the day, not a reconstruction.
 | `apps/server/src/utils/chatApi.test.js` | free-roster enforcement, runtime discovery + ranking, model failover, intent coercion, chain-of-thought filtering, outage degradation |
 | `apps/server/src/schema/RoutineChatSchema.test.js` | chat body + per-proposal encryption round trip |
 | `apps/server/tests/authMiddleware.spec.js` | an expired/garbage token leaves the request unauthenticated rather than refused |
+| `packages/markdown-editor/MarkdownEditor.test.js` | the CONTRIBUTION editor's `modelValue` / `update:modelValue` contract with vue-easymde — text really leaves CodeMirror |
+
+### The CONTRIBUTION save path (D-05)
+
+`MarkdownField` owns the text being typed (`draft`) and its `commit` carries
+that, never the `value` prop; the container writes on `commit` only. Until
+4 Oct 2026 it committed the prop, so every contribution edit was discarded
+silently — the shape beta ticket D-05 describes. The path is now pinned at all
+three seams: editor → field (`MarkdownEditor.test.js`), field → sheet
+(`MarkdownField.test.js`, `GoalItemSheet.test.js`), sheet → mutation
+(`GoalItemSheetContainer.test.js`). The container deliberately does **not**
+bind `input-contribution`; that event is for a live preview, and saving from it
+would be one mutation per keystroke.
 
 ## Running it locally
 
