@@ -2244,6 +2244,13 @@ export default {
   padding-bottom: 6px !important;
 }
 
+/* The native app pads every toolbar by the status bar's height
+   (android-safe-area.css); this one sits mid-sheet, nowhere near it. */
+.ai-search-modal .prompt-toolbar >>> .v-toolbar {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
 .prompt-toolbar >>> .v-toolbar__content {
   min-height: 32px !important;
   height: auto !important;
