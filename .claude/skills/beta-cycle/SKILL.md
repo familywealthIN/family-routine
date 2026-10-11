@@ -85,6 +85,13 @@ If you want MCP next time, launch Chrome **before** starting the session:
   --remote-debugging-port=9222 --user-data-dir=C:/Users/grvpa/cdbg &   # SHORT path - MAX_PATH
 ```
 
+### Decided behaviour — never file, never fix
+
+- **AI goal builder Plan Title = the model's title.** The typed text is a prompt, and a prompt
+  cannot be a goal title. "Keep the typed title" was shipped and reverted TWICE as D-15
+  (6 and 11 Oct 2026). Drop any finding that asks for it at triage, and never send a fixer at
+  it. The full list of decided behaviour lives in `.claude/agents/beta-tester.md`.
+
 ### Known environment facts — exclude these from findings
 
 - The start webhook `https://workflows.grvpanchal.me/webhook/test-flow` **does not respond**

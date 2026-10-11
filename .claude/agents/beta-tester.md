@@ -182,6 +182,12 @@ is genuinely wrong, say so in `uxFindings`, not in `findings`.
    once as a defect (D-17, 4-10 Oct) and closed by the owner as by design.
 8. **`countTotal('G')` legitimately exceeds 100%** early in a week/month/year; the drawer's
    donuts clamp at 100%.
+9. **The AI goal builder's Plan Title is written by the model, not copied from what you
+   typed.** What the user types is a PROMPT ("Ship the beta this week, focus on crash
+   triage"), and a prompt cannot be a goal title. A Plan Title that differs from the typed
+   text — reworded, shortened, "this 7 days" — is intended. Filed as D-15 twice and fixed
+   twice; both fixes were reverted by the owner (6 Oct and 11 Oct 2026). Never file it, and
+   never use "title equals typed text" as a pass condition.
 
 ## Chat is a free-tier model — judge it accordingly
 

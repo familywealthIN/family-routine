@@ -62,7 +62,11 @@ one as a side effect of another ticket:
 - D/K/G live in the user drawer, not on the home screen;
 - the streak is derived, not persisted;
 - the checklist header counts goal items while the agent's end-event rule counts **slots**
-  from the routine's time gap (D-20) — these two numbers must stay separate.
+  from the routine's time gap (D-20) — these two numbers must stay separate;
+- the AI goal builder's Plan Title is the MODEL's title. What the user types is a prompt, and a
+  prompt cannot be a goal title — never default, copy or force the plan title to the typed
+  text. That change was made and reverted twice (D-15, 6 and 11 Oct 2026); a ticket asking
+  for it is a product decision, so stop and report instead of fixing.
 
 Routine chat answers through **OpenRouter's free tier only** (`chatApi.js`), with the roster
 discovered at runtime and ranked by JSON-contract support. Never pin a hardcoded roster, and
