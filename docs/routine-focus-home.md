@@ -113,6 +113,8 @@ The model is asked for a JSON object, and the client acts on the intent:
 | `add_tasks` | creates day goal items under the focused routine, then attaches their ids to the reply bubble so it renders live checkboxes |
 | `break_down` | nothing — the three steps are **proposals**, created only when the user presses "Add all to checklist" |
 | `complete_task` | completes the named item through the same mutation a checkbox tap uses |
+| `defer_task` | moves the named item to **tomorrow** — `updateGoalItem` with the next day's `date`, the same single write the goal sheet's date chips use |
+| `skip_task` | records the named item as **missed** for today (`markGoalItemMissed`, D-07). Nothing is created on another day |
 | `status` | nothing; the reply quotes the D/K/G percentages it was given |
 | `chat` | nothing |
 
@@ -127,6 +129,13 @@ Guards worth knowing:
 - A create that fails logs an orange event under the reply, and a brief step's
   Add pill flips back: the bubble's own text came from the model before the
   write, so it would otherwise claim a task that does not exist.
+- A `defer_task` / `skip_task` `targetItemId` is held to the same rule, for the
+  same reason twice over: moving the wrong task is worse than moving none.
+- A reply claiming a **carry-over** with no `defer_task` behind it is replaced
+  server-side with "I can't reschedule that one from here… use its date chips"
+  (`claimsCarryOver`). The bubble's text is composed before any write, so the
+  model was free to promise a move nothing performed — including on a `skip`,
+  which records a miss on today's item and creates nothing on another day.
 - A free model that ignores JSON mode keeps its prose as a plain `chat` reply
   rather than losing the turn.
 

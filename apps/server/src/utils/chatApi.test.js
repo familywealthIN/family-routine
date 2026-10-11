@@ -5,7 +5,7 @@
 
 const {
   chatWithRoutine, completeChat, freeModels, resolveFreeModels, clearModelCache,
-  modelRank, usableProse, FALLBACK_FREE_MODELS,
+  modelRank, usableProse, claimsCarryOver, FALLBACK_FREE_MODELS, NO_RESCHEDULE_REPLY,
 } = require('./chatApi');
 
 // Discovery is cached per process, so every suite starts from a cold catalogue.
@@ -272,6 +272,92 @@ describe('chatWithRoutine', () => {
   it('rejects a truncated monologue as a reply', () => {
     expect(usableProse('x'.repeat(900))).toBe('');
     expect(usableProse('Nice — two down, one to go.')).toBe('Nice — two down, one to go.');
+  });
+
+  // D-04: the chat used to answer "that item will be carried over to tomorrow"
+  // under an intent that performs nothing, so the thread claimed a move no one
+  // made. A defer now names the item it acts on, and the id is held to the same
+  // rule completeItemId is.
+  it('passes through a defer_task with the open item it names', async () => {
+    global.fetch = jest.fn().mockResolvedValue(okResponse(JSON.stringify({
+      reply: 'Moving “Ship dashboard PR” to tomorrow.',
+      intent: 'defer_task',
+      targetItemId: 'gi1',
+    })));
+
+    const result = await chatWithRoutine({ text: 'move the PR to tomorrow', context: CONTEXT });
+
+    expect(result.intent).toBe('defer_task');
+    expect(result.targetItemId).toBe('gi1');
+    expect(result.reply).toMatch(/to tomorrow/);
+  });
+
+  it('passes through a skip_task with the open item it names', async () => {
+    global.fetch = jest.fn().mockResolvedValue(okResponse(JSON.stringify({
+      reply: 'Down as missed for today.',
+      intent: 'skip_task',
+      targetItemId: 'gi1',
+    })));
+
+    const result = await chatWithRoutine({ text: "skip the PR, I won't get to it", context: CONTEXT });
+
+    expect(result.intent).toBe('skip_task');
+    expect(result.targetItemId).toBe('gi1');
+  });
+
+  // Moving the wrong task is worse than moving none, so an id that is not an
+  // open item here takes the intent down with it — and the reply goes too,
+  // because it was written before anything was attempted.
+  it('refuses a defer whose targetItemId is not an open item on this routine', async () => {
+    global.fetch = jest.fn().mockResolvedValue(okResponse(JSON.stringify({
+      reply: "Understood. That item will be carried over to tomorrow's Wind-down slot.",
+      intent: 'defer_task',
+      targetItemId: 'gi2',
+    })));
+
+    const result = await chatWithRoutine({ text: 'move the Ana reply to tomorrow', context: CONTEXT });
+
+    expect(result.targetItemId).toBeNull();
+    expect(result.intent).toBe('chat');
+    expect(result.reply).toBe(NO_RESCHEDULE_REPLY);
+    expect(result.reply).toMatch(/date chips/);
+  });
+
+  // The free-formed version of the same lie: no intent at all behind it.
+  it('replaces a plain chat reply that claims a carry-over', async () => {
+    global.fetch = jest.fn().mockResolvedValue(okResponse(JSON.stringify({
+      reply: "Noted. I'll skip 'Write the changelog entry' today and carry it over to tomorrow.",
+      intent: 'chat',
+    })));
+
+    const result = await chatWithRoutine({ text: 'skip the changelog entry today', context: CONTEXT });
+
+    expect(result.reply).toBe(NO_RESCHEDULE_REPLY);
+  });
+
+  // A skip records a miss on today's item; it creates nothing on another day,
+  // so it must not promise one either.
+  it('replaces a skip_task reply that promises a carry-over as well', async () => {
+    global.fetch = jest.fn().mockResolvedValue(okResponse(JSON.stringify({
+      reply: "I'll skip it for today and carry it over to tomorrow.",
+      intent: 'skip_task',
+      targetItemId: 'gi1',
+    })));
+
+    const result = await chatWithRoutine({ text: 'skip the PR today', context: CONTEXT });
+
+    expect(result.intent).toBe('skip_task');
+    expect(result.targetItemId).toBe('gi1');
+    expect(result.reply).toBe(NO_RESCHEDULE_REPLY);
+  });
+
+  it('leaves a reply that already admits it cannot reschedule alone', () => {
+    const honest = "The app doesn't support moving tasks to another day — they stay "
+      + 'in today’s checklist until resolved.';
+    expect(claimsCarryOver(honest)).toBe(false);
+    expect(claimsCarryOver(NO_RESCHEDULE_REPLY)).toBe(false);
+    expect(claimsCarryOver('Nice — two down, one to go.')).toBe(false);
+    expect(claimsCarryOver('That item will be carried over to tomorrow.')).toBe(true);
   });
 
   // The dashboard must keep working when the free tier is exhausted.

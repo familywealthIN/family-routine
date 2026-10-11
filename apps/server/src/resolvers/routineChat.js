@@ -160,6 +160,7 @@ const mutation = {
         intent: result.intent,
         tasks: result.tasks,
         completeItemId: result.completeItemId,
+        targetItemId: result.targetItemId,
         model: result.model,
         error: result.error,
       };
