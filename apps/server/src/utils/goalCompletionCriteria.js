@@ -41,13 +41,15 @@ function collectPeriodCriteria(childPeriodGoals, goalItemId) {
   childPeriodGoals.forEach((childGoal) => {
     (childGoal.goalItems || []).forEach((childGoalItem) => {
       if (String(childGoalItem.goalRef) === String(goalItemId)) {
-        // Met means CHECKED ON TIME (owner's rule, D-02). A day item ticked
-        // after its routine window — or on a later day — is graded 'missed' by
-        // utils/goalItemStatus when it is completed; it is recorded as late and
-        // never counts towards the period.
+        // Met means TICKED, late or not (owner's rule, 11 Oct 2026). A day item
+        // ticked after its routine window — or on a later day — is still graded
+        // 'missed' by utils/goalItemStatus and reported as `late`, but it counts
+        // towards the period: a night routine ticked at 00:27 was done. The
+        // earlier on-time-only rule (D-02) had /goals read 4/5 for a week the
+        // user ticked every day of.
         const ticked = !!childGoalItem.isComplete;
         const late = ticked && childGoalItem.status === 'missed';
-        criteria.push({ date: childGoal.date, isComplete: ticked && !late, late });
+        criteria.push({ date: childGoal.date, isComplete: ticked, late });
       }
     });
   });
@@ -87,9 +89,7 @@ function buildMilestoneDays(childDates, criteria, referenceDate) {
 
     if (!onThisDate.length) return { date: childDate, status: 'none' };
     if (onThisDate.every((criterion) => criterion.isComplete)) return { date: childDate, status: 'complete' };
-    // A late tick can no longer be made on time, so the day is settled even today.
-    const settled = onThisDate.some((criterion) => criterion.late);
-    if (!settled && sortableDate(childDate) >= reference) return { date: childDate, status: 'upcoming' };
+    if (sortableDate(childDate) >= reference) return { date: childDate, status: 'upcoming' };
 
     return {
       date: childDate,

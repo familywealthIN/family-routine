@@ -259,7 +259,7 @@ async function autoCheckTaskPeriod({
       periodGoalItem.milestoneDays = buildMilestoneDays(childDates, criteria, date);
 
       // One number for one goal (D-02): progress is the count of child dates
-      // whose every criterion was checked on time — exactly what milestoneDays
+      // whose every criterion was ticked (late ticks count) — what milestoneDays
       // marks 'complete', and what the cascade's counter and dots render.
       periodGoalItem.progress = periodGoalItem.milestoneDays
         .filter((day) => day.status === 'complete').length;

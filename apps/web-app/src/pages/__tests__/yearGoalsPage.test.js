@@ -65,7 +65,7 @@ const DAY_EXTRA = {
  * September: the month goal, two finished weeks and a third at 4 of 5 days.
  * Four months already done. Ticking the fifth day crosses week, month and year.
  */
-const fixture = (lastDayDone) => buildYearGoal({
+const fixture = (lastDayDone, today = TODAY) => buildYearGoal({
   id: 'y1',
   body: 'Ship v2 of Routine Notes',
   period: 'year',
@@ -111,7 +111,7 @@ const fixture = (lastDayDone) => buildYearGoal({
       ],
     },
   ],
-}, TODAY);
+}, today);
 
 /** wB at 4 of 5 days — one tick away from crossing week, month and year. */
 const almostThere = () => fixture(false);
@@ -205,15 +205,18 @@ describe('YearGoalsTime — the shell', () => {
 });
 
 describe('YearGoalsTime — one tick, the whole cascade', () => {
+  /** Read on Fri 11 Sep, d5's own date: the ordinary on-the-day tick. */
+  const onTime = () => page({ tree: fixture(false, '11-09-2026'), today: '11-09-2026' });
+
   it('applies day, week and month through one write container', async () => {
-    const vm = page();
+    const vm = onTime();
     await vm.onTickDay({ day: { id: 'd5' } });
     expect(vm.spies.ticked).toHaveLength(1);
     expect(vm.spies.ticked[0].map((t) => t.id)).toEqual(['d5', 'wB', 'mSep']);
   });
 
   it('logs one chat event per crossing, in order', async () => {
-    const vm = page();
+    const vm = onTime();
     await vm.onTickDay({ day: { id: 'd5' } });
     expect(vm.spies.events.map((e) => e.text)).toEqual([
       'Ship the dashboard auto-ticked · 5/5 days',
@@ -223,7 +226,7 @@ describe('YearGoalsTime — one tick, the whole cascade', () => {
   });
 
   it('shows one rollup toast for the whole gesture', async () => {
-    const vm = page();
+    const vm = onTime();
     await vm.onTickDay({ day: { id: 'd5' } });
     expect(vm.toast.title).toBe('Ship the dashboard auto-ticked · 5/5 days');
     expect(vm.toast.sub).toContain('Year at 83% · 5/6 months');

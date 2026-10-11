@@ -193,7 +193,7 @@ describe('a week ticks from its own days', () => {
   const weekWith = (doneCount, total) => {
     const days = [];
     for (let i = 0; i < total; i += 1) {
-      days.push(dayGoal(`d${i}`, `0${i + 6}-09-2026`, i < doneCount));
+      days.push(dayGoal(`d${i}`, `${String(i + 6).padStart(2, '0')}-09-2026`, i < doneCount));
     }
     return buildYearGoal(yearGoal([
       monthGoal('mSep', '30-09-2026', [weekGoal('w1', '11-09-2026', days)]),
@@ -240,15 +240,74 @@ describe('a week ticks from its own days', () => {
   });
 });
 
+// The server's `progress`, as the Goals page and /home read it: one win per DATE
+// of the week, once every day goal on it is ticked — late ticks count (owner,
+// 11 Oct 2026). This page used to count ticked items instead.
+describe('a week counts ticked dates, as the Goals page does', () => {
+  const late = (id, date) => ({ ...dayGoal(id, date, true), status: 'missed' });
+  const weekOf = (days) => buildYearGoal(yearGoal([
+    monthGoal('mSep', '30-09-2026', [weekGoal('w1', '11-09-2026', days)]),
+  ]), TODAY).months[SEP].weeks[0];
+
+  it('counts a day goal ticked late', () => {
+    const week = weekOf([dayGoal('a', '07-09-2026', true), late('b', '08-09-2026')]);
+    expect(week.doneDays).toBe(2);
+    expect(week.dayStatuses.slice(1, 3)).toEqual(['complete', 'complete']);
+  });
+
+  it('counts a date once however many of its goals were ticked', () => {
+    const week = weekOf([
+      dayGoal('a', '07-09-2026', true),
+      dayGoal('b', '07-09-2026', true),
+      dayGoal('c', '07-09-2026', true),
+    ]);
+    expect(week.doneDays).toBe(1);
+  });
+
+  it('marks a date partial, not won, while one of its goals is still open', () => {
+    const week = weekOf([dayGoal('a', '07-09-2026', true), dayGoal('b', '07-09-2026', false)]);
+    expect(week.doneDays).toBe(0);
+    expect(week.dayStatuses[1]).toBe('partial');
+    expect(week.dots[1].icon).toBe('donut_large');
+  });
+
+  it('ignores a linked day goal dated outside the week', () => {
+    const week = weekOf([dayGoal('a', '07-09-2026', true), dayGoal('b', '15-09-2026', true)]);
+    expect(week.doneDays).toBe(1);
+    expect(week.days).toHaveLength(2);
+  });
+
+  it('predicts a week crossing from a late tick on a past date', () => {
+    const days = ['06', '07', '08', '09'].map((d, i) => dayGoal(`d${i}`, `${d}-09-2026`, true));
+    days.push(dayGoal('d4', '11-09-2026', false));
+    const tree = buildYearGoal(yearGoal([
+      monthGoal('mSep', '30-09-2026', [weekGoal('wB', '11-09-2026', days)]),
+    ]), TODAY);
+    const plan = planTick(tree, { level: 'day', id: 'd4' });
+    expect(plan.ticks.map((t) => t.id)).toEqual(['d4', 'wB']);
+  });
+
+  it('does not predict a crossing while another goal on the date is open', () => {
+    const days = ['06', '07', '08', '09'].map((d, i) => dayGoal(`d${i}`, `${d}-09-2026`, true));
+    days.push(dayGoal('d4', '12-09-2026', false), dayGoal('d5', '12-09-2026', false));
+    const tree = buildYearGoal(yearGoal([
+      monthGoal('mSep', '30-09-2026', [weekGoal('wB', '11-09-2026', days)]),
+    ]), TODAY);
+    const plan = planTick(tree, { level: 'day', id: 'd4' });
+    expect(plan.ticks.map((t) => t.id)).toEqual(['d4']);
+  });
+});
+
 describe('one tick, the whole cascade', () => {
   /**
    * September has its month goal, two weeks already done and a third standing at
-   * 4 of 5 days. The year has 4 months done. Ticking the fifth day of that week
-   * therefore crosses week, month AND year in one gesture.
+   * 4 of 5 days. The year has 4 months done. Ticking the fifth day of that week —
+   * today's, so the tick is on time — therefore crosses week, month AND year in
+   * one gesture.
    */
   const almostThere = () => {
     const days = [0, 1, 2, 3].map((i) => dayGoal(`d${i}`, `0${i + 6}-09-2026`, true));
-    days.push(dayGoal('d4', '11-09-2026', false));
+    days.push(dayGoal('d4', TODAY, false));
     return buildYearGoal(yearGoal([
       ...doneMonths(4),
       monthGoal('mSep', '30-09-2026', [
@@ -288,7 +347,7 @@ describe('one tick, the whole cascade', () => {
 
   it('stops at the week when the month is not yet at 3', () => {
     const days = [0, 1, 2, 3].map((i) => dayGoal(`d${i}`, `0${i + 6}-09-2026`, true));
-    days.push(dayGoal('d4', '11-09-2026', false));
+    days.push(dayGoal('d4', TODAY, false));
     const tree = buildYearGoal(yearGoal([
       monthGoal('mSep', '30-09-2026', [weekGoal('wB', '11-09-2026', days)]),
     ]), TODAY);

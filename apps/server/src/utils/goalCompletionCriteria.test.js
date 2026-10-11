@@ -35,29 +35,39 @@ describe('collectPeriodCriteria', () => {
 // D-02, owner's rule: a milestone is met only when it was checked on time.
 // goalItemStatus grades a tick after the routine window (or on a later day)
 // as 'missed'; that tick is recorded as late and never counts.
-describe('checked on time', () => {
+// Owner's rule, 11 Oct 2026: a late tick COUNTS. It replaced the on-time-only
+// rule (D-02), under which /goals read 4/5 for a night routine ticked every day
+// of the week, three of them after 22:30's window.
+describe('a late tick counts', () => {
   const lateOn = (date) => weekDays.map((d) => ({
     date: d,
     goalItems: [{ goalRef: 'W1', isComplete: true, status: d === date ? 'missed' : 'done' }],
   }));
 
-  it('does not count a late tick as met', () => {
+  it('counts a late tick as met, and still reports it as late', () => {
     const criteria = collectPeriodCriteria(lateOn('07-09-2026'), 'W1');
-    expect(criteria.find((c) => c.date === '07-09-2026')).toEqual({ date: '07-09-2026', isComplete: false, late: true });
-    expect(criteria.filter((c) => c.isComplete)).toHaveLength(6);
+    expect(criteria.find((c) => c.date === '07-09-2026')).toEqual({ date: '07-09-2026', isComplete: true, late: true });
+    expect(criteria.filter((c) => c.isComplete)).toHaveLength(7);
   });
 
-  it('marks a late day missed, even when it is the day being read', () => {
+  it('marks a late-ticked day complete', () => {
     const days = buildMilestoneDays(weekDays, collectPeriodCriteria(lateOn('12-09-2026'), 'W1'), '12-09-2026');
-    expect(days[6]).toEqual({ date: '12-09-2026', status: 'missed' });
+    expect(days[6]).toEqual({ date: '12-09-2026', status: 'complete' });
   });
 
-  it('does not auto-complete a goal whose only open criterion was ticked late', () => {
+  it('auto-completes a goal whose last criterion was ticked late', () => {
     const criteria = collectPeriodCriteria(lateOn('09-09-2026'), 'W1');
     const result = evaluateAutoComplete({
       criteria, completionThreshold: 5, stepDownPeriod: 'day', date: '12-09-2026',
     });
-    expect(result.isComplete).toBe(false);
+    expect(result.isComplete).toBe(true);
+  });
+
+  it('keeps today winnable while a goal on it is still open', () => {
+    const goals = lateOn('12-09-2026');
+    goals[6].goalItems.push({ goalRef: 'W1', isComplete: false, status: 'todo' });
+    const days = buildMilestoneDays(weekDays, collectPeriodCriteria(goals, 'W1'), '12-09-2026');
+    expect(days[6]).toEqual({ date: '12-09-2026', status: 'upcoming' });
   });
 });
 

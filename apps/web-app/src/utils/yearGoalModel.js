@@ -40,6 +40,7 @@
  */
 import moment from 'moment';
 import { PROFILE_SETTINGS } from '@routine-notes/ui/constants/settings';
+import { CASCADE_UNIT_STYLE } from '@routine-notes/ui/constants/routineFocus';
 
 export const DATE_FORMAT = 'DD-MM-YYYY';
 
@@ -219,25 +220,54 @@ function buildDay(dayItem, todayKey) {
   };
 }
 
+/** The 7 DD-MM-YYYY dates of a week goal, Sunday first — server `periodChildDates`. */
+function weekDates(weekDate) {
+  const parsed = parseDate(weekDate);
+  if (!parsed) return [];
+  const sunday = parsed.clone().subtract(parsed.day(), 'days');
+  return DOW_INITIALS.map((label, dow) => sunday.clone().add(dow, 'days').format(DATE_FORMAT));
+}
+
+/**
+ * One week date's standing, by the server's own rule (`buildMilestoneDays` in
+ * apps/server/src/utils/goalCompletionCriteria.js): a date counts once, when
+ * EVERY day goal on it is ticked — a late tick counts. This page used to count
+ * ticked items, so several on one date counted separately and a week the Goals
+ * page read as 6/5 read as 19 here. `progress` is not in this query's reach
+ * (see the header), so the rule is mirrored instead of fetched.
+ *
+ * @returns {'complete'|'partial'|'missed'|'upcoming'|'none'}
+ */
+function weekDayStatus(daysOnDate, date, todayKey) {
+  if (!daysOnDate.length) return 'none';
+  if (daysOnDate.every((d) => d.isComplete)) return 'complete';
+  const sortable = (value) => value.split('-').reverse().join('');
+  if (sortable(date) >= sortable(todayKey)) return 'upcoming';
+  return daysOnDate.some((d) => d.isComplete) ? 'partial' : 'missed';
+}
+
 /** One of the 7 strip slots above a week's day rows. */
-function buildDot(day, slot, dow, label, today) {
+function buildDot(status, slot, dow, label, today) {
   const isToday = slot.isSame(today, 'day');
-  const hasPassed = slot.isBefore(today, 'day');
   let icon = 'fiber_manual_record';
   let color = 'rgba(0,0,0,.15)';
   let size = 8;
-  if (day) {
+  if (status !== 'none') {
     size = 18;
-    if (day.isComplete) {
+    if (status === 'complete') {
       icon = 'check_circle';
       color = DONE_GREEN;
-    } else if (isToday) {
-      icon = 'radio_button_checked';
-      color = NOW_ORANGE;
-    } else if (hasPassed) {
+    } else if (status === 'partial') {
+      // Some of the date's goals are ticked, not all — the /home cascade's glyph.
+      icon = CASCADE_UNIT_STYLE.partial.icon;
+      color = CASCADE_UNIT_STYLE.partial.color;
+    } else if (status === 'missed') {
       // The only place this page says "you missed this".
       icon = 'cancel';
       color = 'rgba(229,57,53,.55)';
+    } else if (isToday) {
+      icon = 'radio_button_checked';
+      color = NOW_ORANGE;
     } else {
       icon = 'radio_button_unchecked';
       color = 'rgba(0,0,0,.3)';
@@ -254,15 +284,12 @@ function buildDot(day, slot, dow, label, today) {
   };
 }
 
-function buildDots(days, weekDate, today) {
-  const start = parseDate(weekDate);
-  if (!start) return [];
-  const sunday = start.clone().startOf('week');
-  return DOW_INITIALS.map((label, dow) => buildDot(
-    days.filter((d) => d.dow === dow)[0] || null,
-    sunday.clone().add(dow, 'days'),
+function buildDots(dayStatuses, dates, today) {
+  return dates.map((date, dow) => buildDot(
+    dayStatuses[dow],
+    moment(date, DATE_FORMAT),
     dow,
-    label,
+    DOW_INITIALS[dow],
     today,
   ));
 }
@@ -270,7 +297,16 @@ function buildDots(days, weekDate, today) {
 function buildWeek(weekItem, today) {
   const todayKey = today.format(DATE_FORMAT);
   const days = childrenOf(weekItem, 'day').map((d) => buildDay(d, todayKey));
-  const doneDays = days.filter((d) => d.isComplete).length;
+  // Counted per DATE of this week — the figure the Goals page and /home read
+  // from the server's `progress`. A day goal dated outside the week still lists
+  // below, but it cannot win this week a day.
+  const dates = weekDates(weekItem.date);
+  const dayStatuses = dates.map((date) => weekDayStatus(
+    days.filter((d) => d.date === date),
+    date,
+    todayKey,
+  ));
+  const doneDays = dayStatuses.filter((s) => s === 'complete').length;
   const parsed = parseDate(weekItem.date);
   const isCurrent = !!parsed && parsed.isSame(today, 'week');
   /**
@@ -291,7 +327,9 @@ function buildWeek(weekItem, today) {
     week: parsed ? parsed.week() : null,
     rangeLabel: weekRangeLabel(weekItem.date),
     days,
-    dots: buildDots(days, weekItem.date, today),
+    dates,
+    dayStatuses,
+    dots: buildDots(dayStatuses, dates, today),
     doneDays,
     autoTicked,
     canTickByHand: !autoTicked,
@@ -699,7 +737,15 @@ export function planTick(tree, target) {
   // --- week crossing
   let weekNowDone = !!(week && week.isComplete);
   if (level === 'day' && week) {
-    const doneDays = week.doneDays + 1;
+    // The tick wins the week a day only when it completes its date: the date is
+    // this week's and every other goal on it is already ticked.
+    const dateIndex = (week.dates || []).indexOf(day.date);
+    const othersDone = week.days
+      .filter((d) => d.date === day.date && d.id !== day.id)
+      .every((d) => d.isComplete);
+    const winsDate = dateIndex !== -1 && othersDone
+      && week.dayStatuses[dateIndex] !== 'complete';
+    const doneDays = week.doneDays + (winsDate ? 1 : 0);
     if (!week.isComplete && doneDays >= TH.week) {
       weekNowDone = true;
       ticks.push(tickOf(week, true));
