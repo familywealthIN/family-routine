@@ -1110,6 +1110,10 @@ export default {
         'toggle-item': this.toggleItem,
         'complete-item': this.completeItemFromChat,
         'items-created': this.onChatItemsCreated,
+        // A deferred item leaves this day's list, and list membership is the one
+        // thing the entity-level write cannot express — same as the goal sheet's
+        // `move-date`.
+        'items-moved': this.refetchGoals,
       };
     },
     chatSubline() {

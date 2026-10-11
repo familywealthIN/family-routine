@@ -35,19 +35,30 @@ const {
   MARK_ROUTINE_CHAT_ADDED_MUTATION,
   POST_ROUTINE_CHAT_EVENT_MUTATION,
 } = require('../../composables/graphql/chatQueries');
+const {
+  UPDATE_GOAL_ITEM_FIELDS_MUTATION,
+} = require('../../composables/graphql/goalItemQueries');
+const { MARK_GOAL_ITEM_MISSED_MUTATION } = require('../../composables/useGoalMutations');
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const ITEMS = [
   {
-    id: 'g1', body: 'Ship dashboard PR', isComplete: false, goalRef: 'wg_sw',
+    id: 'g1', body: 'Ship dashboard PR', isComplete: false, goalRef: 'wg_sw', taskRef: 'sw',
   },
   {
-    id: 'g2', body: 'Reply to Ana', isComplete: true, goalRef: 'wg_sw',
+    id: 'g2', body: 'Reply to Ana', isComplete: true, goalRef: 'wg_sw', taskRef: 'sw',
   },
 ];
 
-const makeCtx = (sendResult, over = {}) => {
+/**
+ * @param {Object} sendResult what `sendRoutineChat` resolves with.
+ * @param {Object} over context fields to replace.
+ * @param {Array} rejected mutation documents whose write should fail — the
+ *   thread's own `postRoutineChatEvent` has to keep working, so the failing
+ *   write is named rather than failing every mutation.
+ */
+const makeCtx = (sendResult, over = {}, rejected = []) => {
   const ctx = {
     date: '12-09-2026',
     taskRef: 'sw',
@@ -68,6 +79,9 @@ const makeCtx = (sendResult, over = {}) => {
         if (options.mutation === SEND_ROUTINE_CHAT_MUTATION) {
           return Promise.resolve({ data: { sendRoutineChat: sendResult } });
         }
+        if (rejected.indexOf(options.mutation) >= 0) {
+          return Promise.reject(new Error('GraphQL error: nope'));
+        }
         return Promise.resolve({ data: {} });
       }),
     },
@@ -86,6 +100,8 @@ const makeCtx = (sendResult, over = {}) => {
 const sent = (ctx) => ctx.mutations.find((m) => m.mutation === SEND_ROUTINE_CHAT_MUTATION);
 const marked = (ctx) => ctx.mutations.filter((m) => m.mutation === MARK_ROUTINE_CHAT_ADDED_MUTATION);
 const events = (ctx) => ctx.mutations.filter((m) => m.mutation === POST_ROUTINE_CHAT_EVENT_MUTATION);
+const moves = (ctx) => ctx.mutations.filter((m) => m.mutation === UPDATE_GOAL_ITEM_FIELDS_MUTATION);
+const misses = (ctx) => ctx.mutations.filter((m) => m.mutation === MARK_GOAL_ITEM_MISSED_MUTATION);
 
 describe('RoutineChatContainer.send', () => {
   it('sends the routine snapshot with the message so the model has context', async () => {
@@ -312,6 +328,135 @@ describe('RoutineChatContainer.createItems — the week-goal link', () => {
     }));
     // And no "3 tasks added" pill for three tasks that do not exist.
     expect(events(ctx).some((e) => /added to the checklist/.test(e.variables.text))).toBe(false);
+  });
+});
+
+/**
+ * Defer and skip (D-04).
+ *
+ * The chat used to answer "that item will be carried over to tomorrow" with no
+ * intent behind it at all, so nothing moved and the thread said otherwise. The
+ * two intents now do the real thing — `updateGoalItem` with tomorrow's date is
+ * the goal sheet's own move, `markGoalItemMissed` is D-07's — and the invariant
+ * that matters is the same one D-01 established: no success pill without a
+ * write that landed.
+ */
+describe('RoutineChatContainer — defer and skip', () => {
+  it('moves the item a defer_task names to tomorrow, carrying its current fields', async () => {
+    const ctx = makeCtx({
+      intent: 'defer_task',
+      reply: 'Moving “Ship dashboard PR” to tomorrow.',
+      targetItemId: 'g1',
+      replyMessage: { id: 'reply-1' },
+    });
+    await Container.methods.send.call(ctx, 'move the dashboard PR to tomorrow');
+    await flush();
+
+    // `updateGoalItem` is a full replace, so the item's own values travel with
+    // the new date or the move wipes them.
+    expect(moves(ctx)[0].variables).toEqual({
+      id: 'g1',
+      date: '13-09-2026',
+      period: 'day',
+      body: 'Ship dashboard PR',
+      contribution: '',
+      reward: '',
+      deadline: '',
+      isMilestone: false,
+      taskRef: 'sw',
+      goalRef: 'wg_sw',
+      tags: [],
+    });
+    // The item left this day's list, so the page has to re-read it.
+    expect(ctx.$emit).toHaveBeenCalledWith('items-moved', ['g1']);
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: '“Ship dashboard PR” moved to tomorrow',
+      tone: 'blue',
+    }));
+  });
+
+  it('records the item a skip_task names as missed, and does not call it a carry-over', async () => {
+    const ctx = makeCtx({
+      intent: 'skip_task',
+      reply: 'Noted — “Ship dashboard PR” is down as missed for today.',
+      targetItemId: 'g1',
+      replyMessage: { id: 'reply-2' },
+    });
+    await Container.methods.send.call(ctx, "skip the dashboard PR, I won't get to it");
+    await flush();
+
+    expect(misses(ctx)[0].variables).toEqual({ id: 'g1', isMissed: true });
+    // A miss stays on today's checklist, so nothing moved and nothing refetches.
+    expect(moves(ctx)).toHaveLength(0);
+    expect(ctx.$emit).not.toHaveBeenCalledWith('items-moved', expect.anything());
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: '“Ship dashboard PR” marked missed for today',
+      tone: 'orange',
+    }));
+    expect(events(ctx).some((e) => /carried over|tomorrow/.test(e.variables.text))).toBe(false);
+  });
+
+  // The server drops an id that is not open on this routine, but an item this
+  // client has since ticked or dropped must not be written to blind either.
+  it('writes nothing for a targetItemId that is not an open item here', async () => {
+    const done = makeCtx({
+      intent: 'defer_task', reply: 'Moved it.', targetItemId: 'g2', replyMessage: { id: 'r' },
+    });
+    await Container.methods.send.call(done, 'move the Ana reply to tomorrow');
+    await flush();
+    expect(moves(done)).toHaveLength(0);
+    expect(events(done)).toHaveLength(0);
+
+    const unknown = makeCtx({
+      intent: 'skip_task', reply: 'Skipped it.', targetItemId: 'nope', replyMessage: { id: 'r' },
+    });
+    await Container.methods.send.call(unknown, 'skip the thing with the dentist');
+    await flush();
+    expect(misses(unknown)).toHaveLength(0);
+    expect(events(unknown)).toHaveLength(0);
+  });
+
+  it('says so in the thread rather than letting the bubble claim a carry-over', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const ctx = makeCtx({
+      intent: 'defer_task',
+      reply: 'Understood. That item will be carried over to tomorrow.',
+      targetItemId: 'g1',
+      replyMessage: { id: 'reply-3' },
+    }, {}, [UPDATE_GOAL_ITEM_FIELDS_MUTATION]);
+    await Container.methods.send.call(ctx, 'move the dashboard PR to tomorrow');
+    await flush();
+
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: 'Couldn’t move “Ship dashboard PR” to tomorrow. Try again.',
+      tone: 'orange',
+      icon: 'error_outline',
+    }));
+    // And no "moved to tomorrow" pill, and no refetch for a move that did not
+    // happen — the reply bubble's own claim is all that is left, which is why
+    // the orange pill has to be there.
+    expect(events(ctx).some((e) => /moved to tomorrow/.test(e.variables.text))).toBe(false);
+    expect(ctx.$emit).not.toHaveBeenCalledWith('items-moved', expect.anything());
+    consoleError.mockRestore();
+  });
+
+  it('does not record a miss the write refused', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const ctx = makeCtx({
+      intent: 'skip_task',
+      reply: "I'll skip that for today and carry it over to tomorrow.",
+      targetItemId: 'g1',
+      replyMessage: { id: 'reply-4' },
+    }, {}, [MARK_GOAL_ITEM_MISSED_MUTATION]);
+    await Container.methods.send.call(ctx, 'skip the dashboard PR');
+    await flush();
+
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: 'Couldn’t mark “Ship dashboard PR” missed. Try again.',
+      tone: 'orange',
+    }));
+    expect(events(ctx).some((e) => /marked missed/.test(e.variables.text))).toBe(false);
+    consoleError.mockRestore();
   });
 });
 
