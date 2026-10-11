@@ -325,16 +325,7 @@ export default {
         }
 
         if (plan) {
-          // The plan title is persisted verbatim as the parent goal, so it
-          // has to stay the user's own words. modifyQueryPeriod rewrites the
-          // period word into an explicit count for the planner's horizon
-          // ("this week" → "this 7 days") and the model echoes that objective
-          // back as its title — which reached the form, and the saved goal,
-          // as a silent rewrite of what the user typed. Keep the model's
-          // horizon, default the title to the typed objective; the field
-          // stays editable.
-          const typedTitle = this.searchQuery.trim();
-          this.milestoneData = { ...plan, title: typedTitle || plan.title };
+          this.milestoneData = { ...plan };
 
           this.$emit('search-complete', {
             milestoneData: this.milestoneData,
