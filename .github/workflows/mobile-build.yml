@@ -155,9 +155,11 @@ jobs:
             echo "::error::ANDROID_DEBUG_KEYSTORE_B64 not set; debug builds would get a random signing key and Google Sign-In would break"
             exit 1
           fi
-          mkdir -p ~/.android
-          printf '%s' "$ANDROID_DEBUG_KEYSTORE_B64" | base64 --decode > ~/.android/debug.keystore
-          keytool -list -v -keystore ~/.android/debug.keystore -storepass android 2>/dev/null | grep SHA1:
+          # Handed to Gradle by path (app/build.gradle reads ANDROID_DEBUG_KEYSTORE):
+          # writing it to ~/.android/debug.keystore alone was silently not used.
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/debug.keystore"
+          echo "ANDROID_DEBUG_KEYSTORE=$RUNNER_TEMP/debug.keystore" >> "$GITHUB_ENV"
+          keytool -list -v -keystore "$RUNNER_TEMP/debug.keystore" -storepass android 2>/dev/null | grep SHA1:
 
       - name: Write apps/android/local.properties
         run: |
@@ -171,6 +173,20 @@ jobs:
       - name: Build debug APK
         working-directory: apps/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      # Testers can only sign in if the APK carries the registered key, so check
+      # the built APK itself rather than trusting the keystore step.
+      - name: Verify APK is signed with the registered debug key
+        run: |
+          set -e
+          want=$(keytool -list -v -keystore "$ANDROID_DEBUG_KEYSTORE" -storepass android 2>/dev/null | grep -m1 'SHA1:' | awk '{print $2}')
+          got=$(keytool -printcert -jarfile apps/android/app/build/outputs/apk/debug/app-debug.apk | grep -m1 'SHA1:' | awk '{print $2}')
+          echo "keystore SHA1: $want"
+          echo "APK SHA1:      $got"
+          if [ -z "$want" ] || [ "$want" != "$got" ]; then
+            echo "::error::Debug APK is not signed with the registered debug key; Google Sign-In would fail on testers' devices"
+            exit 1
+          fi
 
       # Signed release AABs are built and published by release-mobile.yml on a v* tag.
       # This workflow is the pre-merge gate only.
