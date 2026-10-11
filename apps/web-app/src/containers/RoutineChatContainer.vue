@@ -417,7 +417,7 @@ export default {
         if (!result) return;
 
         if (result.intent === 'add_tasks' && result.tasks && result.tasks.length) {
-          const ids = await this.createItems(result.tasks);
+          const { ids } = await this.createItems(result.tasks);
           if (ids.length && result.replyMessage) {
             await this.attachItems(result.replyMessage.id, ids);
           }
@@ -508,6 +508,15 @@ export default {
       this.addedSteps = { ...this.addedSteps, [`${this.taskRef}|${value}`]: true };
     },
 
+    forgetStep(text) {
+      const value = String(text || '').trim();
+      const key = `${this.taskRef}|${value}`;
+      if (!value || !this.addedSteps[key]) return;
+      const rest = { ...this.addedSteps };
+      delete rest[key];
+      this.addedSteps = rest;
+    },
+
     toggleBrief() {
       this.briefOpen = {
         ...this.briefOpen,
@@ -532,8 +541,13 @@ export default {
       // Flip the pill before the round trip, and keep it flipped: the guard
       // against adding twice is this record, not a disabled control.
       this.rememberStep(text);
-      const ids = await this.createItems([text]);
-      if (!ids.length) return;
+      const { ids } = await this.createItems([text]);
+      // The create did not land, so the pill goes back to Add: leaving it
+      // flipped would offer a tick for a task that does not exist.
+      if (!ids.length) {
+        this.forgetStep(text);
+        return;
+      }
       await this.postEvent({
         text: `Added “${text}” to the checklist`,
         tone: 'blue',
@@ -586,7 +600,7 @@ export default {
     /** Accept a break-down turn's three proposals as real checklist items. */
     async addProposals(message) {
       if (!message || !message.proposals || !message.proposals.length) return;
-      const ids = await this.createItems(message.proposals);
+      const { ids, failed } = await this.createItems(message.proposals);
       if (!ids.length) return;
       // Pressed inside a chat bubble, so following its confirmation keeps the
       // user where they already were. Adding a brief step does NOT set this: the
@@ -595,8 +609,11 @@ export default {
       this.userScrollIntent = true;
       if (isLocal(message.id)) {
         // "Plan from next steps" — its proposals ARE the brief's steps, so the
-        // pills have to flip too or the same step could be added again.
-        message.proposals.forEach((step) => this.rememberStep(step));
+        // pills have to flip too or the same step could be added again. A step
+        // whose create failed keeps its Add pill.
+        message.proposals
+          .filter((step) => failed.indexOf(String(step || '').trim()) === -1)
+          .forEach((step) => this.rememberStep(step));
         this.markLocalAdded(message.id);
       } else {
         await this.attachItems(message.id, ids);
@@ -612,9 +629,13 @@ export default {
      * Create day goal items under the focused routine. `goalRef` copies the
      * routine's existing week-goal link so an item the chat creates rolls up
      * the same way one created through AI Search does.
+     *
+     * Resolves `{ ids, failed }`: every caller announces what it added, so it
+     * has to be able to tell a create that landed from one that did not.
      */
     async createItems(bodies) {
       const ids = [];
+      const failed = [];
       const goalRef = this.inheritedGoalRef();
       // Sequential: addGoalItem's optimistic cache write reads the day goal it
       // just wrote to, so concurrent creates race each other's reads.
@@ -630,16 +651,35 @@ export default {
               taskRef: this.taskRef,
               goalRef: goalRef || undefined,
               isComplete: false,
-              isMilestone: false,
+              // A day goal carrying a goalRef IS that goal's milestone, and the
+              // server rejects the pair without this (resolvers/goal.js
+              // addGoalItem). Same rule as AI Search's direct create.
+              isMilestone: !!goalRef,
             });
             if (created && created.id) ids.push(created.id);
+            else failed.push(body);
           } catch (error) {
             console.error('[RoutineChat] createItems failed:', error);
+            failed.push(body);
           }
         }
       }
       if (ids.length) this.$emit('items-created', ids);
-      return ids;
+      if (failed.length) await this.reportCreateFailure(failed);
+      return { ids, failed };
+    },
+
+    /**
+     * Say so when a create did not land. The reply bubble's text came from the
+     * model before the write was attempted, so it still claims the task was
+     * added — an event pill under it is the honest record, written the same way
+     * every other thread write logs itself.
+     */
+    reportCreateFailure(failed) {
+      const text = failed.length === 1
+        ? `Couldn’t add “${failed[0]}” to the checklist. Try again.`
+        : `Couldn’t add ${failed.length} tasks to the checklist. Try again.`;
+      return this.postEvent({ text, tone: 'orange', icon: 'error_outline' });
     },
 
     inheritedGoalRef() {

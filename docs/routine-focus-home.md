@@ -122,7 +122,11 @@ Guards worth knowing:
   both server-side (`chatApi.js`) and again client-side. A hallucinated id would
   otherwise report "marked done" having completed nothing.
 - An item the chat creates inherits the routine's existing `goalRef`, so it rolls
-  up into the same week goal as one created through AI Search.
+  up into the same week goal as one created through AI Search — and with it
+  `isMilestone: true`, because the server refuses a `goalRef` without it.
+- A create that fails logs an orange event under the reply, and a brief step's
+  Add pill flips back: the bubble's own text came from the model before the
+  write, so it would otherwise claim a task that does not exist.
 - A free model that ignores JSON mode keeps its prose as a plain `chat` reply
   rather than losing the turn.
 

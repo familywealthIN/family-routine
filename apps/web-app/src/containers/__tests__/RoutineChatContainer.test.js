@@ -205,6 +205,116 @@ describe('RoutineChatContainer.send', () => {
   });
 });
 
+/**
+ * The create path, against the server's actual rule.
+ *
+ * `resolveDayGoalLink` links every day goal of a routine that has a week goal,
+ * so a checklist whose items carry a `goalRef` is the DEFAULT state, and the
+ * resolver refuses a `goalRef` without `isMilestone`
+ * (apps/server/src/resolvers/goal.js, addGoalItem). Sending the pair the way AI
+ * Search sends it is therefore the difference between the chat creating tasks
+ * and the chat creating nothing while saying it did.
+ */
+const serverLikeAddGoalItem = () => jest.fn((input) => {
+  if (input.goalRef && !input.isMilestone) {
+    return Promise.reject(new Error(
+      'GraphQL error: When goalRef is provided, isMilestone must be true',
+    ));
+  }
+  return Promise.resolve({ id: `new-${input.body}`, ...input });
+});
+
+describe('RoutineChatContainer.createItems — the week-goal link', () => {
+  let consoleError;
+
+  beforeEach(() => {
+    consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => consoleError.mockRestore());
+
+  it('creates under a routine whose items already carry a goalRef', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks',
+      reply: "Added 'Draft the beta v2 scope doc' to your checklist.",
+      tasks: ['Draft the beta v2 scope doc'],
+      replyMessage: { id: 'reply-1' },
+    }, { $goals: { addGoalItem: serverLikeAddGoalItem() } });
+    await Container.methods.send.call(ctx, 'add a task: Draft the beta v2 scope doc');
+    await flush();
+
+    expect(ctx.$goals.addGoalItem).toHaveBeenCalledWith(expect.objectContaining({
+      goalRef: 'wg_sw',
+      isMilestone: true,
+    }));
+    // The id lands on the reply bubble, which is what gives it a live checkbox.
+    expect(marked(ctx)[0].variables).toEqual({
+      id: 'reply-1',
+      items: ['new-Draft the beta v2 scope doc'],
+    });
+    expect(events(ctx)).toHaveLength(0);
+  });
+
+  it('leaves isMilestone off when the routine has no week-goal link to inherit', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks', reply: 'Added it.', tasks: ['Water the plants'], replyMessage: { id: 'r' },
+    }, {
+      goalItems: [{ id: 'g1', body: 'Ship dashboard PR', isComplete: false }],
+      $goals: { addGoalItem: serverLikeAddGoalItem() },
+    });
+    await Container.methods.send.call(ctx, 'add water the plants');
+    await flush();
+
+    expect(ctx.$goals.addGoalItem).toHaveBeenCalledWith(expect.objectContaining({
+      goalRef: undefined,
+      isMilestone: false,
+    }));
+    expect(marked(ctx)[0].variables.items).toEqual(['new-Water the plants']);
+  });
+
+  it('says so in the thread rather than letting the bubble claim it added one', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks',
+      reply: "Added 'Draft the beta v2 scope doc' to your checklist.",
+      tasks: ['Draft the beta v2 scope doc'],
+      replyMessage: { id: 'reply-1' },
+    }, {
+      $goals: { addGoalItem: jest.fn(() => Promise.reject(new Error('GraphQL error: nope'))) },
+    });
+    await Container.methods.send.call(ctx, 'add a task: Draft the beta v2 scope doc');
+    await flush();
+
+    // Nothing was created, so nothing is attached — and the thread carries the
+    // correction, because the bubble's own text came from the model.
+    expect(marked(ctx)).toHaveLength(0);
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: 'Couldn’t add “Draft the beta v2 scope doc” to the checklist. Try again.',
+      tone: 'orange',
+      icon: 'error_outline',
+    }));
+    expect(ctx.$emit).not.toHaveBeenCalledWith('items-created', expect.anything());
+  });
+
+  it('does not drop a failed "Add all to checklist" silently', async () => {
+    const ctx = makeCtx({}, {
+      $goals: { addGoalItem: jest.fn(() => Promise.reject(new Error('GraphQL error: nope'))) },
+    });
+    await Container.methods.addProposals.call(ctx, {
+      id: 'reply-2',
+      proposals: ['Write the PR description', 'Request review', 'Get CI green'],
+    });
+    await flush();
+
+    expect(marked(ctx)).toHaveLength(0);
+    expect(events(ctx)[0].variables).toEqual(expect.objectContaining({
+      text: 'Couldn’t add 3 tasks to the checklist. Try again.',
+      tone: 'orange',
+    }));
+    // And no "3 tasks added" pill for three tasks that do not exist.
+    expect(events(ctx).some((e) => /added to the checklist/.test(e.variables.text))).toBe(false);
+  });
+});
+
 describe('RoutineChatContainer.addProposals', () => {
   it('turns the three proposals into items, marks the bubble and logs an event', async () => {
     const ctx = makeCtx({});
@@ -300,7 +410,7 @@ const FITNESS = {
   ],
 };
 
-const mountContainer = (props = {}, { email = 'user@example.com' } = {}) => {
+const mountContainer = (props = {}, { email = 'user@example.com', failCreate = false } = {}) => {
   const mutations = [];
   const created = [];
   const notified = [];
@@ -327,6 +437,7 @@ const mountContainer = (props = {}, { email = 'user@example.com' } = {}) => {
   vm.$goals = {
     addGoalItem: (input) => {
       created.push(input);
+      if (failCreate) return Promise.reject(new Error('GraphQL error: nope'));
       return Promise.resolve({ id: `new-${created.length}`, ...input });
     },
   };
@@ -437,6 +548,25 @@ describe('RoutineChatContainer — the brief card', () => {
     const { vm, created } = mountContainer({ isPastDay: true });
     await vm.addBriefStep({ tag: 'area:health:fitness', text: 'Try the river loop' });
     expect(created).toHaveLength(0);
+  });
+
+  // The pill flips before the round trip, so a create that fails has to flip it
+  // back — a disabled "Added" tick for a task that does not exist is the worst
+  // of the two failures.
+  it('puts the pill back and says so when the create fails', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const { vm, logged } = mountContainer({}, { failCreate: true });
+    await vm.addBriefStep({ tag: 'area:health:fitness', text: 'Try the river loop' });
+    await flush();
+    await Vue.nextTick();
+
+    expect(vm.briefBlocks[0].steps[0].added).toBe(false);
+    expect(logged()[0].variables).toEqual(expect.objectContaining({
+      text: 'Couldn’t add “Try the river loop” to the checklist. Try again.',
+      tone: 'orange',
+    }));
+    expect(logged().some((e) => /^Added /.test(e.variables.text))).toBe(false);
+    consoleError.mockRestore();
   });
 });
 
