@@ -84,3 +84,5 @@ fastlane/screenshots/
 fastlane/metadata/android/en-US/images/phoneScreenshots/
 fastlane/metadata/android/en-US/images/tenInchScreenshots/
 fastlane/metadata/android/en-US/images/sevenInchScreenshots/
+# Staged copy of fastlane/metadata/en-GB for the English (U.S.) App Store listing
+fastlane/metadata/en-US/
