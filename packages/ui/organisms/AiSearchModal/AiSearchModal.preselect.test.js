@@ -18,6 +18,7 @@ const open = (over) => {
     preselectTaskRef: '',
     populateRoutineTags: jest.fn(),
     loadSettings: jest.fn(),
+    fetchGoalsForPeriod: jest.fn(),
     ...over,
   };
   AiSearchModal.methods.initializeToolbar.call(state);

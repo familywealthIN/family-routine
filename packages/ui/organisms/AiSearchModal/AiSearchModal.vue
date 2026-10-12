@@ -645,6 +645,20 @@ import { stepupMilestonePeriodDate } from '../../utils/getDates';
 import AiTaskCreationForm from '../AiTaskCreationForm/AiTaskCreationForm.vue';
 import AiGoalPlanForm from '../AiGoalPlanForm/AiGoalPlanForm.vue';
 
+// A goal item's parent must sit in the period directly above it.
+const PARENT_PERIOD = {
+  day: 'week', week: 'month', month: 'year', year: 'lifetime',
+};
+
+/**
+ * True when `goal` carries a period and it is not the one directly above
+ * `itemPeriod`. A goal without a period (older callers) is not judged.
+ */
+export function isWrongParentPeriod(goal, itemPeriod) {
+  const expected = PARENT_PERIOD[itemPeriod];
+  return !!(goal && goal.period && expected && goal.period !== expected);
+}
+
 export default {
   name: 'OrganismAiSearchModal',
 
@@ -1040,10 +1054,12 @@ export default {
       }
     },
 
-    // Watch for period changes and fetch goals for that period
+    // Watch for period changes and fetch the parent goals for that period.
+    // Day included: a goal plan leaves the list on the period above the plan,
+    // and returning to a day task must bring it back to week goals, or the
+    // first month goal is preselected as the day task's parent (D-07).
     toolbarPeriod(newPeriod) {
-      // Only in goal mode and for week/month/year periods
-      if (!this.isTaskMode && ['week', 'month', 'year'].includes(newPeriod)) {
+      if (['day', 'week', 'month', 'year'].includes(newPeriod)) {
         this.fetchGoalsForPeriod(newPeriod);
       }
     },
@@ -1132,6 +1148,18 @@ export default {
         // goalRef — which is how a month plan ended up parented to a week goal.
         // Drop it, and say so, because a cleared chip tells the user nothing.
         const goals = newVal || [];
+
+        // A list for some other period is still in flight from a previous
+        // mode (a goal plan leaves month goals behind). Nothing in it is a
+        // valid parent for this item, so take nothing from it: drop a pick
+        // made against it quietly and wait for the right period's list.
+        if (goals.length && isWrongParentPeriod(goals[0], this.toolbarPeriod)) {
+          if (goals.some((goal) => goal.id === this.toolbarGoalRef)) {
+            this.toolbarGoalRef = null;
+          }
+          return;
+        }
+
         if (this.toolbarGoalRef && !goals.some((goal) => goal.id === this.toolbarGoalRef)) {
           const dropped = (oldVal || []).find((goal) => goal.id === this.toolbarGoalRef);
           this.goalRefNotice = `Parent goal ${dropped ? `"${dropped.body}" ` : ''}is not in the `
@@ -1237,8 +1265,17 @@ export default {
         this.toolbarTaskRef = this.$currentTaskData.id;
       }
 
+      // The list may still hold the period above a goal plan from the last
+      // session; ask for the week goals a day task belongs under. The
+      // goalItemsRef watcher preselects once they arrive.
+      this.fetchGoalsForPeriod('day');
+
       // Auto-select goal that matches current task if available
-      if (this.goalItemsRef && this.goalItemsRef.length > 0) {
+      const listFitsDay = this.goalItemsRef && this.goalItemsRef.length > 0
+        && !isWrongParentPeriod(this.goalItemsRef[0], 'day');
+      if (!listFitsDay) {
+        this.toolbarGoalRef = null;
+      } else {
         // Try to find a goal matching the current task's taskRef
         if (this.$currentTaskData && this.$currentTaskData.id) {
           const matchingGoal = this.goalItemsRef.find(
@@ -1294,7 +1331,21 @@ export default {
       });
     },
 
+    /**
+     * Refuse a parent goal from the wrong period, with the same notice the
+     * goalItemsRef watcher gives. Returns true when the save must stop.
+     */
+    refuseWrongParentPeriod() {
+      const goal = (this.goalItemsRef || []).find((g) => g.id === this.toolbarGoalRef);
+      if (!isWrongParentPeriod(goal, this.toolbarPeriod)) return false;
+      this.goalRefNotice = `Parent goal "${goal.body}" is not in the period above this one, `
+        + 'so it has been cleared. Pick a parent goal from the toolbar, or this will be saved without one.';
+      this.toolbarGoalRef = null;
+      return true;
+    },
+
     handleSaveClick() {
+      if (this.refuseWrongParentPeriod()) return;
       if (this.isTaskMode && this.$refs.taskForm) {
         this.$refs.taskForm.saveTask();
       } else if (!this.isTaskMode && this.$refs.goalForm) {
@@ -1315,6 +1366,8 @@ export default {
       // The container stamps the deterministic priority tag from the creation
       // context (date / @mention), so the organism just forwards the raw
       // payload — no priority guessing, no background AI refinement.
+      if (this.refuseWrongParentPeriod()) return;
+
       if (this.isTaskMode && !this.aiEnhancedTask) {
         const queryText = this.searchQuery.trim();
         const goalItemData = {
@@ -1328,6 +1381,13 @@ export default {
           isMilestone: !!this.toolbarGoalRef,
         };
         this.$emit('direct-task-create', goalItemData);
+        // Clear the submitted text at once. The sheet takes a moment to close
+        // (or stays open, if the consumer keeps it), and a stale query there
+        // was typed onto and re-submitted as one merged task (D-08).
+        this.searchQuery = '';
+        this.$nextTick(() => {
+          if (this.dialog) this.focusPromptInput();
+        });
         return;
       }
 

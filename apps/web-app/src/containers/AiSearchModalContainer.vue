@@ -160,7 +160,11 @@ export default {
         return !this.$root.$data.email;
       },
       update(data) {
-        return data.goalDatePeriod && data.goalDatePeriod.date ? data.goalDatePeriod.goalItems : [];
+        const goal = data.goalDatePeriod;
+        if (!goal || !goal.date) return [];
+        // Stamp each item with its goal's period: the modal refuses a parent
+        // that is not in the period directly above the item being saved.
+        return (goal.goalItems || []).map((item) => ({ ...item, period: goal.period }));
       },
     },
 
