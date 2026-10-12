@@ -188,7 +188,14 @@ jobs:
         run: |
           set -e
           want=$(keytool -list -v -keystore "$ANDROID_DEBUG_KEYSTORE" -storepass android 2>/dev/null | grep -m1 'SHA1:' | awk '{print $2}')
-          got=$(keytool -printcert -jarfile apps/android/app/build/outputs/apk/debug/app-debug.apk | grep -m1 'SHA1:' | awk '{print $2}')
+          # apksigner, not `keytool -printcert -jarfile`: from minSdk 24 the
+          # build signs with v2/v3 only, and keytool reads only v1 (JAR) signatures.
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          got=$("$apksigner" verify --print-certs apps/android/app/build/outputs/apk/debug/app-debug.apk \
+            | grep -m1 'certificate SHA-1 digest:' | awk '{print $NF}')
+          # keytool prints D8:55:..., apksigner d8559e...; compare the bare hex.
+          want=$(echo "$want" | tr -d ':' | tr 'a-f' 'A-F')
+          got=$(echo "$got" | tr -d ':' | tr 'a-f' 'A-F')
           echo "keystore SHA1: $want"
           echo "APK SHA1:      $got"
           if [ -z "$want" ] || [ "$want" != "$got" ]; then
