@@ -27,6 +27,44 @@ target 'App' do
   # Add your Pods here
 end
 
+# @capacitor-firebase/analytics is used through its default "Lite" subspec,
+# because its "Analytics" subspec pins Firebase ~> 11.7.0 and this app is on
+# Firebase/Core 11.15. Lite declares no Firebase dependency, so CocoaPods
+# neither builds Firebase before the plugin nor puts it on the plugin's
+# framework search paths, and `import FirebaseCore` fails to compile. Wire both
+# up by hand, with the same paths the App target already gets.
+FIREBASE_FOR_ANALYTICS_PLUGIN = %w[
+  FirebaseCore FirebaseCoreInternal FirebaseInstallations GoogleUtilities
+  PromisesObjC nanopb FirebaseAnalytics GoogleAppMeasurement GoogleAdsOnDeviceConversion
+].freeze
+
+def link_firebase_into_analytics_plugin(installer)
+  project = installer.pods_project
+  plugin = project.targets.find { |t| t.name == 'CapacitorFirebaseAnalytics' }
+  return unless plugin
+
+  FIREBASE_FOR_ANALYTICS_PLUGIN.each do |name|
+    target = project.targets.find { |t| t.name == name }
+    next unless target
+    plugin.add_dependency(target) unless plugin.dependencies.any? { |d| d.target == target }
+  end
+
+  search_paths = %w[FirebaseCore FirebaseCoreInternal FirebaseInstallations GoogleUtilities PromisesObjC nanopb]
+    .map { |name| %("${PODS_CONFIGURATION_BUILD_DIR}/#{name}") } + [
+      '"${PODS_ROOT}/FirebaseAnalytics/Frameworks"',
+      '"${PODS_ROOT}/GoogleAppMeasurement/Frameworks"',
+      '"${PODS_ROOT}/GoogleAdsOnDeviceConversion/Frameworks"',
+      '"${PODS_XCFRAMEWORKS_BUILD_DIR}/FirebaseAnalytics/Default"',
+      '"${PODS_XCFRAMEWORKS_BUILD_DIR}/GoogleAppMeasurement/Core"',
+      '"${PODS_XCFRAMEWORKS_BUILD_DIR}/GoogleAppMeasurement/IdentitySupport"',
+      '"${PODS_XCFRAMEWORKS_BUILD_DIR}/GoogleAdsOnDeviceConversion"',
+    ]
+  plugin.build_configurations.each do |config|
+    config.build_settings['FRAMEWORK_SEARCH_PATHS'] = ['$(inherited)'] + search_paths
+  end
+end
+
 post_install do |installer|
   assertDeploymentTarget(installer)
+  link_firebase_into_analytics_plugin(installer)
 end
