@@ -1442,6 +1442,11 @@
     "@types/scriptjs" "0.0.2"
     scriptjs "^2.5.9"
 
+"@capacitor-firebase/analytics@7.5.0":
+  version "7.5.0"
+  resolved "https://registry.yarnpkg.com/@capacitor-firebase/analytics/-/analytics-7.5.0.tgz#f3908f89ab129c73385de51ef54ae23892711635"
+  integrity sha512-PxMTltu0wa7uT/tpXEPos8mentU4kDoU7yJeSzLIeO6ysB2Qp7N2/4GamKP1ITpZ0OvUuU7fjG5zqAQj5xX2jg==
+
 "@capacitor/android@^7.2.0":
   version "7.6.0"
   resolved "https://registry.npmjs.org/@capacitor/android/-/android-7.6.0.tgz"

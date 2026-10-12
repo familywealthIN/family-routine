@@ -275,7 +275,6 @@ export default {
       this.flash(saved.id);
       this.trackBusinessEvent(created ? 'routine_item_created' : 'routine_item_updated', {
         item_id: saved.id,
-        item_name: saved.name,
         time: saved.time,
         points: saved.points,
         steps_count: (saved.steps || []).length,
@@ -308,7 +307,7 @@ export default {
     onRemoved(removed) {
       const name = (removed && removed.name) || 'The routine';
       if (removed && String(removed.id) === this.selectedId) this.selectedId = '';
-      this.trackBusinessEvent('routine_item_deleted', { item_id: removed && removed.id, item_name: name });
+      this.trackBusinessEvent('routine_item_deleted', { item_id: removed && removed.id });
       this.notify('Routine deleted', `${name} no longer earns points`, 'delete', '#ef9a9a');
     },
 

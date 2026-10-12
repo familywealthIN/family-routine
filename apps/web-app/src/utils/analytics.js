@@ -8,6 +8,74 @@
 import firebase from 'firebase/app';
 import 'firebase/analytics';
 import 'firebase/performance';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+
+/**
+ * The native Firebase Analytics SDK on iOS and Android, through
+ * @capacitor-firebase/analytics. Registered by name rather than imported: the
+ * package's web build needs the modular Firebase 11 SDK, and this bundle is on
+ * Firebase 7, so its web half must never be pulled in. The native half is linked
+ * by `cap sync` and needs no JS from the package. Registered on first use, so
+ * the web build never touches it.
+ */
+let nativePlugin = null;
+const native = () => {
+  if (!nativePlugin) nativePlugin = registerPlugin('FirebaseAnalytics');
+  return nativePlugin;
+};
+
+/**
+ * Names Firebase keeps for itself, which it drops when an app logs them. Sessions
+ * and screen views it already records automatically; an error goes out as
+ * `app_error` instead.
+ */
+const RESERVED = {
+  session_start: null,
+  screen_view: null,
+  error: 'app_error',
+};
+/** Per-session values, never user properties: Firebase tracks sessions itself. */
+const SESSION_PROPERTIES = ['session_id', 'session_start_time'];
+
+// Firebase limits: names ≤ 40 chars of [A-Za-z0-9_], ≤ 25 params, string values ≤ 100.
+const fbName = (name) => String(name).replace(/[^A-Za-z0-9_]/g, '_').slice(0, 40);
+
+function fbParams(params = {}) {
+  const out = {};
+  Object.keys(params).forEach((key) => {
+    if (Object.keys(out).length >= 25) return;
+    const value = params[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      out[fbName(key)] = value;
+    } else if (typeof value === 'string' || typeof value === 'boolean') {
+      out[fbName(key)] = String(value).slice(0, 100);
+    }
+  });
+  return out;
+}
+
+/** The web SDK's `logEvent` / `setUserProperties` shape, over the native plugin. */
+const nativeSink = {
+  logEvent(name, params = {}) {
+    if (name === 'page_view') {
+      const screenName = String(params.page_title || params.page_path || 'unknown').slice(0, 100);
+      return native().setCurrentScreen({ screenName }).catch(() => {});
+    }
+    const mapped = Object.prototype.hasOwnProperty.call(RESERVED, name) ? RESERVED[name] : name;
+    if (!mapped) return Promise.resolve();
+    return native().logEvent({ name: fbName(mapped), params: fbParams(params) })
+      .catch(() => {});
+  },
+  setUserProperties(props = {}) {
+    Object.keys(props)
+      .filter((key) => SESSION_PROPERTIES.indexOf(key) === -1)
+      .forEach((key) => {
+        const value = props[key] == null ? null : String(props[key]).slice(0, 36);
+        native().setUserProperty({ key: fbName(key).slice(0, 24), value })
+          .catch(() => {});
+      });
+  },
+};
 
 class AnalyticsManager {
   constructor() {
@@ -29,14 +97,6 @@ class AnalyticsManager {
 
   async init() {
     try {
-      // Initialize Firebase Analytics if not in development
-      if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'development') {
-        if (firebase.apps.length > 0) {
-          this.analytics = firebase.analytics();
-          this.performance = firebase.performance();
-        }
-      }
-
       // Get basic device information
       this.deviceInfo = this.getBasicDeviceInfo();
 
@@ -55,6 +115,27 @@ class AnalyticsManager {
     } catch (error) {
       console.error('Failed to initialize Analytics Manager:', error);
     }
+  }
+
+  /**
+   * Where events go: the native SDK in the iOS/Android apps, else the web SDK.
+   *
+   * Resolved per event, not once at start-up. This module is imported before
+   * `App.vue` calls `firebase.initializeApp`, so the old one-off check found no
+   * Firebase app every time and nothing was ever sent.
+   */
+  sink() {
+    if (Capacitor.isNativePlatform()) return nativeSink;
+    if (!this.webAnalytics && process.env.NODE_ENV !== 'development' && firebase.apps.length > 0) {
+      try {
+        this.webAnalytics = firebase.analytics();
+        this.performance = firebase.performance();
+      } catch (error) {
+        // No measurementId in this build's Firebase config: analytics stays off.
+        this.webAnalytics = null;
+      }
+    }
+    return this.webAnalytics || null;
   }
 
   /**
@@ -119,14 +200,9 @@ class AnalyticsManager {
       ...additionalProps,
     };
 
+    // trackEvent sends it to Firebase; a second logEvent here counted every
+    // page view twice.
     this.trackEvent('page_view', pageViewData);
-
-    if (this.analytics) {
-      this.analytics.logEvent('page_view', {
-        page_title: pageName,
-        page_location: window.location.href,
-      });
-    }
   }
 
   /**
@@ -153,11 +229,8 @@ class AnalyticsManager {
       page: this.currentPage,
     };
 
+    // trackEvent already sends it to Firebase; logging it again doubled it.
     this.trackEvent(eventName, businessEventData);
-
-    if (this.analytics) {
-      this.analytics.logEvent(eventName, properties);
-    }
   }
 
   /**
@@ -187,13 +260,6 @@ class AnalyticsManager {
     };
 
     this.trackEvent('error', errorData);
-
-    if (this.analytics) {
-      this.analytics.logEvent('exception', {
-        description: error.message || error,
-        fatal: false,
-      });
-    }
 
     console.error('Tracked error:', error, context);
   }
@@ -256,9 +322,8 @@ class AnalyticsManager {
   setUserProperty(property, value) {
     this.userProperties[property] = value;
 
-    if (this.analytics) {
-      this.analytics.setUserProperties({ [property]: value });
-    }
+    const sink = this.sink();
+    if (sink) sink.setUserProperties({ [property]: value });
   }
 
   /**
@@ -291,9 +356,8 @@ class AnalyticsManager {
     }
 
     // Send to Firebase Analytics
-    if (this.analytics) {
-      this.analytics.logEvent(eventName, properties);
-    }
+    const sink = this.sink();
+    if (sink) sink.logEvent(eventName, properties);
 
     // Send to custom analytics endpoint if configured
     this.sendToCustomEndpoint(eventData);

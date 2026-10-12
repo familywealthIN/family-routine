@@ -470,7 +470,6 @@ export default {
             this.trackBusinessEvent('user_login', {
               provider: 'google',
               is_new_user: needsOnboarding,
-              user_email: email,
               tags_count: tags.length,
             });
 
