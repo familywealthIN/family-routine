@@ -475,8 +475,10 @@ ample headroom, but `nuke` is the only way back from a lost passphrase.
    build number — TestFlight builds cannot be deleted, only expired. To gate
    them behind a label instead, change the `if:` on `distribute-ios` to
    `contains(github.event.pull_request.labels.*.name, 'distribute')`.
-3. **`ios.minVersion` disagreement.** `capacitor.config.json` says `15.0` while
-   the pbxproj and Podfile say `14.0`. Reconcile before the first release.
+3. **Minimum OS versions.** iOS 15.0 everywhere (`capacitor.config.json`,
+   pbxproj, Podfile) since 12 Oct 2026: App Store Connect warns (ITMS-90068)
+   that iOS 14 targets are refused from April 2027. Android `minSdkVersion` is
+   24, because Play's automatic protection refuses a bundle below it.
 4. **Root `.gitignore` used to contain bare `android` / `ios`**, which silently
    ignored every new file under `apps/android` and `apps/ios`. They are now
    rooted (`/android`, `/ios`). If you ever see a new native file refuse to
