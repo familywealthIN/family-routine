@@ -19,6 +19,9 @@ const { RoutineItemModel } = require('../schema/RoutineItemSchema');
 const { GoalModel } = require('../schema/GoalSchema');
 const { ProgressModel } = require('../schema/ProgressSchema');
 const { ReferralModel } = require('../schema/ReferralSchema');
+const { AgentModel } = require('../schema/AgentSchema');
+const { RoutineChatMessageModel } = require('../schema/RoutineChatSchema');
+const { XpTransactionModel } = require('../schema/XpTransactionSchema');
 const { grantWelcomePoints } = require('../utils/xpLedger');
 
 /** `sendInvite` stores the session email as typed — match addresses case-insensitively. */
@@ -473,17 +476,18 @@ const mutation = {
       }
 
       try {
-        // Delete all user data in parallel
+        // Every collection keyed by the user's email. The privacy policy
+        // promises deletion removes all of it, so a new user-owned collection
+        // must be added here too.
         await Promise.all([
-          // Delete user routines
           RoutineModel.deleteMany({ email }),
-          // Delete user routine items
           RoutineItemModel.deleteMany({ email }),
-          // Delete user goals
           GoalModel.deleteMany({ email }),
-          // Delete user progress
           ProgressModel.deleteMany({ email }),
-          // Finally, delete the user account
+          AgentModel.deleteMany({ email }),
+          RoutineChatMessageModel.deleteMany({ email }),
+          XpTransactionModel.deleteMany({ email }),
+          ReferralModel.deleteMany({ $or: [{ inviterEmail: email }, { inviteeEmail: email }] }),
           UserModel.deleteOne({ email }),
         ]);
 

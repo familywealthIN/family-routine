@@ -1,0 +1,96 @@
+diff --git a/node_modules/@codetrix-studio/capacitor-google-auth/CodetrixStudioCapacitorGoogleAuth.podspec b/node_modules/@codetrix-studio/capacitor-google-auth/CodetrixStudioCapacitorGoogleAuth.podspec
+index 6432925..9212fae 100644
+--- a/node_modules/@codetrix-studio/capacitor-google-auth/CodetrixStudioCapacitorGoogleAuth.podspec
++++ b/node_modules/@codetrix-studio/capacitor-google-auth/CodetrixStudioCapacitorGoogleAuth.podspec
+@@ -10,6 +10,6 @@
+     s.source_files = 'ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}'
+     s.ios.deployment_target  = '12.0'
+     s.dependency 'Capacitor'
+-    s.dependency 'GoogleSignIn', '~> 6.2.4'
++    s.dependency 'GoogleSignIn', '~> 7.1'
+     s.static_framework = true
+   end
+diff --git a/node_modules/@codetrix-studio/capacitor-google-auth/ios/Plugin/Plugin.swift b/node_modules/@codetrix-studio/capacitor-google-auth/ios/Plugin/Plugin.swift
+index fd39ed9..c62ad25 100644
+--- a/node_modules/@codetrix-studio/capacitor-google-auth/ios/Plugin/Plugin.swift
++++ b/node_modules/@codetrix-studio/capacitor-google-auth/ios/Plugin/Plugin.swift
+@@ -23,6 +23,7 @@ public class GoogleAuth: CAPPlugin {
+         let serverClientId = getServerClientIdValue();
+ 
+         googleSignInConfiguration = GIDConfiguration.init(clientID: customClientId, serverClientID: serverClientId)
++        googleSignIn.configuration = googleSignInConfiguration
+         
+         // these are scopes granted by default by the signIn method
+         let defaultGrantedScopes = ["email", "profile", "openid"];
+@@ -77,17 +78,17 @@ public class GoogleAuth: CAPPlugin {
+                     self.signInCall?.reject(error.localizedDescription);
+                     return;
+                 }
+-                self.resolveSignInCallWith(user: user!)
++                self.resolveSignInCallWith(user: user!, serverAuthCode: nil)
+                 }
+             } else {
+                 let presentingVc = self.bridge!.viewController!;
+                 
+-                self.googleSignIn.signIn(with: self.googleSignInConfiguration, presenting: presentingVc, hint: nil, additionalScopes: self.additionalScopes) { user, error in
++                self.googleSignIn.signIn(withPresenting: presentingVc, hint: nil, additionalScopes: self.additionalScopes) { result, error in
+                     if let error = error {
+                         self.signInCall?.reject(error.localizedDescription, "\(error._code)");
+                         return;
+                     }
+-                    self.resolveSignInCallWith(user: user!);
++                    self.resolveSignInCallWith(user: result!.user, serverAuthCode: result!.serverAuthCode);
+                 };
+             }
+         }
+@@ -100,15 +101,15 @@ public class GoogleAuth: CAPPlugin {
+                 call.reject("User not logged in.");
+                 return
+             }
+-            self.googleSignIn.currentUser!.authentication.do { (authentication, error) in
+-                guard let authentication = authentication else {
++            self.googleSignIn.currentUser!.refreshTokensIfNeeded { (user, error) in
++                guard let user = user else {
+                     call.reject(error?.localizedDescription ?? "Something went wrong.");
+                     return;
+                 }
+                 let authenticationData: [String: Any] = [
+-                    "accessToken": authentication.accessToken,
+-                    "idToken": authentication.idToken ?? NSNull(),
+-                    "refreshToken": authentication.refreshToken
++                    "accessToken": user.accessToken.tokenString,
++                    "idToken": user.idToken?.tokenString ?? NSNull(),
++                    "refreshToken": user.refreshToken.tokenString
+                 ]
+                 call.resolve(authenticationData);
+             }
+@@ -133,7 +134,7 @@ public class GoogleAuth: CAPPlugin {
+             print("There is no url on handleOpenUrl");
+             return;
+         }
+-        googleSignIn.handle(url);
++        _ = googleSignIn.handle(url);
+     }
+     
+     
+@@ -159,14 +160,14 @@ public class GoogleAuth: CAPPlugin {
+         return nil;
+     }
+ 
+-    func resolveSignInCallWith(user: GIDGoogleUser) {
++    func resolveSignInCallWith(user: GIDGoogleUser, serverAuthCode: String?) {
+         var userData: [String: Any] = [
+             "authentication": [
+-                "accessToken": user.authentication.accessToken,
+-                "idToken": user.authentication.idToken,
+-                "refreshToken": user.authentication.refreshToken
+-            ],
+-            "serverAuthCode": user.serverAuthCode ?? NSNull(),
++                "accessToken": user.accessToken.tokenString,
++                "idToken": user.idToken?.tokenString ?? NSNull(),
++                "refreshToken": user.refreshToken.tokenString
++            ] as [String: Any],
++            "serverAuthCode": serverAuthCode ?? NSNull(),
+             "email": user.profile?.email ?? NSNull(),
+             "familyName": user.profile?.familyName ?? NSNull(),
+             "givenName": user.profile?.givenName ?? NSNull(),

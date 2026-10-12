@@ -20,6 +20,14 @@ const ROOT = path.join(__dirname, '..', '..');
 const FINAL = path.join(__dirname, '..', 'final');
 const PLAY_IMG = path.join(ROOT, 'fastlane', 'metadata', 'android', 'en-US', 'images');
 const IOS_SHOTS = path.join(ROOT, 'fastlane', 'screenshots', 'en-GB');
+// The App Store listing exists in English (U.K.), its primary language, and
+// English (U.S.). Both get the same text and screenshots on every sync, so the
+// two can never drift: en-GB is authored and committed, en-US is a staged copy.
+const IOS_META = path.join(ROOT, 'fastlane', 'metadata', 'en-GB');
+const IOS_MIRRORS = [
+  [IOS_SHOTS, path.join(ROOT, 'fastlane', 'screenshots', 'en-US')],
+  [IOS_META, path.join(ROOT, 'fastlane', 'metadata', 'en-US')],
+];
 
 function stage(src, dest) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -69,10 +77,15 @@ function run() {
     } else missing.push(`iphone-${s.key}`);
   });
 
+  IOS_MIRRORS.forEach(([from, to]) => {
+    fs.rmSync(to, { recursive: true, force: true });
+    fs.readdirSync(from).forEach((f) => stage(path.join(from, f), path.join(to, f)));
+  });
+
   console.log(`Play    ${path.relative(ROOT, PLAY_IMG)}`);
   console.log(`          ${counts.phone} phone, ${counts.ten} tenInch, ${counts.seven} sevenInch`);
   console.log(`Apple   ${path.relative(ROOT, IOS_SHOTS)}`);
-  console.log(`          ${counts.ios} screenshots`);
+  console.log(`          ${counts.ios} screenshots, mirrored with the en-GB text to en-US`);
   // The Play API has no Chromebook image type, so `supply` cannot carry these;
   // they are uploaded by hand from store-assets/final/ (see README).
   const chromebook = slides.filter((s) => fs.existsSync(path.join(FINAL, `googlebook-${s.key}.png`))).length;

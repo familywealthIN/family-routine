@@ -1,1 +1,3 @@
 eol=lf
+# patch-package hunks must match node_modules byte for byte, so never CRLF them.
+*.patch text eol=lf
