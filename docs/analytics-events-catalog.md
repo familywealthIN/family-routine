@@ -228,10 +228,10 @@
 #### `add_goal_dialog_open`
 
 **Type**: User Interaction  
-**Triggered**: User opens goal creation dialog  
+**Triggered**: User opens goal creation dialog (on Goals, not sent when the period shown has ended — New goal is disabled there)  
 **Parameters**:
 * `from_page` (string): Current page
-* `goals_count` (number): Current number of goals
+* `period` (string): The level the sheet opens on (day, week, month, year, lifetime)
 
 ### Task Management Events
 
@@ -324,7 +324,7 @@
 **Triggered**: Goals component successfully mounts  
 **Parameters**:
 * `component` (string): Component name ('GoalsTime')
-* `goals_count` (number): Number of goals loaded
+* `shell` (string): Layout in use (phone, tablet, desktop)
 
 #### `dashboard_mounted`
 

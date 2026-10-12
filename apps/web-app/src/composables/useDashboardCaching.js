@@ -154,9 +154,16 @@ const MAX_ACTIVITY_ROWS = 3;
 function recentActivity(goals) {
   if (!Array.isArray(goals)) return [];
 
+  // PAST activity, so strictly before today. `goalsByTag` returns the whole tag,
+  // future days included, and an unticked FUTURE goal has `isComplete: false`
+  // exactly like a missed one — so without this the card listed work the user
+  // has not reached yet and painted it with the missed icon (D-06). Planning a
+  // week ahead made the brief look like a week of failure.
+  const today = moment().startOf('day');
   const dayGoals = goals
     .filter((goal) => goal && goal.period === 'day'
-      && Array.isArray(goal.goalItems) && goal.goalItems.length)
+      && Array.isArray(goal.goalItems) && goal.goalItems.length
+      && moment(goal.date, 'DD-MM-YYYY').isBefore(today))
     .slice()
     .sort((a, b) => moment(b.date, 'DD-MM-YYYY').valueOf() - moment(a.date, 'DD-MM-YYYY').valueOf());
 

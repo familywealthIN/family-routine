@@ -5,7 +5,7 @@ Open any `.dc.html` file in a browser (keep the folder structure). Each page sho
 ## Pages
 | File | Replaces | Highlights |
 |---|---|---|
-| Routine Notes Final.dc.html | RoutineFocus.vue (Home) | Focus card + checklist, routine chat with "Before you start" context, tick → agent lifecycle, week selector (long-press today = Skip day), Inbox, goal item page (Markdown contribution, tags, subtasks, agent result) |
+| Routine Notes Final.dc.html | RoutineFocus.vue (Home) | Focus card + checklist, routine chat with "Before you start" context, check circle → Start sheet (locked-in goal item + Start Task / Start Agent) → agent lifecycle, week selector (long-press today = Skip day), Inbox, goal item page (Markdown contribution, tags, subtasks, agent result) |
 | Priority.dc.html | PriorityTime.vue | Triage card, 2×2 map, Delegate → agent, Automate → routine |
 | Agents.dc.html | — | Agent list, lifecycle, events, last result, run test, create/edit |
 | Goals.dc.html | GoalsTime.vue | Goals overview; tap Goals again to switch to a year goal |
@@ -22,6 +22,6 @@ Open any `.dc.html` file in a browser (keep the folder structure). Each page sho
 
 ## Notes for development
 - Data is sample data in each file's logic class; agent runs and webhooks are simulated.
-- Avatar is loaded from a remote URL — swap for the real profile image.
+- Avatar is `assets/avatar.svg`, a neutral illustrated placeholder — swap for `user.picture`. It replaced a remote photo of a real person, which could not appear in a store screenshot.
 - Point rates (3 h / 1 h / 25%) and the version label on About are placeholders — use `profileSettings`.
 - Markdown contribution mirrors `@routine-notes/markdown-editor` (EasyMDE default config) — use the package in the app.

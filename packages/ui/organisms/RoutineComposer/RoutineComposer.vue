@@ -32,6 +32,7 @@
         data-testid="composer-input"
         @input="$emit('input', $event.target.value)"
         @focus="$emit('focus')"
+        @blur="$emit('blur')"
         @keydown.enter.prevent="send"
       />
       <button

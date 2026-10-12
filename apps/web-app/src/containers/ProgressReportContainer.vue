@@ -29,7 +29,13 @@
     @open-routine="$emit('open-routine', $event)"
     @open-history="$emit('open-history')"
     @retry="refresh"
-  />
+  >
+    <!-- Pass the slot's props on (`wide`): dropping them here left On the
+         clock in its narrow single-column layout on its full-width row. -->
+    <template v-slot:timing="slotProps">
+      <slot name="timing" v-bind="slotProps"></slot>
+    </template>
+  </ProgressReport>
 </template>
 
 <script>

@@ -9,11 +9,11 @@ Implementation of `packages/design/*.dc.html`. The shared contract is in
 |---|---|---|
 | Home | `pages/RoutineFocus.vue` | already existed; this round added the goal-item page, Inbox, Skip-day long-press and the Start Work -> Build Agent chain |
 | Priority | `pages/PriorityTime.vue` | 2x2 map is navigation on phone only; all four quadrants render at once on tablet/desktop |
-| Agents | `pages/AgentsBoard.vue` (via `views/Agents.vue`) | rewrite of the existing data-table page; list+detail 2:3 on tablet/desktop |
-| Goals | `pages/GoalsTime.vue` | cascade ladder is the navigation |
-| Year Goals | `pages/YearGoalsTime.vue` | reuses Home's chat thread, one thread per goal |
-| Routines | `pages/SettingsTime.vue` | 24h dial + editable timeline; delete moved into the editor |
-| Progress | `pages/ProgressTime.vue` | efficiency hero + sparkline + D/K/G trio |
+| Agents | `pages/AgentsBoard.vue` (via `views/Agents.vue`) | rewrite of the existing data-table page; list+detail 2:3 on tablet/desktop, list pane `position: sticky` |
+| Goals | `pages/GoalsTime.vue` | cascade ladder is the navigation; left pane `position: sticky` on tablet/desktop; add row + New goal disabled once the period shown has ended (`goalCascade.periodIsOver`) |
+| Year Goals | `pages/YearGoalsTime.vue` | reuses Home's chat thread, one thread per goal; every level adds and edits in the shared goal-item sheet; a past month takes no new goals and its goals open view-only |
+| Routines | `pages/SettingsTime.vue` | 24h dial + editable timeline; delete moved into the editor; left pane `position: sticky` on tablet/desktop |
+| Progress | `pages/ProgressTime.vue` | efficiency hero + sparkline + D/K/G trio; "On the clock" card (`TimingReportCard`, `routineTiming` query), full-width row on tablet/desktop |
 | Groups | `pages/FamilyRoutine.vue` | group pulse, member week grid; `confirm()` replaced by a sheet |
 | Profile / About | `pages/ProfileTime.vue`, `pages/AboutTime.vue` | lock icons replace the read-only banner; About trimmed per the design |
 
@@ -161,6 +161,24 @@ Where the redesign dropped behaviour, the behaviour came back.
    **once per session**, so a tag whose single attempt hit a dead network stays
    blank until a reload. The alternative — retry on every focus change — spends
    a model call per retry on a user who is offline.
-4. **About's copy is the design's trimmed version**, not `AboutTime.vue`'s longer
+4. ~~**The check circle stopped asking, and the locked-in goal item disappeared.**~~
+   **Restored.** `DashBoard.checkDialogClick` opened a modal on EVERY startable
+   routine, and branched: a routine that already had a day goal item got a
+   goal-action modal naming that item above Start Task / Start Agent / Build Agent,
+   while an empty one got the create form. The redesign kept only the create form,
+   and only for `isCurrent || redeemable` — so a routine that was startable but not
+   the clock's current one ticked straight through, banking the points with no
+   option to start its agent and nothing on screen saying which item had just been
+   completed. `onRingAction` now opens the sheet for any routine whose ring is
+   enabled, and `QuickGoalCreation` gained a `lockedItem` block — the routine's
+   first day goal item, which is the one `{goalId}` resolves to, labelled
+   `LOCKED IN · AGENT TARGET` when an agent is bound. One sheet does both jobs
+   rather than the dashboard's two dialogs. Two fixes came with it: the redeem
+   affordability pre-flight runs **before** the sheet again (the dashboard's
+   documented reason — Start Task persists the goal item and only then redeems, so a
+   failed redeem strands an orphan item on an unticked routine), and Start Task
+   redeems a passed routine instead of silently doing nothing, which is what
+   `tickRoutine`'s `passed` guard made it do while Start Agent beside it worked.
+5. **About's copy is the design's trimmed version**, not `AboutTime.vue`'s longer
    text, despite the design README claiming the copy is "kept as written". It drops
    the soldier-metaphor restatements and Priority's fifth point.

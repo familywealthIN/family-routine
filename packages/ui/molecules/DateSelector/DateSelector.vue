@@ -35,28 +35,12 @@
         <!-- Period Toggle (fixed at top) - hidden in task mode -->
         <template v-if="!taskMode">
           <div class="period-toggle-container">
-            <v-btn-toggle
+            <sliding-switch
               v-model="internalPeriod"
-              mandatory
-              class="period-toggle"
+              :segments="periodSegments"
+              size="xs"
               @change="handlePeriodChange"
-            >
-              <v-btn small value="day" :disabled="disabled">
-                Day
-              </v-btn>
-              <v-btn small value="week" :disabled="disabled">
-                Week
-              </v-btn>
-              <v-btn small value="month" :disabled="disabled">
-                Month
-              </v-btn>
-              <v-btn small value="year" :disabled="disabled">
-                Year
-              </v-btn>
-              <v-btn small value="lifetime" :disabled="disabled">
-                Lifetime
-              </v-btn>
-            </v-btn-toggle>
+            />
           </div>
 
           <v-divider />
@@ -245,18 +229,12 @@
           <!-- Period Toggle - hidden in task mode -->
           <template v-if="!taskMode">
             <div class="period-toggle-container">
-              <v-btn-toggle
+              <sliding-switch
                 v-model="internalPeriod"
-                mandatory
-                class="period-toggle"
+                :segments="periodSegments"
+                size="xs"
                 @change="handlePeriodChange"
-              >
-                <v-btn small value="day" :disabled="disabled">Day</v-btn>
-                <v-btn small value="week" :disabled="disabled">Week</v-btn>
-                <v-btn small value="month" :disabled="disabled">Month</v-btn>
-                <v-btn small value="year" :disabled="disabled">Year</v-btn>
-                <v-btn small value="lifetime" :disabled="disabled">Lifetime</v-btn>
-              </v-btn-toggle>
+              />
             </div>
             <v-divider />
           </template>
@@ -390,6 +368,17 @@
 import { AtomMenu, AtomTextField, AtomDatePicker } from '../../atoms';
 import { blurActiveElement } from '../../utils/blurActiveElement';
 import MobileSubDrawer from '../MobileSubDrawer/MobileSubDrawer.vue';
+import SlidingSwitch from '../SlidingSwitch/SlidingSwitch.vue';
+
+/* The five periods, in the order the picker steps through them. The `xs` switch
+   keeps all five on one line on a phone; the old v-btn-toggle wrapped them. */
+const PERIOD_SEGMENTS = Object.freeze([
+  { key: 'day', label: 'Day' },
+  { key: 'week', label: 'Week' },
+  { key: 'month', label: 'Month' },
+  { key: 'year', label: 'Year' },
+  { key: 'lifetime', label: 'Lifetime' },
+]);
 
 /**
  * MoleculeDateSelector - Airbnb-style date selector with support for
@@ -410,6 +399,7 @@ export default {
     AtomTextField,
     AtomDatePicker,
     MobileSubDrawer,
+    SlidingSwitch,
   },
 
   props: {
@@ -588,6 +578,9 @@ export default {
   },
 
   computed: {
+    periodSegments() {
+      return PERIOD_SEGMENTS;
+    },
     /**
      * Computed prepend icon (tree for lifetime, calendar otherwise)
      */
@@ -1461,26 +1454,6 @@ export default {
   padding: 8px;
 }
 
-.period-toggle {
-  width: 100%;
-  display: flex;
-  background-color: transparent;
-  box-shadow: none;
-}
-
-.period-toggle .v-btn {
-  flex: 1;
-  text-transform: capitalize;
-  font-size: 12px;
-  min-width: 0 !important;
-  color: #000000 !important;
-  font-weight: 500;
-}
-
-.period-toggle .v-btn.v-btn--active {
-  color: #1976d2 !important;
-  font-weight: 600;
-}
 
 .date-selector-header {
   background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);

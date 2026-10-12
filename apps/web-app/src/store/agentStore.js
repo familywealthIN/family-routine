@@ -2,6 +2,7 @@ import Vue from 'vue';
 import moment from 'moment';
 import { ranToday } from '@routine-notes/ui/constants/agents';
 import eventBus, { EVENTS } from '../utils/eventBus';
+import readResponseBody from '../utils/responseBody';
 import {
   AGENTS_QUERY,
   AGENT_BY_TASK_REF_QUERY,
@@ -348,12 +349,7 @@ const dispatchEvent = async ({ vm, event, goalId }) => {
   if (kind === 'url' || isHttpUrl(value)) {
     const response = await fetch(value, { method: 'GET' });
     const ct = response.headers.get('content-type') || '';
-    let data;
-    if (ct.toLowerCase().includes('json')) {
-      data = await response.json();
-    } else {
-      data = await response.text();
-    }
+    const data = await readResponseBody(response);
     const wrapped = {
       ok: response.ok,
       status: response.status,
@@ -374,6 +370,19 @@ const recordExecution = async (apollo, variables) => {
     variables,
   });
   return data && data.recordAgentExecution;
+};
+
+// Record a run as open, with no counters: the outcome is recorded separately.
+const openRun = async (apollo, agent, status = 'running') => {
+  if (!apollo || !agent) return false;
+  try {
+    const updated = await recordExecution(apollo, { id: agent.id, status });
+    if (updated) upsertAgent(updated);
+    return !!updated;
+  } catch (err) {
+    console.warn('[agentStore] could not record the run as open', err);
+    return false;
+  }
 };
 
 const actions = {
@@ -470,6 +479,20 @@ const actions = {
     clearStatus(taskRef);
   },
 
+  /**
+   * This device's badge says a run is open today but the server does not know
+   * it (the start was recorded before `openRun` existed, or that write
+   * failed). The badge is only ever set by an explicit Start Agent here today,
+   * so it is evidence enough: open the run on the server so the end event can
+   * close it. Returns whether it did.
+   */
+  async adoptLocalRun(apollo, taskRef) {
+    const agent = state.agentsByTaskRef[taskRef];
+    if (!agent || !RUN_OPEN_STATUSES.includes(statusFor(taskRef))) return false;
+    if (RUN_OPEN_STATUSES.includes(agent.executionStatus) && ranToday(agent)) return false;
+    return openRun(apollo, agent, 'listening');
+  },
+
   /** Today's badge for a task ('' when none, or when it was set another day). */
   statusFor(taskRef) {
     return statusFor(taskRef);
@@ -525,6 +548,12 @@ const actions = {
       : Promise.resolve(null);
     const settleJob = () => jobIdP.then((jid) => (jid ? settleAgentJob(jid) : null)).catch(() => {});
     const show = (s) => { if (visible) setStatus(taskRef, s); };
+    // Tell the server the run is open BEFORE the webhook is called. The
+    // outcome below is only recorded once the webhook answers, and a slow one
+    // (or the app being closed meanwhile) used to leave the server on
+    // yesterday's run: this device's badge said "listening" while the end
+    // event, which the server gates on a run opened today, was refused.
+    await openRun(apollo, agent);
     try {
       const result = await dispatchEvent({
         vm, event: stripGraphqlMeta(agent.startEvent), goalId,
@@ -583,6 +612,27 @@ const actions = {
       }).catch(() => {});
       return null;
     }
+  },
+
+  /**
+   * Whether an end event would actually go on the wire for this routine.
+   *
+   * The same three refusals `fireEndEvent` applies, readable BEFORE the call.
+   * It exists because the caller has to decide whether to say anything: the
+   * page used to post "All tasks complete — end event firing" and start the
+   * bolt animation before dispatching, then swallow a `null` return, so a
+   * routine with no end event configured — or whose run was opened by
+   * "Start Task", or opened yesterday — announced a dispatch that never
+   * happened and an animation that never ran.
+   *
+   * One owner of the rule, read twice. `fireEndEvent` keeps its own guards:
+   * this is a question, not a gate, and the state can change between them.
+   */
+  canFireEndEvent(taskRef) {
+    const agent = state.agentsByTaskRef[taskRef];
+    if (!agent || !agent.endEvent || !agent.endEvent.value) return false;
+    if (!RUN_OPEN_STATUSES.includes(agent.executionStatus)) return false;
+    return !!ranToday(agent);
   },
 
   async fireEndEvent({

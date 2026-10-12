@@ -1,4 +1,5 @@
 import { SplashScreen } from '@capacitor/splash-screen';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import 'babel-polyfill';
 import 'isomorphic-unfetch';
 import Vue from 'vue';
@@ -59,6 +60,14 @@ Vue.config.productionTip = false;
 if (Capacitor.isNativePlatform()) {
   document.documentElement.classList.add('capacitor-native');
   document.body.classList.add('capacitor-native');
+}
+
+// Dark status bar icons on Android. The status-bar plugin applies the
+// configured style and THEN overlaysWebView at startup, and on Android 11+
+// the overlay call's legacy flags undo the style, leaving white icons on the
+// app's white header. Re-applying it once the app has started sticks.
+if (Capacitor.getPlatform() === 'android') {
+  StatusBar.setStyle({ style: Style.Light }).catch(() => {});
 }
 
 // Install Analytics plugin

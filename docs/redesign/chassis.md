@@ -73,7 +73,8 @@ Toast copy is always **title + sub**, where the sub carries the consequence
 - both dialogs `max-width:94%`, `max-height:86%`
 
 Per-page exceptions: the Routines editor is 560px on tablet and desktop; Year Goals'
-create/menu sheets are 480px; Goals' new-goal sheet is 500px.
+⋮ menu / delete-confirm sheet is 480px (adding and editing a goal at any level use
+the shared goal-item sheet); Goals' new-goal sheet is 500px.
 
 ## Palette
 
@@ -107,6 +108,7 @@ tokens in `packages/ui/constants/routineFocus.js` rather than adding a second se
 | Year hero | 120 / 80 / 100 | 42 | 7 | 263.9 |
 | Priority tile | 26 | 19 | — | 119.4 |
 | Agent avatar | 42 | — | `inset 0 0 0 2px` | — |
+| Drawer D/K/G (one line under the name) | 30 | — | 3 | — |
 
 Ring colour rule: green `#4CAF50` at 100%, orange for "today"/current, blue
 `#288bd5` otherwise, grey/transparent for future or empty.

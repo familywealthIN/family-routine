@@ -184,6 +184,17 @@ describe('OrganismRoutineFocusCard — tablet/desktop tick state', () => {
   // larger `lgRingSize`/`lgTitleSize` pair is computed but never rendered; this
   // suite used to assert those dead values, which is how the oversized desktop
   // ring and heading passed review.
+  // The border donut reads the checklist on every form factor: a ticked
+  // routine with 3 of 5 done draws 3/5 of the ring, not a full circle.
+  it('draws the ticked ring as the checklist progress', () => {
+    ['tablet', 'desktop'].forEach((variant) => {
+      const card = render({
+        variant, routine: { ...ROUTINE, ticked: true }, doneCount: 3, totalCount: 5,
+      }).vm.$children[0];
+      expect(card.ringRemaining).toBeCloseTo(2 / 5, 5);
+    });
+  });
+
   it('keeps the full ring and title before the tick, matching tablet', () => {
     const desktop = render({ variant: 'desktop' }).vm.$children[0];
     const tablet = render({ variant: 'tablet' }).vm.$children[0];

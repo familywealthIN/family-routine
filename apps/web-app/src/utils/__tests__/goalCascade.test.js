@@ -20,6 +20,7 @@ const {
   itemsFor,
   manualTickBlocked,
   normaliseTab,
+  periodIsOver,
   periodCount,
   periodDone,
   planRowTick,
@@ -692,5 +693,30 @@ describe('the figures the rest of the app reads', () => {
     const ids = built.groups.reduce((all, group) => all.concat(group.rows.map((row) => row.id)), []);
     expect(ids).toEqual(['y1']);
     expect(built.listTotal).toBe(1);
+  });
+});
+
+// A past day, week, month or year takes no new goals.
+describe('periodIsOver', () => {
+  const today = '09-10-2026'; // Friday
+  it.each([
+    ['day', '08-10-2026', true],
+    ['day', '09-10-2026', false],
+    ['week', '03-10-2026', true], // Saturday of last week
+    ['week', '04-10-2026', false], // Sunday, this week
+    ['month', '31-08-2026', true],
+    ['month', '01-10-2026', false],
+    ['year', '31-12-2025', true],
+    ['year', '01-01-2026', false],
+    ['lifetime', '01-01-1970', false],
+  ])('%s around %s: %s', (tab, date, over) => {
+    expect(periodIsOver(tab, date, today)).toBe(over);
+  });
+
+  it('switches the cascade view off for a past month', () => {
+    const month = buildCascade({
+      tab: 'month', goals: [], routines: [], selectedDate: '15-08-2026', today, now: moment(),
+    });
+    expect(month.canAdd).toBe(false);
   });
 });

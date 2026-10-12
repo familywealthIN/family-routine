@@ -15,7 +15,10 @@
  *      iframe behind "Full transcript" is for.
  *
  * `MarkdownField` is stubbed: EasyMDE is tested where it lives, and loading it
- * here would drag CodeMirror into every assertion.
+ * here would drag CodeMirror into every assertion. The stub owns a `draft` and
+ * commits THAT, exactly as the real field does — a stub that commits its
+ * `value` prop instead would let the sheet pass while every contribution edit
+ * was silently discarded (D-05).
  */
 jest.mock(
   '../../molecules/MarkdownField/MarkdownField.vue',
@@ -24,9 +27,18 @@ jest.mock(
     default: {
       name: 'MarkdownField',
       props: ['value', 'editorKey'],
-      methods: { flush() { this.$emit('commit', this.value); } },
+      data() {
+        return { draft: this.value };
+      },
+      methods: {
+        type(text) {
+          this.draft = text;
+          this.$emit('input', text);
+        },
+        flush() { this.$emit('commit', this.draft); },
+      },
       render(h) {
-        return h('div', { attrs: { 'data-testid': 'stub-markdown' } }, this.value);
+        return h('div', { attrs: { 'data-testid': 'stub-markdown' } }, this.draft);
       },
     },
   }),
@@ -72,7 +84,8 @@ const ITEM = {
 };
 
 const EVENTS = [
-  'close', 'toggle-status', 'delete', 'update-title', 'commit-contribution',
+  'close', 'toggle-status', 'delete', 'update-title',
+  'input-contribution', 'commit-contribution',
   'update-tags', 'pick-date', 'open-transcript', 'reward-seen',
   'add-subtask', 'toggle-subtask', 'rename-subtask', 'move-subtask-up', 'remove-subtask',
 ];
@@ -181,6 +194,41 @@ describe('GoalItemSheet — title', () => {
   });
 });
 
+describe('GoalItemSheet — contribution', () => {
+  /**
+   * The save signal is the field's `commit`, and it carries what was typed. The
+   * sheet must forward that text rather than the item's own — the container
+   * writes nothing when the two are equal, so re-emitting the item's value is
+   * indistinguishable from discarding the edit.
+   */
+  it('forwards the typed text on commit, not the item it was typed over', () => {
+    const { sheet, events } = render();
+    const field = findByName(sheet, 'MarkdownField');
+    field.type('Closes the last blocker.\n- and the new bullet');
+    field.flush();
+    expect(events['commit-contribution']).toEqual([
+      { item: ITEM, contribution: 'Closes the last blocker.\n- and the new bullet' },
+    ]);
+  });
+
+  it('reports every keystroke as input-contribution for a live preview', () => {
+    const { sheet, events } = render();
+    findByName(sheet, 'MarkdownField').type('Half a bull');
+    expect(events['input-contribution']).toEqual([
+      { item: ITEM, contribution: 'Half a bull' },
+    ]);
+  });
+
+  it('closing the sheet flushes the typed text instead of dropping it', () => {
+    const { el, sheet, events } = render();
+    findByName(sheet, 'MarkdownField').type('Typed, then closed');
+    q(el, 'goal-sheet-close').click();
+    expect(events['commit-contribution']).toEqual([
+      { item: ITEM, contribution: 'Typed, then closed' },
+    ]);
+  });
+});
+
 describe('GoalItemSheet — Date row', () => {
   it('offers the quick-picks and emits the one that is picked', () => {
     const { el, events } = render();
@@ -234,47 +282,74 @@ describe('GoalItemSheet — Linked to, locked', () => {
   });
 });
 
-describe('GoalItemSheet — Linked to, editable', () => {
+/*
+ * Editing a saved item (Home's host, and the only one that opens the sheet this
+ * way) shows Linked to as chips, never pickers: re-pointing a saved goal at a
+ * different routine or parent re-parents a node mid-cascade and moves the
+ * roll-up counts on both sides, with no confirm and no undo.
+ */
+describe('GoalItemSheet — Linked to while EDITING is read-only', () => {
+  it('shows the chips, not the pickers', () => {
+    const { el } = render();
+    expect(q(el, 'goal-sheet-routine-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-goal-ref-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-routine').textContent).toContain('Start Work · 09:00');
+    expect(q(el, 'goal-sheet-goal-ref').textContent).toContain('Ship the dashboard');
+  });
+
+  it('offers no way to emit a link change at all', () => {
+    const { sheet } = render();
+    expect(findByName(sheet, 'GoalTaskSelector')).toBeNull();
+    expect(findByName(sheet, 'GoalRefSelector')).toBeNull();
+  });
+});
+
+describe('GoalItemSheet — Linked to while ADDING', () => {
+  const adding = (props = {}) => render({
+    mode: 'create',
+    seed: { period: 'day', date: '12-09-2026', taskRef: 'sw', goalRef: 'wg1' },
+    ...props,
+  });
+
   const pickers = (sheet) => ({
     routine: findByName(sheet, 'GoalTaskSelector'),
     goalRef: findByName(sheet, 'GoalRefSelector'),
   });
 
-  it("shows the routine and parent-goal pickers on the item's current link", () => {
-    const { el } = render();
+  it('shows the routine and parent-goal pickers on the draft’s link', () => {
+    const { el } = adding();
     expect(q(el, 'goal-sheet-routine-picker').getAttribute('data-value')).toBe('sw');
     expect(q(el, 'goal-sheet-goal-ref-picker').getAttribute('data-value')).toBe('wg1');
     expect(q(el, 'goal-sheet-routine')).toBeNull();
   });
 
-  it('writes a new parent goal through update-link', () => {
-    const { sheet } = render();
+  it('writes the pick into the draft rather than emitting a save', () => {
+    const { sheet } = adding();
     const links = [];
     sheet.$on('update-link', (payload) => links.push(payload));
     pickers(sheet).goalRef.$emit('input', 'wg2');
-    expect(links).toEqual([{ item: ITEM, goalRef: 'wg2' }]);
-  });
-
-  it('writes a new routine, and clearing one sends an empty ref', () => {
-    const { sheet } = render();
-    const links = [];
-    sheet.$on('update-link', (payload) => links.push(payload));
     pickers(sheet).routine.$emit('input', 'eve');
-    pickers(sheet).goalRef.$emit('input', null);
-    expect(links).toEqual([{ item: ITEM, taskRef: 'eve' }, { item: ITEM, goalRef: '' }]);
-  });
-
-  it('does not write a pick that changes nothing', () => {
-    const { sheet } = render();
-    const links = [];
-    sheet.$on('update-link', (payload) => links.push(payload));
-    pickers(sheet).goalRef.$emit('input', 'wg1');
+    expect(sheet.form.goalRef).toBe('wg2');
+    expect(sheet.form.taskRef).toBe('eve');
     expect(links).toEqual([]);
   });
 
+  it('clearing a pick empties the draft’s ref', () => {
+    const { sheet } = adding();
+    pickers(sheet).goalRef.$emit('input', null);
+    expect(sheet.form.goalRef).toBe('');
+  });
+
   it('labels the parent picker one period up', () => {
-    const { sheet } = render({ period: 'week' });
+    const { sheet } = adding({ seed: { period: 'week', date: '12-09-2026' } });
     expect(pickers(sheet).goalRef.label).toBe('Rolls up into a month goal');
+  });
+
+  it('keeps the routine picker but locks the parent when the caller fixes it (Year Goals)', () => {
+    const { el } = adding({ linkLocked: true });
+    expect(q(el, 'goal-sheet-routine-picker').getAttribute('data-value')).toBe('sw');
+    expect(q(el, 'goal-sheet-goal-ref-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-goal-ref').textContent).toContain('Ship the dashboard');
   });
 });
 
@@ -369,7 +444,8 @@ describe('GoalItemSheet — create mode', () => {
       goalRefLabel: 'Ship the dashboard',
     });
     expect(q(el, 'goal-sheet-date-picker')).toBeNull();
-    expect(q(el, 'goal-sheet-routine-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-goal-ref-picker')).toBeNull();
+    expect(q(el, 'goal-sheet-routine-picker')).not.toBeNull();
     expect(q(el, 'goal-sheet-date').textContent).toContain('Week 37');
     type(el, 'Day goal');
     await Vue.nextTick();
@@ -513,5 +589,25 @@ describe('GoalItemSheet — closed', () => {
   it('renders nothing while closed', () => {
     const { el } = render({ open: false });
     expect(el.nodeType).toBe(8);
+  });
+});
+
+describe('GoalItemSheet — view only', () => {
+  it('is the same sheet with every input disabled, no toggle and no delete', () => {
+    const { el, events } = render({ readonly: true, readonlyNote: 'View only · August is over' });
+    expect(q(el, 'goal-sheet-readonly').textContent).toContain('August is over');
+    expect(q(el, 'goal-sheet-title').disabled).toBe(true);
+    expect(q(el, 'goal-sheet-delete')).toBeNull();
+    expect(q(el, 'goal-sheet-date-today')).toBeNull();
+    const locked = el.querySelectorAll('.rn-gis__lockable');
+    expect(locked.length).toBeGreaterThanOrEqual(3);
+    locked.forEach((node) => expect(node.hasAttribute('inert')).toBe(true));
+    q(el, 'goal-sheet-status').click();
+    expect(events['toggle-status']).toHaveLength(0);
+  });
+
+  it('names the parent noun by period when nothing is linked', () => {
+    const { el } = render({ period: 'week', goalRefLabel: '', linkLocked: true });
+    expect(q(el, 'goal-sheet-no-goal-ref').textContent.trim()).toBe('Not linked to a month goal');
   });
 });

@@ -38,6 +38,18 @@ const nextDate = (date, delta = 1) => {
   return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
 };
 
+/**
+ * Cold-open and wait until the dashboard's data is genuinely in the store.
+ *
+ * BOTH feeding queries have to be waited on, not just the goals. They resolve
+ * independently, and on a cold server the routine read is the slow one (the
+ * suite has measured a 3158 ms first round trip against a just-started dev
+ * server). Waiting only for `optimizedDailyGoals` let `closeApp` navigate away
+ * while `routineDate` was still in flight — so the routine was never persisted,
+ * the next open had no routine to paint, and its skeleton covered the goal items
+ * too. That produced an intermittent "cached goals did not paint" failure that
+ * looked like an app regression and was purely this warm-up being incomplete.
+ */
 async function openApp(page) {
   await gotoAuthed(page, '/home');
   await page.waitForFunction(() => !!window.__APOLLO_CLIENT__, { timeout: 20_000 });
@@ -46,10 +58,17 @@ async function openApp(page) {
       const c = window.__APOLLO_CLIENT__;
       if (!c) return false;
       const s = c.cache.extract();
-      return !!s.ROOT_QUERY && !!s.ROOT_QUERY[`optimizedDailyGoals({"date":"${d}"})`];
+      const rq = s.ROOT_QUERY;
+      if (!rq) return false;
+      // The query keys prove both reads landed; the entity counts prove they
+      // landed with content rather than an empty/errored payload.
+      if (!rq[`optimizedDailyGoals({"date":"${d}"})`]) return false;
+      if (!rq[`routineDate({"date":"${d}"})`]) return false;
+      return Object.keys(s).some((k) => k.startsWith('RoutineItem:'))
+        && Object.keys(s).some((k) => k.startsWith('GoalItem:'));
     },
     DATE,
-    { timeout: 20_000 },
+    { timeout: 30_000 },
   );
   await page.waitForTimeout(600);
 }
@@ -61,6 +80,11 @@ async function closeApp(page) {
 }
 
 test.beforeAll(async () => {
+  // `test.setTimeout()` at file scope covers tests, not hooks — hooks keep the
+  // 30s default. Seeding is ~40 sequential round trips (purge every tagged
+  // item, then create 7 week goals and 14 day goals one at a time), which sits
+  // right on that boundary and tips over whenever the server is cold.
+  test.setTimeout(150_000);
   routineSnapshot = await snapshotRoutine(DATE);
   await purgeSeed({ dates: [DATE] });
   await ensureRoutine(DATE);
@@ -69,6 +93,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
+  test.setTimeout(150_000);
   const n = await purgeSeed({ dates: [DATE, nextDate(DATE)] });
   const reset = await restoreRoutine(routineSnapshot);
   console.log(`[seed] purged ${n} goal items; routine ${reset ? 'reset' : 'left untouched'}`);

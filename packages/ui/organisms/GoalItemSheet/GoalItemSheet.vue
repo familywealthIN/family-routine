@@ -48,15 +48,17 @@
           -->
           <div
             class="rn-gis__status"
+            :class="{ 'rn-gis__status--readonly': readonly }"
             :style="{ background: statusTint, color: statusColor }"
-            :title="item && item.isComplete ? 'Mark as open' : 'Mark complete'"
+            :title="readonly ? '' : (item && item.isComplete ? 'Mark as open' : 'Mark complete')"
             data-testid="goal-sheet-status"
-            @click="$emit('toggle-status', item)"
+            @click="!readonly && $emit('toggle-status', item)"
           >
             <span class="rn-gis__status-dot" :style="{ background: statusColor }"></span>
             {{ statusLabel }}
           </div>
           <i
+            v-if="!readonly"
             class="rn-mi rn-gis__icon-btn rn-gis__icon-btn--danger"
             title="Delete goal item"
             data-testid="goal-sheet-delete"
@@ -72,13 +74,18 @@
       </div>
     </template>
 
-    <div v-if="current" class="rn-gis">
+    <div v-if="current" class="rn-gis" :class="{ 'rn-gis--readonly': readonly }">
+      <div v-if="readonly" class="rn-gis__view-note" data-testid="goal-sheet-readonly">
+        <i class="rn-mi rn-gis__locked-icon">visibility</i>{{ readonlyNote }}
+      </div>
       <textarea
         ref="title"
         class="rn-gis__title"
         rows="1"
         :placeholder="creating ? titlePlaceholder : 'Untitled'"
         :value="current.body"
+        :readonly="readonly"
+        :disabled="readonly"
         data-testid="goal-sheet-title"
         @input="onTitleInput"
         @change="onTitleChange"
@@ -87,6 +94,8 @@
 
       <markdown-field
         ref="contribution"
+        class="rn-gis__lockable"
+        v-bind="lockAttrs"
         :value="current.contribution || ''"
         :editor-key="creating ? `new-${createKey}` : current.id"
         @input="onContributionInput"
@@ -139,11 +148,28 @@
           <i class="rn-mi rn-gis__field-icon">account_tree</i>Linked to
         </div>
         <!--
-          Editable: the routine and the parent goal it rolls up into, with the
-          same two pickers the AI search toolbar uses. Locked (Year Goals,
-          where the plan fixes the parent): the read-only chips.
+          The pickers are an ADD-time control, not an edit-time one.
+
+          Adding: the routine and the parent goal it rolls up into, with the same
+          two pickers the AI search toolbar uses — that is where the link is
+          decided, and the sheet is the only place to decide it.
+
+          Editing (Home, which is the only host that opens this sheet on a saved
+          item): read-only chips. Re-pointing a saved item at a different routine
+          or a different parent re-parents a node in the middle of the cascade,
+          and the roll-up counts on both sides move silently with it — the
+          `day -> week -> month` thresholds in chassis.md § "The goal cascade"
+          are computed from what hangs off each parent. There was no confirm and
+          no undo, just two dropdowns on an otherwise read-only summary.
+
+          `linkLocked` locks only the PARENT while adding: Year Goals fixes what a
+          new goal rolls up into, but which routine does the work is still the
+          user's call, so the routine picker stays.
         -->
-        <div v-if="!linkLocked" class="rn-gis__field-value rn-gis__field-value--grow rn-gis__link-pickers">
+        <div
+          v-if="creating"
+          class="rn-gis__field-value rn-gis__field-value--grow rn-gis__link-pickers"
+        >
           <goal-task-selector
             class="rn-gis__picker"
             :items="routines"
@@ -159,7 +185,16 @@
             data-testid="goal-sheet-routine-picker"
             @input="setLink({ taskRef: $event || '' })"
           />
+          <div
+            v-if="linkLocked"
+            class="rn-gis__chip rn-gis__chip--goal rn-gis__picker"
+            data-testid="goal-sheet-goal-ref"
+          >
+            <i class="rn-mi">timeline</i>
+            <span class="rn-gis__chip-text">{{ goalRefLabel }}</span>
+          </div>
           <goal-ref-selector
+            v-else
             class="rn-gis__picker"
             :items="goalRefOptions"
             :tasklist="routines"
@@ -188,7 +223,7 @@
             </div>
           </template>
           <span v-else class="rn-gis__muted" data-testid="goal-sheet-no-goal-ref">
-            Not linked to a week goal
+            Not linked to a {{ parentNoun }}
           </span>
         </div>
       </div>
@@ -228,15 +263,15 @@
         <div v-else class="rn-gis__field-value">
           <div class="rn-gis__date" data-testid="goal-sheet-date">{{ dateLabel }}</div>
           <!--
-            A past day is read-only on purpose: `updateGoalItem`'s move path
-            rewrites the item's owning day document, and moving yesterday's work
-            onto yesterday is not a thing the user can want. The lock says so
-            rather than offering pills that then refuse.
+            The caller locks a COMPLETED item on a past day: finished work has
+            nowhere to move to. An open past item keeps its pills so a missed
+            task can be carried forward to today. The lock says so rather than
+            offering pills that then refuse.
           -->
           <div v-if="dateLocked" class="rn-gis__locked" data-testid="goal-sheet-date-locked">
             <i class="rn-mi rn-gis__locked-icon">lock</i>past dates can’t change
           </div>
-          <div v-else class="rn-gis__date-opts">
+          <div v-else-if="!readonly" class="rn-gis__date-opts">
             <div
               v-for="option in dateOptions"
               :key="option.key"
@@ -254,7 +289,7 @@
         <div class="rn-gis__field-label">
           <i class="rn-mi rn-gis__field-icon">tag</i>Tags
         </div>
-        <div class="rn-gis__field-value rn-gis__field-value--grow">
+        <div class="rn-gis__field-value rn-gis__field-value--grow rn-gis__lockable" v-bind="lockAttrs">
           <hierarchical-tag-input
             :value="current.tags || []"
             :universe="tagUniverse"
@@ -268,6 +303,8 @@
       <!-- Subtasks belong to a saved item; a new one gets them once it exists. -->
       <subtask-editor
         v-if="!creating"
+        class="rn-gis__lockable"
+        v-bind="lockAttrs"
         :subtasks="item.subTasks || []"
         @add="$emit('add-subtask', { item, body: $event })"
         @toggle="$emit('toggle-subtask', { item, subtask: $event })"
@@ -352,15 +389,16 @@ export default {
     /** Goal items one period up — the parent-goal picker's choices. */
     goalRefOptions: { type: Array, default: () => [] },
     /**
-     * Show Linked to as read-only chips instead of the pickers. Year Goals
-     * sets it: there the plan decides what a new goal rolls up into.
+     * Show the parent goal as a read-only chip even while ADDING; the routine
+     * picker stays. Year Goals sets it: there the plan decides what a new goal
+     * rolls up into. Editing is already read-only without this — see the template.
      */
     linkLocked: { type: Boolean, default: false },
     /** "Day goal · 12 Sep 2026". */
     periodLabel: { type: String, default: '' },
     /** "Start Work · 09:00", or "Inbox" for an item with no routine. */
     routineLabel: { type: String, default: 'Inbox' },
-    /** The parent week goal's body. Empty renders "Not linked to a week goal". */
+    /** The parent goal's body. Empty renders "Not linked to a week goal" (month, year… by period). */
     goalRefLabel: { type: String, default: '' },
     dateLabel: { type: String, default: '' },
     dateLocked: { type: Boolean, default: false },
@@ -368,6 +406,13 @@ export default {
     dateOptions: { type: Array, default: () => [] },
     tagUniverse: { type: Array, default: () => [] },
     tagUsage: { type: Object, default: () => ({}) },
+    /**
+     * View only: the same sheet with every input disabled, no status toggle and
+     * no delete. Year Goals opens a past month's goals this way.
+     */
+    readonly: { type: Boolean, default: false },
+    /** The line that says why it is view only. */
+    readonlyNote: { type: String, default: 'View only' },
     /** "Updated by PR Summarizer · end event · Today 11:42". */
     rewardMeta: { type: String, default: '' },
     /** The transcript has not been looked at yet. */
@@ -386,6 +431,14 @@ export default {
     creating() {
       return this.mode === 'create';
     },
+    /**
+     * `inert` takes a block out of focus and pointer input entirely, so a
+     * disabled MarkdownField, tag input or subtask list cannot be typed into
+     * however it is built. The class only greys it.
+     */
+    lockAttrs() {
+      return this.readonly ? { inert: '', 'aria-disabled': 'true' } : {};
+    },
     /** What the fields read: the draft when adding, the item when editing. */
     current() {
       return this.creating ? this.form : this.item;
@@ -395,6 +448,11 @@ export default {
     },
     isPhone() {
       return this.shell === 'phone';
+    },
+    /** "week goal" for a day item, "month goal" for a week item, … */
+    parentNoun() {
+      const period = this.creating ? this.form.period : this.period;
+      return PARENT_NOUN[period] || 'goal';
     },
     goalRefPlaceholder() {
       const period = this.creating ? this.form.period : this.period;
@@ -489,16 +547,13 @@ export default {
       this.$emit('update-tags', { item: this.item, tags });
     },
     /** Routine and/or parent goal. Editing writes through; adding drafts it. */
+    /*
+     * Draft-only. The pickers render while adding and nowhere else, so there is
+     * no saved item to write through — the `update-link` emit that used to live
+     * here went with the edit-time pickers (see the Linked to block).
+     */
     setLink(changes) {
-      if (this.creating) {
-        Object.assign(this.form, changes);
-        return;
-      }
-      if (!this.item) return;
-      const unchanged = Object.keys(changes)
-        .every((key) => (this.item[key] || '') === (changes[key] || ''));
-      if (unchanged) return;
-      this.$emit('update-link', { item: this.item, ...changes });
+      Object.assign(this.form, changes);
     },
     setDate(date) {
       this.form.date = date || '';
@@ -557,6 +612,27 @@ export default {
 .rn-gis {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   padding-bottom: 12px;
+}
+
+/* View only: every input greyed and out of reach (`inert` does the blocking). */
+.rn-gis--readonly .rn-gis__lockable,
+.rn-gis--readonly .rn-gis__title {
+  opacity: .55;
+  pointer-events: none;
+}
+
+.rn-gis__status--readonly {
+  cursor: default;
+}
+
+.rn-gis__view-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .54);
 }
 
 .rn-gis__head {

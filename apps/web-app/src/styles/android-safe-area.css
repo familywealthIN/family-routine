@@ -97,8 +97,10 @@ body.android15-soft-keys {
     width: 100% !important;
   }
 
-  /* Content area adjustments for Android 14+ */
-  .android14-plus .scrollable-content {
+  /* Content area adjustments for Android 14+. MobileLayout's page area only:
+     the AI search sheet's scroll area shares the `scrollable-content` name and
+     picked this up as ~100px of blank space above and below its prompt. */
+  .android14-plus .scrollable-content.safe-area-content {
     padding-top: calc(64px + var(--safe-area-inset-top)) !important;
     padding-bottom: calc(75px + var(--safe-area-inset-bottom)) !important;
     padding-left: var(--safe-area-inset-left) !important;
@@ -111,8 +113,10 @@ body.android15-soft-keys {
     z-index: 999 !important;
   }
 
-  /* Dialog toolbar safe area for Android 14+ */
-  .android14-plus .v-dialog .v-toolbar {
+  /* Dialog toolbar safe area for Android 14+. Full-screen dialogs only: a
+     sheet or centred dialog never sits under the status bar, and this pushed
+     the AI search prompt's chip toolbar down by a status bar's height. */
+  .android14-plus .v-dialog--fullscreen .v-toolbar {
     margin-top: var(--safe-area-inset-top) !important;
   }
 
@@ -176,6 +180,3 @@ body.android15-soft-keys {
   padding: 0 5px !important;
 }
 
-.prompt-box {
-  padding: 10px 12px 40px 12px !important;
-}

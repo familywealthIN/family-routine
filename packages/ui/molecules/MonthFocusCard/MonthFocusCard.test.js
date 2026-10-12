@@ -119,6 +119,14 @@ describe('MoleculeMonthFocusCard — the month', () => {
     el.querySelector('[data-testid="add-month-goal"]').click();
     expect(events[0][0]).toBe('add-month');
   });
+
+  it('takes no new goals in a month that is over', () => {
+    const past = render({ month: month({ isCurrent: false, isPast: true }), openWeekId: 'w1' });
+    expect(past.el.querySelector('[data-testid="add-week-goal"]').disabled).toBe(true);
+    expect(past.el.querySelector('[data-testid="add-day-w1"]').disabled).toBe(true);
+    const empty = render({ month: month({ isPast: true, goal: null, weeks: [] }) });
+    expect(empty.el.querySelector('[data-testid="add-month-goal"]')).toBeNull();
+  });
 });
 
 describe('MoleculeMonthFocusCard — weeks expand in place', () => {

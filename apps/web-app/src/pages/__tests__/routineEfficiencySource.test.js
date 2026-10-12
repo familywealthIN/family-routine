@@ -17,6 +17,11 @@
 // them). Stub them — they play no part in the efficiency card.
 jest.mock('vue-radar', () => ({ __esModule: true, default: {} }));
 jest.mock('vue-easymde', () => ({ __esModule: true, default: {} }));
+// The page mounts the chassis now, so it also reaches the native sign-in
+// plugins through `utils/signOut` and the gitignored blob config behind them.
+jest.mock('@codetrix-studio/capacitor-google-auth', () => ({ GoogleAuth: {} }));
+jest.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false } }));
+jest.mock('../../blob/config', () => ({ gauthOption: {}, graphQLUrl: '' }), { virtual: true });
 
 const CheckHistory = require('../CheckHistory.vue').default;
 
@@ -40,11 +45,30 @@ describe('CheckHistory Routine Efficiency', () => {
     const progress = { cards: [card({ value: '33%' })] };
 
     expect(efficiency(progress).value).toBe('33%');
-    expect(CheckHistory.computed.graphArray.call({
-      progress,
-      routines,
-      countTotal: CheckHistory.methods.countTotal,
-    })).toEqual([30, 0, 0]);
+    // The trend under the card is the share of each day's routine ticked, not
+    // the raw points the old chart plotted: the number above it is a
+    // percentage, so the line beneath should be the same unit and have a
+    // ceiling to be read against.
+    expect(CheckHistory.computed.trend.call({ progress, routines }).values)
+      .toEqual([100, 0, 0]);
+  });
+
+  it('breaks the trend line on a day with no routine instead of plotting a zero', () => {
+    const routines = [
+      { date: '16-08-2026', tasklist: [{ ticked: true }] },
+      { date: '17-08-2026', tasklist: [] },
+    ];
+    expect(CheckHistory.computed.trend.call({ routines }).values).toEqual([100, null]);
+  });
+
+  it('orders the trend oldest first whatever order the server sent', () => {
+    const routines = [
+      { date: '18-08-2026', tasklist: [{ ticked: true }] },
+      { date: '16-08-2026', tasklist: [{ ticked: false }] },
+    ];
+    const { values, labels } = CheckHistory.computed.trend.call({ routines });
+    expect(values).toEqual([0, 100]);
+    expect(labels).toEqual(['16 Aug', '18 Aug']);
   });
 
   it('carries the formula the screen offers behind the info icon', () => {

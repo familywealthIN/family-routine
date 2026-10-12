@@ -58,30 +58,15 @@
       @select-result="openGoalDetail"
     />
 
-    <!-- Goal Creation Fullscreen Dialog -->
-    <v-dialog
-      v-model="goalDisplayDialog"
-      fullscreen
-      hide-overlay
-      transition="dialog-bottom-transition"
-    >
-      <v-card>
-        <v-toolbar color="white">
-          <v-spacer></v-spacer>
-          <v-btn icon @click="goalDisplayDialog = false">
-            <v-icon>close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <v-card class="no-shadow">
-          <v-card-text class="pa-0">
-            <goal-creation
-              :newGoalItem="selectedGoalItem"
-              v-on:add-update-goal-entry="onGoalUpdated"
-            />
-          </v-card-text>
-        </v-card>
-      </v-card>
-    </v-dialog>
+    <!-- Home's goal sheet, the one editor every page shares. -->
+    <goal-edit-sheet-container
+      :open="goalDisplayDialog"
+      :shell="shell"
+      :item="selectedGoalItem"
+      @close="onGoalUpdated"
+      @toggle="toggleGoal"
+      @changed="refreshResults"
+    />
   </div>
 </template>
 
@@ -92,13 +77,14 @@ import { ROUTINE_DATE_QUERY } from '@/composables/graphql/queries';
 import { USER_TAGS } from '@/constants/settings';
 import getJSON from '@/utils/getJSON';
 import SearchResults from '@routine-notes/ui/organisms/SearchResults/SearchResults.vue';
-import GoalCreation from '@/containers/GoalCreationContainer.vue';
+import { resolveShell } from '@routine-notes/ui/constants/navigation';
+import GoalEditSheetContainer from '@/containers/GoalEditSheetContainer.vue';
 
 export default {
   name: 'SearchTime',
   components: {
     SearchResults,
-    GoalCreation,
+    GoalEditSheetContainer,
   },
   data() {
     return {
@@ -143,6 +129,9 @@ export default {
     },
   },
   computed: {
+    shell() {
+      return resolveShell(this.$vuetify && this.$vuetify.breakpoint);
+    },
     routineItems() {
       if (this.routineData && this.routineData.tasklist) {
         return this.routineData.tasklist;
@@ -264,6 +253,21 @@ export default {
         subTasks: item.subTasks || [],
       };
       this.goalDisplayDialog = true;
+    },
+    /** The sheet's status toggle: a plain completion, then re-run the search. */
+    toggleGoal(item) {
+      if (!item || !item.id) return;
+      this.$goals.completeGoalItem({
+        id: item.id,
+        taskRef: item.taskRef || '',
+        date: item.date,
+        period: item.period,
+        isComplete: !item.isComplete,
+        isMilestone: !!item.isMilestone,
+      }).then(() => this.refreshResults()).catch(() => {});
+    },
+    refreshResults() {
+      if (this.executedQuery) this.executeSearch();
     },
     onGoalUpdated() {
       this.goalDisplayDialog = false;

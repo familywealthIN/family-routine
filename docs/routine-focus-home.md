@@ -52,6 +52,9 @@ and `WeekGoalStreakContainer` — nothing imports them.
 | Sign out (shared with MobileLayout) | `apps/web-app/src/utils/signOut.js` |
 | Focus card, cascade panel, chat thread, composer, deck, sheet, top bar, drawer | `packages/ui/organisms/Routine*`, `packages/ui/organisms/UserDrawer` |
 | Routine rail / day chips, points chip | `packages/ui/molecules/RoutineRail`, `packages/ui/molecules/FocusPointsChip` |
+| Pull to refresh (phone card; both panes on tablet/desktop) | `packages/ui/molecules/PullToRefresh` |
+| Drawer's "Today on the clock" ribbon (`routineTiming` read while the drawer is open) | `apps/web-app/src/containers/RoutineTimingContainer.vue`, `apps/web-app/src/utils/routineTiming.js`, `packages/ui/molecules/TimingRibbon` |
+| Agent run state + start/end dispatch | `apps/web-app/src/store/agentStore.js` (via `plugins/agent.js` → `this.$agent`); webhook bodies read by `utils/responseBody.js` |
 | Design tokens (colours, agent stages, per-shell geometry) | `packages/ui/constants/routineFocus.js` |
 | Motion keyframes (`rn-fly`, `rn-breathe`, `rn-pop`, …) | `packages/ui/styles/routine-focus.css` |
 | Chat model calls (free OpenRouter tier) | `apps/server/src/utils/chatApi.js` |
@@ -113,6 +116,8 @@ The model is asked for a JSON object, and the client acts on the intent:
 | `add_tasks` | creates day goal items under the focused routine, then attaches their ids to the reply bubble so it renders live checkboxes |
 | `break_down` | nothing — the three steps are **proposals**, created only when the user presses "Add all to checklist" |
 | `complete_task` | completes the named item through the same mutation a checkbox tap uses |
+| `defer_task` | moves the named item to **tomorrow** — `updateGoalItem` with the next day's `date`, the same single write the goal sheet's date chips use |
+| `skip_task` | records the named item as **missed** for today (`markGoalItemMissed`, D-07). Nothing is created on another day |
 | `status` | nothing; the reply quotes the D/K/G percentages it was given |
 | `chat` | nothing |
 
@@ -122,7 +127,18 @@ Guards worth knowing:
   both server-side (`chatApi.js`) and again client-side. A hallucinated id would
   otherwise report "marked done" having completed nothing.
 - An item the chat creates inherits the routine's existing `goalRef`, so it rolls
-  up into the same week goal as one created through AI Search.
+  up into the same week goal as one created through AI Search — and with it
+  `isMilestone: true`, because the server refuses a `goalRef` without it.
+- A create that fails logs an orange event under the reply, and a brief step's
+  Add pill flips back: the bubble's own text came from the model before the
+  write, so it would otherwise claim a task that does not exist.
+- A `defer_task` / `skip_task` `targetItemId` is held to the same rule, for the
+  same reason twice over: moving the wrong task is worse than moving none.
+- A reply claiming a **carry-over** with no `defer_task` behind it is replaced
+  server-side with "I can't reschedule that one from here… use its date chips"
+  (`claimsCarryOver`). The bubble's text is composed before any write, so the
+  model was free to promise a move nothing performed — including on a `skip`,
+  which records a miss on today's item and creates nothing on another day.
 - A free model that ignores JSON mode keeps its prose as a plain `chat` reply
   rather than losing the turn.
 
@@ -168,7 +184,31 @@ event firing — so the thread is a record of the day, not a reconstruction.
 - **The agent's end-event rule** counts *slots*: `D.splitRate / K.splitRate`,
   derived from the routine's time gap, not from the checklist length (D-20). A
   listening agent completes when that counter fills. Do not unify these two —
-  the first is what the user sees, the second is what the economy counts.
+  the first is what the user sees, the second is what the economy counts. The
+  *total* is that slot count; the *filled* side is a plain count of the
+  routine's completed goal items. It must not be inverted out of the K ledger
+  (`slots × K.earned / points`): a 0-point routine never moves `K.earned`, so
+  that ratio pinned the agent in `listening` forever (D-03).
+- **The end event also needs a run open today on the server**
+  (`canFireEndEvent`: end event configured, `executionStatus` running/listening,
+  `ranToday`). Start records the run open (`openRun`) *before* the start webhook
+  is called, so closing the app mid-webhook no longer strands it. When this
+  device's copy says no run, the page re-reads the agent (`fetchByTaskRef` — a
+  run another device opened); if the server still has none but this device's
+  badge from today says listening/running, `adoptLocalRun` re-opens it. On load
+  and after every pull to refresh, `fireDueEndEvents` re-runs the rule for each
+  routine still listening, so one whose counter already filled does not stay
+  stuck. A webhook's success is its status code; a body that is not valid JSON
+  is kept as text (`utils/responseBody.js`), not a failed run.
+- **The cascade counter and the cascade grid** count different things on
+  purpose (D-02). The counter is in **milestones** — the server's own
+  `milestonesComplete` over every milestone the goal holds, floored at the
+  threshold — because that is the unit `evaluateAutoComplete` gates on. The grid
+  is in **calendar cells**, and one cell can hold several milestones, which is
+  why a day can be `partial`. `GoalItem.progress` is a third unit again (one win
+  per child *document*); it is the streak count the Goals screen renders and the
+  focus screen never shows it. Only the server's `isComplete` sets the card's
+  "Done" — the panel must never tick a goal off its own arithmetic.
 - **`countTotal('G')`** multiplies by 4 / 2 / 1.334 depending on how far into the
   week, month and year the day sits. The drawer's donuts clamp at 100%, because
   the raw value legitimately exceeds it early in the week.
@@ -180,11 +220,25 @@ event firing — so the thread is a record of the day, not a reconstruction.
 | `packages/ui/organisms/RoutineFocusCard/RoutineFocusCard.test.js` | ring geometry per shell, tick/agent states, checklist collapse, cascade swap |
 | `packages/ui/organisms/RoutineChatThread/RoutineChatThread.test.js` | bubble alignment, event pills, live checkbox rows, proposals, quick-reply placement |
 | `apps/web-app/src/utils/__tests__/routineFocusModel.test.js` | current routine, window maths, button states, cascade grid |
-| `apps/web-app/src/pages/__tests__/routineFocusPage.test.js` | shell selection, tasklist dedupe, `firing` derivation, ticked-ring gesture, the computed graph (catches the rows ↔ focus cycle) |
+| `apps/web-app/src/pages/__tests__/routineFocusPage.test.js` | shell selection, tasklist dedupe, `firing` derivation, ticked-ring gesture, the computed graph (catches the rows ↔ focus cycle), end event after a server re-read / badge fallback, `fireDueEndEvents` |
+| `apps/web-app/src/store/__tests__/agentEndEvent.test.js` | `fireEndEvent`, today-only badges, run recorded open before the start webhook answers, `adoptLocalRun` |
 | `apps/web-app/src/containers/__tests__/RoutineChatContainer.test.js` | every intent path, proposal acceptance, event posting |
 | `apps/server/src/utils/chatApi.test.js` | free-roster enforcement, runtime discovery + ranking, model failover, intent coercion, chain-of-thought filtering, outage degradation |
 | `apps/server/src/schema/RoutineChatSchema.test.js` | chat body + per-proposal encryption round trip |
 | `apps/server/tests/authMiddleware.spec.js` | an expired/garbage token leaves the request unauthenticated rather than refused |
+| `packages/markdown-editor/MarkdownEditor.test.js` | the CONTRIBUTION editor's `modelValue` / `update:modelValue` contract with vue-easymde — text really leaves CodeMirror |
+
+### The CONTRIBUTION save path (D-05)
+
+`MarkdownField` owns the text being typed (`draft`) and its `commit` carries
+that, never the `value` prop; the container writes on `commit` only. Until
+4 Oct 2026 it committed the prop, so every contribution edit was discarded
+silently — the shape beta ticket D-05 describes. The path is now pinned at all
+three seams: editor → field (`MarkdownEditor.test.js`), field → sheet
+(`MarkdownField.test.js`, `GoalItemSheet.test.js`), sheet → mutation
+(`GoalItemSheetContainer.test.js`). The container deliberately does **not**
+bind `input-contribution`; that event is for a live preview, and saving from it
+would be one mutation per keystroke.
 
 ## Running it locally
 

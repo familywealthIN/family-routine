@@ -211,8 +211,19 @@ describe('InboxSheetContainer — pending items (the old "Pending Items" list)',
     const vm = ctx();
     call('onDoNow', vm, PENDING);
     expect(vm.$goals.addGoalItem).toHaveBeenCalledWith(expect.objectContaining({
-      body: 'Fix the bike', taskRef: 'sw', goalRef: 'wg_sw', date: '12-09-2026',
+      body: 'Fix the bike', taskRef: 'sw', date: '12-09-2026',
     }));
+    /*
+     * No `goalRef`, and this used to assert one.
+     *
+     * `addGoalItem` refuses a ref without `isMilestone: true`, and this call sent
+     * `false` — so planning a pending item onto a routine that rolls up into a
+     * week goal failed with "Couldn't move that task." for no reason the user
+     * could see. `resolveDayGoalLink` links it server-side when the ref is
+     * omitted. Same correction as the chat's `createItems`.
+     */
+    const created = vm.$goals.addGoalItem.mock.calls[0][0];
+    expect(created).not.toHaveProperty('goalRef');
     await flush();
     expect(vm.$apollo.mutate).toHaveBeenCalledWith(expect.objectContaining({
       variables: { id: 'm1' },

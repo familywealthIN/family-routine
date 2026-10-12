@@ -10,6 +10,8 @@ const { RoutineModel } = require('../schema/RoutineSchema');
 const { ProgressType } = require('../schema/ProgressSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const { getProgressReport, threshold } = require('../utils/getProgressReport');
+const { RoutineTimingType } = require('../schema/RoutineTimingSchema');
+const { datesBetween, summariseTiming } = require('../utils/routineTiming');
 // const ApiError = require('../utils/ApiError');
 
 const query = {
@@ -66,6 +68,28 @@ const query = {
         period,
         startDate,
         endDate,
+      });
+    },
+  },
+  // On time, late and missed check-ins for a date range: the drawer's day
+  // ribbon and the Progress page's Timing card. Only the range's own day
+  // documents are read, and nothing is written.
+  routineTiming: {
+    type: RoutineTimingType,
+    args: {
+      startDate: { type: GraphQLNonNull(GraphQLString) },
+      endDate: { type: GraphQLNonNull(GraphQLString) },
+      // The user's own today (DD-MM-YYYY): the server clock is UTC.
+      today: { type: GraphQLString },
+    },
+    resolve: async (root, { startDate, endDate, today }, context) => {
+      const email = getEmailfromSession(context);
+      const dates = datesBetween(startDate, endDate);
+      const routines = dates.length
+        ? await RoutineModel.find({ email, date: { $in: dates } }).lean().exec()
+        : [];
+      return summariseTiming({
+        routines, startDate, endDate, today,
       });
     },
   },

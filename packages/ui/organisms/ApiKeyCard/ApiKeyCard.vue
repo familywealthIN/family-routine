@@ -140,12 +140,18 @@ export default {
   margin-top: 10px;
 }
 
+/* Block, not flex. `text-overflow: ellipsis` has no effect on a flex
+   container, so the key was hard-clipped mid-string ("frt_36fe7349-c54c-4458-b7")
+   with nothing to show it continued and no way to scroll to the rest. The 40px
+   line-height centres the single line exactly as `align-items: center` did.
+   Matches `.rn-cai__cred-value` in ConnectAiPanel, which is on this same page
+   and already ellipsises correctly. The full value stays reachable through the
+   copy button beside it. */
 .rn-pkey__value {
   flex: 1;
   min-width: 0;
   height: 40px;
-  display: flex;
-  align-items: center;
+  line-height: 40px;
   padding: 0 12px;
   border-radius: 10px;
   background: #f7f7f7;

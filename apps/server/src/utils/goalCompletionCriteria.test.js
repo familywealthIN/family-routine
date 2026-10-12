@@ -16,7 +16,7 @@ describe('collectPeriodCriteria', () => {
       { date: '07-09-2026', goalItems: [{ goalRef: 'W2', isComplete: false }] },
     ], 'W1');
 
-    expect(criteria).toEqual([{ date: '06-09-2026', isComplete: true }]);
+    expect(criteria).toEqual([{ date: '06-09-2026', isComplete: true, late: false }]);
   });
 
   it('matches ObjectId-ish ids by string and tolerates empty docs', () => {
@@ -25,13 +25,52 @@ describe('collectPeriodCriteria', () => {
       { date: '07-09-2026' },
     ], 'W1');
 
-    expect(criteria).toEqual([{ date: '06-09-2026', isComplete: false }]);
+    expect(criteria).toEqual([{ date: '06-09-2026', isComplete: false, late: false }]);
   });
 });
 
 // D-11: the streak filled left-to-right by completion count, so the beta week
 // (completed 16, 17, 18; MISSED 19; completed 20, 21) rendered as five solid
 // nodes in a row — an unbroken run in a control called "Streak".
+// D-02, owner's rule: a milestone is met only when it was checked on time.
+// goalItemStatus grades a tick after the routine window (or on a later day)
+// as 'missed'; that tick is recorded as late and never counts.
+// Owner's rule, 11 Oct 2026: a late tick COUNTS. It replaced the on-time-only
+// rule (D-02), under which /goals read 4/5 for a night routine ticked every day
+// of the week, three of them after 22:30's window.
+describe('a late tick counts', () => {
+  const lateOn = (date) => weekDays.map((d) => ({
+    date: d,
+    goalItems: [{ goalRef: 'W1', isComplete: true, status: d === date ? 'missed' : 'done' }],
+  }));
+
+  it('counts a late tick as met, and still reports it as late', () => {
+    const criteria = collectPeriodCriteria(lateOn('07-09-2026'), 'W1');
+    expect(criteria.find((c) => c.date === '07-09-2026')).toEqual({ date: '07-09-2026', isComplete: true, late: true });
+    expect(criteria.filter((c) => c.isComplete)).toHaveLength(7);
+  });
+
+  it('marks a late-ticked day complete', () => {
+    const days = buildMilestoneDays(weekDays, collectPeriodCriteria(lateOn('12-09-2026'), 'W1'), '12-09-2026');
+    expect(days[6]).toEqual({ date: '12-09-2026', status: 'complete' });
+  });
+
+  it('auto-completes a goal whose last criterion was ticked late', () => {
+    const criteria = collectPeriodCriteria(lateOn('09-09-2026'), 'W1');
+    const result = evaluateAutoComplete({
+      criteria, completionThreshold: 5, stepDownPeriod: 'day', date: '12-09-2026',
+    });
+    expect(result.isComplete).toBe(true);
+  });
+
+  it('keeps today winnable while a goal on it is still open', () => {
+    const goals = lateOn('12-09-2026');
+    goals[6].goalItems.push({ goalRef: 'W1', isComplete: false, status: 'todo' });
+    const days = buildMilestoneDays(weekDays, collectPeriodCriteria(goals, 'W1'), '12-09-2026');
+    expect(days[6]).toEqual({ date: '12-09-2026', status: 'upcoming' });
+  });
+});
+
 describe('buildMilestoneDays', () => {
   const betaWeek = ['16-08-2026', '17-08-2026', '18-08-2026', '19-08-2026', '20-08-2026', '21-08-2026', '22-08-2026'];
   const betaCriteria = collectPeriodCriteria(
@@ -76,7 +115,30 @@ describe('buildMilestoneDays', () => {
       { date: '16-08-2026', isComplete: false },
     ];
 
-    expect(buildMilestoneDays(['16-08-2026'], criteria, '22-08-2026')[0].status).toBe('missed');
+    expect(buildMilestoneDays(['16-08-2026'], criteria, '22-08-2026')[0].status).not.toBe('complete');
+  });
+
+  // D-02: the cascade grid drew this day as a red cancel while
+  // `milestonesComplete` had already counted the milestone that landed on it.
+  it('calls a past day with some milestones met partial, not missed', () => {
+    const criteria = [
+      { date: '16-08-2026', isComplete: true },
+      { date: '16-08-2026', isComplete: false },
+      { date: '17-08-2026', isComplete: false },
+      { date: '17-08-2026', isComplete: false },
+    ];
+    const days = buildMilestoneDays(['16-08-2026', '17-08-2026'], criteria, '22-08-2026');
+
+    expect(days.map((day) => day.status)).toEqual(['partial', 'missed']);
+  });
+
+  it('does not call a day partial while it is still winnable', () => {
+    const criteria = [
+      { date: '22-08-2026', isComplete: true },
+      { date: '22-08-2026', isComplete: false },
+    ];
+
+    expect(buildMilestoneDays(['22-08-2026'], criteria, '22-08-2026')[0].status).toBe('upcoming');
   });
 });
 
@@ -88,7 +150,7 @@ describe('evaluateAutoComplete', () => {
     const result = evaluateAutoComplete({ ...base, criteria, progress: 6 });
 
     expect(result.isComplete).toBe(false);
-    expect(result.outstanding).toEqual([{ date: '09-09-2026', isComplete: false }]);
+    expect(result.outstanding).toEqual([{ date: '09-09-2026', isComplete: false, late: false }]);
     expect(result.note).toBeNull();
   });
 

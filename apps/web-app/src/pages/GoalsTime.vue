@@ -24,10 +24,9 @@
     A delete is page-orchestrated for the same reason: the server cascades to every
     transitive `goalRef` descendant, so both display reads go stale at once.
 
-    The editor is DashBoard's own fullscreen dialog, mounted again around the SAME
-    `GoalCreationContainer` — so a goal edited here looks like, and runs the same
-    mutations as, one edited from the dashboard. Delete sits on the cascade ROW,
-    which is where the dashboard has it too. See `GoalEditDialogContainer`.
+    The editor is Home's goal sheet (`GoalEditSheetContainer` around the same
+    `GoalItemSheetContainer`), so a goal edited here looks and behaves exactly
+    like one opened from a checklist row. Delete sits on the cascade ROW too.
   -->
   <app-shell-container
     active="goals"
@@ -40,24 +39,25 @@
     <template v-slot:header-actions>
       <button
         type="button"
-        class="goals-page__act"
-        :class="labelledActions ? 'goals-page__act--label' : 'goals-page__act--icon'"
+        class="rn-shell__act"
+        :class="labelledActions ? 'rn-shell__act--label' : 'rn-shell__act--icon'"
         title="Milestones"
         data-testid="goals-milestones"
         @click="openMilestones"
       >
-        <i class="rn-mi goals-page__act-glyph">widgets</i>
+        <i class="rn-mi rn-shell__act-glyph">widgets</i>
         <span v-if="labelledActions">Milestones</span>
       </button>
       <button
         type="button"
-        class="goals-page__act goals-page__act--primary"
-        :class="labelledActions ? 'goals-page__act--label' : 'goals-page__act--icon'"
-        title="New goal"
+        class="rn-shell__act rn-shell__act--primary"
+        :class="labelledActions ? 'rn-shell__act--label' : 'rn-shell__act--icon'"
+        :title="canAdd ? 'New goal' : 'This period is over'"
+        :disabled="!canAdd"
         data-testid="goals-new"
         @click="openSheet"
       >
-        <i class="rn-mi goals-page__act-glyph">add</i>
+        <i class="rn-mi rn-shell__act-glyph">add</i>
         <span v-if="labelledActions">New goal</span>
       </button>
     </template>
@@ -126,18 +126,17 @@
         />
 
         <!--
-          The full editor — body, contribution, tags, subtasks, the milestone
-          link, defer / mark-missed. DashBoard's fullscreen dialog outside, the
-          dashboard's `GoalCreationContainer` inside, so neither the chrome nor
-          the behaviour is forked. It carries no delete: that is the row's.
+          The editor: Home's goal sheet — title, description, tags, subtasks,
+          date. Its status toggle runs through the cascade's tick rule.
         -->
-        <goal-edit-dialog-container
+        <goal-edit-sheet-container
           :open="editorOpen"
+          :shell="shell"
           :item="editItem"
-          :period="tab"
-          :date="editorDate"
+          :routines="routines"
           @close="closeEditor"
-          @saved="onGoalSaved"
+          @toggle="$refs.cascade.toggleItem($event)"
+          @changed="refreshReads"
         />
 
         <!-- The write units. Renderless: one mutation each and nothing else. -->
@@ -190,14 +189,14 @@ import GoalRoutineIndexContainer from '../containers/GoalRoutineIndexContainer.v
 import GoalsCascadeContainer from '../containers/GoalsCascadeContainer.vue';
 import GoalCalendarContainer from '../containers/GoalCalendarContainer.vue';
 import GoalItemCreateContainer from '../containers/GoalItemCreateContainer.vue';
-import GoalEditDialogContainer from '../containers/GoalEditDialogContainer.vue';
+import GoalEditSheetContainer from '../containers/GoalEditSheetContainer.vue';
 import GoalPeriodTickContainer from '../containers/GoalPeriodTickContainer.vue';
 import GoalPeriodDeleteContainer from '../containers/GoalPeriodDeleteContainer.vue';
 import GoalDeleteConfirmContainer from '../containers/GoalDeleteConfirmContainer.vue';
 import YearGoalListContainer from '../containers/YearGoalListContainer.vue';
 import { signOut } from '../utils/signOut';
 import {
-  DATE_FORMAT, currentRoutineId, goalDateFor, normaliseTab,
+  DATE_FORMAT, currentRoutineId, goalDateFor, normaliseTab, periodIsOver,
 } from '../utils/goalCascade';
 
 /** Routes this page can leave by. One place, so one line changes per route. */
@@ -227,7 +226,7 @@ export default {
     GoalsCascadeContainer,
     GoalCalendarContainer,
     GoalItemCreateContainer,
-    GoalEditDialogContainer,
+    GoalEditSheetContainer,
     GoalPeriodTickContainer,
     GoalPeriodDeleteContainer,
     GoalDeleteConfirmContainer,
@@ -291,6 +290,10 @@ export default {
      */
     editorDate() {
       return goalDateFor(normaliseTab(this.tab), this.selectedDate);
+    },
+    /** A past day, week, month or year takes no new goals (same rule as the list's add row). */
+    canAdd() {
+      return !periodIsOver(this.tab, this.selectedDate, this.today);
     },
   },
 
@@ -367,6 +370,7 @@ export default {
       this.monthDate = next.format(DATE_FORMAT);
     },
     openSheet() {
+      if (!this.canAdd) return;
       this.trackUserInteraction('add_goal_dialog_open', 'button_click', {
         from_page: 'goals',
         period: normaliseTab(this.tab),
@@ -550,68 +554,11 @@ export default {
 .goals-page--tablet,
 .goals-page--desktop {
   height: 100%;
-  overflow: hidden;
 }
 
 .goals-page--tablet > .rn-gcas,
 .goals-page--desktop > .rn-gcas {
   flex: 1;
   min-height: 0;
-}
-
-.goals-page__act {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(0, 0, 0, .12);
-  background: #fff;
-  color: rgba(0, 0, 0, .7);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.goals-page__act--label {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 18px;
-}
-
-/* The phone header has 412px to hold a title, two actions, the points chip and
-   the avatar — so there the actions are bare glyphs. */
-.goals-page__act--icon {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  justify-content: center;
-  border-color: transparent;
-  background: transparent;
-  border-radius: 50%;
-  color: rgba(0, 0, 0, .6);
-}
-
-.goals-page__act--icon:hover {
-  background: rgba(0, 0, 0, .05);
-}
-
-.goals-page__act--primary.goals-page__act--label {
-  border-color: transparent;
-  background: #288bd5;
-  color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, .14);
-}
-
-.goals-page__act--primary.goals-page__act--icon {
-  color: #288bd5;
-}
-
-.goals-page__act-glyph {
-  font-size: 18px;
-}
-
-.goals-page__act--icon .goals-page__act-glyph {
-  font-size: 24px;
 }
 </style>

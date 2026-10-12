@@ -32,7 +32,6 @@ jest.mock(
         routineEndTime: { type: String, default: '' },
         earnPoints: { type: Number, default: 0 },
         description: { type: String, default: '' },
-        parentGoalPeriodLabel: { type: String, default: '' },
         selectedTaskRef: { type: String, default: '' },
         selectedBody: { type: String, default: '' },
         agentState: { type: String, default: 'none' },
@@ -49,6 +48,7 @@ jest.mock(
         redeemCost: { type: Number, default: 0 },
         allowStartWithoutTask: { type: Boolean, default: false },
         openItemCount: { type: Number, default: -1 },
+        lockedItem: { type: Object, default: null },
       },
       render(h) { return h('div'); },
     },
@@ -120,6 +120,45 @@ describe('QuickGoalCreationContainer.addGoalItem', () => {
   });
 });
 
+// D-03 recurrence: the Start sheet's typed-task path adds the goal item and
+// fires the start event itself, so the page's zero-point guard never ran.
+describe('QuickGoalCreationContainer.startAgent on a 0-point routine', () => {
+  const ctxFor = (points) => makeCtx({
+    selectedTaskRef: 't1',
+    tasklist: [{ id: 't1', name: 'Task 1', points }],
+    addGoalItem: jest.fn(() => Promise.resolve()),
+  });
+
+  it('refuses with the 0-point notice and writes nothing when a task is typed', async () => {
+    const ctx = ctxFor(0);
+    await Container.methods.startAgent.call(ctx, { body: 'Check card statement' });
+
+    expect(ctx.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'This routine is worth 0 points', group: 'notify', type: 'warning',
+    }));
+    expect(ctx.addGoalItem).not.toHaveBeenCalled();
+    expect(ctx.$emit).not.toHaveBeenCalledWith('start-agent', expect.anything());
+  });
+
+  it('refuses the empty-input path too, before handing off to the page', async () => {
+    const ctx = ctxFor(0);
+    ctx.goals = [{ period: 'day', date: '24-07-2026', goalItems: [{ taskRef: 't1' }] }];
+    await Container.methods.startAgent.call(ctx, { body: '' });
+    expect(ctx.$notify).toHaveBeenCalledTimes(1);
+    expect(ctx.$emit).not.toHaveBeenCalled();
+  });
+
+  it('lets a routine worth any points through', async () => {
+    const ctx = ctxFor(1);
+    await Container.methods.startAgent.call(ctx, { body: 'Check card statement' });
+    expect(ctx.$notify).not.toHaveBeenCalled();
+    expect(ctx.addGoalItem).toHaveBeenCalledWith(
+      expect.objectContaining({ body: 'Check card statement', taskRef: 't1' }),
+      { explicitAgent: true },
+    );
+  });
+});
+
 // ---------------------------------------------------------------------------
 // The sheet presentation and the Build Agent handoff.
 //
@@ -178,6 +217,17 @@ describe('QuickGoalCreationContainer presentation', () => {
   it('defaults to the inline presentation, so the dialog hosts are untouched', () => {
     expect(Container.props.sheet.default).toBe(false);
     expect(mount().organism.sheet).toBe(false);
+  });
+
+  /**
+   * The item the routine is already locked in on. Pure pass-through — the page
+   * resolves it through the SAME `findFirstGoalIdForRoutine` the agent dispatch
+   * reads, so the container must not have its own idea of which item that is.
+   */
+  it('passes the locked-in goal item straight through', () => {
+    const lockedItem = { id: 'gi1', body: 'Ship the sheet' };
+    expect(mount({ lockedItem }).organism.lockedItem).toBe(lockedItem);
+    expect(mount().organism.lockedItem).toBeNull();
   });
 
   it('bubbles the backdrop dismissal', () => {

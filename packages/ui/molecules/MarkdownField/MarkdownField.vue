@@ -218,8 +218,12 @@ export default {
   cursor: pointer;
 }
 
-.rn-mdf__toggle:hover {
-  background: rgba(40, 139, 213, .08);
+/* A real button keeps its hover tint, but only where a pointer can actually
+   hover — otherwise it latches on after a tap, same as the preview did. */
+@media (hover: hover) and (pointer: fine) {
+  .rn-mdf__toggle:hover {
+    background: rgba(40, 139, 213, .08);
+  }
 }
 
 .rn-mdf__toggle-icon {
@@ -257,9 +261,9 @@ export default {
   overflow-wrap: break-word;
 }
 
-.rn-mdf__preview:hover {
-  background: rgba(0, 0, 0, .03);
-}
+/* No hover wash on the preview. It is a block of text, not a control, and on
+   a touch screen `:hover` sticks after the tap — so in a dialog the whole
+   field kept a grey background once it had been touched. */
 
 .rn-mdf__preview--empty {
   color: rgba(0, 0, 0, .35);

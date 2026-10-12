@@ -28,7 +28,30 @@
       @change-period="goPeriod"
       @open-routine="openRoutine"
       @open-history="goTo(HISTORY_ROUTE)"
-    />
+    >
+      <!--
+        On the clock: on time / late / missed for the period on screen. The
+        report says `wide` when it gives the card a full-width row (tablet and
+        desktop); the phone stacks it in its single column.
+      -->
+      <template v-slot:timing="{ wide }">
+        <RoutineTimingContainer
+          v-slot="{ timing, loading, error }"
+          :start-date="periodRange.startDate"
+          :end-date="periodRange.endDate"
+          :today="today"
+        >
+          <TimingReportCard
+            v-bind="timingCard(timing)"
+            :period="safePeriod"
+            :loading="loading"
+            :error="error"
+            :wide="!!wide"
+            @open-routine="openRoutine"
+          />
+        </RoutineTimingContainer>
+      </template>
+    </ProgressReportContainer>
   </AppShellContainer>
 </template>
 
@@ -49,10 +72,15 @@
  */
 import moment from 'moment';
 import SlidingSwitch from '@routine-notes/ui/molecules/SlidingSwitch/SlidingSwitch.vue';
+import TimingReportCard from '@routine-notes/ui/molecules/TimingReportCard/TimingReportCard.vue';
 import { resolveShell } from '@routine-notes/ui/constants/navigation';
 import { PROGRESS_PERIODS } from '@routine-notes/ui/constants/progress';
 import AppShellContainer from '../containers/AppShellContainer.vue';
 import ProgressReportContainer from '../containers/ProgressReportContainer.vue';
+import RoutineTimingContainer from '../containers/RoutineTimingContainer.vue';
+import {
+  onTimeRate, timingBuckets, weekdayPattern, routineRows,
+} from '../utils/routineTiming';
 import { signOut } from '../utils/signOut';
 import {
   DATE_FORMAT, normalisePeriod, periodWindow, rangeLabel,
@@ -66,7 +94,9 @@ export const LOGOUT_KEY = 'logout';
 export default {
   name: 'ProgressTime',
 
-  components: { AppShellContainer, ProgressReportContainer, SlidingSwitch },
+  components: {
+    AppShellContainer, ProgressReportContainer, RoutineTimingContainer, SlidingSwitch, TimingReportCard,
+  },
 
   props: {
     /** From the route: `/progress/:period`, defaulted to week by views/Progress.vue. */
@@ -89,6 +119,10 @@ export default {
     safePeriod() {
       return normalisePeriod(this.period);
     },
+    /** The period on screen, so the Timing card reads the same window as the report. */
+    periodRange() {
+      return periodWindow(this.safePeriod, this.today);
+    },
     /** The shell's subtitle: "Week of 6 – 12 September". */
     rangeLabel() {
       const { startDate, endDate } = periodWindow(this.safePeriod, this.today);
@@ -97,6 +131,17 @@ export default {
   },
 
   methods: {
+    /** The Timing card's props from one `routineTiming` read. */
+    timingCard(timing) {
+      if (!timing) return {};
+      return {
+        totals: timing,
+        rate: onTimeRate(timing),
+        buckets: timingBuckets(this.safePeriod, timing.days),
+        weekdays: weekdayPattern(timing.days),
+        routines: routineRows(timing.routines),
+      };
+    },
     goTo(route) {
       if (!route || this.$route.path === route) return;
       this.$router.push(route).catch(() => {});

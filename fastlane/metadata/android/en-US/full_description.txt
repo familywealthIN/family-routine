@@ -1,0 +1,72 @@
+Most task apps are a list that grows. Routine Notes is a day that repeats.
+
+You design your day once — honest start times, a point value on each block — and then you show up. Every goal you care about hangs off that timeline, so planning and doing are the same screen.
+
+The belief behind it: incremental daily achievement compounds into outcomes that seemed impossible.
+
+
+YOUR DAY, TIME-BOXED
+
+Routine Notes lays your day on a timeline, keeps score on punctuality, and never lets a missed check-in silently disappear.
+
+• Punctuality window — each routine opens a window around its start time. Tick inside it and the check-in counts as on time.
+• Quick tasks — drop one-off work into the current routine slot, so improvised work still lands in a time box.
+• Past, not gone — miss the window and the routine moves to Past with a redeem button. Check in late with points, streak intact.
+• Skip Day — pause the loop for travel or a sick day without wrecking your history.
+
+
+THE YEAR → DAY CASCADE
+
+Turn one yearly ambition into month, week and day milestones — then let your daily wins roll back up.
+
+• Break a year goal into month and week milestones, each decomposing into schedulable day goals.
+• Link days to routines — a day goal attached to a routine shows on the Home card, so the plan and the timeline are the same object.
+• Wins roll up — five day wins complete a week, three weeks a month, six months a year. You never mark a year done, you arrive at it.
+• A calendar view prints each day's goal count, so gaps are visible before they become months.
+
+
+A SELF-SORTING PRIORITY MATRIX
+
+You never pick a quadrant. How and where you create a task decides it, so the Do / Plan / Delegate / Automate matrix mirrors the shape of your day on its own.
+
+• Do — anything you start, or create, for today.
+• Plan — anything you schedule for a future day.
+• Delegate — @mention a person in the task and it hands off.
+• Automate — kick a task off with an agent and it lands here.
+
+
+AGENTS, ATTACHED TO ROUTINES
+
+An agent is a worker glued to a routine. Start the task and it fires, work and it listens, finish and it reports success or failure.
+
+• Bind an agent to a routine; the routine's schedule becomes the agent's schedule.
+• Wire the events — point a start event, and an optional end event, at any URL: your own webhook, an n8n flow, your own endpoint, with the goal id substituted in.
+• Auditable lifecycle — idle, listening, finished, with success and failure counts per agent.
+• Redeem a late check-in and its agents still fire. Automation shouldn't punish a late human.
+
+
+THE POINT SYSTEM
+
+Three things decide whether a soldier takes the mountain — and they are the three ways you earn points. 100 each, 300 a day.
+
+• Discipline — be present. Tick routines inside their punctuality window.
+• Kinetics — put in the work. Clear the steps and quick tasks in every slot.
+• Geniuses — plan the campaign. Plan week, month and year milestones and link them to today.
+
+Points settle overnight and fund your AI agents. Show up daily and AI stays free.
+
+
+ALSO IN THE APP
+
+• Chat with each routine — ask what you did last time, break a task down, or plan from your next steps, in a thread scoped to that block.
+• Progress — routine efficiency with a week-over-week trend, a Discipline / Kinetics / Geniuses balance ring, and what's slipping.
+• Groups — share a routine with family or a team, see who has checked in today.
+• Phone, tablet and laptop (Googlebook and Chromebook) — side-by-side panes on big screens, keyboard and mouse welcome, synced everywhere, works offline.
+• Sign in with Google or with Apple. Delete your account from inside the app at any time.
+
+
+GETTING STARTED
+
+1. Set honest start times. Morning first, where Discipline is cheapest.
+2. Write one year goal. Cascade it down to a day goal you can schedule.
+3. Link it to a routine and show up. Earn your points on time and watch the loop compound.

@@ -85,6 +85,13 @@ If you want MCP next time, launch Chrome **before** starting the session:
   --remote-debugging-port=9222 --user-data-dir=C:/Users/grvpa/cdbg &   # SHORT path - MAX_PATH
 ```
 
+### Decided behaviour — never file, never fix
+
+- **AI goal builder Plan Title = the model's title.** The typed text is a prompt, and a prompt
+  cannot be a goal title. "Keep the typed title" was shipped and reverted TWICE as D-15
+  (6 and 11 Oct 2026). Drop any finding that asks for it at triage, and never send a fixer at
+  it. The full list of decided behaviour lives in `.claude/agents/beta-tester.md`.
+
 ### Known environment facts — exclude these from findings
 
 - The start webhook `https://workflows.grvpanchal.me/webhook/test-flow` **does not respond**
@@ -242,8 +249,8 @@ one wave both land there before dispatching them concurrently.
 
 After each wave, commit or merge its work one piece at a time and run the touched workspace's
 checks before starting the next — a wave that lands on a broken tree wastes the next wave.
-Baseline for comparison: `packages/ui` 221 tests, `apps/web-app` 561, `apps/server` 207, all
-green as of 2 Oct 2026. Jest's `testMatch` excludes `apps/web-app/e2e/`, so `yarn test` is
+Baseline for comparison: `packages/ui` 1484 tests, `apps/web-app` 1670, `apps/server` 359, all
+green as of 9 Oct 2026. Jest's `testMatch` excludes `apps/web-app/e2e/`, so `yarn test` is
 safe to run while a beta session is live; **never** run the Playwright e2e specs then —
 `cache-integrity.spec.js` deletes today's Routine document out from under the run.
 

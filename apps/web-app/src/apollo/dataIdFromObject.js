@@ -21,10 +21,16 @@
  * other screen silently repaints with a figure for a period it never asked
  * about. That is the D-13 symptom (two Routine Efficiency numbers at the same
  * instant) arriving by a second route.
+ *
+ * `routineTiming` is the same again: a slot or routine row carries the routine's
+ * id, but its counts belong to the date range asked for, so the drawer's two
+ * weeks and the Progress page's year must not share one record.
  */
 import { defaultDataIdFromObject } from 'apollo-cache-inmemory';
 
-const UNNORMALIZED_TYPES = ['ProgressItem', 'ProgressItemValues'];
+const UNNORMALIZED_TYPES = [
+  'ProgressItem', 'ProgressItemValues', 'RoutineTimingSlot', 'RoutineTimingRoutine',
+];
 
 export default function dataIdFromObject(object) {
   if (object && object.id === null) return null;

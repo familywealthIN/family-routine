@@ -56,18 +56,19 @@
     <priority-item-complete ref="complete" :date="date" @error="onCompleteError" />
     <priority-routine-create ref="routineCreate" @error="onAutomateError" />
 
-    <!-- Reused as-is: the agent editor (its own domain + routine options) and the
-         goal editor dialog. A Priority row is still editable — the design draws
-         no pencil, but losing the only editor on the screen would be a
-         regression, so the row body opens it. -->
+    <!-- Reused as-is: the agent editor (its own domain + routine options). A
+         Priority row is still editable — the design draws no pencil, so the row
+         body opens the goal sheet below. -->
     <agent-edit-modal ref="agentModal" :tasklist="tasklist" @saved="onAgentSaved" />
-    <!-- Mounted only with an item: the dialog renders its content eagerly, and
-         GoalCreation dereferences its item on the first render. -->
-    <goal-display-modal
-      v-if="selectedGoalItem"
-      v-model="goalDialogOpen"
-      :goal-item="selectedGoalItem"
-      @add-update-goal-entry="onGoalEditorClosed"
+    <!-- Home's goal sheet, the one editor every page now shares. -->
+    <goal-edit-sheet-container
+      :open="goalDialogOpen"
+      :shell="shell"
+      :item="selectedGoalItem"
+      :routines="tasklist"
+      @close="onGoalEditorClosed"
+      @toggle="onToggle"
+      @changed="refetchBoard"
     />
   </div>
 </template>
@@ -83,7 +84,7 @@ import PriorityQuadrantUpdate from '../containers/PriorityQuadrantUpdateContaine
 import PriorityItemComplete from '../containers/PriorityItemCompleteContainer.vue';
 import PriorityRoutineCreate from '../containers/PriorityRoutineCreateContainer.vue';
 import AgentEditModal from '../containers/AgentEditModalContainer.vue';
-import GoalDisplayModal from '../containers/GoalDisplayModalContainer.vue';
+import GoalEditSheetContainer from '../containers/GoalEditSheetContainer.vue';
 import { XP_BALANCE_QUERY } from '../composables/graphql/queries';
 import { NO_ROUTINE_KEY } from '../utils/priorityBoard';
 import { signOut } from '../utils/signOut';
@@ -116,7 +117,7 @@ export default {
     PriorityItemComplete,
     PriorityRoutineCreate,
     AgentEditModal,
-    GoalDisplayModal,
+    GoalEditSheetContainer,
   },
   apollo: {
     xpBalance: {

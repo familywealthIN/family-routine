@@ -12,6 +12,7 @@
     :empty="view.empty"
     :empty-text="pendingDate ? LOADING_TEXT : view.emptyText"
     :add-label="view.addLabel"
+    :can-add="view.canAdd"
     :load-error="loadError"
     :retrying="retrying"
     @select-step="$emit('select-step', $event)"
@@ -199,6 +200,21 @@ export default {
         return;
       }
       this.$emit('tick', plan);
+    },
+    /**
+     * The edit sheet's status toggle, run through the same tick rule as a tap
+     * on the row (a day tick can close the week, month and year above it).
+     */
+    toggleItem(item) {
+      if (!item || !item.id) return;
+      this.onToggleRow({
+        id: item.id,
+        period: item.period,
+        date: item.date,
+        taskRef: item.taskRef || '',
+        done: !!item.isComplete,
+        isMilestone: !!item.isMilestone,
+      });
     },
     /**
      * A row carries only what it draws. The editor needs the WHOLE goal item —

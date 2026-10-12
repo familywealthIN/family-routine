@@ -18,7 +18,7 @@
   -->
   <div
     class="rn-switch"
-    :class="`rn-switch--${variant}`"
+    :class="[`rn-switch--${variant}`, `rn-switch--${size}`]"
     role="tablist"
     data-testid="sliding-switch"
   >
@@ -59,13 +59,30 @@ export default {
     value: { type: [String, Number], default: null },
     /** `thumb` = Progress/Profile pill. `underline` = About feature tabs. */
     variant: { type: String, default: 'thumb' },
-    /** Segment height. 34 for the pill, 52 for the icon-over-label tabs. */
-    height: { type: Number, default: 34 },
+    /**
+     * `sm` = the 34px chassis pill. `xs` = the compact one: a tighter track and
+     * 11px labels, for a switch that has to hold five words (DateSelector's
+     * Day · Week · Month · Year · Lifetime) inside a dialog.
+     */
+    size: { type: String, default: 'sm' },
+    /**
+     * Segment height. Defaults by `size` (34 / 28); 52 for the icon-over-label
+     * tabs. Pass it only to override the size's own height.
+     */
+    height: { type: Number, default: null },
     indicatorColor: { type: String, default: '#288bd5' },
     activeColor: { type: String, default: 'rgba(0,0,0,.87)' },
     inactiveColor: { type: String, default: 'rgba(0,0,0,.55)' },
   },
   computed: {
+    /** The track's padding, which the thumb geometry has to subtract. */
+    inset() {
+      return this.size === 'xs' ? 2 : 3;
+    },
+    resolvedHeight() {
+      if (this.height != null) return this.height;
+      return this.size === 'xs' ? 28 : 34;
+    },
     resolvedSegments() {
       return this.segments.map((raw, index) => {
         const seg = typeof raw === 'object' && raw !== null ? raw : { key: raw, label: raw };
@@ -102,16 +119,17 @@ export default {
           background: this.indicatorColor,
         };
       }
+      const pad = this.inset;
       return {
-        left: `calc(3px + ${i} * (100% - 6px) / ${n})`,
-        width: `calc((100% - 6px) / ${n})`,
+        left: `calc(${pad}px + ${i} * (100% - ${pad * 2}px) / ${n})`,
+        width: `calc((100% - ${pad * 2}px) / ${n})`,
       };
     },
   },
   methods: {
     segStyle(seg) {
       return {
-        height: `${this.height}px`,
+        height: `${this.resolvedHeight}px`,
         color: seg.active ? this.activeColor : this.inactiveColor,
       };
     },
@@ -138,6 +156,14 @@ export default {
   background: rgba(0, 0, 0, .06);
 }
 
+/* Compact: 2px of track instead of 3, and labels small enough that five
+   segments fit a phone dialog without wrapping. The thumb geometry reads the
+   same inset from `inset()`, so the two stay in step. */
+.rn-switch--thumb.rn-switch--xs {
+  padding: 2px;
+  border-radius: 10px;
+}
+
 .rn-switch--underline {
   border-bottom: 1px solid rgba(0, 0, 0, .08);
 }
@@ -153,6 +179,12 @@ export default {
   border-radius: 9px;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+}
+
+.rn-switch--xs .rn-switch__indicator--thumb {
+  top: 2px;
+  bottom: 2px;
+  border-radius: 8px;
 }
 
 .rn-switch__indicator--underline {
@@ -183,6 +215,12 @@ export default {
   flex-direction: column;
   font-size: 11px;
   border-radius: 0;
+}
+
+.rn-switch--xs .rn-switch__seg {
+  font-size: 11px;
+  border-radius: 8px;
+  padding: 0 1px;
 }
 
 .rn-switch__icon {

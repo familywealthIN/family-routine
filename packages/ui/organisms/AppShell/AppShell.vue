@@ -253,6 +253,7 @@
       :streak-days="streakDays == null ? undefined : streakDays"
       :streak-hint="streakHint"
       :nav-items="moreItems"
+      :timing="timing"
       @input="drawerOpen = $event"
       @navigate="go"
     />
@@ -360,6 +361,8 @@ export default {
     streakHint: { type: String, default: '' },
     /** { D, K, G } percentages for the drawer's ring trio. Null hides it. */
     scores: { type: Object, default: null },
+    /** The drawer's on-time ribbon (UserDrawer `timing`). Null hides it. */
+    timing: { type: Object, default: null },
     /** Year average %, drawn as the ring around the Goals nav glyph. Null: no ring. */
     yearAverage: { type: Number, default: null },
     logo: { type: String, default: '/img/icons/android-chrome-192x192.png' },
@@ -520,22 +523,19 @@ export default {
   color: rgba(0, 0, 0, .87);
 }
 
-.capacitor-native .rn-shell {
-  --rn-shell-safe-bottom: 0px;
-}
+/* No `.capacitor-native` override zeroing this. It used to be zeroed because
+   android-safe-area.css pads <body> by the inset — but `.rn-shell--phone` is
+   `position: fixed; inset: 0`, so it is laid out against the viewport and never
+   sees that padding. Zeroing it drew the tab bar's middle labels underneath the
+   gesture pill / home indicator (measured on an API 36 emulator: inset 24px,
+   tabbar 850-914 in a 914px viewport, padding-bottom 4px). Same fix as
+   `--rn-safe-bottom` on the Home page. */
 
 /* Unknown is not 0: a page that did not supply D/K/G or the streak gets no
-   "0%" rings and no "0-day streak" in the drawer. The points pill on the
-   streak row stays - it has its own known/unknown handling. */
-.rn-shell--no-balance .rn-drawer__section-label,
-.rn-shell--no-balance .rn-drawer__donuts,
-.rn-shell--no-streak .rn-drawer__streak-icon,
-.rn-shell--no-streak .rn-drawer__streak-text {
+   "0%" circles and no "0-day streak" in the drawer. */
+.rn-shell--no-balance .rn-drawer__scores,
+.rn-shell--no-streak .rn-drawer__streak {
   display: none;
-}
-
-.rn-shell--no-balance .rn-drawer__streak {
-  margin-top: 12px;
 }
 
 .rn-shell--phone {
@@ -562,7 +562,9 @@ export default {
 
 .rn-shell__title {
   font-weight: 700;
-  line-height: 1.1;
+  /* 1.3, not 1.1: with overflow hidden for the ellipsis, a tighter box cut the
+     descenders of g, y and p off the bottom of the title. */
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -581,8 +583,14 @@ export default {
   flex-shrink: 0;
 }
 
+/* `1 1 0px` + `height: 0`, not `flex: 1` (a 0% basis): with a percentage basis
+   WebKit (iPad) treats this box's height as indefinite, so a page inside it
+   sized `height: 100%` (Goals, Routines, Year Goals on tablet and desktop)
+   resolved against the whole shell column instead, came out the header's
+   height too tall, and scrolled the page on top of its own panes. */
 .rn-shell__body {
-  flex: 1;
+  flex: 1 1 0px;
+  height: 0;
   min-height: 0;
   overflow-y: auto;
 }
@@ -634,6 +642,92 @@ export default {
 .rn-shell__topbar-text {
   flex: 1;
   min-width: 0;
+}
+
+/*
+ * The header action — ONE definition for every page's `header-actions` slot.
+ *
+ * Six pages had each rolled their own (`goals-page__act`, `rn-agents__new`,
+ * `rn-groups__invite-btn`, `rn-routines__new`, `rn-miles__act`, `rn-plan__act`)
+ * and they had drifted: the icon-only ones were 40x40 on Goals, Milestones and
+ * Routines but 36x36 on the Month Planner, while every labelled one was 36.
+ * Every design file's phone frame draws this control at 36px — a circle when it
+ * is a glyph alone, an r18 pill when it carries a word — so that is what this
+ * is, and the pages consume it instead of restating it.
+ *
+ * This block is deliberately NOT scoped: slot content belongs to the page, so a
+ * scoped rule here would never reach it.
+ */
+.rn-shell__act {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  border: 1px solid rgba(0, 0, 0, .12);
+  border-radius: 18px;
+  background: #fff;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .7);
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* 36 square + r18 is the circle; no second radius to keep in step. */
+.rn-shell__act--icon {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+  background: transparent;
+  color: rgba(0, 0, 0, .6);
+}
+
+.rn-shell__act--icon:hover {
+  background: rgba(0, 0, 0, .05);
+}
+
+.rn-shell__act--label {
+  padding: 0 14px;
+}
+
+.rn-shell__act--primary.rn-shell__act--label {
+  border-color: transparent;
+  background: #288bd5;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .14);
+}
+
+/* Icon-only has no room for a filled pill, so "primary" is the blue glyph. */
+.rn-shell__act--primary.rn-shell__act--icon {
+  color: #288bd5;
+}
+
+/* Groups' invite button when the group is full or failed to load, and any
+   action that is disabled (Goals' New goal on a period that has ended). */
+.rn-shell__act:disabled {
+  cursor: default;
+}
+
+.rn-shell__act--primary.rn-shell__act--icon:disabled {
+  color: rgba(0, 0, 0, .25);
+}
+
+.rn-shell__act--primary.rn-shell__act--label:disabled,
+.rn-shell__act--muted.rn-shell__act--label {
+  border-color: transparent;
+  background: rgba(0, 0, 0, .25);
+  color: #fff;
+}
+
+.rn-shell__act-glyph {
+  font-size: 18px;
+}
+
+.rn-shell__act--icon .rn-shell__act-glyph {
+  font-size: 22px;
 }
 
 .rn-shell__avatar-btn {
@@ -825,10 +919,13 @@ export default {
 
 /* The design's 4px head padding sits under its 24px status strip, which is
    what puts the title level with the rail's logo (22px down, 38 tall, centred
-   at 41). With the strip off — every real app — the head keeps those 24px (plus 1 to centre the 24px title line exactly), or
-   the title rides up to the top edge, 25px above the logo it should line up with. */
+   at 41). With the strip off — every real app — the head has to make up that
+   space itself, or the title rides up to the top edge. 26px, measured in
+   WebKit: the title is 22px on a 28.6px line, and the middle of its capitals
+   sits ~15px below the line's top, so a 26px pad puts them on the logo's
+   centre. 29px (sized for a 24px line) left the title visibly ~3px low. */
 .rn-shell--tablet.rn-shell--no-status .rn-shell__head {
-  padding-top: 29px;
+  padding-top: 26px;
 }
 
 .rn-shell--tablet .rn-shell__body {

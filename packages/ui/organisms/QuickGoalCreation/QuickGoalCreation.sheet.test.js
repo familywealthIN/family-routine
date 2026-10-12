@@ -247,13 +247,44 @@ describe('QuickGoalCreation — locked routine', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 4b — a routine that already has a goal item
+// ---------------------------------------------------------------------------
+/**
+ * The LOCKED IN card that named the item was removed (owner, 11 Oct 2026): it
+ * appeared mid-gesture once Start Agent created the item and shifted the sheet.
+ * Only the placeholder still says a second item is being added.
+ */
+describe('QuickGoalCreation — a routine that already has a goal item', () => {
+  const ITEM = { id: 'gi1', body: 'Ship the sheet', contribution: 'Unblocks the beta' };
+
+  it('asks for a task when the routine has nothing on it yet', () => {
+    const { el } = render();
+    expect(el.querySelector('#newGoalItemBody').getAttribute('placeholder'))
+      .toBe('Type your task');
+  });
+
+  it('draws no locked-in card, so nothing pops in after Start Agent', () => {
+    const { el } = render({ lockedItem: ITEM, agentState: 'assigned' });
+    expect(q(el, 'quick-goal-locked-item')).toBeNull();
+    expect(el.textContent).not.toContain('LOCKED IN');
+  });
+
+  // Typing still adds a SECOND item rather than replacing the first.
+  it('turns the input into "add another" once the routine has an item', () => {
+    const { el } = render({ lockedItem: ITEM });
+    expect(el.querySelector('#newGoalItemBody').getAttribute('placeholder'))
+      .toBe('Add another task');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 5 — the PARENT GOAL picker
 // ---------------------------------------------------------------------------
 describe('QuickGoalCreation — parent goal picker', () => {
   it('is collapsed, and says so, until it is tapped', async () => {
     const { el } = render({ goalItemsRef: GOAL_ITEMS });
     expect(q(el, 'quick-goal-goal-options')).toBeNull();
-    expect(text(q(el, 'quick-goal-goal-picker'))).toContain('PARENT GOAL');
+    expect(text(q(el, 'quick-goal-goal-picker'))).toContain('flag');
     expect(text(q(el, 'quick-goal-goal-value'))).toBe('No parent goal');
 
     q(el, 'quick-goal-goal-picker').click();

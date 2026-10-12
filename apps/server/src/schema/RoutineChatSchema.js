@@ -116,6 +116,8 @@ const RoutineChatReplyType = new GraphQLObjectType({
     intent: { type: GraphQLString },
     tasks: { type: new GraphQLList(GraphQLString) },
     completeItemId: { type: GraphQLString },
+    // The item a defer_task / skip_task turn acts on.
+    targetItemId: { type: GraphQLString },
     model: { type: GraphQLString },
     error: { type: GraphQLString },
   },

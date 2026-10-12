@@ -376,7 +376,8 @@ export default {
   outline: 0;
   background: transparent;
   font: inherit;
-  font-size: 14px;
+  /* 16px: anything smaller makes iOS zoom the page on focus. */
+  font-size: 16px;
   color: #333;
 }
 

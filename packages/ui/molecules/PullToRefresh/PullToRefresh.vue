@@ -7,8 +7,11 @@
     through `refreshing`, which keeps the indicator spinning until it is false.
 
     Touch only, and passive: it never blocks a scroll. A drag that turns out
-    horizontal first (the routine deck's swipe) is ignored, as is any drag that
-    starts with a scroller under the finger not at its top.
+    horizontal first (the routine deck's swipe) is ignored. A downward drag that
+    starts with a scroller under the finger part-way down scrolls it as usual and
+    becomes a pull once everything under the finger reaches its top, in the same
+    gesture, the way the native control does. Home opens its card scrolled to the
+    bottom of the chat, so refusing those outright meant most pulls did nothing.
 
     Presentational — no data, no Apollo.
   -->
@@ -90,7 +93,7 @@ export default {
         x0: touch.clientX,
         y0: touch.clientY,
         axis: '',
-        atTop: this.allScrollersAtTop(event.target),
+        target: event.target,
       };
     },
     onTouchMove(event) {
@@ -101,12 +104,19 @@ export default {
       const dy = touch.clientY - g.y0;
       if (!g.axis) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) < AXIS_LOCK_PX) return;
-        // Only a downward, mostly-vertical drag from the very top is a pull.
-        if (!g.atTop || dy <= 0 || Math.abs(dx) >= Math.abs(dy)) {
+        // A sideways drag is the deck's swipe, never a pull.
+        if (Math.abs(dx) >= Math.abs(dy)) {
           this.gesture = null;
           return;
         }
         g.axis = 'y';
+      }
+      if (!this.pulling) {
+        // Still scrolling: the pull starts where the content runs out of
+        // scroll, if the finger is still heading down.
+        const goingDown = touch.clientY > (g.lastY === undefined ? g.y0 : g.lastY);
+        g.lastY = touch.clientY;
+        if (!goingDown || !this.allScrollersAtTop(g.target)) return;
         g.y0 = touch.clientY;
         this.pulling = true;
       }

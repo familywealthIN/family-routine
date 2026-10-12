@@ -3,10 +3,16 @@
     Week / Month / Year panel shown inside the focus card when a cascade tab is
     active. One goal, its unit grid, and what it rolls up into.
 
-    The thresholds it counts against are the real ones from
-    `utils/getDates.js → threshold` (week 5 days, month 3 weeks, year 6 months),
-    which is also what the server's autoCheckTaskPeriod uses — so "4 / 5 days ·
-    Active" is the same arithmetic that will auto-tick the parent.
+    The counter is in MILESTONES, because that is the unit the server's gate
+    counts in: `evaluateAutoComplete` ticks the parent on
+    `met >= threshold && no outstanding milestone`, so `done / threshold` is the
+    goal's own `milestonesComplete` over every milestone it holds, floored at
+    the real threshold from `utils/getDates.js` (week 5, month 3, year 6). The
+    grid below stays in calendar cells, and a cell can hold more than one
+    milestone — which is why its counts and this counter are not the same number.
+
+    `complete` is the server's `isComplete` and nothing else. This panel never
+    declares a goal Done on its own arithmetic.
   -->
   <div v-if="cascade" class="rn-cascade">
     <div class="rn-cascade__head">

@@ -1,0 +1,7 @@
+A full redesign of every screen.
+
+- Home is now a focus card: the routine you are on, its checklist, and a chat thread scoped to that block.
+- Tapping a routine's check circle always asks first, and names the goal item you are about to complete.
+- New Priority board, Agents page, Progress trends and a year-to-day goal cascade.
+- Groups show who has checked in today.
+- Faster, steadier offline behaviour, and a pile of sync fixes around late check-ins and new days.

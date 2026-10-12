@@ -9,6 +9,7 @@
  * the routine thread's "Before you start" card missing for most tagged routines
  * (docs/redesign/STATUS.md gap 16).
  */
+const moment = require('moment');
 const { CACHE_KEY_PREFIX } = require('@routine-notes/ui/utils/dashboardCache');
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -143,6 +144,45 @@ describe('ensureTagContext', () => {
       { date: 'Fri', text: 'Stretch', done: false },
       { date: 'Thu', text: 'Missed · meeting ran over', done: false },
     ]);
+  });
+
+  // D-06: `goalsByTag` returns the whole tag, future days included, and an
+  // unticked FUTURE goal carries `isComplete: false` exactly like a missed one.
+  // Listing it under PAST ACTIVITY painted work the user had not reached yet
+  // with the missed icon, so planning a week ahead read as a week of failure.
+  it('leaves future-dated goals out of PAST ACTIVITY', async () => {
+    const { ensureTagContext } = load();
+    // Built relative to the clock so the case cannot rot into the past.
+    const day = (offset) => moment().add(offset, 'days').format('DD-MM-YYYY');
+    const api = makeVm({
+      goals: [
+        { date: day(-1), period: 'day', goalItems: [{ body: 'Yesterday ran', isComplete: true }] },
+        { date: day(2), period: 'day', goalItems: [{ body: 'Planned long run', isComplete: false }] },
+        { date: day(5), period: 'day', goalItems: [{ body: 'Planned rest', isComplete: false }] },
+      ],
+    });
+
+    await ensureTagContext(api.vm, 'area:health:fitness');
+
+    expect(stored('area:health:fitness').activity)
+      .toEqual([{ date: moment().add(-1, 'days').format('ddd'), text: 'Yesterday ran', done: true }]);
+  });
+
+  // Today is not past either — the brief is read before the day's work is done,
+  // so today's own items would all show as missed.
+  it('leaves today out of PAST ACTIVITY', async () => {
+    const { ensureTagContext } = load();
+    const api = makeVm({
+      goals: [{
+        date: moment().format('DD-MM-YYYY'),
+        period: 'day',
+        goalItems: [{ body: "Today's run", isComplete: false }],
+      }],
+    });
+
+    await ensureTagContext(api.vm, 'area:health:fitness');
+
+    expect(stored('area:health:fitness').activity).toEqual([]);
   });
 
   it('asks once for a tag, however many routines carry it', async () => {

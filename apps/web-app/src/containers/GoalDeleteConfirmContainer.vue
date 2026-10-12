@@ -5,26 +5,21 @@
     dialog chrome; the page calls `open(target)` and acts on `confirm`, so no
     page holds modal state and no organism talks to Apollo.
   -->
-  <OrganismSimpleDialog
-    v-model="isOpen"
-    persistent
-    title="Delete this goal?"
+  <goal-delete-sheet
+    :open="isOpen"
+    :shell="shell"
+    :summary="summary"
+    :milestones="milestoneBodies"
+    :hidden-count="hiddenCount"
     :confirm-text="confirmText"
-    confirm-color="error"
     data-testid="goal-delete-confirm"
-    @cancel="close"
+    @close="close"
     @confirm="onConfirm"
-  >
-    <p class="mb-2">{{ summary }}</p>
-    <ul v-if="milestoneBodies.length" class="milestone-list">
-      <li v-for="milestone in milestoneBodies" :key="milestone.id">{{ milestone.body }}</li>
-    </ul>
-    <p v-if="hiddenCount" class="mb-0 grey--text">and {{ hiddenCount }} more</p>
-  </OrganismSimpleDialog>
+  />
 </template>
 
 <script>
-import { OrganismSimpleDialog } from '@routine-notes/ui/organisms';
+import GoalDeleteSheet from '@routine-notes/ui/organisms/GoalDeleteSheet/GoalDeleteSheet.vue';
 import { GOAL_ITEM_MILESTONES_QUERY } from '../composables/useGoalQueries';
 
 // Enough to recognise the plan without turning the dialog into a list view.
@@ -32,7 +27,10 @@ const PREVIEW_LIMIT = 5;
 
 export default {
   name: 'GoalDeleteConfirmContainer',
-  components: { OrganismSimpleDialog },
+  components: { GoalDeleteSheet },
+  props: {
+    shell: { type: String, default: 'phone' },
+  },
   data() {
     return {
       isOpen: false,
@@ -109,10 +107,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-  .milestone-list {
-    margin: 0 0 8px 0;
-    padding-left: 20px;
-  }
-</style>

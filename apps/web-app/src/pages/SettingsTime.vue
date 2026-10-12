@@ -22,14 +22,14 @@
     <template v-slot:header-actions>
       <button
         type="button"
-        class="rn-routines__new"
-        :class="`rn-routines__new--${shell}`"
+        class="rn-shell__act rn-shell__act--primary"
+        :class="isPhone ? 'rn-shell__act--icon' : 'rn-shell__act--label'"
         title="New routine"
         data-testid="routines-new"
         @click="openNew()"
       >
-        <i class="rn-mi rn-routines__new-glyph">add</i>
-        <span v-if="!isPhone" class="rn-routines__new-label">New routine</span>
+        <i class="rn-mi rn-shell__act-glyph">add</i>
+        <span v-if="!isPhone">New routine</span>
       </button>
     </template>
 
@@ -275,7 +275,6 @@ export default {
       this.flash(saved.id);
       this.trackBusinessEvent(created ? 'routine_item_created' : 'routine_item_updated', {
         item_id: saved.id,
-        item_name: saved.name,
         time: saved.time,
         points: saved.points,
         steps_count: (saved.steps || []).length,
@@ -308,7 +307,7 @@ export default {
     onRemoved(removed) {
       const name = (removed && removed.name) || 'The routine';
       if (removed && String(removed.id) === this.selectedId) this.selectedId = '';
-      this.trackBusinessEvent('routine_item_deleted', { item_id: removed && removed.id, item_name: name });
+      this.trackBusinessEvent('routine_item_deleted', { item_id: removed && removed.id });
       this.notify('Routine deleted', `${name} no longer earns points`, 'delete', '#ef9a9a');
     },
 
@@ -396,57 +395,11 @@ export default {
 .rn-routines--desktop {
   flex: 1;
   height: 100%;
-  overflow: hidden;
 }
 
 .rn-routines--tablet > *,
 .rn-routines--desktop > * {
   flex: 1;
   min-height: 0;
-}
-
-/* --- the header's New routine control ----------------------------------- */
-
-.rn-routines__new {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 36px;
-  border: 0;
-  cursor: pointer;
-  flex-shrink: 0;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-/* Phone has no room for a pill beside the points chip and the avatar, so the
-   design uses a bare blue +. */
-.rn-routines__new--phone {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  justify-content: center;
-  border-radius: 50%;
-  background: transparent;
-  color: #288bd5;
-}
-
-.rn-routines__new--tablet,
-.rn-routines__new--desktop {
-  padding: 0 16px;
-  border-radius: 18px;
-  background: #288bd5;
-  color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, .14);
-}
-
-.rn-routines__new--phone .rn-routines__new-glyph {
-  font-size: 24px;
-}
-
-.rn-routines__new--tablet .rn-routines__new-glyph,
-.rn-routines__new--desktop .rn-routines__new-glyph {
-  font-size: 18px;
 }
 </style>

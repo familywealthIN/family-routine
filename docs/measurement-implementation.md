@@ -230,7 +230,7 @@ Each component follows a consistent integration pattern:
 | `goal_period_change` | `button_toggle` | `from_period` , `to_period` , `selected_task_ref` | User changes goal time period |
 | `check_dialog_click` | `button_click` | `task_id` , `date` , `goal_period` | User opens task check dialog |
 | `milestones_navigation` | `button_click` | `from_page` , `to_page` | Navigation to milestones |
-| `add_goal_dialog_open` | `button_click` | `from_page` , `goals_count` | Open goal creation dialog |
+| `add_goal_dialog_open` | `button_click` | `from_page` , `period` | Open goal creation dialog |
 
 ### Business Events
 

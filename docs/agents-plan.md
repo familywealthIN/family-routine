@@ -51,6 +51,8 @@ After the start event returns HTTP 200:
 * If no end event is configured, the agent should move to finished state and refresh the routine view.
 * If an end event is configured, the agent should remain in a listening state until the end event is resolved. refresh at both listening and finished state change
 
+As built: the run is recorded open on the server (`running`, `agentStore` `openRun`) *before* the start webhook is called, and the end event fires only while the server has a run opened today. "HTTP 200" means the status code; a body that is not valid JSON is kept as text (`utils/responseBody.js`) rather than failing the run. See `docs/routine-focus-home.md` for the end-event rule.
+
 The goal item updated by the agent should show a ready status so the user can clearly see which goal is associated with the current or most recent execution. This makes the relationship between routine action, goal state, and agent execution visible in the UI.
 
 Once all task-goals are complete, using the same completion trigger mechanism currently driven by K stimulus, the system should fire the agent’s end event. After that:

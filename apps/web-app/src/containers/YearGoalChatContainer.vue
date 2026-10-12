@@ -13,6 +13,7 @@
 </template>
 
 <script>
+import { resolveShell } from '@routine-notes/ui/constants/navigation';
 /**
  * The year goal's conversation.
  *
@@ -79,7 +80,12 @@ export default {
 
   data() {
     return {
-      chatMessages: [], typing: false, sending: false, adding: {},
+      chatMessages: [],
+      typing: false,
+      sending: false,
+      adding: {},
+      /** Set by a send; the next thread load may then scroll (see watch). */
+      userScrollIntent: false,
     };
   },
 
@@ -207,7 +213,14 @@ export default {
   },
 
   watch: {
+    // On phone the thread shares the PAGE's scroller, so pinning it to the
+    // bottom on every load dragged the year goal off screen as the page opened.
+    // There it only follows a message the user just sent; the tablet/desktop
+    // chat pane is its own scroller and still opens at the latest message.
     chatMessages() {
+      const intent = this.userScrollIntent;
+      this.userScrollIntent = false;
+      if (this.isPhone() && !intent) return;
       this.scrollIntoView();
     },
     typing(active) {
@@ -222,6 +235,9 @@ export default {
       }
     },
 
+    isPhone() {
+      return resolveShell(this.$vuetify && this.$vuetify.breakpoint) === 'phone';
+    },
     scrollIntoView() {
       this.$nextTick(() => setTimeout(() => {
         let node = this.$el && this.$el.parentElement;
@@ -275,6 +291,7 @@ export default {
 
       this.sending = true;
       this.typing = true;
+      this.userScrollIntent = true;
       this.$emit('sent');
 
       try {

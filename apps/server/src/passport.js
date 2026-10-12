@@ -15,8 +15,21 @@ const googleClients = {
   ios: new OAuth2Client(GA_IOS_CLIENT_ID),
 };
 
+/**
+ * Apple's identity token carries `sub`, `email` and `is_private_email` — and no
+ * name, ever. The real name is handed over ONCE, in the authorization response
+ * of the very first sign-in for an Apple ID, and only the client ever sees it.
+ * So the client sends it to us as `name`, and we use it when it is there.
+ *
+ * `displayNameFromEmail` is what we fall back to otherwise, and it is a
+ * PLACEHOLDER, not a name: for `alex@example.com` it is "alex". Onboarding
+ * recognises it as one and asks (`WelcomeWizard.needsName`), so the two have to
+ * agree on the shape — see that computed before changing this.
+ */
+const displayNameFromEmail = (email) => (email ? email.split('@')[0] : 'Apple User');
+
 const authenticateApple = async (req) => {
-  const { identityToken } = req.body;
+  const { identityToken, name: providedName } = req.body;
   if (!identityToken) {
     throw new Error('No identity token provided');
   }
@@ -30,7 +43,8 @@ const authenticateApple = async (req) => {
 
     // Apple may not provide email on subsequent logins
     const email = payload.email || `${payload.sub}@privaterelay.appleid.com`;
-    const name = payload.email ? payload.email.split('@')[0] : 'Apple User';
+    const trimmedName = (providedName || '').trim();
+    const name = trimmedName || displayNameFromEmail(payload.email);
 
     return {
       data: {
@@ -225,5 +239,10 @@ async function upsertGoogleUser({ profile }, notificationId, timezone) {
 }
 
 module.exports = {
-  generateAccessToken, upsertGoogleUser, upsertAppleUser, authenticateGoogle, authenticateApple,
+  generateAccessToken,
+  upsertGoogleUser,
+  upsertAppleUser,
+  authenticateGoogle,
+  authenticateApple,
+  displayNameFromEmail,
 };

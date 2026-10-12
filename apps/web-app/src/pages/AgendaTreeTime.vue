@@ -1,201 +1,398 @@
 <template>
-  <container-box :isLoading="isLoading">
-    <pre style="display: none;">
-      {{ JSON.stringify(monthTaskGoals, null, 2) }}
-    </pre>
-    <atom-layout pt-3>
-      <atom-flex xs12 sm4 pl-3 pr-2 d-flex>
-        <atom-select :items="months" label="Months" v-model="selectedMonth" item-text="label" item-value="value"
-          outline></atom-select>
-      </atom-flex>
-      <atom-flex xs12 sm4 pl-2 pr-2 d-flex>
-        <atom-select :items="tasklist" label="Task List" v-model="selectedTaskRef" item-text="name" item-value="id"
-          outline></atom-select>
-      </atom-flex>
-      <atom-flex xs12 sm4 pl-2 pr-3 d-flex>
-        <atom-select :items="monthGoals" v-model="monthGoalRef" label="Month Goal" item-text="name" item-value="id"
-          outline></atom-select>
-      </atom-flex>
-    </atom-layout>
-    <div class="wrapper">
-      <ul class="parent">
-        <li v-bind:key="String(goal.date + goal.name +goal.period)" class="long" v-for="goal in agendaTreeGoals">
-          <span class="rounded-long" @click="newGoalItem(goal.date, goal.name, goal.period)">
-            {{ formatDate(goal.date) }} {{ goal.name }}
-          </span>
-          <ul class="children first-child">
-            <li
-              v-bind:key="String(monthMilestone.date + monthMilestone.name + monthMilestone.period)"
-              class="long"
-              v-for="monthMilestone in goal.milestones"
+  <!--
+    /agenda/tree/:selectedTaskRef — the month planner for ONE routine, moved onto
+    the chassis and made to fit a phone.
+
+    What it is: a routine's month goal, the three work weeks under it, and the
+    five weekdays under each week. Tapping an empty node adds the goal for that
+    date. The cascade is the point — a day goal rolls up into a week goal, which
+    rolls up into the month goal (chassis.md § "The goal cascade").
+
+    Why it was rebuilt rather than patched:
+
+    * It was drawn as a LEFT-TO-RIGHT tree out of absolutely-positioned `<ul>`s
+      with hardcoded pixels — 260px nodes, `left:100%` per level, a 1000px
+      wrapper and a 700px children column. Three levels wide is ~820px, so on
+      every phone in the fleet (320-412px) half the tree sat outside the
+      viewport with no way to reach it: the page scrolls vertically, and the
+      overflowing nodes were to the RIGHT. The day column was also 700px tall
+      regardless of content, so the 15 days were spread over two screens of
+      whitespace.
+    * It drew legacy chrome (a MobileLayout toolbar under the status bar, and no
+      bottom nav of its own), while the page it is reached FROM — Progress —
+      already mounts AppShellContainer.
+
+    Now it is a vertical cascade: the month node, then one card per week holding
+    its five day rows. That has no intrinsic width, so it reflows to one column
+    on a phone and two or three on tablet/desktop, and each card is as tall as
+    the rows it actually has.
+
+    Bugs fixed on the way, all three of them things the old layout hid:
+
+    1. The Months dropdown did nothing. Picking a month moved `date`, and the
+       `date` watcher refetched the routine but never the goals, so the tree
+       kept showing the month you came from. The watcher now reloads both.
+    2. `selectedTaskRef` is a ROUTE PROP and the Routine dropdown had it as its
+       `v-model`, so choosing a routine wrote to a prop — Vue warns, and the
+       parent overwrites it on the next render. The selection is local state now,
+       seeded and re-seeded from the prop.
+    3. A failed `monthTaskGoals` read only reached `console.error`, leaving an
+       empty tree that looked like "nothing planned yet". It gets the chassis'
+       LoadErrorState, like every other page.
+  -->
+  <app-shell-container
+    active="goals"
+    title="Month Planner"
+    :subtitle="subLabel"
+    @navigate="onNavigate"
+    @sign-out="onSignOut"
+  >
+    <template v-slot:header-actions>
+      <button
+        type="button"
+        class="rn-shell__act"
+        :class="labelledActions ? 'rn-shell__act--label' : 'rn-shell__act--icon'"
+        title="Progress"
+        data-testid="plan-progress"
+        @click="goTo('/progress')"
+      >
+        <i class="rn-mi rn-shell__act-glyph">insights</i>
+        <span v-if="labelledActions">Progress</span>
+      </button>
+    </template>
+
+    <div class="rn-plan" :class="`rn-plan--${shell}`" data-testid="agenda-tree-page">
+      <!--
+        The three pickers, as the pill selects the AI search modal's toolbar
+        uses: 36px, r12, #f5f5f5 on a #e8e8e8 hairline. Native <select> on
+        purpose — it gets the OS picker on a phone, which beats a hand-rolled
+        popover on a 360px screen, and it is reachable by keyboard for free.
+      -->
+      <div class="rn-plan__bar" data-testid="plan-bar">
+        <label class="rn-plan__pick">
+          <i class="rn-mi rn-plan__pick-glyph">event</i>
+          <select v-model="selectedMonth" class="rn-plan__sel" data-testid="plan-month">
+            <option v-for="month in months" :key="month.value" :value="month.value">
+              {{ month.label }}
+            </option>
+          </select>
+          <i class="rn-mi rn-plan__pick-chev">expand_more</i>
+        </label>
+
+        <label class="rn-plan__pick">
+          <i class="rn-mi rn-plan__pick-glyph">history</i>
+          <select v-model="taskRef" class="rn-plan__sel" data-testid="plan-routine">
+            <option value="">Pick a routine</option>
+            <option v-for="task in tasklist" :key="task.id" :value="task.id">
+              {{ task.name }}
+            </option>
+          </select>
+          <i class="rn-mi rn-plan__pick-chev">expand_more</i>
+        </label>
+
+        <!-- Only once there is more than one month goal is there a choice to make. -->
+        <label v-if="monthGoals.length > 1" class="rn-plan__pick rn-plan__pick--wide">
+          <i class="rn-mi rn-plan__pick-glyph">flag</i>
+          <select v-model="monthGoalRef" class="rn-plan__sel" data-testid="plan-month-goal">
+            <option v-for="goal in monthGoals" :key="goal.id" :value="goal.id">
+              {{ goal.name }}
+            </option>
+          </select>
+          <i class="rn-mi rn-plan__pick-chev">expand_more</i>
+        </label>
+      </div>
+
+      <load-error-state
+        v-if="loadError"
+        message="We couldn't load this month's plan."
+        :retrying="isLoading"
+        @retry="reload"
+      />
+
+      <p v-else-if="!taskRef" class="rn-plan__note" data-testid="plan-no-routine">
+        Pick a routine to plan its month.
+      </p>
+
+      <template v-else>
+        <!-- The month node. Its own card, full width: everything below rolls up into it. -->
+        <section class="rn-plan__month" data-testid="plan-month-node">
+          <div class="rn-plan__month-head">
+            <span class="rn-plan__tag">Month</span>
+            <span class="rn-plan__month-date">{{ monthLabel }}</span>
+            <span class="rn-plan__filled" data-testid="plan-filled">{{ filledLabel }}</span>
+          </div>
+          <component
+            :is="monthNode && monthNode.name ? 'div' : 'button'"
+            :type="monthNode && monthNode.name ? null : 'button'"
+            class="rn-plan__node rn-plan__node--month"
+            :class="{ 'rn-plan__node--empty': !(monthNode && monthNode.name) }"
+            data-testid="plan-month-body"
+            @click="addFor(monthNode)"
+          >
+            <template v-if="monthNode && monthNode.name">{{ monthNode.name }}</template>
+            <template v-else>
+              <i class="rn-mi rn-plan__node-add">add</i>Set a month goal
+            </template>
+          </component>
+        </section>
+
+        <!-- One card per work week, each holding its five weekdays. -->
+        <div class="rn-plan__weeks">
+          <section
+            v-for="(week, index) in weeks"
+            :key="week.date"
+            class="rn-plan__week"
+            :data-testid="`plan-week-${index}`"
+          >
+            <div class="rn-plan__week-head">
+              <span class="rn-plan__tag rn-plan__tag--week">Week {{ index + 1 }}</span>
+              <span class="rn-plan__week-range">{{ weekRange(week) }}</span>
+            </div>
+
+            <component
+              :is="week.name ? 'div' : 'button'"
+              :type="week.name ? null : 'button'"
+              class="rn-plan__node"
+              :class="{ 'rn-plan__node--empty': !week.name }"
+              :data-testid="`plan-week-body-${index}`"
+              @click="addFor(week)"
             >
-              <span class="rounded-long"
-                @click="newGoalItem(monthMilestone.date, monthMilestone.name, monthMilestone.period)">
-                {{ formatDate(monthMilestone.date) }} {{ monthMilestone.name }}
-              </span>
-              <ul class="children first-child top-child last-child">
-                <li
-                  v-bind:key="String(weekMilestone.date + weekMilestone.name + weekMilestone.period)"
-                  class="long"
-                  v-for="weekMilestone in monthMilestone.milestones"
+              <template v-if="week.name">{{ week.name }}</template>
+              <template v-else>
+                <i class="rn-mi rn-plan__node-add">add</i>Add a week goal
+              </template>
+            </component>
+
+            <!--
+              The day rows hang off a rail rather than off connector lines drawn
+              with fixed-width ::before pseudo-elements. Same reading — these
+              roll up into the node above — with no width to overflow.
+            -->
+            <ul class="rn-plan__days">
+              <li v-for="day in week.milestones" :key="day.date" class="rn-plan__day">
+                <span class="rn-plan__day-date">{{ dayLabel(day.date) }}</span>
+                <component
+                  :is="day.name ? 'div' : 'button'"
+                  :type="day.name ? null : 'button'"
+                  class="rn-plan__node rn-plan__node--day"
+                  :class="{ 'rn-plan__node--empty': !day.name }"
+                  :data-testid="`plan-day-${day.date}`"
+                  @click="addFor(day)"
                 >
-                  <span class="rounded-long"
-                    @click="newGoalItem(weekMilestone.date, weekMilestone.name, weekMilestone.period)">
-                    {{ formatDate(weekMilestone.date) }} {{ weekMilestone.name }}
-                  </span>
-                </li>
-              </ul>
-            </li>
-          </ul>
-        </li>
-      </ul>
+                  <template v-if="day.name">{{ day.name }}</template>
+                  <template v-else>
+                    <i class="rn-mi rn-plan__node-add">add</i>Add
+                  </template>
+                </component>
+              </li>
+            </ul>
+          </section>
+        </div>
+      </template>
     </div>
-    <atom-dialog v-model="goalDetailsDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
-      <atom-card>
-        <atom-toolbar dark color="primary">
-          <atom-button icon dark @click="goalDetailsDialog = false">
-            <atom-icon>close</atom-icon>
-          </atom-button>
-          <atom-toolbar-title>Add Goal</atom-toolbar-title>
-          <atom-spacer></atom-spacer>
-        </atom-toolbar>
-        <goal-list :goals="monthTaskGoals" :date="correctDate(selectedDate)" :period="currentGoalPeriod"
-          :selectedBody="selectedBody" :tasklist="tasklist" :selectedTaskRef="selectedTaskRef" :isDefaultMilestone="true"
-          @toggle-goal-details-dialog="toggleGoalDetailsDialog" />
-        <atom-alert :value="true" color="success" icon="ev_station" outline class="ml-3 mr-3">
-          It's better to set Month and Weekly goals first to better guide daily milestones.
-        </atom-alert>
-      </atom-card>
-    </atom-dialog>
-  </container-box>
+
+    <!--
+      Adding a goal for one node. The chassis sheet, not the fullscreen Vuetify
+      dialog with a primary-coloured toolbar this page used to raise: on a phone
+      that dialog covered the plan completely to host a one-line form.
+    -->
+    <responsive-sheet
+      :open="goalDetailsDialog"
+      :shell="shell"
+      :title="addTitle"
+      @close="toggleGoalDetailsDialog(false)"
+    >
+      <goal-list
+        :goals="monthTaskGoals"
+        :date="selectedDate"
+        :period="currentGoalPeriod"
+        :selected-body="selectedBody"
+        :tasklist="tasklist"
+        :selected-task-ref="taskRef"
+        :is-default-milestone="true"
+        @toggle-goal-details-dialog="toggleGoalDetailsDialog"
+      />
+      <p class="rn-plan__hint">
+        <i class="rn-mi rn-plan__hint-glyph">ev_station</i>
+        Set the month and week goals first — they are what a day goal rolls up into.
+      </p>
+    </responsive-sheet>
+  </app-shell-container>
 </template>
 
 <script>
 /* eslint-disable no-param-reassign */
 import moment from 'moment';
 
-import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
-import {
-  AtomAlert,
-  AtomButton,
-  AtomCard,
-  AtomDialog,
-  AtomFlex,
-  AtomIcon,
-  AtomLayout,
-  AtomSelect,
-  AtomSpacer,
-  AtomToolbar,
-  AtomToolbarTitle,
-} from '@routine-notes/ui/atoms';
+import LoadErrorState from '@routine-notes/ui/molecules/LoadErrorState/LoadErrorState.vue';
+import ResponsiveSheet from '@routine-notes/ui/molecules/ResponsiveSheet/ResponsiveSheet.vue';
+import { resolveShell } from '@routine-notes/ui/constants/navigation';
+import AppShellContainer from '../containers/AppShellContainer.vue';
 import GoalList from '../containers/GoalListContainer.vue';
-import { stepupMilestonePeriodDate } from '../utils/getDates';
+import { signOut } from '../utils/signOut';
+
+export const LOGOUT_KEY = 'logout';
+
+const DATE_FORMAT = 'DD-MM-YYYY';
+
+const MONTHS = Object.freeze([
+  { value: '0', label: 'January' },
+  { value: '1', label: 'February' },
+  { value: '2', label: 'March' },
+  { value: '3', label: 'April' },
+  { value: '4', label: 'May' },
+  { value: '5', label: 'June' },
+  { value: '6', label: 'July' },
+  { value: '7', label: 'August' },
+  { value: '8', label: 'September' },
+  { value: '9', label: 'October' },
+  { value: '10', label: 'November' },
+  { value: '11', label: 'December' },
+]);
+
+/** What the add sheet is titled per node period. */
+const ADD_TITLE = {
+  month: 'Add a month goal',
+  week: 'Add a week goal',
+  day: 'Add a day goal',
+};
 
 export default {
+  name: 'AgendaTreeTime',
+
   components: {
+    AppShellContainer,
     GoalList,
-    ContainerBox,
-    AtomAlert,
-    AtomButton,
-    AtomCard,
-    AtomDialog,
-    AtomFlex,
-    AtomIcon,
-    AtomLayout,
-    AtomSelect,
-    AtomSpacer,
-    AtomToolbar,
-    AtomToolbarTitle,
+    LoadErrorState,
+    ResponsiveSheet,
   },
-  props: ['selectedTaskRef'],
+
+  props: {
+    /** From the route. The dropdown's selection is `taskRef`, seeded from this. */
+    selectedTaskRef: { type: String, default: '' },
+  },
+
   data() {
     return {
       isLoading: false,
+      loadError: false,
       agendaTreeGoals: [],
       goalDetailsDialog: false,
       tasklist: [],
       monthGoals: [],
       monthTaskGoals: [],
-      did: '',
-      skipDay: false,
       currentGoalPeriod: 'day',
       selectedBody: '',
-      date: moment().format('DD-MM-YYYY'),
-      selectedDate: moment().format('DD-MM-YYYY'),
-      selectedMonth: '',
+      /** Which routine the plan is for. NOT the prop — see the template's note. */
+      taskRef: this.selectedTaskRef || '',
+      date: moment().format(DATE_FORMAT),
+      selectedDate: moment().format(DATE_FORMAT),
+      selectedMonth: String(moment().month()),
       monthGoalRef: '',
-      weekDays: this.buildWeekdays(),
-      months: [
-        { value: '0', label: 'January' },
-        { value: '1', label: 'February' },
-        { value: '2', label: 'March' },
-        { value: '3', label: 'April' },
-        { value: '4', label: 'May' },
-        { value: '5', label: 'June' },
-        { value: '6', label: 'July' },
-        { value: '7', label: 'August' },
-        { value: '8', label: 'September' },
-        { value: '9', label: 'October' },
-        { value: '10', label: 'November' },
-        { value: '11', label: 'December' },
-      ],
-      month: '',
-      year: '',
-      periods: ['year', 'month', 'week', 'day'],
-      isEditable: true,
+      months: MONTHS,
     };
   },
+
+  computed: {
+    /** The ONE breakpoint rule — `resolveShell`, never a second scheme. */
+    shell() {
+      return resolveShell(this.$vuetify && this.$vuetify.breakpoint);
+    },
+    isPhone() {
+      return this.shell === 'phone';
+    },
+    /** The phone header has no room for a worded button beside the chip. */
+    labelledActions() {
+      return !this.isPhone;
+    },
+    subLabel() {
+      if (this.isPhone) return '';
+      return this.routineName ? `${this.routineName} · ${this.monthLabel}` : this.monthLabel;
+    },
+    routineName() {
+      const task = (this.tasklist || []).find((item) => item.id === this.taskRef);
+      return task ? task.name : '';
+    },
+    monthLabel() {
+      return moment(this.date, DATE_FORMAT).format('MMMM YYYY');
+    },
+    monthNode() {
+      return this.agendaTreeGoals[0] || null;
+    },
+    weeks() {
+      return (this.monthNode && this.monthNode.milestones) || [];
+    },
+    /** Every node in the cascade, flat — what `filledLabel` counts. */
+    allNodes() {
+      if (!this.monthNode) return [];
+      const days = this.weeks.reduce((acc, week) => acc.concat(week.milestones || []), []);
+      return [this.monthNode, ...this.weeks, ...days];
+    },
+    /**
+     * "6 of 19 set". The old layout gave no way to tell a sparse plan from a
+     * full one without counting nodes by eye across two screens.
+     */
+    filledLabel() {
+      const total = this.allNodes.length;
+      if (!total) return '';
+      const set = this.allNodes.filter((node) => !!node.name).length;
+      return `${set} of ${total} set`;
+    },
+    addTitle() {
+      return ADD_TITLE[this.currentGoalPeriod] || 'Add a goal';
+    },
+  },
+
   watch: {
+    /*
+     * Both reads, not just the routine. Picking a month used to refetch the
+     * routine alone, so the tree kept the month you came from.
+     */
     date(newVal, oldVal) {
-      if (newVal !== oldVal) {
-        this.fetchRoutineData();
-        const date = moment(this.date, 'DD-MM-YYYY');
-        const todayDate = moment(new Date(), 'DD-MM-YYYY');
-        this.isEditable = moment(date).isSameOrAfter(todayDate, 'day');
-      }
+      if (newVal === oldVal) return;
+      this.reload();
     },
     selectedMonth(newVal, oldVal) {
-      if (oldVal && newVal !== oldVal) {
-        this.date = moment(Number(newVal) + 1, 'MM').format('DD-MM-YYYY');
-      }
+      if (!oldVal || newVal === oldVal) return;
+      /* A month goal id belongs to one month, so it cannot survive the move. */
+      this.monthGoalRef = '';
+      this.date = moment(this.date, DATE_FORMAT).month(Number(newVal)).date(1).format(DATE_FORMAT);
     },
     monthGoalRef(newVal, oldVal) {
       if (oldVal && newVal !== oldVal) {
         this.buildAgendaTreeGoals(this.monthTaskGoals);
       }
     },
-    selectedTaskRef(newVal, oldVal) {
+    taskRef(newVal, oldVal) {
       if (newVal !== oldVal) {
+        this.monthGoalRef = '';
         this.fetchMonthTaskGoalsData();
       }
     },
+    /** A different route param (Progress deep-links straight at a routine). */
+    selectedTaskRef(newVal) {
+      if (newVal && newVal !== this.taskRef) this.taskRef = newVal;
+    },
   },
+
   mounted() {
     this.buildCleanAgendaTreeGoals();
-    this.fetchRoutineData();
-    this.fetchMonthTaskGoalsData();
+    this.reload();
   },
+
   methods: {
-    /**
-     * Fetch routine data using shared composable via plugin
-     */
+    reload() {
+      return Promise.all([this.fetchRoutineData(), this.fetchMonthTaskGoalsData()]);
+    },
+
+    /** The routine list behind the Routine dropdown. */
     async fetchRoutineData() {
       this.isLoading = true;
       try {
-        const routineData = await this.$routine.fetchRoutine(this.date, {
-          useCache: true,
-          onNotFound: () => {
-            // Routine will be auto-created by the composable
-          },
-        });
-
-        if (routineData) {
-          this.tasklist = routineData.tasklist || [];
-          this.did = routineData.id || '';
-          this.skipDay = !!routineData.skip;
-        }
+        const routineData = await this.$routine.fetchRoutine(this.date, { useCache: true });
+        if (routineData) this.tasklist = routineData.tasklist || [];
       } catch (error) {
-        console.error('Error fetching routine:', error);
+        console.error('[AgendaTreeTime] routine failed:', error);
         this.$notify({
           title: 'Error',
           text: 'An unexpected error occurred',
@@ -208,495 +405,441 @@ export default {
       }
     },
 
-    /**
-     * Fetch month task goals using shared composable via plugin
-     */
+    /** This routine's month / week / day goals for the shown month. */
     async fetchMonthTaskGoalsData() {
-      if (!this.selectedTaskRef) return;
+      if (!this.taskRef) {
+        this.monthTaskGoals = [];
+        this.buildCleanAgendaTreeGoals();
+        return;
+      }
 
       this.isLoading = true;
       try {
         const goalsData = await this.$goals.fetchMonthTaskGoals(
           this.date,
-          this.selectedTaskRef,
+          this.taskRef,
           { useCache: true },
         );
-
         this.monthTaskGoals = goalsData || [];
+        this.loadError = false;
         this.buildAgendaTreeGoals(this.monthTaskGoals);
       } catch (error) {
-        console.error('Error fetching month task goals:', error);
+        console.error('[AgendaTreeTime] month task goals failed:', error);
+        this.loadError = true;
       } finally {
         this.isLoading = false;
       }
     },
 
-    /**
-     * Add new day routine using shared composable
-     */
-    async addNewDayRoutine() {
-      this.isLoading = true;
-      try {
-        await this.$routine.addRoutine(this.date);
-        await this.fetchRoutineData();
-      } catch (error) {
-        console.error('Error adding routine:', error);
-        this.$notify({
-          title: 'Error',
-          text: 'An unexpected error occurred',
-          group: 'notify',
-          type: 'error',
-          duration: 3000,
-        });
-      } finally {
-        this.isLoading = false;
-      }
-    },
+    /** The empty cascade for the shown month: 1 month, 3 weeks, 15 weekdays. */
     buildCleanAgendaTreeGoals() {
-      this.month = moment(this.date, 'DD-MM-YYYY').month();
-      this.selectedMonth = String(this.month);
-      this.year = moment(this.date, 'DD-MM-YYYY').year();
-      const { monthWeekDays, threeFridays } = this.getDaysArray(this.year, this.month);
-      const seperatedWeekDays = [];
-      seperatedWeekDays.push(monthWeekDays.slice(0, 5));
-      seperatedWeekDays.push(monthWeekDays.slice(5, 10));
-      seperatedWeekDays.push(monthWeekDays.slice(10, 15));
+      const month = moment(this.date, DATE_FORMAT).month();
+      const year = moment(this.date, DATE_FORMAT).year();
+      this.selectedMonth = String(month);
+      const { monthWeekDays, threeFridays } = this.getDaysArray(year, month);
+      const weekSlices = [
+        monthWeekDays.slice(0, 5),
+        monthWeekDays.slice(5, 10),
+        monthWeekDays.slice(10, 15),
+      ];
 
-      this.agendaTreeGoals = [];
       this.monthGoals = [];
-
-      this.agendaTreeGoals[0] = {
+      this.agendaTreeGoals = [{
         period: 'month',
-        // name: moment(this.date, 'DD-MM-YYYY').format('MMMM'),
         name: '',
-        date: `01-${this.month + 1}-${this.year}`,
+        date: `01-${month + 1}-${year}`,
         milestones: threeFridays.map((workWeek, i) => ({
           period: 'week',
           name: '',
           date: workWeek,
-          milestones: seperatedWeekDays[i].map((seperatedWeekDay) => ({
+          milestones: (weekSlices[i] || []).map((weekDay) => ({
             period: 'day',
             name: '',
-            date: seperatedWeekDay,
+            date: weekDay,
           })),
         })),
-      };
+      }];
     },
+
     buildAgendaTreeGoals(monthTaskGoals) {
       this.buildCleanAgendaTreeGoals();
-      if (monthTaskGoals && monthTaskGoals.length) {
-        if (this.monthGoals && this.monthGoals.length === 0) {
-          monthTaskGoals
-            .forEach((monthTaskGoal) => {
-              if (monthTaskGoal && monthTaskGoal.period === 'month') {
-                monthTaskGoal.goalItems.forEach((goalItem) => {
-                  this.monthGoals.push({
-                    id: goalItem.id,
-                    name: goalItem.body,
-                  });
-                });
-              }
-            });
-        }
+      if (!monthTaskGoals || !monthTaskGoals.length) return;
 
-        const monthGoal = monthTaskGoals
-          .find((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'month');
-        const weekGoals = monthTaskGoals
-          .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'week');
-        const dayGoals = monthTaskGoals
-          .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'day');
-
-        if (monthGoal && monthGoal.goalItems && monthGoal.goalItems.length) {
-          if (!this.monthGoalRef) {
-            this.monthGoalRef = monthGoal.goalItems[0].id;
-          }
-          const monthGoalSelected = this.monthGoals.find((mG) => mG.id === this.monthGoalRef);
-          this.agendaTreeGoals[0].name = `${this.agendaTreeGoals[0].name} ${monthGoalSelected ? monthGoalSelected.name : ''}`;
-        }
-
-        this.agendaTreeGoals[0].milestones = this.agendaTreeGoals[0].milestones.map((milestone) => {
-          const milestoneWeek = weekGoals.find((weekGoal) => weekGoal.date === moment(milestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
-          if (milestoneWeek && milestoneWeek.goalItems && milestoneWeek.goalItems.length) {
-            const weekGoalSelected = milestoneWeek.goalItems.find((goalItem) => goalItem.goalRef === this.monthGoalRef);
-            milestone.name = weekGoalSelected ? weekGoalSelected.body : milestone.name;
-
-            milestone.milestones = milestone.milestones.map((dayMilestone) => {
-              const milestoneDay = dayGoals.find((dayGoal) => dayGoal.date === moment(dayMilestone.date, 'DD-MM-YYYY').format('DD-MM-YYYY'));
-              const hasMilestoneDayValues = milestoneDay && milestoneDay.goalItems && milestoneDay.goalItems.length;
-              const hasWeekGoalSelectedId = weekGoalSelected && weekGoalSelected.id;
-              if (hasMilestoneDayValues && hasWeekGoalSelectedId) {
-                const dayGoalSelected = milestoneDay.goalItems.find((goalItem) => goalItem.goalRef === weekGoalSelected.id);
-                dayMilestone.name = dayGoalSelected ? dayGoalSelected.body : dayMilestone.name;
-              }
-              return dayMilestone;
+      if (this.monthGoals.length === 0) {
+        monthTaskGoals.forEach((monthTaskGoal) => {
+          if (monthTaskGoal && monthTaskGoal.period === 'month') {
+            monthTaskGoal.goalItems.forEach((goalItem) => {
+              this.monthGoals.push({ id: goalItem.id, name: goalItem.body });
             });
           }
+        });
+      }
+
+      const monthGoal = monthTaskGoals
+        .find((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'month');
+      const weekGoals = monthTaskGoals
+        .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'week');
+      const dayGoals = monthTaskGoals
+        .filter((monthTaskGoal) => monthTaskGoal && monthTaskGoal.period === 'day');
+
+      if (monthGoal && monthGoal.goalItems && monthGoal.goalItems.length) {
+        if (!this.monthGoalRef) {
+          this.monthGoalRef = monthGoal.goalItems[0].id;
+        }
+        const selected = this.monthGoals.find((goal) => goal.id === this.monthGoalRef);
+        this.agendaTreeGoals[0].name = selected ? selected.name : '';
+      }
+
+      this.agendaTreeGoals[0].milestones = this.agendaTreeGoals[0].milestones.map((milestone) => {
+        const milestoneWeek = weekGoals
+          .find((weekGoal) => weekGoal.date === moment(milestone.date, DATE_FORMAT).format(DATE_FORMAT));
+        if (!milestoneWeek || !milestoneWeek.goalItems || !milestoneWeek.goalItems.length) {
           return milestone;
-        });
-      }
-    },
-    buildWeekdays() {
-      const weekDays = [];
-      const dayShort = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-      const currentDate = moment();
+        }
 
-      const weekStart = currentDate.clone().startOf('week');
-      // const weekEnd = currentDate.clone().endOf('isoWeek');
+        const weekGoalSelected = milestoneWeek.goalItems
+          .find((goalItem) => goalItem.goalRef === this.monthGoalRef);
+        milestone.name = weekGoalSelected ? weekGoalSelected.body : milestone.name;
 
-      dayShort.forEach((day, i) => {
-        weekDays.push({
-          dayNumber: moment(weekStart)
-            .add(i, 'days')
-            .format('DD'),
-          isActive: moment().weekday() === i,
-          day,
-        });
-      });
-
-      return weekDays;
-    },
-    deleteTaskGoal({ id, period, date }) {
-      // Apollo cache optimistic update handles instant UI removal
-      this.$goals.deleteGoalItem({
-        id, period, date, dayDate: this.date,
-      })
-        .catch(() => {
-          this.$notify({
-            title: 'Error',
-            text: 'An unexpected error occured',
-            group: 'notify',
-            type: 'error',
-            duration: 3000,
-          });
-        });
-    },
-    updateSelectedTaskRef(id) {
-      this.selectedTaskRef = id;
-    },
-    disablePrevious() {
-      return this.date === moment().format('DD-MM-YYYY');
-    },
-    formatDate(date) {
-      return moment(date, 'DD-MM-YYYY')
-        .format('DD/MM');
-    },
-    correctDate(date) {
-      return moment(date, 'DD-MM-YYYY')
-        .format('DD-MM-YYYY');
-    },
-    previousDate() {
-      this.date = moment(this.date, 'DD-MM-YYYY')
-        .subtract(1, 'days')
-        .format('DD-MM-YYYY');
-    },
-    nextDate() {
-      this.date = moment(this.date, 'DD-MM-YYYY')
-        .add(1, 'days')
-        .format('DD-MM-YYYY');
-    },
-    setDate(indx) {
-      const currentDate = moment();
-      const weekStart = currentDate.clone().startOf('week');
-
-      this.weekDays = this.weekDays.map((weekDay, i) => {
-        if (Number(indx) === i) {
-          weekDay.isActive = true;
-          return weekDay;
-        }
-        weekDay.isActive = false;
-        return weekDay;
-      });
-      this.date = moment(weekStart)
-        .add(indx, 'days')
-        .format('DD-MM-YYYY');
-    },
-    getButtonColor(task) {
-      if (task) {
-        if (task.ticked) {
-          return 'success';
-        }
-        if (task.passed) {
-          return 'error';
-        }
-      }
-      return 'grey';
-    },
-    getButtonIcon(task) {
-      if (task) {
-        if (task.ticked) {
-          return 'check';
-        }
-        if (task.passed && !task.ticked) {
-          return 'close';
-        }
-        if (!task.passed && !task.ticked && !task.wait) {
-          return 'alarm';
-        }
-      }
-      return 'more_horiz';
-    },
-    newGoalItem(date, name, period) {
-      if (!name) {
-        this.selectedDate = date;
-        this.currentGoalPeriod = period;
-        this.selectedBody = '';
-        this.goalDetailsDialog = true;
-      }
-    },
-    clonePeriodGoalItem(task, period) {
-      const stepUpPeriod = stepupMilestonePeriodDate(period);
-      const filteredPeriodGoals = this.filterTaskGoalsPeriod(task.id, stepUpPeriod.period);
-      this.selectedBody = (filteredPeriodGoals
-        && filteredPeriodGoals.length
-        && filteredPeriodGoals[0].goalItems[0].body)
-        || '';
-      this.selectedTaskRef = task.id;
-      this.currentGoalPeriod = period;
-      this.goalDetailsDialog = true;
-    },
-    filterTaskGoalsPeriod(id, currentGoalPeriod) {
-      const taskGoalList = [];
-      if (this.goals && this.goals.length) {
-        this.goals.forEach((goal) => {
-          if (goal && goal.period === currentGoalPeriod) {
-            const taskGoalItems = goal && goal.goalItems && goal
-              .goalItems.filter((goalItem) => goalItem.taskRef === id);
-
-            if (taskGoalItems && taskGoalItems.length) {
-              const newGoal = {
-                id: goal.id,
-                period: goal.period,
-                date: goal.date,
-                goalItems: taskGoalItems,
-              };
-              taskGoalList.push(newGoal);
-            }
+        milestone.milestones = milestone.milestones.map((dayMilestone) => {
+          const milestoneDay = dayGoals
+            .find((dayGoal) => dayGoal.date === moment(dayMilestone.date, DATE_FORMAT).format(DATE_FORMAT));
+          const hasDays = milestoneDay && milestoneDay.goalItems && milestoneDay.goalItems.length;
+          if (hasDays && weekGoalSelected && weekGoalSelected.id) {
+            const dayGoalSelected = milestoneDay.goalItems
+              .find((goalItem) => goalItem.goalRef === weekGoalSelected.id);
+            dayMilestone.name = dayGoalSelected ? dayGoalSelected.body : dayMilestone.name;
           }
+          return dayMilestone;
         });
-      }
-      return Array.isArray(taskGoalList) ? taskGoalList : [];
+        return milestone;
+      });
     },
-    toggleGoalDetailsDialog(bool) {
-      this.goalDetailsDialog = bool;
-      // Refetch month task goals when dialog closes
-      this.fetchMonthTaskGoalsData();
-    },
+
+    /**
+     * The month's first three Mon-Fri work weeks, as `DD-M-YYYY` strings, plus
+     * the Friday that ends each. Counting starts at the first Monday, so a
+     * month opening mid-week begins at the first full week.
+     */
     getDaysArray(year, month) {
       let firstMonday = '';
       const threeFridays = [];
-      const monthIndex = month; // 0..11 instead of 1..12
       const names = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-      const date = new Date(year, monthIndex, 1);
+      const date = new Date(year, month, 1);
       const monthWeekDays = [];
 
       while (threeFridays.length <= 2) {
         if (!firstMonday && names[date.getDay()] === 'mon') {
           firstMonday = `${date.getDate()}-${month + 1}-${year}`;
         }
-
         if (firstMonday && !['sun', 'sat'].includes(names[date.getDay()])) {
           monthWeekDays.push(`${date.getDate()}-${month + 1}-${year}`);
         }
-
-        if (firstMonday && names[date.getDay()] === 'fri' && threeFridays.length <= 2) {
+        if (firstMonday && names[date.getDay()] === 'fri') {
           threeFridays.push(`${date.getDate()}-${month + 1}-${year}`);
         }
         date.setDate(date.getDate() + 1);
       }
       return { monthWeekDays, threeFridays };
     },
-  },
-  computed: {
-    today() {
-      return moment(this.date, 'DD-MM-YYYY').format('DD MMMM YYYY');
+
+    /** "Mon 06". */
+    dayLabel(date) {
+      return moment(date, DATE_FORMAT).format('ddd DD');
+    },
+
+    /** "06 – 10 Oct", read off the week's own day nodes. */
+    weekRange(week) {
+      const days = week.milestones || [];
+      if (!days.length) return moment(week.date, DATE_FORMAT).format('DD MMM');
+      const first = moment(days[0].date, DATE_FORMAT);
+      const last = moment(days[days.length - 1].date, DATE_FORMAT);
+      return `${first.format('DD')} – ${last.format('DD MMM')}`;
+    },
+
+    /** A node with a goal already is a label; an empty one opens the add sheet. */
+    addFor(node) {
+      if (!node || node.name) return;
+      this.selectedDate = moment(node.date, DATE_FORMAT).format(DATE_FORMAT);
+      this.currentGoalPeriod = node.period;
+      this.selectedBody = '';
+      this.goalDetailsDialog = true;
+    },
+
+    toggleGoalDetailsDialog(open) {
+      this.goalDetailsDialog = open;
+      if (!open) this.fetchMonthTaskGoalsData();
+    },
+
+    goTo(route) {
+      if (!route || this.$route.path === route) return;
+      this.$router.push(route).catch(() => {});
+    },
+    onNavigate(key, item) {
+      if (key === LOGOUT_KEY) {
+        this.onSignOut();
+        return;
+      }
+      this.goTo(item && item.route);
+    },
+    onSignOut() {
+      signOut(this);
     },
   },
 };
 </script>
 
-<style scoped>
-.wrapper ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  position: relative;
+<style>
+.rn-plan {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
-.wrapper {
-  max-width: 800px;
-  width: 100%;
-  height: 1000px;
-  margin: 0 auto;
-  padding: 10px;
+/* ---- header action, as Milestones draws it ---- */
+
+.rn-plan__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rn-plan__pick {
+  position: relative;
   display: flex;
   align-items: center;
+  gap: 4px;
+  flex: 1 1 140px;
+  max-width: 220px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 6px;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  background: #f5f5f5;
 }
 
-.wrapper li {
-  width: 180px;
-  position: relative;
+.rn-plan__pick--wide {
+  flex-basis: 100%;
+  max-width: none;
 }
 
-.wrapper li.long {
-  width: 260px;
-}
-
-.wrapper li::before {
-  position: absolute;
-  content: "";
-  width: 180px;
-  height: 2px;
-  background-color: #333333;
-  left: 50%;
-  transform: translateX(-50%);
-  top: 25px;
-}
-
-.wrapper li.long::before {
-  position: absolute;
-  content: "";
-  width: 260px;
-  height: 2px;
-  background-color: #333333;
-  left: 50%;
-  transform: translateX(-50%);
-  top: 25px;
-}
-
-.rounded {
-  height: 50px;
-  width: 100px;
-  display: block;
-  background-color: #fff;
-  border: 1px solid #ccc;
-  border-radius: 16px;
-  position: relative;
-  margin: 0 auto;
-  font-size: 12px;
-  line-height: 50px;
-  cursor: pointer;
-  padding: 0 8px;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rounded-long {
-  height: 50px;
-  width: 200px;
-  display: block;
-  background-color: #fff;
-  border: 1px solid #ccc;
-  border-radius: 16px;
-  position: relative;
-  margin: 0 auto;
-  font-size: 12px;
-  line-height: 50px;
-  cursor: pointer;
-  padding: 0 8px;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.children {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  left: 100%;
-  height: 700px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.rounded.hide-childs+ul.children {
-  visibility: hidden;
-  opacity: 0;
-}
-
-.children.first-child.top-child {
-  height: 305px;
-}
-
-.children.first-child.bottom-child {
-  height: 380px;
-}
-
-.children::before {
-  position: absolute;
-  content: "";
-  left: 0;
-  width: 2px;
-  background-color: #333333;
-  top: 25px;
-  bottom: 25px;
-}
-
-.wrapper .last-child li::before,
-.wrapper li.hide-node::before {
-  width: 50px;
-  left: 0;
-  transform: translateX(0);
-}
-
-.hide-node::after {
-  position: absolute;
-  content: "+";
-  font-size: 12px;
-  top: -14px;
-  left: 0;
-  right: 0;
-}
-
-.last-child .hide-node::after {
-  content: "";
-}
-
-.rounded:active {
-  transform: scale(0.9);
-}
-
-.add-new >>> .v-btn {
-  margin-left: -15px;
-  padding-left: 0;
-  text-align: left;
-}
-
-.date-navigation {
-  padding: 32px 32px 0 32px;
-}
-
-.date-navigation .date-today {
-  height: 40px;
-  padding-top: 10px;
-  font-weight: bold;
-}
-
-.weekdays {
-  width: 100%;
-  display: flex;
-  justify-content: space-evenly;
-  align-items: center;
-  font-weight: 500;
-}
-
-.weekdays .day {
-  padding: 16px;
-  border-radius: 16px;
-  text-align: center;
-}
-
-.weekdays .day.active {
-  background-color: #288bd5;
-  color: #fff;
-}
-
-.overlay-icon {
-  position: absolute;
+.rn-plan__pick-glyph,
+.rn-plan__pick-chev {
+  flex: 0 0 auto;
   font-size: 14px;
-  padding: 2px 0 0 3px;
+  color: rgba(0, 0, 0, .5);
+}
+
+/* The native control, stripped back to the text. `appearance:none` takes the
+   platform chrome; the chevron beside it is ours, so it matches the one on the
+   AI search modal's selects.
+
+   16px on a phone and not the 12px the toolbar pills use: iOS zooms the whole
+   page when a focused form control renders under 16px, and this one is a form
+   control (commit 4ed0905 fixed the same thing on four other fields). */
+.rn-plan__sel {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .8);
+  text-overflow: ellipsis;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.rn-plan__sel:focus {
+  outline: none;
+}
+
+.rn-plan--tablet .rn-plan__sel,
+.rn-plan--desktop .rn-plan__sel {
+  font-size: 13px;
+}
+
+/* ---- the cascade ---- */
+
+.rn-plan__month,
+.rn-plan__week {
+  min-width: 0;
+  padding: 12px 14px 14px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .06), 0 8px 18px -12px rgba(0, 0, 0, .12);
+}
+
+.rn-plan__month-head,
+.rn-plan__week-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+
+.rn-plan__tag {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 9px;
+  background: rgba(40, 139, 213, .12);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #1f6fab;
+}
+
+.rn-plan__tag--week {
+  background: rgba(0, 0, 0, .06);
+  color: rgba(0, 0, 0, .6);
+}
+
+.rn-plan__month-date,
+.rn-plan__week-range {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: rgba(0, 0, 0, .8);
+}
+
+.rn-plan__filled {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .45);
+}
+
+/*
+  One node. Rendered as a <button> while empty and a <div> once it holds a goal,
+  because only the empty one does anything — the old markup made every node
+  look tappable and then ignored the tap on the ones that were filled.
+*/
+.rn-plan__node {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, .08);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  color: rgba(0, 0, 0, .85);
+  overflow-wrap: anywhere;
+}
+
+.rn-plan__node--month {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rn-plan__node--empty {
+  align-items: center;
+  border-style: dashed;
+  background: transparent;
+  font-weight: 600;
+  color: #288bd5;
+  cursor: pointer;
+}
+
+.rn-plan__node--empty:active {
+  background: rgba(40, 139, 213, .06);
+}
+
+.rn-plan__node-add {
+  font-size: 16px;
+}
+
+/* Phone: one column. Tablet two, desktop three — a week card holds five rows of
+   wrapping text, so a fourth column would be narrower than its own content. */
+.rn-plan__weeks {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.rn-plan--tablet .rn-plan__weeks {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rn-plan--desktop .rn-plan__weeks {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* The rail: what used to be absolutely-positioned connector lines of a fixed
+   width. A border reads the same and costs no layout. */
+.rn-plan__days {
+  margin: 10px 0 0;
+  padding: 2px 0 0 10px;
+  border-left: 2px solid rgba(0, 0, 0, .08);
+  list-style: none;
+}
+
+.rn-plan__day {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 0;
+}
+
+/* Fixed column so the day bodies line up, and `tabular-nums` so the dates do
+   not jitter between rows. */
+.rn-plan__day-date {
+  flex: 0 0 52px;
+  padding-top: 11px;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(0, 0, 0, .45);
+}
+
+.rn-plan__node--day {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+/* ---- notes ---- */
+
+.rn-plan__note {
+  margin: 4px 2px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, .55);
+}
+
+.rn-plan__hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(76, 175, 80, .1);
+  font-size: 12px;
+  line-height: 1.45;
+  color: #2e7d32;
+}
+
+.rn-plan__hint-glyph {
+  flex: 0 0 auto;
+  font-size: 16px;
 }
 </style>
