@@ -238,7 +238,7 @@ All four trees are populated now:
 
 | Path | Holds | Committed? |
 |---|---|---|
-| `fastlane/metadata/en-US/` | App Store name, subtitle, keywords, promo text, description, URLs, release notes | yes |
+| `fastlane/metadata/en-GB/` | App Store (English U.K., the listing's primary language) name, subtitle, keywords, promo text, description, URLs, release notes | yes |
 | `fastlane/metadata/android/en-US/` | Play title, short + full description, changelog | yes |
 | `fastlane/metadata/android/en-US/images/` | `icon.png`, `featureGraphic.png` | yes — authored, built by `make-store-images.js` |
 | `fastlane/metadata/android/en-US/images/*Screenshots/`, `fastlane/screenshots/` | the slide set | **no** — staged from `store-assets/final/` |

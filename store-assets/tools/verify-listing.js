@@ -23,7 +23,7 @@ const platforms = require('./platforms');
 
 const ROOT = path.join(__dirname, '..', '..');
 const FINAL = path.join(__dirname, '..', 'final');
-const IOS = path.join(ROOT, 'fastlane', 'metadata', 'en-US');
+const IOS = path.join(ROOT, 'fastlane', 'metadata', 'en-GB');
 const PLAY = path.join(ROOT, 'fastlane', 'metadata', 'android', 'en-US');
 
 const results = [];
@@ -190,7 +190,7 @@ function imageInfo(file) {
     ['Play phone', path.join(PLAY, 'images', 'phoneScreenshots'), slides.length],
     ['Play 10" tablet', path.join(PLAY, 'images', 'tenInchScreenshots'), slides.length],
     ['Play 7" tablet', path.join(PLAY, 'images', 'sevenInchScreenshots'), slides.length],
-    ['App Store screenshots', path.join(ROOT, 'fastlane', 'screenshots', 'en-US'), slides.length * 2],
+    ['App Store screenshots', path.join(ROOT, 'fastlane', 'screenshots', 'en-GB'), slides.length * 2],
   ];
   const anyStaged = staged.some(([, dir]) => fs.existsSync(dir));
   if (!anyStaged) {

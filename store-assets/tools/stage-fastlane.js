@@ -19,7 +19,7 @@ const slides = require('./slides');
 const ROOT = path.join(__dirname, '..', '..');
 const FINAL = path.join(__dirname, '..', 'final');
 const PLAY_IMG = path.join(ROOT, 'fastlane', 'metadata', 'android', 'en-US', 'images');
-const IOS_SHOTS = path.join(ROOT, 'fastlane', 'screenshots', 'en-US');
+const IOS_SHOTS = path.join(ROOT, 'fastlane', 'screenshots', 'en-GB');
 
 function stage(src, dest) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
