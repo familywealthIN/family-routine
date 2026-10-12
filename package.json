@@ -12,11 +12,13 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "postinstall": "patch-package",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "turbo": "^2.4.0",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "patch-package": "^8.0.0",
+    "turbo": "^2.4.0"
   },
   "resolutions": {
     "node-libs-browser/readable-stream": "^2.3.8",
