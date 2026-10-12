@@ -1,6 +1,7 @@
 # Store deployment for Routine Notes (com.routine.note).
 #
-#   Release  — triggered by a v*.*.* tag (.github/workflows/release-mobile.yml)
+#   Release  — a develop -> master merge or a v*.*.* tag
+#              (.github/workflows/release-mobile.yml)
 #     android release       signed AAB  -> Play production, staged rollout
 #     ios     release       signed IPA  -> App Store, auto-submit
 #                                     (iPhone + iPad; the iPad build is also

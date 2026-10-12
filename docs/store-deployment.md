@@ -13,6 +13,7 @@ one binary, one upload, zero extra build work.
 
 | Trigger | What happens |
 |---|---|
+| Merge a `develop` → `master` PR | `release-mobile.yml` with the version from the root `VERSION` file, then tags `v<VERSION>` once both stores have the build. Bump `VERSION` on develop before each merge; an already-tagged version fails before anything builds. Same store behaviour as a tag push. |
 | Push a `v*.*.*` tag | `release-mobile.yml` — signed AAB to Play production (10% staged rollout), signed IPA to the App Store (iPhone + iPad). Both auto-submitted for review. |
 | PR to `master`/`develop` | `mobile-build.yml` — after the smoke tests, the debug APK goes to Firebase App Distribution and a signed build goes to TestFlight. |
 | `workflow_dispatch` | Same as a tag, but you pick the version and the Play track (`internal` or `production`). |
@@ -21,7 +22,7 @@ one binary, one upload, zero extra build work.
 git tag v1.3.0 && git push origin v1.3.0
 ```
 
-The tag is the single source of truth for the marketing version.
+The tag (or, for a merge, the `VERSION` file) is the single source of truth for the marketing version.
 `scripts/stamp-version.mjs` writes it into `apps/android/app/build.gradle`,
 `project.pbxproj` and `apps/web-app/package.json` at build time — nothing
 version-related is committed.

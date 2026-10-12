@@ -1,16 +1,25 @@
 name: Release (Play Store + App Store)
 
-# Push a v*.*.* tag to cut a release:
-#   git tag v1.3.0 && git push origin v1.3.0
+# Three ways to cut a release:
+#   1. Merge a develop -> master pull request. The marketing version is read
+#      from the VERSION file at the repo root, and the run tags v<VERSION> once
+#      both stores have the build. Bump VERSION on develop before every merge:
+#      a merge whose VERSION already has a tag fails in the first job, before
+#      anything is built.
+#   2. Push a v*.*.* tag:  git tag v1.3.0 && git push origin v1.3.0
+#      (the tag is then the source of truth for the version).
+#   3. Run it by hand (workflow_dispatch).
 #
-# The tag is the single source of truth for the marketing version. Android is
-# published to Google Play; the single iOS binary covers iPhone and iPad, and is
-# offered on Apple Silicon Macs through the "Designed for iPad" availability
-# option in App Store Connect (no separate Mac build).
+# Android is published to Google Play; the single iOS binary covers iPhone and
+# iPad, and is offered on Apple Silicon Macs through the "Designed for iPad"
+# availability option in App Store Connect (no separate Mac build).
 
 on:
   push:
     tags: ['v*.*.*']
+  pull_request:
+    types: [closed]
+    branches: [master]
   workflow_dispatch:
     inputs:
       version:
@@ -54,6 +63,12 @@ concurrency:
 jobs:
   prepare:
     name: Resolve version
+    # A closed PR into master only releases when it was merged, and only from
+    # develop: a hotfix branch merged straight to master does not ship on its own.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref == 'develop')
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
@@ -61,6 +76,10 @@ jobs:
       build_number: ${{ steps.v.outputs.build_number }}
       sync_metadata: ${{ steps.v.outputs.sync_metadata }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags, for the already-released check
+
       - name: Derive version and track
         id: v
         env:
@@ -76,6 +95,14 @@ jobs:
             VERSION="${{ inputs.version }}"
             TRACK="${{ inputs.track }}"
             SYNC="${{ inputs.sync_store_metadata }}"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            VERSION="$(tr -d '[:space:]' < VERSION)"
+            TRACK="production"
+            SYNC="${SYNC_STORE_METADATA_VAR:-false}"
+            if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+              echo "::error::v$VERSION is already released. Bump VERSION on develop and merge again."
+              exit 1
+            fi
           else
             VERSION="${GITHUB_REF#refs/tags/v}"
             TRACK="production"
@@ -380,6 +407,10 @@ jobs:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           SYNC_STORE_METADATA: ${{ needs.prepare.outputs.sync_metadata }}
+          # Repository variable. Unset or anything but 'true' uploads the build
+          # to App Store Connect only and leaves the review submission to a
+          # human; 'true' submits it and releases it as soon as it is approved.
+          SUBMIT_FOR_REVIEW: ${{ vars.SUBMIT_FOR_REVIEW }}
         run: bundle exec fastlane ios release
 
       - name: Upload build log on failure
@@ -389,3 +420,24 @@ jobs:
           name: ios-release-logs
           path: ~/Library/Logs/gym
           if-no-files-found: ignore
+
+  tag:
+    name: Tag the release
+    # Only a merge needs tagging: a tag push already is one, and a manual run
+    # may be re-publishing an existing version.
+    needs: [prepare, android, ios]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pushed with GITHUB_TOKEN, which does not start workflows, so this tag
+      # does not trigger a second release run.
+      - name: Push v${{ needs.prepare.outputs.version }}
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          git tag "v$VERSION" "$GITHUB_SHA"
+          git push origin "v$VERSION"
