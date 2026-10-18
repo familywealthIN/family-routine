@@ -264,7 +264,7 @@ const mutation = {
   },
 
   /**
-   * Post a system event pill into a thread — "Routine ticked · G +12",
+   * Post a system event pill into a thread — "Routine ticked · D +12",
    * "Ship dashboard PR · 1 left", "Agent started". Written by the client at
    * the moment the underlying mutation succeeds, so the thread is a real log
    * of the day rather than a reconstruction.

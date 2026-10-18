@@ -496,6 +496,108 @@ describe('RoutineFocus redeem price', () => {
   });
 });
 
+/**
+ * D-02: the tick pill used to name `row.stimulus` — the routine's LABEL — so a
+ * G-labelled routine said 'G +10' while `tickRoutineItem` credits Discipline
+ * alone and the drawer's G donut stayed 0. The pill is read off the mutation's
+ * own stimuli instead.
+ */
+describe('RoutineFocus tick credit', () => {
+  const stims = (earned = {}) => [
+    { name: 'D', splitRate: 6, earned: earned.D || 0 },
+    { name: 'K', splitRate: 1, earned: earned.K || 0 },
+    { name: 'G', splitRate: 3, earned: earned.G || 0 },
+  ];
+
+  it('names what was credited, not the routine’s G label', () => {
+    const vm = {
+      rows: [{
+        id: 'sw', name: 'Start Work', stimulus: 'G', stimulusLabel: 'Geniuses',
+      }],
+      stimulusTotals: { D: 12, K: 2, G: 0 },
+      postChatEvent: jest.fn(),
+      $notify: jest.fn(),
+    };
+    methods.onRoutineTicked.call(vm, { id: 'sw' }, {
+      fireAgent: false,
+      credited: [{ name: 'D', label: 'Discipline', points: 12 }],
+    });
+
+    expect(vm.postChatEvent).toHaveBeenCalledWith(expect.objectContaining({
+      text: 'Routine ticked · D +12',
+    }));
+    expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Start Work done · D +12',
+      text: 'Discipline moved to 12%',
+    }));
+  });
+
+  it('lists every stimulus that moved', () => {
+    const vm = {
+      rows: [], stimulusTotals: { D: 12, K: 2, G: 0 }, postChatEvent: jest.fn(), $notify: jest.fn(),
+    };
+    methods.onRoutineTicked.call(vm, { id: 'sw', name: 'Start Work' }, {
+      fireAgent: false,
+      credited: [
+        { name: 'D', label: 'Discipline', points: 12 },
+        { name: 'K', label: 'Kinetics', points: 2 },
+      ],
+    });
+    expect(vm.postChatEvent).toHaveBeenCalledWith(expect.objectContaining({
+      text: 'Routine ticked · D +12 · K +2',
+    }));
+  });
+
+  // A 0-point routine is legitimate data and its tick credits nothing, so there
+  // is no delta to name and none is invented.
+  it('claims no points when nothing was credited', () => {
+    const vm = {
+      rows: [], stimulusTotals: { D: 0, K: 0, G: 0 }, postChatEvent: jest.fn(), $notify: jest.fn(),
+    };
+    methods.onRoutineTicked.call(vm, { id: 'sw', name: 'Stretch' }, { fireAgent: false });
+    expect(vm.postChatEvent).toHaveBeenCalledWith(expect.objectContaining({
+      text: 'Routine ticked',
+    }));
+    expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({ title: 'Stretch done' }));
+  });
+
+  it('reads the credit off the stimuli the mutation returns', async () => {
+    const task = {
+      id: 'sw', name: 'Start Work', points: 12, stimuli: stims(),
+    };
+    const vm = {
+      date: '12-09-2026',
+      tasklist: [task],
+      isSkippedDay: false,
+      blockedBySkip: methods.blockedBySkip,
+      trackTaskEvent: jest.fn(),
+      trackMutationPerformance: jest.fn(),
+      measureFly: jest.fn(),
+      clearFly: jest.fn(),
+      notifyGeneric: jest.fn(),
+      ensureRoutineId: jest.fn(() => Promise.resolve('r1')),
+      onRoutineTicked: jest.fn(),
+      $notify: jest.fn(),
+      $apollo: {
+        mutate: jest.fn(() => Promise.resolve({
+          data: {
+            tickRoutineItem: {
+              id: 'r1',
+              tasklist: [{ id: 'sw', stimuli: stims({ D: 12 }) }],
+            },
+          },
+        })),
+      },
+    };
+
+    await methods.tickRoutine.call(vm, task, { fireAgent: false });
+
+    expect(vm.onRoutineTicked).toHaveBeenCalledWith(task, expect.objectContaining({
+      credited: [{ name: 'D', label: 'Discipline', points: 12 }],
+    }));
+  });
+});
+
 describe('RoutineFocus slot counters (the agent end-event rule)', () => {
   // D-20: the TOTAL is points-derived slots from the routine's time gap, not a
   // checkbox count — and it is what gates the agent's end event.

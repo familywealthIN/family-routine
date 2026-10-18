@@ -151,6 +151,13 @@ System events (`kind: 'event'`) are written by the client the moment the
 underlying mutation succeeds — routine ticked, item checked, agent started, end
 event firing — so the thread is a record of the day, not a reconstruction.
 
+A pill names only what the write actually credited. The routine's `stimulus` is
+the LABEL `primaryStimulus` picks for the card — `tickRoutineItem` moves
+Discipline alone, so a G-labelled routine's tick pill said 'G +10' against a
+drawer reading G 0% (D-02). `earnedDeltas` diffs the mutation's own
+`stimuli[].earned`, and the chat snapshot's `stimulus` is `TICK_STIMULUS`, so
+the pill, the toast and the model's wording cannot outrun the donuts.
+
 ## Deliberate departures from the handoff
 
 1. **The ticked ring does not undo the tick.** The handoff says "tap again to

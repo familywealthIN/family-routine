@@ -118,6 +118,40 @@ export function primaryStimulus(task) {
 }
 
 /**
+ * The stimulus a tick pays into. `tickRoutineItem` moves Discipline and nothing
+ * else (apps/server resolvers/routine.js) whatever the routine is labelled — K
+ * moves when a checklist item is completed, G when one is linked to a longer
+ * period. The tick's optimistic response already hardcodes the same rule.
+ *
+ * `primaryStimulus` is the LABEL the card and deck wear, not the credit.
+ */
+export const TICK_STIMULUS = 'D';
+
+const earnedOf = (stimuli, name) => {
+  const stim = (stimuli || []).find((s) => s && s.name === name);
+  return Number((stim && stim.earned) || 0);
+};
+
+/**
+ * Which stimuli a write actually credited, as `[{ name, label, points }]` in
+ * D/K/G order, from the item's stimuli before and after it.
+ *
+ * Reading `primaryStimulus` as the credit had the tick's chat pill say
+ * 'Routine ticked · G +10' on a G-labelled routine whose tick moved D alone,
+ * against a drawer reading G 0% (D-02). Only a stimulus whose `earned` really
+ * rose may be named, so the pill and the donuts cannot disagree.
+ */
+export function earnedDeltas(before, after) {
+  return ['D', 'K', 'G']
+    .map((name) => ({
+      name,
+      label: (STIMULI[name] || STIMULI.D).label,
+      points: Math.round(earnedOf(after, name) - earnedOf(before, name)),
+    }))
+    .filter((delta) => delta.points > 0);
+}
+
+/**
  * Enrich the day's routine items with everything the deck, rail and focus card
  * need. One pass, so every surface reads the same numbers.
  *

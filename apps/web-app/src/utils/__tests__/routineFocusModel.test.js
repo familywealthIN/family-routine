@@ -8,6 +8,8 @@ import {
   pickCascadeItem,
   buildCascade,
   routineSlotCount,
+  earnedDeltas,
+  TICK_STIMULUS,
 } from '../routineFocusModel';
 
 const stimuli = (dSplit, kSplit, gSplit, earned = {}) => [
@@ -60,6 +62,39 @@ describe('primaryStimulus', () => {
     expect(primaryStimulus(TASKS[3])).toBe('K');
     expect(primaryStimulus(TASKS[0])).toBe('K');
     expect(primaryStimulus({ stimuli: [{ name: 'D', splitRate: 4 }] })).toBe('D');
+  });
+});
+
+// D-02: the pill and the drawer donuts have to agree, so what a write credited
+// is read off `earned` rather than off the routine's label.
+describe('earnedDeltas', () => {
+  it('names only the stimuli whose earned rose, in D/K/G order', () => {
+    const deltas = earnedDeltas(
+      stimuli(6, 1, 3, { D: 0, K: 4, G: 0 }),
+      stimuli(6, 1, 3, { D: 10, K: 6, G: 0 }),
+    );
+    expect(deltas).toEqual([
+      { name: 'D', label: 'Discipline', points: 10 },
+      { name: 'K', label: 'Kinetics', points: 2 },
+    ]);
+  });
+
+  // The ticket's case: a G-labelled routine whose tick moves D alone.
+  it('does not name G for a G-labelled routine whose tick only credits D', () => {
+    const task = TASKS[2];
+    expect(primaryStimulus(task)).toBe('G');
+    const deltas = earnedDeltas(task.stimuli, stimuli(6, 1, 3, { D: 12 }));
+    expect(deltas.map((d) => d.name)).toEqual(['D']);
+  });
+
+  it('is empty when nothing moved, and ignores a missing side', () => {
+    expect(earnedDeltas(TASKS[2].stimuli, TASKS[2].stimuli)).toEqual([]);
+    expect(earnedDeltas(TASKS[2].stimuli, null)).toEqual([]);
+    expect(earnedDeltas(undefined, undefined)).toEqual([]);
+  });
+
+  it('agrees with the only stimulus a tick credits', () => {
+    expect(TICK_STIMULUS).toBe('D');
   });
 });
 
