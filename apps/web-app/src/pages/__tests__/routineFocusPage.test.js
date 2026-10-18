@@ -178,6 +178,23 @@ describe('RoutineFocus READY tag and agent-driven refresh', () => {
     expect(decorate({ id: 'g1', contribution: 'x', isComplete: true }).ready).toBe(false);
   });
 
+  // The subtask badge counts what is really ticked: completing the parent does
+  // not tick its subtasks, and the goal sheet's SUBTASKS counter reads the same
+  // list, so the two surfaces must not disagree (D-10).
+  it('counts only the ticked subtasks, parent complete or not', () => {
+    const subTasks = [
+      { id: 's1', body: 'Contrast pass', isComplete: false },
+      { id: 's2', body: 'Type scale', isComplete: false },
+    ];
+    expect(decorate({ id: 'g1', isComplete: true, subTasks }))
+      .toMatchObject({ subDone: 0, subTotal: 2 });
+    expect(decorate({ id: 'g1', isComplete: false, subTasks }))
+      .toMatchObject({ subDone: 0, subTotal: 2 });
+    subTasks[0].isComplete = true;
+    expect(decorate({ id: 'g1', isComplete: true, subTasks }))
+      .toMatchObject({ subDone: 1, subTotal: 2 });
+  });
+
   it('refetches the list when an agent status settles today', () => {
     const refetchGoals = jest.fn();
     const ctx = { isToday: true, refetchGoals };
