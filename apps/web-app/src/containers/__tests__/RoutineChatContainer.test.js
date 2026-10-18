@@ -34,6 +34,7 @@ const {
   SEND_ROUTINE_CHAT_MUTATION,
   MARK_ROUTINE_CHAT_ADDED_MUTATION,
   POST_ROUTINE_CHAT_EVENT_MUTATION,
+  REVISE_ROUTINE_CHAT_REPLY_MUTATION,
   ROUTINE_INSIGHT_MUTATION,
 } = require('../../composables/graphql/chatQueries');
 const {
@@ -99,6 +100,8 @@ const makeCtx = (sendResult, over = {}, rejected = []) => {
 const sent = (ctx) => ctx.mutations.find((m) => m.mutation === SEND_ROUTINE_CHAT_MUTATION);
 const marked = (ctx) => ctx.mutations.filter((m) => m.mutation === MARK_ROUTINE_CHAT_ADDED_MUTATION);
 const events = (ctx) => ctx.mutations.filter((m) => m.mutation === POST_ROUTINE_CHAT_EVENT_MUTATION);
+const revised = (ctx) => ctx.mutations
+  .filter((m) => m.mutation === REVISE_ROUTINE_CHAT_REPLY_MUTATION);
 const moves = (ctx) => ctx.mutations.filter((m) => m.mutation === UPDATE_GOAL_ITEM_FIELDS_MUTATION);
 const misses = (ctx) => ctx.mutations.filter((m) => m.mutation === MARK_GOAL_ITEM_MISSED_MUTATION);
 
@@ -494,6 +497,78 @@ describe('RoutineChatContainer.createItems — the week-goal link', () => {
     }));
     // And no "3 tasks added" pill for three tasks that do not exist.
     expect(events(ctx).some((e) => /added to the checklist/.test(e.variables.text))).toBe(false);
+  });
+});
+
+/**
+ * The reply bubble itself (D-03).
+ *
+ * The orange pill D-01 added is the event log, and it was not enough: the
+ * model's "Added: X" is composed before the create is attempted and PERSISTED,
+ * so the thread kept asserting the task after a reload and contradicted the pill
+ * directly below it. The claim has to be rewritten where it is stored.
+ */
+describe('RoutineChatContainer — a reply that claimed an add it did not make', () => {
+  let consoleError;
+
+  beforeEach(() => {
+    consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => consoleError.mockRestore());
+
+  it('rewrites the bubble so no message reads "Added" for a task that was not created', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks',
+      reply: 'Added: Email the vendor for the missing invoice.',
+      tasks: ['Email the vendor for the missing invoice'],
+      replyMessage: { id: 'reply-1' },
+    }, {
+      $goals: { addGoalItem: jest.fn(() => Promise.reject(new Error('GraphQL error: nope'))) },
+    });
+    await Container.methods.send.call(ctx, 'add a task to email the vendor');
+    await flush();
+
+    expect(revised(ctx)[0].variables).toEqual({
+      id: 'reply-1',
+      text: 'I couldn’t add “Email the vendor for the missing invoice” to the checklist'
+        + ' — nothing was saved. Try again.',
+    });
+    // Rewritten where it is stored, so the correction survives the reload the
+    // ticket's repro ends with.
+    expect(revised(ctx)[0].variables.text).not.toMatch(/Added/);
+    expect(ctx.refetch).toHaveBeenCalled();
+    // The pill is still the event log; it is not the bubble's correction.
+    expect(events(ctx)[0].variables.tone).toBe('orange');
+  });
+
+  it('corrects a partial add by its real numbers, keeping the ids that landed', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks', reply: 'Added all three.', tasks: ['a', 'b', 'c'], replyMessage: { id: 'r' },
+    });
+    let n = 0;
+    ctx.$goals.addGoalItem = jest.fn((input) => {
+      n += 1;
+      return n === 2 ? Promise.reject(new Error('refused'))
+        : Promise.resolve({ id: `new-${input.body}` });
+    });
+    await Container.methods.send.call(ctx, 'add three');
+    await flush();
+
+    expect(revised(ctx)[0].variables.text)
+      .toBe('I added 2 of 3 — “b” didn’t save. Try again.');
+    // The two that did land still attach, so the bubble keeps their checkboxes.
+    expect(marked(ctx)[0].variables.items).toEqual(['new-a', 'new-c']);
+  });
+
+  it('leaves a reply alone when every task was created', async () => {
+    const ctx = makeCtx({
+      intent: 'add_tasks', reply: 'Added.', tasks: ['Review analytics events'], replyMessage: { id: 'r' },
+    });
+    await Container.methods.send.call(ctx, 'add it');
+    await flush();
+
+    expect(revised(ctx)).toHaveLength(0);
   });
 });
 

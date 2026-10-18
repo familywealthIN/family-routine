@@ -13,6 +13,7 @@ const {
   RoutineChatMessageType,
   RoutineChatReplyType,
   decryptSaved,
+  encryptText,
   TEXT_MAX,
   TONES,
 } = require('../schema/RoutineChatSchema');
@@ -313,6 +314,44 @@ const mutation = {
       if (Array.isArray(items) && items.length) update.items = items;
       return RoutineChatMessageModel
         .findOneAndUpdate({ _id: id, email }, update, { new: true })
+        .exec();
+    },
+  },
+
+  /**
+   * Rewrite a reply bubble whose claim the client could not carry out.
+   *
+   * The model composes its reply BEFORE the client attempts the goal-item
+   * writes the intent asks for, so an `add_tasks` turn whose create failed left
+   * a persisted bubble reading "Added: …" for a task the checklist never got —
+   * and it survived a reload, contradicted only by the event pill beneath it
+   * (D-03). The pill is still the event log; this corrects the claim itself.
+   *
+   * `findOneAndUpdate` skips `pre('save')`, so the new body is encrypted here
+   * by the schema's own cipher; the post-read hook decrypts what comes back.
+   * Scoped to the routine's own text bubbles: a user message is the user's words
+   * and an event pill is already a record of what happened.
+   */
+  reviseRoutineChatReply: {
+    type: RoutineChatMessageType,
+    args: {
+      id: { type: new GraphQLNonNull(GraphQLID) },
+      text: { type: new GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, { id, text }, ctx) => {
+      const email = getEmailfromSession(ctx);
+      const body = cap(String(text || '').trim(), TEXT_MAX);
+      if (!body) {
+        throw new Error('A chat message cannot be empty');
+      }
+      return RoutineChatMessageModel
+        .findOneAndUpdate(
+          {
+            _id: id, email, from: 'routine', kind: 'text',
+          },
+          { text: encryptText(body) },
+          { new: true },
+        )
         .exec();
     },
   },

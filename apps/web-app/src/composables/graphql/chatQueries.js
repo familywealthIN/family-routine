@@ -104,6 +104,19 @@ export const MARK_ROUTINE_CHAT_ADDED_MUTATION = gql`
   }
 `;
 
+/**
+ * Correct a reply bubble that announced a write which did not land. The model
+ * composes "Added: X" before the create is attempted, so a failed add left the
+ * claim persisted in the thread (D-03).
+ */
+export const REVISE_ROUTINE_CHAT_REPLY_MUTATION = gql`
+  mutation reviseRoutineChatReply($id: ID!, $text: String!) {
+    reviseRoutineChatReply(id: $id, text: $text) {
+      ${CHAT_MESSAGE_FIELDS}
+    }
+  }
+`;
+
 export const CLEAR_ROUTINE_CHAT_MUTATION = gql`
   mutation clearRoutineChat($date: String!, $taskRef: String!) {
     clearRoutineChat(date: $date, taskRef: $taskRef)
@@ -116,5 +129,6 @@ export default {
   POST_ROUTINE_CHAT_EVENT_MUTATION,
   MARK_ROUTINE_CHAT_ADDED_MUTATION,
   ROUTINE_INSIGHT_MUTATION,
+  REVISE_ROUTINE_CHAT_REPLY_MUTATION,
   CLEAR_ROUTINE_CHAT_MUTATION,
 };

@@ -131,7 +131,12 @@ Guards worth knowing:
   `isMilestone: true`, because the server refuses a `goalRef` without it.
 - A create that fails logs an orange event under the reply, and a brief step's
   Add pill flips back: the bubble's own text came from the model before the
-  write, so it would otherwise claim a task that does not exist.
+  write, so it would otherwise claim a task that does not exist. The pill alone
+  was not enough (D-03) — the claim is persisted, so an `add_tasks` reply whose
+  create failed is also **rewritten in place** (`reviseRoutineChatReply`) to say
+  what actually happened, by its real numbers on a partial add. A break-down or
+  brief bubble is not rewritten: its text is a proposal, and the pill is what
+  claims anything.
 - A `defer_task` / `skip_task` `targetItemId` is held to the same rule, for the
   same reason twice over: moving the wrong task is worse than moving none.
 - A reply claiming a **carry-over** with no `defer_task` behind it is replaced
@@ -225,6 +230,7 @@ event firing — so the thread is a record of the day, not a reconstruction.
 | `apps/web-app/src/containers/__tests__/RoutineChatContainer.test.js` | every intent path, proposal acceptance, event posting |
 | `apps/server/src/utils/chatApi.test.js` | free-roster enforcement, runtime discovery + ranking, model failover, intent coercion, chain-of-thought filtering, outage degradation |
 | `apps/server/src/schema/RoutineChatSchema.test.js` | chat body + per-proposal encryption round trip |
+| `apps/server/src/resolvers/routineChatRevise.test.js` | a corrected reply is scoped to the routine's own bubble and encrypted at rest |
 | `apps/server/tests/authMiddleware.spec.js` | an expired/garbage token leaves the request unauthenticated rather than refused |
 | `packages/markdown-editor/MarkdownEditor.test.js` | the CONTRIBUTION editor's `modelValue` / `update:modelValue` contract with vue-easymde — text really leaves CodeMirror |
 
