@@ -48,7 +48,7 @@ describe('OrganismRoutineChatThread', () => {
   it('centres a system event as a tinted pill, not a bubble', () => {
     const { el } = render({
       messages: [{
-        id: 'e1', from: 'routine', kind: 'event', text: 'Routine ticked · G +12', tone: 'green', icon: 'check_circle',
+        id: 'e1', from: 'routine', kind: 'event', text: 'Routine ticked · D +12', tone: 'green', icon: 'check_circle',
       }],
     });
     expect(el.querySelector('.rn-chat__row').style.justifyContent).toBe('center');

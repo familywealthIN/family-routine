@@ -28,6 +28,7 @@ import {
   buildRecapReply,
   buildPlanReply,
 } from '../utils/routineBrief';
+import { TICK_STIMULUS } from '../utils/routineFocusModel';
 import {
   ROUTINE_CHAT_QUERY,
   SEND_ROUTINE_CHAT_MUTATION,
@@ -259,7 +260,10 @@ export default {
         routineTime: this.routine.time || '',
         routineEnd: this.endTime,
         routineStatus: this.statusLabel,
-        stimulus: this.routine.stimulus || 'D',
+        // What a tick CREDITS, not the routine's label: handing the model the
+        // label had it answering "earning +10 Geniuses" about a tick that moved
+        // Discipline, against a drawer reading G 0% (D-02).
+        stimulus: TICK_STIMULUS,
         points: Math.round(this.routine.points || 0),
         ticked: !!this.routine.ticked,
         doneCount: this.doneCount,

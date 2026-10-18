@@ -731,13 +731,13 @@ describe('RoutineChatContainer.postEvent', () => {
   it('writes the event against the routine it names', async () => {
     const ctx = makeCtx({});
     await Container.methods.postEvent.call(ctx, {
-      text: 'Routine ticked · G +12', tone: 'green', icon: 'check_circle',
+      text: 'Routine ticked · D +12', tone: 'green', icon: 'check_circle',
     });
 
     expect(events(ctx)[0].variables).toEqual({
       date: '12-09-2026',
       taskRef: 'sw',
-      text: 'Routine ticked · G +12',
+      text: 'Routine ticked · D +12',
       tone: 'green',
       icon: 'check_circle',
       items: [],

@@ -456,6 +456,7 @@ import { threshold } from '../utils/getDates';
 import refuseAgentWithoutPoints from '../utils/agentPointsGuard';
 import {
   buildRoutineRows, findCurrentRoutine, focusWindow, buildCascade, pickCascadeItem,
+  earnedDeltas, TICK_STIMULUS,
 } from '../utils/routineFocusModel';
 
 // How long the fly ghost lives (keyframes run 0.8s).
@@ -1671,7 +1672,8 @@ export default {
       if (row) {
         this.$notify({
           title: `"${item.body}" complete`,
-          text: `Counts toward ${row.name} · tick the routine to earn ${row.stimulus} +${Math.round(row.points || 0)}`,
+          // The tick credits Discipline, not the routine's label (D-02).
+          text: `Counts toward ${row.name} · tick the routine to earn ${TICK_STIMULUS} +${Math.round(row.points || 0)}`,
           group: 'notify',
           type: 'success',
           duration: 3000,
@@ -1866,6 +1868,9 @@ export default {
 
       this.measureFly(task);
       const tickedAt = Date.now();
+      // Copied before the optimistic write lands: the pill names what the tick
+      // credited, which is this against the stimuli the mutation returns.
+      const stimuliBefore = (task.stimuli || []).map((st) => ({ name: st.name, earned: st.earned }));
 
       // Claim the tick locally the instant it is tapped: from here until the
       // server confirms, no query response may write `ticked` on this task —
@@ -1957,12 +1962,18 @@ export default {
             }
           },
         })
-        .then(() => {
+        .then(({ data: payload }) => {
           this.trackMutationPerformance('tickRoutineItem', {
             id: did, taskId: task.id, ticked: true,
           }, tickedAt);
           eventBus.$emit(EVENTS.ROUTINE_TICKED);
-          this.onRoutineTicked(task, { fireAgent, agentImplicit });
+          const result = (payload && payload.tickRoutineItem) || {};
+          const saved = (result.tasklist || []).find((t) => t && t.id === task.id);
+          this.onRoutineTicked(task, {
+            fireAgent,
+            agentImplicit,
+            credited: earnedDeltas(stimuliBefore, saved && saved.stimuli),
+          });
         })
         .catch(() => {
           // Apollo rolls the optimistic write back; drop the guard too, or it
@@ -1976,20 +1987,25 @@ export default {
         });
     },
 
-    onRoutineTicked(task, { fireAgent, agentImplicit }) {
+    onRoutineTicked(task, { fireAgent, agentImplicit, credited = [] }) {
       const row = this.rows.find((r) => r.id === task.id) || task;
-      const stimulus = row.stimulus || 'D';
-      const points = Math.round(row.points || 0);
+      // What the tick CREDITED, never the routine's label: a G-labelled routine
+      // whose tick moves D alone may not claim 'G +N' (D-02). A routine worth no
+      // points credits nothing, and then the pill claims nothing.
+      const delta = credited.map((c) => `${c.name} +${c.points}`).join(' · ');
+      const lead = credited[0];
 
       this.postChatEvent({
-        text: `Routine ticked · ${stimulus} +${points}`,
+        text: delta ? `Routine ticked · ${delta}` : 'Routine ticked',
         tone: 'green',
         icon: 'check_circle',
         taskRef: task.id,
       });
       this.$notify({
-        title: `${row.name} done · ${stimulus} +${points}`,
-        text: `${row.stimulusLabel || 'Discipline'} moved to ${Math.round(this.stimulusTotals[stimulus] || 0)}%`,
+        title: delta ? `${row.name} done · ${delta}` : `${row.name} done`,
+        text: lead
+          ? `${lead.label} moved to ${Math.round(this.stimulusTotals[lead.name] || 0)}%`
+          : 'This routine carries no stimulus points.',
         group: 'notify',
         type: 'success',
         duration: 3000,
