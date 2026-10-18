@@ -259,6 +259,45 @@ describe('focusWindow', () => {
   });
 });
 
+// A zero-length window (the routine's start and the next one's are the same
+// minute) can never be `isCurrent` — findCurrentRoutine needs now strictly
+// before the end — and the server need not have stamped it `passed`, so it fell
+// through to the countdown branch and rendered "starts in ended" on the card
+// and in the chat subline that reads the same leftLabel (D-11).
+describe('focusWindow — zero-length window', () => {
+  const ZERO = [
+    {
+      id: 'ms', name: 'Meditate', time: '04:00', points: 6, ticked: false, passed: false, stimuli: stimuli(2, 1, 0),
+    },
+    {
+      id: 'wu', name: 'Wake Up', time: '06:00', points: 5, ticked: false, passed: false, stimuli: stimuli(2, 1, 0),
+    },
+    {
+      id: 'mp', name: 'Morning Pages', time: '06:00', points: 10, ticked: false, passed: false, stimuli: stimuli(4, 1, 0),
+    },
+  ];
+  const rowsAt = (time) => buildRoutineRows(ZERO, { now: at(time), isToday: true });
+
+  it('reads as passed once the clock is past an unstamped 06:00 - 06:00 routine', () => {
+    const rows = rowsAt('15:25');
+    const wu = rows.find((r) => r.id === 'wu');
+    expect(wu.isCurrent).toBe(false);
+    expect(wu.past).toBe(false);
+    const w = focusWindow(rows, rows.indexOf(wu), at('15:25'));
+    expect(w.endTime).toBe('06:00');
+    expect(w.leftLabel).toBe('passed');
+    expect(w.leftLabel).not.toContain('ended');
+  });
+
+  it('still counts down to it before it starts', () => {
+    const rows = rowsAt('05:00');
+    const wu = rows.find((r) => r.id === 'wu');
+    const w = focusWindow(rows, rows.indexOf(wu), at('05:00'));
+    expect(w.statusLabel).toBe('Up next');
+    expect(w.leftLabel).toBe('starts in 1h 00m');
+  });
+});
+
 describe('pickCascadeItem', () => {
   const goals = [{
     id: 'wk',

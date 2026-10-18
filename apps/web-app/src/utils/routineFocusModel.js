@@ -266,7 +266,13 @@ export function focusWindow(rows, index, now, { isToday = true } = {}) {
   // Today's clock only means something on today: a future day's routine
   // starts at its time, not "in Nm".
   else if (!isToday) leftLabel = `starts ${focus.time}`;
-  else leftLabel = `starts in ${formatLeft(Math.max(startMin - nowMin, 0)).replace(' left', '')}`;
+  // A start already behind the clock is not "starts in" anything. A zero-length
+  // window (identical start and end) can never be `isCurrent` —
+  // `findCurrentRoutine` needs now strictly before the end — and need not be
+  // server-stamped `passed`, so it fell through to here and composed
+  // formatLeft's terminal 'ended' into "starts in ended" (D-11).
+  else if (startMin <= nowMin) leftLabel = 'passed';
+  else leftLabel = `starts in ${formatLeft(startMin - nowMin).replace(' left', '')}`;
 
   let statusLabel = 'Up next';
   let statusColor = 'rgba(0,0,0,.45)';

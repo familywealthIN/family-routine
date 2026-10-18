@@ -819,6 +819,27 @@ describe('RoutineFocus computed graph', () => {
     expect(vm.showBackToNow).toBe(false);
   });
 
+  // D-11: the chat head's subline reads the same leftLabel as the card, so a
+  // zero-length window used to put "starts in ended" on both surfaces.
+  it('never puts "starts in ended" in the chat subline of a 06:00 - 06:00 routine', () => {
+    const tasklist = [
+      {
+        id: 'wu', name: 'Wake Up', time: '06:00', points: 5, ticked: false, passed: false, stimuli: split(2, 1, 0),
+      },
+      { ...TASKS[0], time: '06:00' },
+      TASKS[1],
+    ];
+    const vm = graph({
+      routineDate: { id: 'r1', tasklist },
+      focusRoutineId: 'wu',
+      now: moment().startOf('day').add(15, 'hours').add(25, 'minutes'),
+    });
+    expect(vm.focusRow.id).toBe('wu');
+    expect(vm.focusWindowInfo.leftLabel).toBe('passed');
+    expect(vm.chatSubline).not.toContain('starts in ended');
+    expect(vm.chatSubline).toBe('0 of 2 done · passed');
+  });
+
   it('follows an explicit focus and offers Back to now', () => {
     const vm = graph({ focusRoutineId: 'lw' });
     expect(vm.resolvedFocusId).toBe('lw');
