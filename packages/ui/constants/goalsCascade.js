@@ -117,8 +117,10 @@ export const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
  */
 export const CASCADE_RULES = {
   [DAY]: `Day goals count toward this week’s goal for the same routine (${CASCADE_TH[WEEK]} days auto-tick it).`,
-  [WEEK]: `{window}. A week goal auto-ticks after ${CASCADE_TH[WEEK]} day goals.`,
-  [MONTH]: `{window}. A month goal auto-ticks after ${CASCADE_TH[MONTH]} week goals.`,
+  // The server's gate, so the line and the rows under it state one rule: every
+  // milestone met, with the threshold as a floor (D-04, `evaluateAutoComplete`).
+  [WEEK]: `{window}. A week goal auto-ticks once every day milestone on it is met (min ${CASCADE_TH[WEEK]}).`,
+  [MONTH]: `{window}. A month goal auto-ticks once every week milestone on it is met (min ${CASCADE_TH[MONTH]}).`,
   [YEAR]: `{window}. A year goal auto-ticks after ${CASCADE_TH[YEAR]} month goals. Tap one to open it.`,
   [LIFETIME]: 'Lifetime goals have no date. Year goals link up into them; tick them by hand.',
 };

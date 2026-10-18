@@ -165,7 +165,11 @@ const GoalGroups = {
             attrs: { 'data-testid': `goal-status-${row.id}` },
           }, row.status.label),
         ]));
-      } else if (row.meta) {
+      }
+
+      // A bar row carries one too: the rule its counter is measured against,
+      // which is the sentence the focus card's cascade panel prints (D-04).
+      if (row.meta) {
         text.push(h('div', { class: 'rn-gcas__row-meta' }, row.meta));
       }
 

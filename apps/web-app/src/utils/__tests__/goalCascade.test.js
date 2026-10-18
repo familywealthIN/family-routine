@@ -21,6 +21,7 @@ const {
   manualTickBlocked,
   normaliseTab,
   periodIsOver,
+  periodComplete,
   periodCount,
   periodDone,
   planRowTick,
@@ -30,6 +31,9 @@ const {
   titleFor,
   yearAverageOf,
 } = require('../goalCascade');
+// The focus card's own cascade model, so the D-04 parity test below compares the
+// two screens rather than restating one of them.
+const { buildCascade: focusCascade } = require('../routineFocusModel');
 
 const TODAY = '12-09-2026';
 const WEEK_DATE = '11-09-2026';
@@ -105,7 +109,14 @@ describe('the cascade ladder is the navigation', () => {
   it('counts each level done-of-total, and the Year step as a percentage', () => {
     const built = view(goalsFor({
       day: [{ id: 'd1', taskRef: 'sw', isComplete: true }, { id: 'd2', taskRef: 'sw', isComplete: false }],
-      week: [{ id: 'w1', taskRef: 'sw', progress: 5 }, { id: 'w2', taskRef: 'mp', progress: 1 }],
+      // The week step counts the goals the SERVER closed, the same rule its rows
+      // draw (D-04) — `progress` at the threshold is not a completion.
+      week: [
+        {
+          id: 'w1', taskRef: 'sw', progress: 5, isComplete: true,
+        },
+        { id: 'w2', taskRef: 'mp', progress: 1 },
+      ],
       // 5 of 6 months is 83%, not 84% — chassis.md § the goal cascade.
       year: [{ id: 'y1', taskRef: 'sw', progress: 5 }],
     }));
@@ -142,9 +153,9 @@ describe('the cascade ladder is the navigation', () => {
     expect(ruleFor('day', { selectedDate: TODAY, today: TODAY }))
       .toContain('5 days auto-tick it');
     expect(ruleFor('week', { selectedDate: TODAY, today: TODAY }))
-      .toBe('Week 37 · 6–12 Sep. A week goal auto-ticks after 5 day goals.');
+      .toBe('Week 37 · 6–12 Sep. A week goal auto-ticks once every day milestone on it is met (min 5).');
     expect(ruleFor('month', { selectedDate: TODAY, today: TODAY }))
-      .toBe('September 2026. A month goal auto-ticks after 3 week goals.');
+      .toBe('September 2026. A month goal auto-ticks once every week milestone on it is met (min 3).');
     expect(ruleFor('year', { selectedDate: TODAY, today: TODAY }))
       .toBe('2026. A year goal auto-ticks after 6 month goals. Tap one to open it.');
     expect(ruleFor('lifetime', { selectedDate: TODAY, today: TODAY }))
@@ -329,13 +340,20 @@ describe('planRowTick — what one tap sends', () => {
     expect(plan.toast).toBeNull();
   });
 
-  it('blocks a hand tick the level below already satisfies', () => {
+  // D-04: "already satisfied" is the server's gate — every milestone met, never
+  // below the threshold — not `progress` against the threshold alone.
+  it('blocks a hand tick the server has already auto-ticked', () => {
     const blocked = {
       id: 'w1', period: 'week', date: WEEK_DATE, taskRef: 'sw', done: false,
     };
     const plan = planRowTick({
       row: blocked,
-      items: { ...items, week: [{ ...items.week[0], progress: 5 }] },
+      items: {
+        ...items,
+        week: [{
+          ...items.week[0], progress: 5, milestonesTotal: 5, milestonesComplete: 5,
+        }],
+      },
       routines: ROUTINES,
       isToday: true,
     });
@@ -345,8 +363,29 @@ describe('planRowTick — what one tap sends', () => {
       icon: 'info',
       color: '#90caf9',
       title: 'Ticked automatically',
-      sub: '5 of 5 day goals are done',
+      sub: '5 of 5 day milestones are met',
     });
+  });
+
+  // The week the beta run tapped: five won days, eight milestones, so the server
+  // left it open. Refusing the tap there would claim an auto-tick that never
+  // happened, and the row's own counter says 5/8.
+  it('lets a hand tick through on a week the server left open at the threshold', () => {
+    const plan = planRowTick({
+      row: {
+        id: 'w1', period: 'week', date: WEEK_DATE, taskRef: 'sw', done: false,
+      },
+      items: {
+        ...items,
+        week: [{
+          ...items.week[0], progress: 5, milestonesTotal: 8, milestonesComplete: 5,
+        }],
+      },
+      routines: ROUTINES,
+      isToday: true,
+    });
+    expect(plan.blocked).toBe(false);
+    expect(plan.ticks.map((tick) => tick.period)).toEqual(['week']);
   });
 
   it('still lets a hand tick through below the threshold', () => {
@@ -390,11 +429,17 @@ describe('planRowTick — what one tap sends', () => {
     });
   });
 
-  it('blocks nothing at all for a row the toast says is automatic', () => {
-    expect(manualTickBlocked('lifetime', { progress: 99 })).toBe(false);
-    expect(manualTickBlocked('week', { progress: 5 })).toBe(true);
-    expect(manualTickBlocked('week', { progress: null })).toBe(false);
-    expect(blockedTickToast('month', { progress: 3 }).sub).toBe('3 of 3 week goals are done');
+  // D-04: the refusal is the SERVER's gate. A week five won days into eight
+  // milestones is still open there, so a hand tick on it is an edit — refusing
+  // it would claim an auto-tick that never happened.
+  it('blocks a hand tick only where the server’s gate is satisfied', () => {
+    expect(manualTickBlocked('lifetime', { milestonesTotal: 9, milestonesComplete: 9 })).toBe(false);
+    expect(manualTickBlocked('week', { milestonesTotal: 5, milestonesComplete: 5 })).toBe(true);
+    expect(manualTickBlocked('week', { milestonesTotal: 8, milestonesComplete: 6 })).toBe(false);
+    expect(manualTickBlocked('week', { progress: 5 })).toBe(false);
+    expect(manualTickBlocked('week', { milestonesComplete: null })).toBe(false);
+    expect(blockedTickToast('month', { milestonesTotal: 4, milestonesComplete: 4 }).sub)
+      .toBe('4 of 4 week milestones are met');
   });
 });
 
@@ -471,28 +516,53 @@ describe('the rows each level draws', () => {
   it('gives a week goal a streak bar against the threshold', () => {
     const built = view(goalsFor({
       week: [{
-        id: 'w1', body: 'Ship it', taskRef: 'sw', progress: 4,
+        id: 'w1', body: 'Ship it', taskRef: 'sw', progress: 4, milestonesTotal: 5, milestonesComplete: 4,
       }],
     }), { tab: 'week' });
     const row = built.groups[0].rows[0];
     expect(row.kind).toBe('bar');
-    expect(row.barLabel).toBe('4/5 days');
+    expect(row.barLabel).toBe('4/5 milestones');
     expect(row.barPct).toBe(80);
     expect(row.status.label).toBe('Active');
+    expect(row.meta).toBe('Needs all 5 day milestones met (min 5)');
   });
 
-  it('prints an em dash, never a 0, for a streak the read did not carry', () => {
+  // D-04: the bar used to count `progress` — one win per fully-won child DATE —
+  // against the bare threshold, so a week goal with eight day milestones read
+  // "5/5 days · Done" where the focus card read "6 / 8 milestones · Active".
+  it('counts the server’s met milestones, with the threshold only as a floor', () => {
+    const built = view(goalsFor({
+      week: [{
+        id: 'w1', body: 'Ship it', taskRef: 'sw', progress: 6, milestonesTotal: 8, milestonesComplete: 6,
+      }],
+    }), { tab: 'week' });
+    const row = built.groups[0].rows[0];
+    expect(row.barLabel).toBe('6/8 milestones');
+    expect(row.barPct).toBe(75);
+    expect(row.status.label).toBe('Active');
+    expect(row.blocked).toBe(false);
+    expect(row.meta).toBe('Needs all 8 day milestones met (min 5)');
+  });
+
+  it('prints an em dash, never a 0, for a tally the read did not carry', () => {
     const built = view(goalsFor({
       week: [{ id: 'w1', body: 'Ship it', taskRef: 'sw' }],
     }), { tab: 'week' });
-    expect(built.groups[0].rows[0].barLabel).toBe('—/5 days');
+    expect(built.groups[0].rows[0].barLabel).toBe('—/5 milestones');
     expect(built.groups[0].rows[0].barPct).toBe(0);
   });
 
-  it('calls a week goal Done once the level below satisfies it', () => {
+  it('calls a week goal Done when the server ticked it, and not before', () => {
+    const open = view(goalsFor({
+      week: [{
+        id: 'w1', body: 'Ship it', taskRef: 'sw', progress: 5, milestonesTotal: 8, milestonesComplete: 5,
+      }],
+    }), { tab: 'week' });
+    expect(open.groups[0].rows[0].status.label).toBe('Active');
+
     const built = view(goalsFor({
       week: [{
-        id: 'w1', body: 'Ship it', taskRef: 'sw', progress: 5,
+        id: 'w1', body: 'Ship it', taskRef: 'sw', progress: 5, milestonesTotal: 5, milestonesComplete: 5, isComplete: true,
       }],
     }), { tab: 'week' });
     expect(built.groups[0].rows[0].status.label).toBe('Done');
@@ -645,6 +715,14 @@ describe('the figures the rest of the app reads', () => {
     expect(periodDone({ isComplete: true }, 'lifetime')).toBe(true);
   });
 
+  // What the rows and the week/month steps report (D-04): the server's gate, so
+  // a week the level below satisfies but the server left open is still Active.
+  it('reports a period goal complete only when the server ticked it', () => {
+    expect(periodComplete({ isComplete: true })).toBe(true);
+    expect(periodComplete({ progress: 5 })).toBe(false);
+    expect(periodComplete(null)).toBe(false);
+  });
+
   it('titles each level the way the design does', () => {
     const at = (tab, selectedDate = TODAY) => titleFor(tab, { selectedDate, today: TODAY });
     expect(at('day')).toBe('Today');
@@ -718,5 +796,52 @@ describe('periodIsOver', () => {
       tab: 'month', goals: [], routines: [], selectedDate: '15-08-2026', today, now: moment(),
     });
     expect(month.canAdd).toBe(false);
+  });
+});
+
+/**
+ * D-04, as the beta run found it: one week goal with eight day milestones and
+ * one met read "1 / 8 milestones · Active · Needs all 8 day milestones met
+ * (min 5)" on the /home WEEK tab and "1/5 days · Active" on /goals, and /goals
+ * clamped at 5/5 where /home read 6/5. The two screens now derive both from the
+ * server's own tally, so the figures cannot drift apart again.
+ */
+describe('one week goal reads the same on /goals and the /home WEEK tab', () => {
+  const ITEM = {
+    id: '6acbadf4e4b0a1c2d3e4f501',
+    body: 'Review payment flow',
+    taskRef: 'sw',
+    isComplete: false,
+    progress: 1,
+    milestonesTotal: 8,
+    milestonesComplete: 1,
+  };
+
+  const goalsRow = () => view(goalsFor({ week: [ITEM] }), { tab: 'week' }).groups[0].rows[0];
+
+  const homePanel = () => focusCascade({
+    period: 'week',
+    goals: [{
+      id: 'gw', period: 'week', date: WEEK_DATE, goalItems: [{ ...ITEM, date: WEEK_DATE }],
+    }],
+    focusRow: { id: 'sw', items: [] },
+    date: TODAY,
+  });
+
+  it('shows one numerator, one denominator and one rule', () => {
+    const row = goalsRow();
+    const panel = homePanel();
+    expect(row.barLabel).toBe(`${panel.done}/${panel.threshold} ${panel.unitName}`);
+    expect(row.barLabel).toBe('1/8 milestones');
+    expect(row.meta).toBe(panel.rule);
+    expect(row.meta).toBe('Needs all 8 day milestones met (min 5)');
+    expect(row.status.label).toBe(panel.statusLabel);
+  });
+
+  it('never clamps the count at the threshold where the focus card does not', () => {
+    const past = { ...ITEM, progress: 6, milestonesComplete: 6 };
+    const row = view(goalsFor({ week: [past] }), { tab: 'week' }).groups[0].rows[0];
+    expect(row.barLabel).toBe('6/8 milestones');
+    expect(row.status.label).toBe('Active');
   });
 });

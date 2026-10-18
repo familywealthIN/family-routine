@@ -14,15 +14,19 @@
  * The design's rule is routine-shaped: a day goal contributes to its routine's
  * week goal only once EVERY task under that routine for that day is done, and
  * five such days auto-tick the week goal (docs/redesign/chassis.md § "The goal
- * cascade"). The server's rule is link-shaped: `autoCheckTaskPeriod` counts the
- * child documents that hold a COMPLETE item whose `goalRef` is this goal item,
- * and publishes that count as `GoalItem.progress`.
+ * cascade"). The server's rule is milestone-shaped: `evaluateAutoComplete` ticks
+ * a period goal once every child milestone the user hung off it is met, and
+ * never below the threshold — `milestonesComplete` of `milestonesTotal`, with
+ * the threshold as a floor.
  *
- * So `progress` is the authority on the NUMBER (it is the figure the server will
- * auto-tick on), and the routine rule is the authority on the GESTURE — which
- * tick earns the toast, the pop and the predicted +1. Nothing here invents a
- * count the server does not have: a goal item that arrived without `progress`
- * reports `null`, which the UI prints as an em dash.
+ * So the server's tally is the authority on the NUMBER and on DONE (it is what
+ * the server auto-ticks on, and what the focus card's cascade panel already
+ * reads — `routineFocusModel.milestoneTally`, which this file reuses rather than
+ * keeping a second copy), and the routine rule is the authority on the GESTURE —
+ * which tick earns the toast, the pop and the predicted +1, for which `progress`
+ * (one win per fully-won child DATE) is still the count. Nothing here invents a
+ * figure the server does not have: a goal item that arrived without the tally
+ * prints an em dash.
  */
 import moment from 'moment';
 import {
@@ -45,7 +49,7 @@ import {
   thresholdChip,
 } from '@routine-notes/ui/constants/goalsCascade';
 import { periodGoalDates } from '@routine-notes/ui/utils/getDates';
-import { findCurrentRoutine, toMinutes } from './routineFocusModel';
+import { findCurrentRoutine, milestoneTally, toMinutes } from './routineFocusModel';
 import { isYearGoalItem } from './yearGoalModel';
 
 export const DATE_FORMAT = 'DD-MM-YYYY';
@@ -189,7 +193,11 @@ export function periodCount(item, period) {
   return th ? Math.min(n, th) : n;
 }
 
-/** Done = the server ticked it, or the level below already satisfies it. */
+/**
+ * Done = the server ticked it, or the level below already satisfies it — the
+ * design's done-children rule, which the tick PREDICTION and the year row read.
+ * What the week and month rows report is `periodComplete` (D-04).
+ */
 export function periodDone(item, period) {
   if (!item) return false;
   if (item.isComplete) return true;
@@ -199,26 +207,48 @@ export function periodDone(item, period) {
 }
 
 /**
- * A hand tick is refused when the level below already satisfies the threshold —
- * the goal is auto-ticked, so a tap on it is a question, not an edit.
+ * Complete = the server's own gate, and nothing looser.
+ *
+ * `evaluateAutoComplete` needs every milestone met AND the threshold, so a week
+ * goal five won days into eight milestones is still open — and `agendaGoals`
+ * runs `autoCheckTaskPeriod` on this page's own read, so `isComplete` is that
+ * gate's answer by the time a row draws. D-04: reading `periodDone` here printed
+ * "5/5 days · Done" for the week the focus card read as "6 / 8 milestones ·
+ * Active". `periodDone` stays as it is for the day-tick PREDICTION, which is the
+ * design's child-win rule.
  */
-export function manualTickBlocked(period, item) {
-  const th = CASCADE_TH[period];
-  if (!th || !item) return false;
-  const n = periodCount(item, period);
-  return n != null && n >= th;
+export function periodComplete(item) {
+  return !!(item && item.isComplete);
 }
 
-/** "Ticked automatically" / "4 of 5 day goals" — chassis.md § cascade. */
+/**
+ * A hand tick is refused when the goal is auto-ticked, so a tap on it is a
+ * question, not an edit. That is the server's gate — every milestone met, never
+ * below the threshold — not `progress` against the threshold alone: a week goal
+ * the server has left open still has an outstanding milestone, and refusing the
+ * tap there would claim an auto-tick that never happened (D-04).
+ */
+export function manualTickBlocked(period, item) {
+  const tally = milestoneTally({ item, period });
+  if (!tally || !tally.known) return false;
+  return tally.done >= tally.threshold;
+}
+
+/**
+ * "Ticked automatically" / "8 of 8 day milestones" — chassis.md § cascade, in
+ * the unit the refusal was decided in (`manualTickBlocked`), so the toast cannot
+ * quote a figure the goal was not closed on.
+ */
 export function blockedTickToast(period, item) {
-  const th = CASCADE_TH[period];
-  const n = periodCount(item, period);
+  const tally = milestoneTally({ item, period });
   const unit = { [WEEK]: 'day', [MONTH]: 'week', [YEAR]: 'month' }[period] || 'child';
   return {
     icon: 'info',
     color: '#90caf9',
     title: 'Ticked automatically',
-    sub: `${n == null ? '—' : n} of ${th} ${unit} goals are done`,
+    sub: tally && tally.known
+      ? `${tally.done} of ${tally.threshold} ${unit} milestones are met`
+      : `Every ${unit} milestone is met`,
   };
 }
 
@@ -381,8 +411,8 @@ export function tickDayOutcome({
  * The three outcomes the design distinguishes:
  *   - a day row: tick it, and if that clears its routine, send every threshold
  *     the clearance crossed in the same gesture;
- *   - a week / month row the level below already satisfies: send nothing and say
- *     "Ticked automatically";
+ *   - a week / month row the server has already auto-ticked: send nothing and
+ *     say "Ticked automatically";
  *   - a year row: nothing at all. A year goal NAVIGATES (`navigate`), because its
  *     own page is where its months live.
  *
@@ -451,10 +481,14 @@ function dayRow(item) {
   };
 }
 
+/**
+ * A week / month row: the server's milestone tally, through the focus card's own
+ * helper, so one goal reads the same on /goals and on the /home WEEK tab — the
+ * counter, the floor, Done-or-Active and the rule line under it (D-04).
+ */
 function barRow(item, period) {
-  const th = CASCADE_TH[period];
-  const n = periodCount(item, period);
-  const done = periodDone(item, period);
+  const tally = milestoneTally({ item, period });
+  const done = periodComplete(item);
   return {
     key: item.id,
     id: item.id,
@@ -466,11 +500,13 @@ function barRow(item, period) {
     date: item.date,
     isMilestone: !!item.isMilestone,
     strike: false,
-    // An em dash, never a 0: a read that did not carry `progress` knows nothing
-    // about this goal's streak, and "0/5 days" would be a claim.
-    barLabel: `${n == null ? '—' : n}/${th} ${CASCADE_UNIT[period]}`,
-    barPct: n == null ? 0 : Math.min(100, (n / th) * 100),
+    // An em dash, never a 0: a read that did not carry the tally knows nothing
+    // about this goal's milestones, and "0/5 milestones" would be a claim.
+    barLabel: `${tally.known ? tally.done : '—'}/${tally.threshold} ${tally.unitName}`,
+    barPct: tally.known ? tally.pct : 0,
     status: statusChip(done),
+    // The same sentence the focus card prints for this goal.
+    meta: tally.rule,
     blocked: manualTickBlocked(period, item),
   };
 }
@@ -682,8 +718,10 @@ export function buildCascade({
 
   const tallies = {
     [DAY]: [dayItems.filter((i) => i.isComplete).length, dayItems.length],
-    [WEEK]: [weekItems.filter((i) => periodDone(i, WEEK)).length, weekItems.length],
-    [MONTH]: [monthItems.filter((i) => periodDone(i, MONTH)).length, monthItems.length],
+    // The week and month steps count the rows below them, and a bar row is Done
+    // only when the server ticked it — one rule per goal, one count (D-04).
+    [WEEK]: [weekItems.filter(periodComplete).length, weekItems.length],
+    [MONTH]: [monthItems.filter(periodComplete).length, monthItems.length],
     [YEAR]: [yearItems.filter((i) => periodDone(i, YEAR)).length, yearItems.length],
     [LIFETIME]: [lifeItems.filter((i) => i.isComplete).length, lifeItems.length],
   };
@@ -788,6 +826,7 @@ export default {
   manualTickBlocked,
   normaliseTab,
   orderedRoutines,
+  periodComplete,
   periodCount,
   periodDone,
   planRowTick,

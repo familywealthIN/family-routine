@@ -147,7 +147,13 @@ export const REDEEM_ROUTINE_ITEM_MUTATION = gql`
 
 /**
  * Get agenda goals for a specific date - all periods (day, week, month, year, lifetime)
- * Used in: AgendaTime.vue
+ * Used in: AgendaTime.vue, GoalsCascadeContainer.vue
+ *
+ * `milestonesTotal` / `milestonesComplete` are the server's own tally for a
+ * period goal, filled by the same `autoCheckTaskPeriod` pass that fills
+ * `progress` — the figures its auto-tick gate counts in. The Goals screen's
+ * week and month rows render them, so one week goal cannot report a different
+ * counter there and on the Routine Focus WEEK tab (D-04).
  */
 export const AGENDA_GOALS_QUERY = gql`
   query agendaGoals($date: String!) {
@@ -159,6 +165,8 @@ export const AGENDA_GOALS_QUERY = gql`
         id
         body
         progress
+        milestonesTotal
+        milestonesComplete
         isComplete
         isMilestone
         taskRef

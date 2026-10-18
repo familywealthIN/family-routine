@@ -45,6 +45,14 @@ describe('the two reads', () => {
     expect(print(AGENDA_GOALS_QUERY)).toMatch(/\bprogress\b/);
   });
 
+  // D-04: the week and month rows render the server's milestone tally, the same
+  // figures the /home WEEK tab reads, so this read has to carry them.
+  it('takes the milestone tally from the cascade read too', () => {
+    const text = print(AGENDA_GOALS_QUERY);
+    expect(text).toMatch(/\bmilestonesTotal\b/);
+    expect(text).toMatch(/\bmilestonesComplete\b/);
+  });
+
   it('re-exports the existing documents instead of declaring second owners', () => {
     expect(AGENDA_GOALS_QUERY).toBe(FROM_QUERIES);
     expect(ROUTINE_INDEX_QUERY).toBe(AGENT_ROUTINE_ITEMS_QUERY);
