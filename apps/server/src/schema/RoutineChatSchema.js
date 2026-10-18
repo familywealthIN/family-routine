@@ -74,6 +74,13 @@ const decryptMessageDoc = (doc) => {
  */
 const decryptSaved = (doc) => decryptMessageDoc(doc);
 
+/**
+ * `findOneAndUpdate` does not run `pre('save')`, so a resolver that rewrites a
+ * body has to hand it through the same cipher the hook uses — otherwise the one
+ * corrected message is the only plaintext row in the collection.
+ */
+const encryptText = (text) => encryption.encrypt(text);
+
 RoutineChatMessageSchema.post(['find', 'findOne', 'findOneAndUpdate'], (docs) => {
   if (!docs) return;
   if (Array.isArray(docs)) {
@@ -130,6 +137,7 @@ const RoutineChatMessageModel = mongoose.model(
 
 module.exports = {
   decryptSaved,
+  encryptText,
   RoutineChatMessageSchema,
   RoutineChatMessageModel,
   RoutineChatMessageType,

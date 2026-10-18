@@ -33,6 +33,7 @@ import {
   SEND_ROUTINE_CHAT_MUTATION,
   POST_ROUTINE_CHAT_EVENT_MUTATION,
   MARK_ROUTINE_CHAT_ADDED_MUTATION,
+  REVISE_ROUTINE_CHAT_REPLY_MUTATION,
   ROUTINE_INSIGHT_MUTATION,
 } from '../composables/graphql/chatQueries';
 import { UPDATE_GOAL_ITEM_FIELDS_MUTATION } from '../composables/graphql/goalItemQueries';
@@ -486,7 +487,17 @@ export default {
         if (!result) return;
 
         if (result.intent === 'add_tasks' && result.tasks && result.tasks.length) {
-          const { ids } = await this.createItems(result.tasks, { taskRef, date });
+          const { ids, failed } = await this.createItems(result.tasks, { taskRef, date });
+          // The bubble's text was written by the model BEFORE the create was
+          // attempted, and it is persisted — so a failed add left "Added: X" in
+          // the thread for good, contradicted only by the pill below it (D-03).
+          // The pill stays; the claim itself is corrected in place.
+          if (failed.length && result.replyMessage) {
+            await this.reviseReply(
+              result.replyMessage.id,
+              this.createFailureReply(failed, ids.length),
+            );
+          }
           if (ids.length && result.replyMessage) {
             await this.attachItems(result.replyMessage.id, ids);
           }
@@ -799,6 +810,18 @@ export default {
     },
 
     /**
+     * What a reply bubble should say instead of the add it claimed, given what
+     * the create actually did. Same numbers as `notifyCreateFailed`: the toast
+     * is the moment, this is what the thread reads after a reload.
+     */
+    createFailureReply(failed, added) {
+      const what = failed.length === 1 ? `“${failed[0]}”` : `those ${failed.length} tasks`;
+      return added
+        ? `I added ${added} of ${added + failed.length} — ${what} didn’t save. Try again.`
+        : `I couldn’t add ${what} to the checklist — nothing was saved. Try again.`;
+    },
+
+    /**
      * The item a `defer_task` / `skip_task` turn named, re-resolved against the
      * checklist this container is actually holding.
      *
@@ -911,6 +934,22 @@ export default {
         type: 'info',
         duration: 4000,
       });
+    },
+
+    /**
+     * Rewrite a persisted reply's text. Only for a bubble the write contradicted
+     * — `text` is what a reload reads back, so leaving it is the whole defect.
+     */
+    reviseReply(messageId, text) {
+      return this.$apollo
+        .mutate({
+          mutation: REVISE_ROUTINE_CHAT_REPLY_MUTATION,
+          variables: { id: messageId, text },
+        })
+        .then(() => this.refetch())
+        .catch((error) => {
+          console.error('[RoutineChat] reviseReply failed:', error);
+        });
     },
 
     attachItems(messageId, items) {
