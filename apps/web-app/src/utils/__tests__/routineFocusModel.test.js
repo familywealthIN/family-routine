@@ -269,6 +269,43 @@ describe('pickCascadeItem', () => {
     })).toBeNull();
   });
 
+  // D-09, as reported on the year tab: Wind-down has no year goal, Wake Up
+  // does, and the card headed "YEAR GOAL FOR Wind-down" drew "Wake Up
+  // resolution" with Wake Up's own linked month goals under it. Wind-down gets
+  // null — the panel's empty state — and Wake Up still gets its own goal.
+  it('leaves the year tab empty rather than lending Wind-down Wake Up’s goal', () => {
+    const yearGoals = [{
+      id: 'yr',
+      period: 'year',
+      date: '31-12-2026',
+      goalItems: [{
+        id: 'yg_wakeup',
+        body: 'Wake Up resolution',
+        date: '31-12-2026',
+        taskRef: 'wakeup',
+        milestonesTotal: 4,
+        milestonesComplete: 1,
+        milestoneDays: [{ date: '31-10-2026', status: 'complete' }],
+      }],
+    }];
+    const children = [{
+      id: 'mo',
+      period: 'month',
+      date: '31-10-2026',
+      goalItems: [{ id: 'c1', body: 'QA retest 4 months child plan', goalRef: 'yg_wakeup' }],
+    }];
+    const winddown = { id: 'winddown', name: 'Wind-down', items: [] };
+    expect(pickCascadeItem({ goals: yearGoals, period: 'year', focusRow: winddown })).toBeNull();
+    expect(buildCascade({
+      period: 'year', goals: yearGoals, focusRow: winddown, date: '08-10-2026', children,
+    })).toBeNull();
+
+    const wakeup = { id: 'wakeup', name: 'Wake Up', items: [] };
+    expect(buildCascade({
+      period: 'year', goals: yearGoals, focusRow: wakeup, date: '08-10-2026', children,
+    }).title).toBe('Wake Up resolution');
+  });
+
   it('shows nothing when no routine is focused', () => {
     expect(pickCascadeItem({ goals, period: 'week', focusRow: null })).toBeNull();
   });
