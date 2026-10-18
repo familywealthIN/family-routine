@@ -80,9 +80,10 @@ const BAR_GROUP = [{
     done: false,
     strike: false,
     period: 'week',
-    barLabel: '4/5 days',
+    barLabel: '4/5 milestones',
     barPct: 80,
     status: { label: 'Active', color: '#FF9800', bg: 'rgba(255,152,0,.14)' },
+    meta: 'Needs all 5 day milestones met (min 5)',
     blocked: false,
   }],
 }];
@@ -182,9 +183,11 @@ describe('GoalCascade — the three row shapes', () => {
     expect(events.toggled).toEqual(['d2']);
   });
 
-  it('gives a week goal its streak bar and status chip', () => {
+  it('gives a week goal its streak bar, status chip and rule line', () => {
     const { el } = render({ tab: 'week', groups: BAR_GROUP });
-    expect(q(el, 'goal-row-w1').textContent).toContain('4/5 days');
+    expect(q(el, 'goal-row-w1').textContent).toContain('4/5 milestones');
+    // D-04: the rule its counter is measured against, as the focus card prints it.
+    expect(q(el, 'goal-row-w1').textContent).toContain('Needs all 5 day milestones met (min 5)');
     expect(q(el, 'goal-status-w1').textContent).toBe('Active');
     expect(q(el, 'goal-row-w1').querySelector('.rn-gcas__bar-fill').style.width).toBe('80%');
   });

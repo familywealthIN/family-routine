@@ -486,6 +486,59 @@ export function linkedGoals({
 }
 
 /**
+ * One period goal's counter, floor, status and rule line, as the SERVER counts
+ * them.
+ *
+ * Exported because /goals draws the same goal (utils/goalCascade.barRow). That
+ * screen read `progress` against the bare threshold and reported "1/5 days"
+ * where this one reported "1 / 8 milestones" for one week goal (D-04), which is
+ * the D-02 split again across two screens instead of one panel.
+ *
+ * `known` says whether the read carried the tally at all, so a caller can print
+ * an em dash rather than claim a 0.
+ *
+ * @param {Object} params
+ * @param {Object} params.item   a week / month / year goal item
+ * @param {string} params.period week | month | year
+ */
+export function milestoneTally({ item, period }) {
+  const meta = CASCADE_META[period];
+  if (!item || !meta) return null;
+
+  const limit = threshold[meta.thresholdKey];
+  // The server's own tally, not a re-count of the grid. `milestoneDays` calls a
+  // DATE complete only when every milestone on it is, so counting 'done' cells
+  // reported 1 of 5 for a week the server had already scored 7 met milestones
+  // on — the counter and the dots were answering different questions.
+  const done = Number(item.milestonesComplete) || 0;
+  const total = Number(item.milestonesTotal) || 0;
+  // What the real gate waits for: evaluateAutoComplete ticks on
+  // `met >= completionThreshold && !outstanding.length`, so the goal needs
+  // every milestone it holds, and never fewer than the threshold.
+  const required = Math.max(total, limit);
+  // The server owns completion. `|| done >= limit` here let the card declare
+  // "Done" off its own arithmetic while autoCheckTaskPeriod had not ticked the
+  // goal — a client must not out-vote the server on whether a goal is met.
+  const complete = !!item.isComplete;
+
+  return {
+    known: item.milestonesComplete != null,
+    // The counter is in milestones because the gate is: the grid still counts
+    // calendar cells, but a cell can hold more than one milestone.
+    unitName: 'milestones',
+    done,
+    threshold: required,
+    complete,
+    statusLabel: complete ? 'Done' : 'Active',
+    statusColor: complete ? '#4CAF50' : '#FF9800',
+    pct: Math.min(100, Math.round((done / Math.max(required, 1)) * 100)),
+    rule: total
+      ? `Needs all ${total} ${meta.stepDown} milestones met (min ${limit})`
+      : `Needs ${limit} ${meta.stepDown} milestones met`,
+  };
+}
+
+/**
  * Build the cascade panel payload for one period.
  *
  * @param {Object} params
@@ -510,21 +563,9 @@ export function buildCascade({
     state: unitState(day.status, day.date, period, today),
   }));
 
-  const limit = threshold[meta.thresholdKey];
-  // The server's own tally, not a re-count of the grid. `milestoneDays` calls a
-  // DATE complete only when every milestone on it is, so counting 'done' cells
-  // reported 1 of 5 for a week the server had already scored 7 met milestones
-  // on — the counter and the dots were answering different questions.
-  const done = Number(item.milestonesComplete) || 0;
-  const total = Number(item.milestonesTotal) || 0;
-  // What the real gate waits for: evaluateAutoComplete ticks on
-  // `met >= completionThreshold && !outstanding.length`, so the goal needs
-  // every milestone it holds, and never fewer than the threshold.
-  const required = Math.max(total, limit);
-  // The server owns completion. `|| done >= limit` here let the card declare
-  // "Done" off its own arithmetic while autoCheckTaskPeriod had not ticked the
-  // goal — a client must not out-vote the server on whether a goal is met.
-  const complete = !!item.isComplete;
+  // The same tally /goals' week and month rows read, so one goal cannot report
+  // two counters, two floors or two rules on the two screens (D-04).
+  const tally = milestoneTally({ item, period });
 
   const linked = linkedGoals({
     period, children, unitDates: days.map((day) => day.date), date,
@@ -533,18 +574,14 @@ export function buildCascade({
   return {
     title: item.body,
     range: rangeLabel(period, item.date || date),
-    // The counter is in milestones because the gate is: the grid still counts
-    // calendar cells, but a cell can hold more than one milestone.
-    unitName: 'milestones',
-    done,
-    threshold: required,
-    complete,
-    statusLabel: complete ? 'Done' : 'Active',
-    statusColor: complete ? '#4CAF50' : '#FF9800',
-    pct: Math.min(100, Math.round((done / Math.max(required, 1)) * 100)),
-    rule: total
-      ? `Needs all ${total} ${meta.stepDown} milestones met (min ${limit})`
-      : `Needs ${limit} ${meta.stepDown} milestones met`,
+    unitName: tally.unitName,
+    done: tally.done,
+    threshold: tally.threshold,
+    complete: tally.complete,
+    statusLabel: tally.statusLabel,
+    statusColor: tally.statusColor,
+    pct: tally.pct,
+    rule: tally.rule,
     cols: meta.cols,
     units,
     linked,
@@ -564,5 +601,6 @@ export default {
   focusWindow,
   pickCascadeItem,
   linkedGoals,
+  milestoneTally,
   buildCascade,
 };
