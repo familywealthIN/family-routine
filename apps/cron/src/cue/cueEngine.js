@@ -67,6 +67,12 @@ function historyDates(today, days = HISTORY_DAYS) {
   return Array.from({ length: days + 1 }, (_, i) => shiftDate(today, i));
 }
 
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function weekday(date) {
+  const [dd, mm, yyyy] = date.split('-').map(Number);
+  return WEEKDAYS[new Date(Date.UTC(yyyy, mm - 1, dd)).getUTCDay()];
+}
+
 function median(values) {
   const s = [...values].sort((a, b) => a - b);
   const mid = Math.floor(s.length / 2);
@@ -125,8 +131,16 @@ function itemHistory({
     spread = median(samples.map((m) => Math.abs(m - usual)));
   }
 
+  // The last 7 days in plain words, for the AI cue (aiCue.js). Weekday names,
+  // not dates: every number the AI may write has to be a fact it was given.
+  const week = historyDates(today, 7).slice(1).map((date, i) => {
+    const task = findTask(byDate.get(date), itemId);
+    const at = task && task.ticked && task.tickedAt ? fromMinutes(minuteOfDay(task.tickedAt, timezone)) : null;
+    return { date: weekday(date), state: states[i], at };
+  });
+
   return {
-    streak, missedYesterday, missedTwice, everDone, usual, spread, samples: samples.length,
+    streak, missedYesterday, missedTwice, everDone, usual, spread, samples: samples.length, week,
   };
 }
 
@@ -295,7 +309,7 @@ function dueCues({
       item, history, timing, anchor, identity, today,
     });
     return [{
-      item, ...copy, title: trim(copy.title), minute: timing.minute, mode: timing.mode,
+      item, ...copy, title: trim(copy.title), minute: timing.minute, mode: timing.mode, history, anchor,
     }];
   });
 }
@@ -334,6 +348,7 @@ function candidateSetTimes(nowMinute) {
 
 module.exports = {
   HISTORY_DAYS,
+  nextTarget,
   toMinutes,
   fromMinutes,
   minuteOfDay,
