@@ -75,11 +75,11 @@ describe('registerPushToken', () => {
       { _id: 'me' },
       {
         $push: { notificationIds: { $each: ['fcm-tablet'], $slice: -MAX_DEVICES } },
-        $unset: { notificationId: 1 },
+        $set: { notificationId: 'fcm-tablet' },
       },
     );
-    // Never $set over the list: the phone stays registered.
-    mockUpdateOne.mock.calls.forEach(([, update]) => expect(update.$set).toBeUndefined());
+    // The list is pushed to, never replaced: the phone stays registered.
+    mockUpdateOne.mock.calls.forEach(([, update]) => expect(update.$set && update.$set.notificationIds).toBeUndefined());
   });
 
   it('takes the token from every other account first', async () => {

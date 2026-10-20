@@ -69,8 +69,8 @@ const getAllClientIds = () => [GOOGLE_CLIENT_ID, GA_CLIENT_ID, GA_IOS_CLIENT_ID]
 // A device token belongs to whoever signed in on that device last — it
 // survives sign-out on the device, so without moving it the previous account
 // on a shared phone would keep its reminders flowing to the new person.
-// `notificationId` is the legacy single-token field; it is folded into the
-// list the next time that user registers a device.
+// `notificationId` is the legacy single-token field: folded into the list the
+// next time that user registers a device, and then kept = the newest device.
 const MAX_DEVICES = 10; // newest kept; FCM failures prune dead ones sooner
 
 const isRealPushToken = (token) => typeof token === 'string'
@@ -112,7 +112,9 @@ async function registerPushToken(User, user, token) {
     { _id: user._id },
     {
       $push: { notificationIds: { $each: [...legacy, token], $slice: -MAX_DEVICES } },
-      $unset: { notificationId: 1 },
+      // Kept pointing at the newest device so a cron still reading only the
+      // legacy field keeps sending while deploys roll out.
+      $set: { notificationId: token },
     },
   ).exec();
 }
