@@ -3,6 +3,7 @@ const {
   GraphQLNonNull,
   GraphQLList,
   GraphQLObjectType,
+  GraphQLBoolean,
 } = require('graphql');
 
 const uniqid = require('uniqid');
@@ -10,7 +11,12 @@ const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 
 const { UserItemType, UserModel } = require('../schema/UserSchema');
-const { authenticateGoogle, authenticateApple } = require('../passport');
+const {
+  NotificationPrefsType, NotificationPrefsInput, withDefaults, sanitizePrefs,
+} = require('../schema/NotificationPrefsSchema');
+const {
+  authenticateGoogle, authenticateApple, isRealPushToken, unbindPushToken, registerPushToken,
+} = require('../passport');
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const validateGroupUser = require('../utils/validateGroupUser');
 const ApiError = require('../utils/ApiError');
@@ -44,6 +50,14 @@ const inviteeView = (user) => ({
 });
 
 const query = {
+  notificationPrefs: {
+    type: NotificationPrefsType,
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const user = await UserModel.findOne({ email }, { notificationPrefs: 1 }).exec();
+      return withDefaults(user && user.notificationPrefs);
+    },
+  },
   getUserTags: {
     type: UserItemType,
     resolve: async (root, args, context) => {
@@ -399,6 +413,65 @@ const mutation = {
         authCode,
         expiresAt: expiresAt.toISOString(),
       };
+    },
+  },
+  /**
+   * Sign-out: stop pushing to this device. Deliberately needs no session —
+   * the device is signing out, its JWT may already be expired (60 days), and a
+   * release queued while offline is retried after the token is gone. Only this
+   * exact device token is removed, so the user's other signed-in devices keep
+   * their reminders, and knowing a token silences that one device only.
+   */
+  releaseNotificationToken: {
+    type: GraphQLBoolean,
+    args: {
+      notificationId: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args) => {
+      if (!isRealPushToken(args.notificationId)) return false;
+      await unbindPushToken(UserModel, args.notificationId);
+      return true;
+    },
+  },
+  /**
+   * A signed-in device reports its push token: on every app start (so devices
+   * signed in before multi-device support register themselves) and whenever
+   * FCM / APNs rotates it. Sign-in registers it too, via authGoogle/authApple.
+   */
+  registerNotificationToken: {
+    type: GraphQLBoolean,
+    args: {
+      notificationId: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      if (!email) throw new ApiError(401, '401:Authentication required');
+      if (!isRealPushToken(args.notificationId)) return false;
+      const user = await UserModel.findOne(
+        { email },
+        { _id: 1, notificationId: 1, notificationIds: 1 },
+      ).exec();
+      if (!user) return false;
+      await registerPushToken(UserModel, user, args.notificationId);
+      return true;
+    },
+  },
+  updateNotificationPrefs: {
+    type: NotificationPrefsType,
+    args: {
+      prefs: { type: GraphQLNonNull(NotificationPrefsInput) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      const clean = sanitizePrefs(args.prefs);
+      const set = Object.keys(clean).reduce(
+        (out, key) => ({ ...out, [`notificationPrefs.${key}`]: clean[key] }),
+        {},
+      );
+      const user = Object.keys(set).length
+        ? await UserModel.findOneAndUpdate({ email }, { $set: set }, { new: true }).exec()
+        : await UserModel.findOne({ email }, { notificationPrefs: 1 }).exec();
+      return withDefaults(user && user.notificationPrefs);
     },
   },
   updateUserTimezone: {

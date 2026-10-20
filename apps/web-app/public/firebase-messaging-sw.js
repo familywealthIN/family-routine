@@ -35,28 +35,31 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// Pushes with a `notification` block are shown by the Firebase SDK itself and
+// open `webpush.fcmOptions.link` (set by apps/cron/src/utils/push.js). Only a
+// data-only message is shown here — showing both displayed every push twice.
 messaging.onBackgroundMessage(function (payload) {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/firebase-logo.png'
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
-messaging.onMessage((payload) => {
-  console.log('Message received. ', payload);
-  // ...
-});
-
-// Foreground messages
-messaging.onMessage((payload) => {
-  console.log('Message received in foreground:', payload);
-  this.$notify({
-    group: 'notify',
-    title: payload.notification.title,
-    text: payload.notification.body,
+  if (payload.notification) return;
+  const data = payload.data || {};
+  self.registration.showNotification(data.title || 'Routine Notes', {
+    body: data.body || '',
+    icon: '/img/icons/android-chrome-512x512.png',
+    data,
   });
+});
+
+// Data-only notifications shown above: open the app at their route, reusing
+// an open tab if there is one.
+self.addEventListener('notificationclick', function (event) {
+  const data = (event.notification && event.notification.data) || {};
+  // SDK-shown notifications (FCM_MSG) are opened by the SDK's own handler.
+  if (data.FCM_MSG) return;
+  event.notification.close();
+  const route = data.route || '/home';
+  const url = new URL(route, self.location.origin).href;
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+    const open = list.find(function (c) { return c.url.indexOf(self.location.origin) === 0; });
+    if (open) return open.navigate(url).then(function (c) { return (c || open).focus(); });
+    return clients.openWindow(url);
+  }));
 });

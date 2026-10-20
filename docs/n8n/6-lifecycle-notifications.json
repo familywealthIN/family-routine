@@ -1,0 +1,72 @@
+{
+    "name": "Lifecycle Notifications",
+    "nodes": [
+        {
+            "parameters": {
+                "content": "## Lifecycle Notifications\nRuns every 15 minutes.\nExecutes `cron/lifecycle-notifications.js`: good morning, day planning, end of day progress, streak celebrations, re-engagement and unopened insights \u2014 each at the user's own local time, at most once (logged in `notificationlogs`).\n\nReplaces **3-daily-progress** \u2014 disable that workflow when enabling this one.\n\n### Setup\n1. Place the family-routine project on your n8n server\n2. Update the command path in the Execute Command node\n3. Ensure `.env` and `serviceAccountKey.json` are configured",
+                "height": 200,
+                "width": 420
+            },
+            "id": "note",
+            "name": "Setup Notes",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                240,
+                40
+            ]
+        },
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "*/15 * * * *"
+                        }
+                    ]
+                }
+            },
+            "id": "trigger",
+            "name": "Every 15 minutes",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                240,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "command": "cd /home/node/family-routine && node cron/lifecycle-notifications.js"
+            },
+            "id": "exec",
+            "name": "Run lifecycle-notifications.js",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                500,
+                320
+            ]
+        }
+    ],
+    "connections": {
+        "Every 15 minutes": {
+            "main": [
+                [
+                    {
+                        "node": "Run lifecycle-notifications.js",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "timezone": "America/New_York"
+    },
+    "active": false,
+    "pinData": {}
+}

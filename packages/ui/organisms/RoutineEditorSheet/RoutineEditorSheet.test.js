@@ -551,8 +551,26 @@ describe('save', () => {
       time: '09:00',
       points: 12,
       tags: ['area:work'],
+      notifyMode: 'notify',
       steps: [{ id: 's1', name: 'Check calendar' }, { id: 's2', name: 'Pick top 3' }],
     }]);
+  });
+
+  it('lets each routine choose notify, alarm or off, defaulting to notify', async () => {
+    const { el, sheet } = render({ routine: ROUTINE });
+    const saved = [];
+    sheet.$on('save', (payload) => saved.push(payload));
+    expect(q(el, 'editor-notify-notify').getAttribute('aria-checked')).toBe('true');
+    click(q(el, 'editor-notify-alarm'));
+    await tick();
+    expect(q(el, 'editor-notify-alarm').getAttribute('aria-checked')).toBe('true');
+    click(q(el, 'editor-save'));
+    expect(saved[0].notifyMode).toBe('alarm');
+  });
+
+  it('keeps a stored reminder mode', () => {
+    const { el } = render({ routine: { ...ROUTINE, notifyMode: 'off' } });
+    expect(q(el, 'editor-notify-off').getAttribute('aria-checked')).toBe('true');
   });
 
   it('emits no id for a new routine, and marks new steps id-less', async () => {
@@ -571,6 +589,7 @@ describe('save', () => {
       time: '10:50',
       points: 10,
       tags: [],
+      notifyMode: 'notify',
       steps: [{ id: '', name: 'Hamstrings' }],
     });
   });

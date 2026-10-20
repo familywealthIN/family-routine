@@ -60,6 +60,14 @@ const RoutineItemSchema = new mongoose.Schema({
   wait: Boolean,
   redeemed: Boolean,
   passedPoints: Number,
+  // When the day's copy was ticked. The cue engine (apps/cron/src/cue) learns
+  // each person's real time for a habit from these, so reminders move to when
+  // they actually do it rather than when they first said they would.
+  tickedAt: Date,
+  // How this routine reaches the person at its time: 'notify' (default, also
+  // when missing), 'alarm' (exact time, alarm channel, one re-ring if not
+  // done), or 'off'. Read by apps/cron send-notification.js.
+  notifyMode: { type: String, enum: ['off', 'notify', 'alarm'] },
 });
 
 // Field encryption at rest.
@@ -208,6 +216,7 @@ const RoutineItemType = new GraphQLObjectType({
     wait: { type: GraphQLBoolean },
     redeemed: { type: GraphQLBoolean },
     passedPoints: { type: GraphQLInt },
+    notifyMode: { type: GraphQLString },
   },
 });
 

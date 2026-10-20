@@ -2525,7 +2525,21 @@ export default {
         if (!row.ticked) this.tickRoutine(row);
         return;
       }
-      if (!row.isCurrent) {
+      // "Do now" and body taps open the routine; an insight nudge also brings
+      // its chat thread into view.
+      if (action === 'focus') return;
+      if (action === 'insight') {
+        this.$nextTick(() => {
+          const chat = this.$refs.chat && this.$refs.chat.$el;
+          if (chat && chat.scrollIntoView) chat.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        return;
+      }
+      // A push is about this routine: its cue may fire a little before the
+      // routine's window opens (learned timing), so it is allowed to start or
+      // build even when another routine is still current.
+      const fromPush = this.$route.query && this.$route.query.src === 'push';
+      if (!row.isCurrent && !fromPush) {
         this.$notify({
           title: 'Not your current task',
           text: 'Start/Build are only available for the active routine.',

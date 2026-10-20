@@ -94,6 +94,7 @@ import {
   getSessionItem,
   isRunningStandalone,
 } from '../token';
+import { releasePushOnSignOut } from '../services/pushSession';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
 import { MeasurementMixin } from '@/utils/measurementMixins.js';
@@ -336,7 +337,8 @@ export default {
       }
     },
 
-    handleClickSignOut() {
+    async handleClickSignOut() {
+      await releasePushOnSignOut(this.$apollo && this.$apollo.provider.defaultClient);
       if (this.isNative) {
         GoogleAuth.signOut()
           .then(async () => {

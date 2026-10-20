@@ -6,7 +6,17 @@ const admin = require('firebase-admin');
 
 const crypto = require('crypto');
 
-const { getLocalTime, groupUsersByTimezone } = require('./utils/timezone');
+const { getLocalTime, getLocalDate, groupUsersByTimezone } = require('./utils/timezone');
+const {
+  minuteOfDay, historyDates, candidateSetTimes, dueCues, batchCues,
+} = require('./cue/cueEngine');
+const {
+  HAS_DEVICE, ALARM_CHANNEL, DEFAULT_CHANNEL, deviceTokens, sendToUser,
+} = require('./utils/push');
+const { routineActions, routineRoute } = require('./cue/routineActions');
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const CONTEXT_DAYS = 30; // chat this recent counts as the routine having AI context
 
 const serviceAccount = require('../serviceAccountKey.json');
 
@@ -85,96 +95,167 @@ admin.initializeApp({
   // databaseURL: 'https://groutine-21c1b.firebaseio.com',
 });
 
-function sendNotification(token, name, description, url, meta = {}) {
-  if (!token) {
-    console.log('No device token provided.');
-    return Promise.resolve();
-  }
-
-  const data = {
-    click_action: url || DOMAIN,
-  };
-  if (meta.routineId) data.routineId = String(meta.routineId);
-  if (meta.agentId) data.agentId = String(meta.agentId);
-  if (meta.action) data.action = String(meta.action);
-
-  const payload = {
-    token,
-    notification: {
-      title: name,
-      body: description,
-    },
-    data,
-    android: {
-      priority: 'high',
-      ttl: 60 * 60 * 1000,
-    },
-  };
-
-  return admin.messaging().send(payload)
-    .then((response) => console.log('Successfully sent message:', response))
-    .catch((error) => console.log('Error sending message:', error));
-}
-
 function exitProcess() {
   console.log(`process ended at ${new Date()}`);
   process.exit();
 }
 
-console.log('Process Started: timezone-aware notification dispatch');
+console.log('Process Started: context-aware cue dispatch');
 const notificationList = [];
+
+const firstMotto = (user) => {
+  const motto = (user.motto || []).map((m) => decrypt(m && m.mottoItem)).find(Boolean);
+  return motto && motto.length <= 40 ? motto : null;
+};
 
 mongoose.connect(MONGDO_DB, { useNewUrlParser: true });
 const db = mongoose.connection;
 db.once('open', async () => {
   try {
-    const users = await db.collection('users')
-      .find({}, { projection: { email: 1, notificationId: 1, timezone: 1 } })
-      .toArray();
+    // Only users signed in on at least one device: sign-out releases that
+    // device's token, so a signed-out device is never in this list.
+    const users = (await db.collection('users')
+      .find(HAS_DEVICE, {
+        projection: {
+          email: 1, notificationId: 1, notificationIds: 1, timezone: 1, motto: 1,
+        },
+      })
+      .toArray())
+      .filter((u) => deviceTokens(u).length);
 
     const groups = groupUsersByTimezone(users);
     const now = new Date();
 
     const perGroup = Array.from(groups.entries()).map(async ([timezone, groupUsers]) => {
-      const time = getLocalTime(timezone, now);
-      const emails = groupUsers.map((u) => u.email);
-      const notificationById = new Map(groupUsers.map((u) => [u.email, u.notificationId]));
+      const today = getLocalDate(timezone, now);
+      const nowMinute = minuteOfDay(now, timezone);
+      const userByEmail = new Map(groupUsers.map((u) => [u.email, u]));
 
-      console.log(`[${timezone}] matching routines at ${time} for ${emails.length} user(s)`);
-
-      const items = await db.collection('routineitems')
+      // Narrow first: only users with an item whose cue could land this minute.
+      const candidates = await db.collection('routineitems')
         .find(
-          { time, email: { $in: emails } },
-          { projection: { name: 1, description: 1, email: 1, ticked: 1 } },
+          {
+            email: { $in: Array.from(userByEmail.keys()) },
+            time: { $in: candidateSetTimes(nowMinute) },
+          },
+          { projection: { email: 1 } },
         )
         .toArray();
+      const emails = Array.from(new Set(candidates.map((c) => c.email)));
+      if (!emails.length) return;
 
-      const itemIds = items.map((item) => item._id);
-      const agents = await db.collection('agents')
-        .find(
-          { email: { $in: emails }, taskRef: { $in: itemIds.map(String) } },
-          { projection: { taskRef: 1, email: 1 } },
-        )
-        .toArray();
+      console.log(`[${timezone}] ${getLocalTime(timezone, now)}: ${emails.length} user(s) with cues in range`);
+
+      const [items, routines] = await Promise.all([
+        db.collection('routineitems')
+          .find(
+            { email: { $in: emails } },
+            {
+              projection: {
+                name: 1, description: 1, email: 1, time: 1, points: 1, steps: 1, notifyMode: 1,
+              },
+            },
+          )
+          .toArray(),
+        db.collection('routines')
+          .find(
+            { email: { $in: emails }, date: { $in: historyDates(today) } },
+            {
+              projection: {
+                date: 1, email: 1, skip: 1, 'tasklist._id': 1, 'tasklist.ticked': 1, 'tasklist.tickedAt': 1,
+              },
+            },
+          )
+          .toArray(),
+      ]);
+
+      const due = emails.flatMap((email) => {
+        const user = userByEmail.get(email);
+        const cues = dueCues({
+          now,
+          timezone,
+          today,
+          items: items
+            .filter((i) => i.email === email)
+            .map((i) => ({
+              ...decryptFields(i, ['name', 'description']),
+              steps: (i.steps || []).map((st) => ({ ...st, name: decrypt(st.name) })),
+            })),
+          routines: routines.filter((r) => r.email === email),
+          identity: firstMotto(user),
+        });
+        return batchCues(cues).map((cue) => ({ ...cue, user }));
+      });
+      if (!due.length) return;
+
+      const dueIds = due.map((c) => String(c.item._id));
+      const [agents, chats, linkedGoals] = await Promise.all([
+        db.collection('agents')
+          .find(
+            { email: { $in: emails }, taskRef: { $in: dueIds } },
+            { projection: { taskRef: 1, email: 1 } },
+          )
+          .toArray(),
+        // AI context the server can see: the person talked to the routine...
+        db.collection('routinechatmessages')
+          .find(
+            {
+              email: { $in: emails },
+              taskRef: { $in: dueIds },
+              from: 'me',
+              createdAt: { $gte: new Date(now.getTime() - CONTEXT_DAYS * DAY_MS) },
+            },
+            { projection: { taskRef: 1, email: 1 } },
+          )
+          .toArray(),
+        // ...or goal items are linked to it.
+        db.collection('goals')
+          .find(
+            { email: { $in: emails }, 'goalItems.taskRef': { $in: dueIds } },
+            { projection: { email: 1, 'goalItems.taskRef': 1 } },
+          )
+          .limit(500)
+          .toArray(),
+      ]);
       const agentByKey = new Map(agents.map((a) => [`${a.email}:${a.taskRef}`, a]));
+      const contextKeys = new Set([
+        ...chats.map((c) => `${c.email}:${c.taskRef}`),
+        ...linkedGoals.flatMap((g) => (g.goalItems || [])
+          .filter((gi) => gi.taskRef).map((gi) => `${g.email}:${gi.taskRef}`)),
+      ]);
 
-      items.forEach((item) => {
-        const decrypted = decryptFields(item, ['name', 'description']);
-        const {
-          name, email, description, ticked,
-        } = decrypted;
-        if (ticked) return;
-        const notificationId = notificationById.get(email);
-        if (!notificationId) return;
+      due.forEach(({
+        user, item, title, body, kind, mode, alarm,
+      }) => {
         const routineId = String(item._id);
-        const agent = agentByKey.get(`${email}:${routineId}`);
-        const meta = {
+        const key = `${user.email}:${routineId}`;
+        const agent = agentByKey.get(key);
+        const actions = kind === 'batch'
+          ? routineActions({})
+          : routineActions({ hasAgent: !!agent, hasAiContext: contextKeys.has(key) });
+        const data = {
+          click_action: DOMAIN || '',
           routineId,
+          action: actions.action,
+          aiLevel: actions.level,
+          // A plain tap only opens the routine; acting (tick, start, build) is
+          // what the buttons are for.
+          route: kind === 'batch' ? '/home' : routineRoute(routineId, 'focus'),
+          cue: kind,
           agentId: agent ? String(agent._id) : undefined,
-          action: agent ? 'start' : 'complete',
         };
-        console.log(`Sending notification to ${email} (${name}) via ${notificationId}`);
-        notificationList.push(sendNotification(notificationId, name, description, undefined, meta));
+        console.log(`Cue ${kind}/${mode}/${actions.level} to ${user.email} (${routineId})`);
+        notificationList.push(sendToUser({
+          messaging: admin.messaging(),
+          db,
+          user,
+          title,
+          body,
+          data,
+          category: actions.category,
+          channel: alarm ? ALARM_CHANNEL : DEFAULT_CHANNEL,
+          timeSensitive: !!alarm,
+        }));
       });
     });
 

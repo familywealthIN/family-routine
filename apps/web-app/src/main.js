@@ -41,6 +41,7 @@ import { createGuardLink } from './apollo/guardLink';
 import dataIdFromObject from './apollo/dataIdFromObject';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
+import { retryPendingRelease } from './services/pushSession';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
 // Load Google Identity Services script
 const script = document.createElement('script');
@@ -269,6 +270,9 @@ loadData().then(() => {
 
     // Make app globally available
     window.app = app;
+
+    // A sign-out that could not reach the server left this device subscribed.
+    retryPendingRelease(apolloClient);
 
     // Hide the native Capacitor splashscreen now that Vue is mounted and
     // the persisted Apollo cache is hydrated. launchAutoHide is set to

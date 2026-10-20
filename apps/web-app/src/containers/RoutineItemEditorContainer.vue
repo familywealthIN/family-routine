@@ -174,6 +174,7 @@ export default {
           name: step.name,
         })),
         tags: payload.tags || [],
+        notifyMode: payload.notifyMode || 'notify',
       };
     },
 

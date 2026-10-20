@@ -62,6 +62,7 @@ import {
   GC_USER_NAME, GC_PICTURE, GC_USER_EMAIL, USER_TAGS,
 } from '../constants/settings';
 import { clearData, getSessionItem } from '../token';
+import { releasePushOnSignOut } from '../services/pushSession';
 
 export default {
   data() {
@@ -105,7 +106,8 @@ export default {
     },
   },
   methods: {
-    handleClickSignOut() {
+    async handleClickSignOut() {
+      await releasePushOnSignOut(this.$apollo && this.$apollo.provider.defaultClient);
       this.$gAuth
         .signOut()
         .then(async () => {

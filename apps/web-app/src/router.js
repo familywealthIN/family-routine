@@ -19,7 +19,7 @@ export default new Router({
     },
     {
       // Push-notification deep link.
-      path: '/home/:routineId/:action(complete|start|build)',
+      path: '/home/:routineId/:action(complete|start|build|focus|insight)',
       name: 'homeRoutineAction',
       component: () => import(/* webpackChunkName: "focusHome" */'./views/RoutineFocusHome.vue'),
       props: true,

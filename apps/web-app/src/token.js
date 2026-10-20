@@ -14,7 +14,9 @@ export async function saveData(data) {
   localStorage.setItem(GC_USER_EMAIL, email);
   localStorage.setItem(GC_PICTURE, picture);
   localStorage.setItem(GC_AUTH_TOKEN, token);
-  localStorage.setItem(GC_NOTIFICATION_TOKEN, notificationId);
+  // The device token is per device, not per user: never overwrite it with a
+  // missing value (the Apple sign-in path used to store "undefined").
+  if (notificationId) localStorage.setItem(GC_NOTIFICATION_TOKEN, notificationId);
   const cache = await caches.open(CACHE_NAME);
   await cache.put(DATA_KEY, new Response(JSON.stringify(data)));
   window.userData = data;
@@ -45,7 +47,7 @@ export async function loadData() {
       localStorage.setItem(GC_USER_EMAIL, email);
       localStorage.setItem(GC_PICTURE, picture);
       localStorage.setItem(GC_AUTH_TOKEN, token);
-      localStorage.setItem(GC_NOTIFICATION_TOKEN, notificationId);
+      if (notificationId) localStorage.setItem(GC_NOTIFICATION_TOKEN, notificationId);
       return userData;
     }
   }

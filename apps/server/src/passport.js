@@ -65,6 +65,58 @@ const authenticateApple = async (req) => {
 
 // Get all client IDs for audience verification
 const getAllClientIds = () => [GOOGLE_CLIENT_ID, GA_CLIENT_ID, GA_IOS_CLIENT_ID].filter(Boolean);
+// Push tokens: one per device, several devices per user (`notificationIds`).
+// A device token belongs to whoever signed in on that device last — it
+// survives sign-out on the device, so without moving it the previous account
+// on a shared phone would keep its reminders flowing to the new person.
+// `notificationId` is the legacy single-token field; it is folded into the
+// list the next time that user registers a device.
+const MAX_DEVICES = 10; // newest kept; FCM failures prune dead ones sooner
+
+const isRealPushToken = (token) => typeof token === 'string'
+  && token.length > 0 && token !== 'undefined' && token !== 'null';
+
+/** Every real device token on a user document, legacy field included. */
+const deviceTokens = (user) => Array.from(new Set([
+  ...((user && user.notificationIds) || []),
+  user && user.notificationId,
+])).filter(isRealPushToken);
+
+/** Detach a token from every account except `exceptId` (all when omitted). */
+async function unbindPushToken(User, token, exceptId) {
+  if (!isRealPushToken(token)) return;
+  const others = exceptId ? { _id: { $ne: exceptId } } : {};
+  await User.updateMany(
+    { ...others, notificationIds: token },
+    { $pull: { notificationIds: token } },
+  ).exec();
+  await User.updateMany(
+    { ...others, notificationId: token },
+    { $unset: { notificationId: 1 } },
+  ).exec();
+}
+
+/**
+ * Add this device to the user's devices (most recent last, capped), taking it
+ * away from any other account first.
+ */
+async function registerPushToken(User, user, token) {
+  if (!user || !isRealPushToken(token)) return;
+  await unbindPushToken(User, token, user._id);
+  const legacy = isRealPushToken(user.notificationId) && user.notificationId !== token
+    ? [user.notificationId] : [];
+  // $pull then $push: one update cannot do both to the same array, and the
+  // push re-adds the token at the end so the cap drops the oldest devices.
+  await User.updateOne({ _id: user._id }, { $pull: { notificationIds: { $in: [token, ...legacy] } } }).exec();
+  await User.updateOne(
+    { _id: user._id },
+    {
+      $push: { notificationIds: { $each: [...legacy, token], $slice: -MAX_DEVICES } },
+      $unset: { notificationId: 1 },
+    },
+  ).exec();
+}
+
 async function upsertAppleUser({ profile }, notificationId, timezone) {
   const User = this;
 
@@ -83,10 +135,9 @@ async function upsertAppleUser({ profile }, notificationId, timezone) {
   }
 
   if (!user) {
-    return User.create({
+    const created = await User.create({
       name: profile.displayName || 'Apple User',
       email: profile.emails[0].value,
-      notificationId,
       picture: '',
       groupId: '',
       tags: [profile.emails[0].value],
@@ -94,19 +145,15 @@ async function upsertAppleUser({ profile }, notificationId, timezone) {
       timezone: timezone || undefined,
       'social.appleProvider': { id: profile.id },
     });
+    await registerPushToken(User, created, notificationId);
+    return created;
   }
 
   if (timezone && !user.timezone) {
     await User.findOneAndUpdate({ _id: user.id }, { timezone }, { new: true });
   }
 
-  if (user.notificationId !== notificationId) {
-    await User.findOneAndUpdate(
-      { _id: user.id },
-      { notificationId },
-      { new: true },
-    );
-  }
+  await registerPushToken(User, user, notificationId);
 
   return user;
 }
@@ -206,7 +253,6 @@ async function upsertGoogleUser({ profile }, notificationId, timezone) {
     const newUser = await User.create({
       name: profile.displayName || `${profile.familyName} ${profile.givenName}`,
       email: profile.emails[0].value,
-      notificationId,
       // eslint-disable-next-line no-underscore-dangle
       picture: profile._json.picture,
       groupId: '',
@@ -217,19 +263,21 @@ async function upsertGoogleUser({ profile }, notificationId, timezone) {
         id: profile.id,
       },
     });
+    await registerPushToken(User, newUser, notificationId);
 
     return newUser;
   }
 
   // eslint-disable-next-line no-underscore-dangle
-  if (user.notificationId !== notificationId || user.picture !== profile._json.picture) {
-    User.findOneAndUpdate(
+  if (user.picture !== profile._json.picture) {
+    await User.findOneAndUpdate(
       { _id: user.id },
       // eslint-disable-next-line no-underscore-dangle
-      { notificationId, picture: profile._json.picture },
+      { picture: profile._json.picture },
       { new: true },
     ).exec();
   }
+  await registerPushToken(User, user, notificationId);
 
   if (timezone && !user.timezone) {
     await User.findOneAndUpdate({ _id: user.id }, { timezone }, { new: true }).exec();
@@ -245,4 +293,9 @@ module.exports = {
   authenticateGoogle,
   authenticateApple,
   displayNameFromEmail,
+  MAX_DEVICES,
+  isRealPushToken,
+  deviceTokens,
+  unbindPushToken,
+  registerPushToken,
 };

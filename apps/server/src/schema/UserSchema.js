@@ -9,6 +9,7 @@ const {
 const mongoose = require('mongoose');
 const { encryption, ENCRYPTION_FIELDS } = require('../utils/encryption');
 const { MottoItemSchema, MottoItemType } = require('./MottoSchema');
+const { NotificationPrefsSchema } = require('./NotificationPrefsSchema');
 const { generateAccessToken, upsertGoogleUser, upsertAppleUser } = require('../passport');
 
 const UserSchema = new mongoose.Schema({
@@ -21,7 +22,11 @@ const UserSchema = new mongoose.Schema({
   picture: String,
   groupId: String,
   inviterEmail: String,
+  // Legacy single device token; folded into notificationIds on next sign-in.
   notificationId: String,
+  // One push token per signed-in device (passport.js registerPushToken).
+  notificationIds: [String],
+  notificationPrefs: NotificationPrefsSchema,
   holidays: Number,
   apiKey: {
     type: String,

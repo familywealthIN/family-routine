@@ -135,6 +135,13 @@ const RoutineItemInputType = new GraphQLInputObjectType({
   },
 });
 
+const NOTIFY_MODES = ['off', 'notify', 'alarm'];
+function assertNotifyMode(mode) {
+  if (mode !== undefined && mode !== null && !NOTIFY_MODES.includes(mode)) {
+    throw new Error(`notifyMode must be one of ${NOTIFY_MODES.join(', ')}`);
+  }
+}
+
 const mutation = {
   addRoutineItem: {
     type: RoutineItemType,
@@ -147,9 +154,11 @@ const mutation = {
       startEvent: { type: GraphQLString },
       endEvent: { type: GraphQLString },
       tags: { type: new GraphQLList(GraphQLString) },
+      notifyMode: { type: GraphQLString },
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
+      assertNotifyMode(args.notifyMode);
 
       assertMinPoints(args.points);
       assertWithinBudget(await RoutineItemModel.find({ email }).exec(), [{ points: args.points }]);
@@ -187,9 +196,11 @@ const mutation = {
       startEvent: { type: GraphQLString },
       endEvent: { type: GraphQLString },
       tags: { type: new GraphQLList(GraphQLString) },
+      notifyMode: { type: GraphQLString },
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
+      assertNotifyMode(args.notifyMode);
 
       const items = await RoutineItemModel.find({ email }).exec();
       const stored = items.find((item) => String(item._id || item.id) === String(args.id));

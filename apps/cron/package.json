@@ -5,6 +5,7 @@
     "scripts": {
         "start:send-notification": "node src/send-notification.js",
         "start:progress": "node src/progress.js",
+        "start:lifecycle": "node src/lifecycle-notifications.js",
         "start:weekly-agenda": "node src/weekly-agenda.js",
         "start:update-holidays": "node src/update-holidays.js",
         "start:settle-xp": "node src/settle-xp.js",

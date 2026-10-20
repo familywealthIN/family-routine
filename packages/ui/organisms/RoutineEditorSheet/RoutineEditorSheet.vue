@@ -157,6 +157,25 @@
         </div>
       </div>
 
+      <div class="rn-red__label rn-red__label--spaced">REMINDER</div>
+      <div class="rn-red__notify" role="radiogroup" aria-label="Reminder" data-testid="editor-notify">
+        <button
+          v-for="mode in notifyModes"
+          :key="mode.value"
+          type="button"
+          role="radio"
+          class="rn-red__notify-opt"
+          :class="{ 'rn-red__notify-opt--on': draft.notifyMode === mode.value }"
+          :aria-checked="draft.notifyMode === mode.value ? 'true' : 'false'"
+          :data-testid="`editor-notify-${mode.value}`"
+          @click="draft.notifyMode = mode.value"
+        >
+          <i class="rn-mi">{{ mode.icon }}</i>
+          <span>{{ mode.label }}</span>
+        </button>
+      </div>
+      <div class="rn-red__notify-hint">{{ notifyHint }}</div>
+
       <div class="rn-red__label rn-red__label--spaced">LINKED</div>
       <div class="rn-red__linked">
         <div class="rn-red__linked-row" data-testid="editor-agent">
@@ -245,6 +264,19 @@ export const defaultPointsFor = (ceiling) => {
   return clampPoints(Number.isFinite(max) ? Math.min(DEFAULT_POINTS, max) : DEFAULT_POINTS);
 };
 
+// How the routine reaches the person at its time (RoutineItem.notifyMode).
+export const NOTIFY_MODES = [
+  {
+    value: 'notify', label: 'Notify', icon: 'notifications', hint: 'A reminder around the time you usually do it.',
+  },
+  {
+    value: 'alarm', label: 'Alarm', icon: 'alarm', hint: 'Rings at exactly this time, and again 5 minutes later if not done.',
+  },
+  {
+    value: 'off', label: 'Off', icon: 'notifications_off', hint: 'No reminder for this routine.',
+  },
+];
+
 const toDraft = (routine, defaultTime, ceiling) => ({
   id: (routine && routine.id) || '',
   name: (routine && routine.name) || '',
@@ -252,6 +284,7 @@ const toDraft = (routine, defaultTime, ceiling) => ({
   time: (routine && routine.time) || defaultTime || DEFAULT_START,
   points: clampPoints(routine ? routine.points : defaultPointsFor(ceiling)),
   tags: [...((routine && routine.tags) || [])],
+  notifyMode: (routine && routine.notifyMode) || 'notify',
   steps: ((routine && routine.steps) || []).map((step) => ({
     key: nextKey(),
     id: (step && step.id) || '',
@@ -305,6 +338,11 @@ export default {
   },
 
   computed: {
+    notifyModes: () => NOTIFY_MODES,
+    notifyHint() {
+      const mode = NOTIFY_MODES.find((m) => m.value === this.draft.notifyMode) || NOTIFY_MODES[0];
+      return mode.hint;
+    },
     isNew() {
       return !this.draft.id;
     },
@@ -488,6 +526,7 @@ export default {
         time: this.draft.time,
         points: clampPoints(this.draft.points),
         tags: [...this.draft.tags],
+        notifyMode: this.draft.notifyMode || 'notify',
         // `id: ''` marks a step the container still has to mint an id for.
         steps: this.draft.steps.map((step) => ({ id: step.id, name: step.name })),
       });
@@ -767,6 +806,45 @@ export default {
   font: inherit;
   font-size: 14px;
   color: #333;
+}
+
+.rn-red__notify {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.rn-red__notify-opt {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, .08);
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .6);
+  cursor: pointer;
+}
+
+.rn-red__notify-opt .rn-mi {
+  font-size: 18px;
+}
+
+.rn-red__notify-opt--on {
+  border-color: #288bd5;
+  background: rgba(40, 139, 213, .08);
+  color: #288bd5;
+}
+
+.rn-red__notify-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, .5);
 }
 
 .rn-red__linked {

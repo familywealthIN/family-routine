@@ -5,38 +5,18 @@ const mongoose = require('mongoose');
 const admin = require('firebase-admin');
 const { getProgressStatement } = require('./utils/getProgressReport');
 const { getLocalTime, getLocalDate, groupUsersByTimezone } = require('./utils/timezone');
+const { HAS_DEVICE, sendToUser } = require('./utils/push');
 
 const serviceAccount = require('../serviceAccountKey.json');
 
 const {
   MONGDO_DB,
-  DOMAIN,
 } = process.env;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: 'https://groutine-21c1b.firebaseio.com',
 });
-
-function sendNotification(token, name, description, url) {
-  const payload = {
-    notification: {
-      title: name,
-      body: description,
-      icon: '/img/icons/android-chrome-512x512.png',
-      click_action: url || DOMAIN,
-    },
-  };
-
-  const options = {
-    priority: 'normal',
-    timeToLive: 60 * 60,
-  };
-
-  return admin.messaging().sendToDevice(token, payload, options)
-    .then((response) => console.log('Successfully sent message:', response))
-    .catch((error) => console.log('Error sending message:', error));
-}
 
 function exitProcess() {
   console.log(`process ended at ${new Date()}`);
@@ -51,7 +31,11 @@ const db = mongoose.connection;
 db.once('open', async () => {
   try {
     const users = await db.collection('users')
-      .find({}, { projection: { email: 1, notificationId: 1, timezone: 1 } })
+      .find(HAS_DEVICE, {
+        projection: {
+          email: 1, notificationId: 1, notificationIds: 1, timezone: 1,
+        },
+      })
       .toArray();
 
     const groups = groupUsersByTimezone(users);
@@ -61,7 +45,7 @@ db.once('open', async () => {
       const date = getLocalDate(timezone, now);
       const time = getLocalTime(timezone, now);
       const emails = groupUsers.map((u) => u.email);
-      const notificationById = new Map(groupUsers.map((u) => [u.email, u.notificationId]));
+      const userByEmail = new Map(groupUsers.map((u) => [u.email, u]));
 
       console.log(`[${timezone}] progress for ${date} ${time} (${emails.length} user(s))`);
 
@@ -75,17 +59,20 @@ db.once('open', async () => {
       routines.forEach((routine) => {
         const { email, tasklist } = routine;
         if (!tasklist || !tasklist.length) return;
-        const notificationId = notificationById.get(email);
-        if (!notificationId) return;
+        const user = userByEmail.get(email);
+        if (!user) return;
         const periodRoutines = [{ date, tasklist }];
         const description = getProgressStatement({ periodRoutines });
-        console.log(`Sending progress to ${email}: ${description} via ${notificationId}`);
-        notificationList.push(sendNotification(
-          notificationId,
-          'Routine Progress',
-          description,
-          'https://routine.familywealth.in/progress/day',
-        ));
+        console.log(`Sending progress to ${email}: ${description}`);
+        notificationList.push(sendToUser({
+          messaging: admin.messaging(),
+          db,
+          user,
+          title: 'Routine Progress',
+          body: description,
+          data: { click_action: 'https://routine.familywealth.in/progress/day' },
+          priority: 'normal',
+        }));
       });
     });
 

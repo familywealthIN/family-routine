@@ -3,9 +3,11 @@ jest.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false
 jest.mock('../../blob/config', () => ({ gauthOption: {} }), { virtual: true });
 jest.mock('../../token', () => ({ clearData: jest.fn(() => Promise.resolve()) }));
 jest.mock('localforage', () => ({ clear: jest.fn(() => Promise.resolve()) }));
+jest.mock('../../services/pushSession', () => ({ releasePushOnSignOut: jest.fn(() => Promise.resolve(true)) }));
 
 /* eslint-disable import/first */
 import localforage from 'localforage';
+import { releasePushOnSignOut } from '../../services/pushSession';
 import { signOut } from '../signOut';
 /* eslint-enable import/first */
 
@@ -53,6 +55,14 @@ describe('signOut', () => {
     expect(localforage.clear).toHaveBeenCalledTimes(1);
     expect(vm.$router.push).toHaveBeenCalledWith('/');
     console.log.mockRestore();
+  });
+
+  it('releases the device push token first, with the live Apollo client', async () => {
+    const { vm, calls } = makeVm();
+    releasePushOnSignOut.mockImplementation(() => { calls.push('release'); return Promise.resolve(true); });
+    await signOut(vm);
+    expect(releasePushOnSignOut).toHaveBeenCalledWith(vm.$apollo.provider.defaultClient);
+    expect(calls[0]).toBe('release');
   });
 
   it('tolerates a caller without $apollo', async () => {

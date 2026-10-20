@@ -487,7 +487,13 @@ const mutation = {
 
       return RoutineModel.findOneAndUpdate(
         { _id: args.id, email, 'tasklist._id': args.taskId },
-        { $set: { 'tasklist.$.ticked': args.ticked, 'tasklist.$.stimuli': task.stimuli } },
+        {
+          $set: {
+            'tasklist.$.ticked': args.ticked,
+            'tasklist.$.stimuli': task.stimuli,
+            'tasklist.$.tickedAt': args.ticked ? new Date() : null,
+          },
+        },
         { new: true },
       ).exec();
     },

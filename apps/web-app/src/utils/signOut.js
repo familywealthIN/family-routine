@@ -14,6 +14,7 @@ import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
 import { USER_TAGS } from '../constants/settings';
 import { clearData } from '../token';
+import { releasePushOnSignOut } from '../services/pushSession';
 import { gauthOption } from '../blob/config';
 
 async function revokeProviderSession(gAuth) {
@@ -49,6 +50,11 @@ async function clearApolloStore(vm) {
  *   and `$router`)
  */
 export async function signOut(vm) {
+  // First, while the Apollo client is still live: stop the server pushing
+  // this account's reminders to a device that is no longer signed in.
+  const client = vm && vm.$apollo && vm.$apollo.provider && vm.$apollo.provider.defaultClient;
+  await releasePushOnSignOut(client);
+
   try {
     await revokeProviderSession(vm && vm.$gAuth);
   } catch (error) {

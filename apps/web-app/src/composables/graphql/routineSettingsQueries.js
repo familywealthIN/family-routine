@@ -53,6 +53,7 @@ const ROUTINE_TEMPLATE_FIELDS = `
   time
   points
   tags
+  notifyMode
   steps {
     id
     name
@@ -84,6 +85,7 @@ export const ADD_ROUTINE_ITEM_MUTATION = gql`
     $points: Int!
     $steps: [StepInputItem]!
     $tags: [String]!
+    $notifyMode: String
   ) {
     addRoutineItem(
       name: $name
@@ -92,6 +94,7 @@ export const ADD_ROUTINE_ITEM_MUTATION = gql`
       points: $points
       steps: $steps
       tags: $tags
+      notifyMode: $notifyMode
     ) {
       ${ROUTINE_TEMPLATE_FIELDS}
     }
@@ -107,6 +110,7 @@ export const UPDATE_ROUTINE_ITEM_MUTATION = gql`
     $points: Int!
     $steps: [StepInputItem]!
     $tags: [String]!
+    $notifyMode: String
   ) {
     updateRoutineItem(
       id: $id
@@ -116,6 +120,7 @@ export const UPDATE_ROUTINE_ITEM_MUTATION = gql`
       points: $points
       steps: $steps
       tags: $tags
+      notifyMode: $notifyMode
     ) {
       ${ROUTINE_TEMPLATE_FIELDS}
     }

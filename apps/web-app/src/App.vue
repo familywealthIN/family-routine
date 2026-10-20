@@ -48,6 +48,7 @@ import MobileLayout from './layouts/MobileLayout.vue';
 import DesktopLayout from './layouts/DesktopLayout.vue';
 import AiSearchModal from './containers/AiSearchModalContainer.vue';
 import TimezoneSync from './components/TimezoneSync.vue';
+import { isSignedIn, registerDevicePush } from './services/pushSession';
 import eventBus, { EVENTS } from './utils/eventBus';
 
 export default {
@@ -184,6 +185,7 @@ export default {
             const token = await messaging.getToken();
             console.log('FCM token:', token);
             localStorage.setItem(GC_NOTIFICATION_TOKEN, token);
+            registerDevicePush(this.$apollo && this.$apollo.provider.defaultClient, token);
           } else {
             console.log('Notification permission denied.');
           }
@@ -194,6 +196,7 @@ export default {
         // Foreground messages
         messaging.onMessage((payload) => {
           console.log('Message received in foreground:', payload);
+          if (!isSignedIn()) return;
           this.$notify({
             group: 'notify',
             title: payload.notification.title,
@@ -223,6 +226,19 @@ export default {
           lightColor: '#4285f4',
           vibration: true,
         });
+        // Routines set to "Alarm" ring on their own channel, so the person can
+        // give it a louder sound than ordinary reminders in system settings.
+        await LocalNotifications.createChannel({
+          id: 'routine-alarms',
+          name: 'Routine Alarms',
+          description: 'Routines you set to ring like an alarm',
+          sound: 'default',
+          importance: 5,
+          visibility: 1,
+          lights: true,
+          lightColor: '#e8710a',
+          vibration: true,
+        });
       }
 
       PushNotifications.requestPermissions().then((result) => {
@@ -235,37 +251,13 @@ export default {
       PushNotifications.addListener('registration', (token) => {
         console.log('Device registered', token.value);
         localStorage.setItem(GC_NOTIFICATION_TOKEN, token.value);
+        // Every start and every rotation: this device is one of possibly several.
+        registerDevicePush(this.$apollo && this.$apollo.provider.defaultClient, token.value);
       });
 
-      PushNotifications.addListener('pushNotificationReceived', async (notification) => {
-        console.log('Push received: ', notification);
-        await LocalNotifications.schedule({
-          notifications: [
-            {
-              title: notification.title || 'Routine Notes',
-              body: notification.body || '',
-              id: Math.floor(Math.random() * 100000),
-              schedule: { at: new Date(Date.now() + 100) },
-              sound: 'default',
-              smallIcon: 'file://android_asset/icon-512.webp',
-              largeIcon: 'ic_launcher',
-              iconColor: '#4285f4',
-              actionTypeId: '',
-              extra: notification.data,
-              importance: 5,
-              visibility: 1,
-              ongoing: false,
-              autoCancel: true,
-              channelId: 'routine-notifications',
-            },
-          ],
-        });
-      });
-
-      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-        console.log('Push action performed', notification);
-        // handle navigation if needed
-      });
+      // Foreground display and taps (buttons included) are pushService's: it
+      // re-posts with the routine's action buttons and routes every tap. A
+      // second listener here showed each foreground push twice.
     },
 
     checkSoftKeys() {

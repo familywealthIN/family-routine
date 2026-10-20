@@ -20,6 +20,8 @@ type Query {
   getUsersByGroupId(groupId: String!): [UserItem]
   # Invites you sent that are still open (email, name, picture only)
   pendingInvites: [UserItem]
+  # Day-level notification preferences, defaults filled in
+  notificationPrefs: NotificationPrefs
 
   # ── Routine Items (templates) ──────────────────────────────────────────────
   # Get all routine item templates for the user
@@ -104,6 +106,12 @@ type Mutation {
   authGoogle(accessToken: String!, notificationId: String!): UserItem
   # Sign in / register with Apple Identity Token
   authApple(identityToken: String!, notificationId: String!, timezone: String, name: String): UserItem
+  # Sign-out: stop push notifications to this device token (no session needed)
+  releaseNotificationToken(notificationId: String!): Boolean
+  # Register this signed-in device's push token (one of several devices per user)
+  registerNotificationToken(notificationId: String!): Boolean
+  # Day-level notification preferences (morning, plan, evening, streak, reengage, insights)
+  updateNotificationPrefs(prefs: NotificationPrefsInput!): NotificationPrefs
 
   # ── User ──────────────────────────────────────────────────────────────────
   # Generate a new API key for MCP / external tool access
@@ -138,6 +146,7 @@ type Mutation {
     startEvent: String
     endEvent: String
     tags: [String]
+    notifyMode: String # off | notify | alarm
   ): RoutineItem
   updateRoutineItem(
     id: ID!
@@ -149,6 +158,7 @@ type Mutation {
     startEvent: String
     endEvent: String
     tags: [String]
+    notifyMode: String # off | notify | alarm
   ): RoutineItem
   deleteRoutineItem(id: ID!): RoutineItem
   # Bulk-create routine items; each item is AI-enhanced with description and steps
@@ -257,6 +267,28 @@ type ClassifiedPriority {
 
 # ── Core Types ────────────────────────────────────────────────────────────────
 
+type NotificationPrefs {
+  morning: Boolean
+  plan: Boolean
+  evening: Boolean
+  streak: Boolean
+  reengage: Boolean
+  insights: Boolean
+  morningTime: String # HH:mm local
+  eveningTime: String # HH:mm local
+}
+
+input NotificationPrefsInput {
+  morning: Boolean
+  plan: Boolean
+  evening: Boolean
+  streak: Boolean
+  reengage: Boolean
+  insights: Boolean
+  morningTime: String
+  eveningTime: String
+}
+
 type UserItem {
   id: ID
   name: String
@@ -305,6 +337,7 @@ type RoutineItem {
   tags: [String]
   steps: [Step]
   stimuli: [Stimulus]
+  notifyMode: String # off | notify (default) | alarm
 }
 
 # A daily routine snapshot — a copy of the template list with per-day ticked/passed/wait state

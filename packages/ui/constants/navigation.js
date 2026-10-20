@@ -41,6 +41,7 @@ export const MORE_NAV = [
   {
     key: 'profile', icon: 'person', label: 'Profile', route: '/settings/profile', gap: '10px',
   },
+  { key: 'notifications', icon: 'notifications', label: 'Notifications', route: '/settings/notifications' },
   { key: 'about', icon: 'info', label: 'About', route: '/about' },
 ];
 
