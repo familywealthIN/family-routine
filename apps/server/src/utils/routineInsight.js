@@ -1,21 +1,22 @@
 /**
- * routineInsight — the first message after a routine is ticked: three
- * sentences that make the user want to come back for the next session.
+ * routineInsight: the coach card a person reads right after ticking a routine.
  *
- * It is a momentum message, not a report card. The routine chat only ever sees
- * today, so this looks back over the routine's last month — the current run of
- * check-ins, the best run, this week against last, the K/D/G it has earned, the
- * activities done most often and the weekday it lands best — and turns that into
- * a win to celebrate, one fresh idea that makes the next session more rewarding,
- * and a target just within reach. The area/project context the client already
- * caches (description + next steps) gives the idea something real to hang on.
+ * Three stages, so the message is both true and worth reading:
+ *   1. summarise: this module reads the routine's last month (runs of
+ *      check-ins, this week against last, today's plan and checklist, linked
+ *      goals, activities done most) into plain numbers;
+ *   2. diagnose: insightStrategy picks ONE hook (why this tick matters) and
+ *      ONE lever (the change most likely to improve the routine), in code;
+ *   3. write and check: the model turns that brief into a title, a spark and
+ *      an action; `validateCard` holds it to the facts, one correction round
+ *      follows, and the same brief is written without a model as the fallback.
  *
- * The model gets measurements, not raw documents, so the prompt stays small
- * enough for a free model. The summariser, the hook and the fallback are pure so
- * the arithmetic is testable without Mongo or a model.
+ * The summariser, validator and fallback are pure, so every decision is
+ * testable without Mongo or a model.
  */
 const moment = require('moment');
 const { completeChat } = require('./chatApi');
+const { diagnose, fallbackMessage, wordsOf } = require('./insightStrategy');
 const { encryption } = require('./encryption');
 
 // Once per routine per day, so it is worth the best writer available. The free
@@ -258,172 +259,185 @@ function summariseRoutineHistory({
     .slice(0, TOP_ACTIVITIES)
     .map(([body, count]) => ({ body, count }));
 
+  // The most recent scheduled session before today: a miss there makes
+  // today a comeback. Rest days and days off the list are not sessions.
+  const before = today
+    ? states.slice(1).find(({ state }) => state !== 'off' && state !== 'skipped')
+    : null;
+  summary.lastBefore = before ? before.state : null;
   summary.showedUp = summary.onTime + summary.late;
   summary.missedToday = summary.plan.filter((r) => r.state === 'missed').map((r) => r.name);
   summary.milestone = nextMilestone(summary);
   return summary;
 }
 
-function describeHistory(summary) {
-  const s = summary;
-  const items = s.itemsDone + s.itemsLate + s.itemsOpen;
-  const today = { onTime: 'ticked inside its window', late: 'ticked after its window' }[s.todayState]
-    || 'ticked';
-  const top = s.topActivities.length
-    ? s.topActivities.map((a) => `${a.body} ×${a.count}`).join('; ')
-    : 'none recorded';
-  // Spelled out, because a free model will otherwise call any run "your best".
-  const record = s.streak >= s.bestStreak
-    ? `this IS the best run in the last ${LOOKBACK_DAYS} days`
-    : `NOT a record: the best run in the last ${LOOKBACK_DAYS} days is ${s.bestStreak}`;
-  const m = s.moment || {};
-  const windowText = s.time ? `window ${s.time}${m.windowEnd ? `-${m.windowEnd}` : ''}` : '';
-  const left = Number.isFinite(m.minutesLeft) ? `${m.minutesLeft} min left in the window` : '';
-  const momentLine = [
-    m.tickedAt && `ticked at ${m.tickedAt}`, s.weekday && `on ${s.weekday}`, windowText, left, today,
-  ].filter(Boolean).join(', ');
-  const plan = (s.plan || []).length
-    ? s.plan.map((r) => `${r.time} ${r.name} (${r.state})${r.current ? ' <- this routine' : ''}`).join('; ')
-    : 'not available';
-  const linked = (s.linked || []).length
-    ? s.linked.map((g) => `${g.period} goal "${g.body}" (${g.done ? 'done' : 'open'})`).join('; ')
-    : 'none linked';
-  const earnedToday = s.earnedToday || { K: 0, D: 0, G: 0 };
-  return `The moment: ${momentLine}.
-Done in this session today: ${s.todayItems.length ? s.todayItems.join('; ') : 'no checklist items recorded'}
-K/D/G this routine earned today: K ${earnedToday.K} · D ${earnedToday.D} · G ${earnedToday.G}
-Today's whole day: ${plan}
-Missed earlier today: ${(s.missedToday || []).length ? s.missedToday.join(', ') : 'nothing'}
-Week / month goals this routine feeds: ${linked}
-Current run of check-ins: ${s.streak} (${record})
-Check-ins this week: ${s.thisWeek} · last week: ${s.lastWeek}
-Last ${LOOKBACK_DAYS} days (${s.days} scheduled): ${s.showedUp} check-ins, ${s.onTime} in time (${pct(s.onTime, s.days)}%), ${s.late} late, ${s.missed} missed, ${s.skipped} rest days
-K/D/G this routine earned over the last ${LOOKBACK_DAYS} days in total (not today): K ${s.earned.K} · D ${s.earned.D} · G ${s.earned.G}
-Strongest day: ${s.bestWeekday || 'not enough data yet'}
-Checklist work: ${items} items, ${s.itemsDone} done in time, ${s.itemsLate} done late, ${s.itemsOpen} open
-Most-done activities: ${top}
-Recent activities: ${s.activities.length ? s.activities.join('; ') : 'none recorded'}`;
-}
-
-const capFirst = (text) => text.charAt(0).toUpperCase() + text.slice(1);
-
-/** The win, the idea and the hook, built from the numbers alone, for when no model answers. */
-function fallbackInsight(summary, routineName = 'this routine') {
-  const s = summary;
-  if (!s.showedUp) {
-    return `First ${routineName} on the board. `
-      + 'Next time, start the minute the window opens. '
-      + 'Three in a row starts your first run.';
-  }
-
-  let win;
-  if (s.streak >= 2) win = `${s.streak} in a row on ${routineName}.`;
-  else if (s.thisWeek > s.lastWeek && s.lastWeek > 0) win = `${s.thisWeek} check-ins this week, up from ${s.lastWeek}.`;
-  else win = `${routineName} done, number ${s.showedUp} this month.`;
-
-  const top = s.topActivities[0];
-  let idea;
-  if (top) idea = `Next time, beat "${top.body}" by one rep or one minute.`;
-  else if (s.late > s.onTime) idea = 'Next time, start the minute the window opens.';
-  else idea = 'Next time, pair it with a song you love.';
-
-  return `${win} ${idea} ${capFirst(s.milestone)}.`;
-}
-
-/** First three sentences of the model's prose, as one plain paragraph. */
-function threeSentences(text) {
-  const plain = String(text || '')
-    .replace(/[*_`#>]/g, '')
-    .replace(/^\s*[-•\d.)]+\s+/gm, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  const sentences = plain.match(/[^.!?]+[.!?]+/g) || [];
-  if (sentences.length < 3) return '';
-  return sentences.slice(0, 3).map((x) => x.trim()).join(' ');
-}
-
-const SYSTEM_PROMPT = 'You are the coach inside Routine Notes, writing the one message the '
-  + 'user reads right after ticking a routine. Read the moment: which routine, the day and '
-  + 'time, what they just did in this session, how the last month has gone, and the '
-  + 'area/project it serves. Then find the single most compelling thing to say to THIS person '
-  + 'right NOW. The aim is a small spark of delight now and a real pull to do more in this '
-  + 'routine next time.\n\n'
-  + 'Craft:\n'
-  + '- Exactly three SHORT sentences as one plain paragraph: at most 12 words each and 30 '
-  + 'words in total, readable at a glance on a phone. One idea per sentence, no clauses '
-  + 'strung together with commas or colons. No lists, headings, '
-  + 'emoji, greeting or sign-off.\n'
-  + '- Open with something true and specific that lands as a win: a real number, or an '
-  + 'activity by name.\n'
-  + '- Give ONE original idea for the next session that fits this routine, this moment and '
-  + 'their goal, something they have not heard before and would actually want to try: a '
-  + "challenge, a twist, a ritual, a reward, a variation, or a way to push the area's next "
-  + 'step forward. Make it concrete enough to do.\n'
-  + '- Use the moment itself when it helps: how early or late in the window they ticked, '
-  + 'the minutes still left in it, what comes next today, and the week or month goal this '
-  + 'routine feeds.\n'
-  + '- If something was missed today, or this routine keeps slipping, and making it up is the '
-  + 'most valuable move, make your ONE idea a quick way to compensate: a compressed version '
-  + 'that fits the minutes left, or folding it into a later routine today. Name the routine '
-  + 'and the time.\n'
-  + '- Leave them looking forward to the next session.\n\n'
-  + 'Avoid:\n'
-  + '- Formulas and stock phrases such as "just N more", "keep it up", "you\'ve got this", '
-  + '"momentum", "crushed", "nailed", "smash". Every message must read as written for this '
-  + 'exact moment, so vary the angle and the sentence shapes.\n'
-  + '- Repeating any idea or phrasing from the earlier messages you are shown.\n'
-  + '- Generic productivity advice: alarms, scheduling, preparing the night before.\n'
-  + '- Shame or lecturing. Never lead with late or missed counts.\n'
-  + '- Calling anything a best or a record unless the data says so, or inventing data, times '
-  + 'or plans that are not given.';
+const BANNED = /\b(keep it up|you'?ve got this|momentum|crush(ed|ing)?|nail(ed|ing)?|smash(ed|ing)?|just \d+ more|great job|well done|proud of you)\b/i;
+const LIMITS = { title: 6, spark: 22, action: 24 };
 
 /**
+ * The writer's brief: the strategy `diagnose` chose, the facts it may quote,
+ * and the shape of the answer. The model decides the words, never the angle.
+ */
+const SYSTEM_PROMPT = 'You write the coach card a person reads right after ticking a routine '
+  + 'in Routine Notes. The analysis is already done for you: you get the HOOK (the true reason '
+  + 'this tick matters), the LEVER (the one change that will make this routine better next '
+  + 'time) and the FACTS you may use. Your job is the words: make them want to read it and '
+  + 'want to try the idea.\n\n'
+  + 'Answer with JSON only: {"title": "...", "spark": "...", "action": "..."}\n'
+  + '- title: at most 6 words. A headline that makes them smile or lean in, built on the hook. '
+  + 'No full stop.\n'
+  + '- spark: one sentence, at most 22 words. The motivation: why this tick matters for who '
+  + 'they are becoming, or for the goal or area it serves. Specific and warm, never generic.\n'
+  + '- action: one sentence, at most 24 words, starting with a verb. The lever made concrete '
+  + 'and vivid: exactly what to do, right now or in the next session as the LEVER says, small '
+  + 'enough to start at once, and something they have not been told before.\n\n'
+  + 'Rules:\n'
+  + '- Use only numbers that appear in the FACTS or the LEVER, or small counts such as one or '
+  + 'two minutes. Never invent data, records, times or plans.\n'
+  + '- No stock phrases: "keep it up", "you have got this", "momentum", "crushed", "nailed", '
+  + '"great job", "just N more". No emoji, no lists, no greeting.\n'
+  + '- Never shame. Never lead with what was missed.\n'
+  + '- Do not reuse an idea or phrasing from the earlier cards you are shown.';
+
+/** The first JSON object in a reply, or null. */
+function parseCard(content) {
+  const match = /\{[\s\S]*\}/.exec(String(content || ''));
+  if (!match) return null;
+  try {
+    const card = JSON.parse(match[0]);
+    const clean = (v) => String(v || '').replace(/[*_`#]/g, '').replace(/\s+/g, ' ').trim();
+    return {
+      title: clean(card.title).replace(/[.!]+$/, ''),
+      spark: clean(card.spark),
+      action: clean(card.action),
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+const tokens = (text) => new Set(String(text || '').toLowerCase().match(/[a-z]{4,}/g) || []);
+function overlap(a, b) {
+  const x = tokens(a);
+  const y = tokens(b);
+  if (!x.size || !y.size) return 0;
+  let shared = 0;
+  x.forEach((t) => { if (y.has(t)) shared += 1; });
+  return shared / Math.min(x.size, y.size);
+}
+
+/**
+ * Hold the card to the brief. Returns the problems found ([] = accept), so a
+ * retry can tell the model exactly what to fix.
+ */
+function validateCard(card, strategy, previous = []) {
+  if (!card) return ['the answer was not the JSON object asked for'];
+  const problems = [];
+  Object.keys(LIMITS).forEach((field) => {
+    const n = wordsOf(card[field]).length;
+    if (!n) problems.push(`${field} is empty`);
+    else if (n > LIMITS[field]) problems.push(`${field} has ${n} words, the limit is ${LIMITS[field]}`);
+  });
+  const all = `${card.title} ${card.spark} ${card.action}`;
+  const stock = BANNED.exec(all);
+  if (stock) problems.push(`uses a stock phrase ("${stock[0]}")`);
+  const invented = (all.match(/\d+/g) || [])
+    .filter((n) => !strategy.numbers.has(n) && Number(n) > 10);
+  if (invented.length) problems.push(`uses numbers not in the facts: ${invented.join(', ')}`);
+  if (previous.some((text) => overlap(card.action, text) >= 0.6)) {
+    problems.push('the action repeats an earlier card, so give a different idea');
+  }
+  return problems;
+}
+
+/**
+ * The card as the thread stores it: title, spark, then the action, labelled
+ * for when it is meant ("Right now" for finishing or making up today).
+ */
+function formatCard({ title, spark, action }, when = 'next') {
+  return `${title}\n${spark}\n${when === 'now' ? 'Right now' : 'Next time'}: ${action}`;
+}
+
+function describeStrategy(strategy, routineName, context) {
+  const {
+    hook, lever, alternatives, facts,
+  } = strategy;
+  const backup = alternatives.length
+    ? `(If the lever cannot be made concrete, use instead: ${alternatives[0].hint})\n`
+    : '';
+  const area = context ? `\nArea / project it serves (description and next steps):\n${context}` : '';
+  return `Routine: ${routineName || 'this routine'}
+HOOK: ${hook ? hook.evidence : 'a session done'}
+LEVER (${lever.when === 'now' ? 'for RIGHT NOW, today' : 'for the NEXT session'}): ${lever.hint}
+${backup}FACTS:
+${facts.map((f) => `- ${f}`).join('\n')}${area}`;
+}
+
+/**
+ * Diagnose in code, write with the model, validate, retry once with the
+ * problems, then fall back to the same brief written without a model.
+ *
  * @param {Object} p
  * @param {Object} p.summary     summariseRoutineHistory() output
  * @param {string} p.routineName
  * @param {string} [p.brief]     area/project description + next steps
  * @param {string[]} [p.previous] earlier insight texts for this routine, newest first
+ * @returns {Promise<{text: string, model: string|null, strategy: string}>}
  */
 async function generateRoutineInsight({
   summary, routineName, brief, previous = [],
 }) {
   const context = String(brief || '').slice(0, BRIEF_MAX);
   const earlier = previous.filter(Boolean).slice(0, MAX_PREVIOUS);
+  const strategy = diagnose(summary, { brief: context });
+  const label = `${strategy.hook ? strategy.hook.key : 'none'}/${strategy.lever.key}`;
+  const shown = earlier.map((t) => `- ${t.replace(/\n/g, ' / ')}`).join('\n');
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
     {
       role: 'user',
-      content: `Routine: ${routineName || 'this routine'}\n${describeHistory(summary)}`
-        + `${context ? `\nArea / project context (description and next steps):\n${context}` : ''}`
-        + `${earlier.length ? `\nEarlier messages for this routine (do not repeat them):\n${earlier.map((t) => `- ${t}`).join('\n')}` : ''}`
-        + '\n\nWrite the message.',
+      content: describeStrategy(strategy, routineName, context)
+        + (earlier.length ? `\nEarlier cards for this routine (do not repeat them):\n${shown}` : '')
+        + '\n\nWrite the card.',
     },
   ];
 
-  // The chosen model first, then the free roster; either must yield three sentences.
+  // The chosen model first, then the free roster. Each gets one correction
+  // round: the validator's problems go back as the next turn.
   const attempts = [
-    // Fable refuses to run with reasoning off. A little thinking, kept out of
-    // the reply; the budget covers it plus the 65-word answer.
     {
       models: insightModels(),
       maxTokens: 2000,
       temperature: 1,
       reasoning: { effort: 'low', exclude: true },
     },
-    { maxTokens: 400 },
+    { maxTokens: 500 },
   ];
   for (let i = 0; i < attempts.length; i += 1) {
-    try {
-      // Sequential on purpose: the second attempt only runs when the first fails.
-      // eslint-disable-next-line no-await-in-loop
-      const { content, model } = await completeChat(messages, attempts[i]);
-      const paragraph = threeSentences(content);
-      if (paragraph) return { text: paragraph, model };
-    } catch (error) {
-      // Try the next attempt; the user ticked and expects an answer.
+    let turn = messages;
+    for (let round = 0; round < 2; round += 1) {
+      let reply;
+      try {
+        // Sequential on purpose: each call only runs when the one before failed.
+        // eslint-disable-next-line no-await-in-loop
+        reply = await completeChat(turn, attempts[i]);
+      } catch (error) {
+        break; // this attempt's model is unavailable; try the next attempt
+      }
+      const card = parseCard(reply.content);
+      const problems = validateCard(card, strategy, earlier);
+      if (!problems.length) {
+        return { text: formatCard(card, strategy.lever.when), model: reply.model, strategy: label };
+      }
+      turn = [
+        ...messages,
+        { role: 'assistant', content: String(reply.content || '') },
+        { role: 'user', content: `Fix these and answer with the JSON again: ${problems.join('; ')}.` },
+      ];
     }
   }
-  return { text: fallbackInsight(summary, routineName), model: null };
+  const fallback = fallbackMessage(strategy, routineName);
+  return { text: formatCard(fallback, fallback.when), model: null, strategy: label };
 }
 
 module.exports = {
@@ -435,8 +449,8 @@ module.exports = {
   linkedGoals,
   summariseRoutineHistory,
   nextMilestone,
-  describeHistory,
-  fallbackInsight,
-  threeSentences,
+  parseCard,
+  validateCard,
+  formatCard,
   generateRoutineInsight,
 };

@@ -181,13 +181,13 @@ const mutation = {
   },
 
   /**
-   * The first message after a routine is ticked — once per routine per day, in
-   * three sentences that celebrate a real win, offer one fresh idea for the next
-   * session and end on a target within reach. Grounded in the last month: the
-   * run of check-ins, this week against last, K/D/G earned, the activities done
-   * most, and the area/project description + next steps the client already
-   * caches (`brief`). Idempotent: a thread that already holds today's paragraph
-   * gets it back.
+   * The first message after a routine is ticked — once per routine per day, as
+   * a coach card: a title, why this tick matters, and one concrete action
+   * ("Right now:" / "Next time:"). The reasoning is deterministic
+   * (utils/insightStrategy: diagnose the last month, pick one hook and one
+   * lever); the model only writes it, and is validated against the facts. The
+   * area/project description + next steps the client caches (`brief`) feed
+   * both. Idempotent: a thread that already holds today's card gets it back.
    */
   routineInsight: {
     type: RoutineChatMessageType,

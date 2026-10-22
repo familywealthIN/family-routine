@@ -8,9 +8,9 @@ const {
   dayPlan,
   summariseRoutineHistory,
   nextMilestone,
-  describeHistory,
-  fallbackInsight,
-  threeSentences,
+  parseCard,
+  validateCard,
+  formatCard,
   generateRoutineInsight,
 } = require('./routineInsight');
 
@@ -52,83 +52,101 @@ describe('summariseRoutineHistory', () => {
   });
 });
 
-describe('threeSentences', () => {
-  it('keeps the first three sentences as one plain paragraph', () => {
-    expect(threeSentences('**One.**\n- Two!\n3. Three? Four.')).toBe('One. Two! Three?');
+const CARD = {
+  title: 'Three sessions, one habit',
+  spark: 'Every tick this week is a vote for the person who trains without a reminder.',
+  action: 'Swap the last set of squats for a slow tempo set and feel the difference.',
+};
+const reply = (card, model = 'm') => ({ content: JSON.stringify(card), model });
+
+describe('the card', () => {
+  const strategy = { numbers: new Set(['3', '42']) };
+
+  it('reads the first JSON object out of a chatty reply and strips markdown', () => {
+    expect(parseCard('Sure!\n```json\n{"title":"**Big** day.","spark":"a","action":"b"}\n```'))
+      .toEqual({ title: 'Big day', spark: 'a', action: 'b' });
+    expect(parseCard('no json here')).toBeNull();
   });
 
-  it('rejects an answer shorter than three sentences', () => {
-    expect(threeSentences('Just one.')).toBe('');
+  it('accepts a card that keeps to the brief', () => {
+    expect(validateCard(CARD, strategy)).toEqual([]);
+  });
+
+  it('names every problem so the retry can fix it', () => {
+    const problems = validateCard({
+      title: 'This title is far too long to read',
+      spark: 'Keep it up, 97 days of momentum.',
+      action: '',
+    }, strategy);
+    expect(problems).toEqual(expect.arrayContaining([
+      'title has 8 words, the limit is 6',
+      'action is empty',
+      expect.stringMatching(/stock phrase/),
+      'uses numbers not in the facts: 97',
+    ]));
+  });
+
+  it('refuses an action that repeats an earlier card', () => {
+    const earlier = [formatCard(CARD)];
+    expect(validateCard(CARD, strategy, earlier)).toContain('the action repeats an earlier card, so give a different idea');
+  });
+
+  it('stores title, spark and the next-time action on three lines', () => {
+    expect(formatCard(CARD)).toBe(`${CARD.title}\n${CARD.spark}\nNext time: ${CARD.action}`);
   });
 });
 
 describe('generateRoutineInsight', () => {
   const summary = summariseRoutineHistory({ routines: [], goals: [], taskRef: 'r1' });
+  beforeEach(() => completeChat.mockReset());
 
-  it('returns the model paragraph trimmed to three sentences', async () => {
-    completeChat.mockResolvedValueOnce({ content: 'A one. B two. C three. D four.', model: 'm' });
+  it('returns the validated card and the strategy it was written from', async () => {
+    completeChat.mockResolvedValueOnce(reply(CARD, 'm'));
     await expect(generateRoutineInsight({ summary, routineName: 'Jog' }))
-      .resolves.toEqual({ text: 'A one. B two. C three.', model: 'm' });
+      .resolves.toEqual({ text: formatCard(CARD), model: 'm', strategy: 'first/twist' });
   });
 
-  it('falls back to a measured three-sentence paragraph when the model fails', async () => {
-    completeChat.mockRejectedValueOnce(new Error('down'));
-    const { text, model } = await generateRoutineInsight({ summary, routineName: 'Jog' });
-    expect(model).toBeNull();
-    expect(text).toBe(fallbackInsight(summary, 'Jog'));
-    expect(text.match(/[.!?](\s|$)/g)).toHaveLength(3);
-  });
-
-  it('fallback celebrates the run, offers one idea and ends on the next target', () => {
-    const s = {
-      ...summary,
-      days: 10,
-      onTime: 4,
-      late: 3,
-      missed: 3,
-      showedUp: 7,
-      streak: 3,
-      bestStreak: 5,
-      topActivities: [{ body: 'Core Workout', count: 6 }],
-      milestone: nextMilestone({ streak: 3, bestStreak: 5 }),
-    };
-    const text = fallbackInsight(s, 'Jog');
-    expect(text).toBe('3 in a row on Jog. Next time, beat "Core Workout" by one rep or one minute. '
-      + '3 more days beats your best run of 5.');
-    expect(text.split(' ').length).toBeLessThanOrEqual(30);
-    expect(text).not.toMatch(/missed|late/);
-    expect(text.match(/[.!?](\s|$)/g)).toHaveLength(3);
-  });
-
-  it('fallback welcomes a first check-in', () => {
-    const text = fallbackInsight({ ...summary, showedUp: 0 }, 'Jog');
-    expect(text).toMatch(/^First Jog on the board/);
-    expect(text.match(/[.!?](\s|$)/g)).toHaveLength(3);
-  });
-
-  it('asks Claude Fable first, at full creativity, with the moment and past messages', async () => {
-    completeChat.mockClear();
-    completeChat.mockResolvedValueOnce({ content: 'A. B. C.', model: 'anthropic/claude-fable-5.1' });
+  it('sends the strategy brief, not raw statistics, and shows earlier cards', async () => {
+    completeChat.mockResolvedValueOnce(reply(CARD));
     await generateRoutineInsight({
-      summary, routineName: 'Jog', previous: ['Yesterday you ran a 5k. Try hills. See you.'],
+      summary, routineName: 'Jog', previous: ['Old title\nOld spark.\nNext time: Run hills.'],
     });
     const [[messages, options]] = completeChat.mock.calls;
     expect(options).toMatchObject({ models: [DEFAULT_INSIGHT_MODEL], temperature: 1 });
     const [system, user] = messages;
-    expect(system.content).toMatch(/Formulas and stock phrases such as "just N more"/);
-    expect(system.content).toMatch(/quick way to compensate/);
-    expect(user.content).toMatch(/The moment:/);
-    expect(user.content).toMatch(/do not repeat them\):\n- Yesterday you ran a 5k/);
+    expect(system.content).toMatch(/Answer with JSON only/);
+    expect(user.content).toMatch(/^Routine: Jog\nHOOK: .+\nLEVER \(for the NEXT session\): .+/);
+    expect(user.content).toMatch(/do not repeat them\):\n- Old title \/ Old spark\. \/ Next time: Run hills\./);
   });
 
-  it('falls back to the free roster when Fable is unavailable', async () => {
-    completeChat.mockClear();
+  it('sends the problems back once and accepts the corrected card', async () => {
+    completeChat
+      .mockResolvedValueOnce({ content: 'not json', model: 'm' })
+      .mockResolvedValueOnce(reply(CARD, 'm'));
+    const result = await generateRoutineInsight({ summary, routineName: 'Jog' });
+    expect(result.text).toBe(formatCard(CARD));
+    const retry = completeChat.mock.calls[1][0];
+    expect(retry[retry.length - 1].content).toMatch(/^Fix these and answer with the JSON again: the answer was not the JSON object/);
+  });
+
+  it('moves to the free roster when the chosen model is unavailable', async () => {
     completeChat
       .mockRejectedValueOnce(new Error('402 credits'))
-      .mockResolvedValueOnce({ content: 'One. Two. Three.', model: 'free:model' });
-    await expect(generateRoutineInsight({ summary, routineName: 'Jog' }))
-      .resolves.toEqual({ text: 'One. Two. Three.', model: 'free:model' });
+      .mockResolvedValueOnce(reply(CARD, 'free:model'));
+    const result = await generateRoutineInsight({ summary, routineName: 'Jog' });
+    expect(result.model).toBe('free:model');
     expect(completeChat.mock.calls[1][1].models).toBeUndefined();
+  });
+
+  it('writes the same strategy without a model when nothing usable comes back', async () => {
+    completeChat.mockRejectedValue(new Error('down'));
+    const { text, model } = await generateRoutineInsight({ summary, routineName: 'Jog' });
+    expect(model).toBeNull();
+    const [title, spark, action] = text.split('\n');
+    expect(title).toBe('Jog is on the board');
+    expect(spark).toMatch(/first check-in/);
+    expect(action).toMatch(/^Next time: /);
+    completeChat.mockReset();
   });
 });
 
@@ -166,11 +184,8 @@ describe('the day around the tick', () => {
     });
     expect(s.missedToday).toEqual(['Morning Pages']);
     expect(s.linked).toEqual([{ period: 'week', body: 'Train 4 times', done: false }]);
-    const text = describeHistory(s);
-    expect(text).toMatch(/The moment: ticked at 20:29, on Wednesday, window 19:30-21:00, 31 min left in the window/);
-    expect(text).toMatch(/Missed earlier today: Morning Pages/);
-    expect(text).toMatch(/19:30 Workout \(done\) <- this routine/);
-    expect(text).toMatch(/week goal "Train 4 times" \(open\)/);
+    expect(s.moment).toEqual({ tickedAt: '20:29', windowEnd: '21:00', minutesLeft: 31 });
+    expect(s.plan.find((r) => r.current).name).toBe('Workout');
   });
 
   it('keys week goals by their Friday and month goals by the last day', () => {
@@ -221,6 +236,11 @@ describe('momentum', () => {
     expect(s.topActivities[0]).toEqual({ body: 'Core Workout', count: 2 });
   });
 
+  it('records the previous scheduled session, skipping rest days', () => {
+    // 06-10 was ticked; the rest day on 05-10 does not count as a session.
+    expect(s.lastBefore).toBe('onTime');
+  });
+
   it('counts today even before the tick reaches the document', () => {
     const fresh = summariseRoutineHistory({
       routines: [day('07-10-2026', { ticked: false })], goals: [], taskRef: 'r1', today: '07-10-2026',
@@ -230,7 +250,6 @@ describe('momentum', () => {
 
   it('hands the model the target within reach', () => {
     expect(s.milestone).toBe('2 more days beats your best run of 4');
-    expect(describeHistory(s)).toMatch(/Current run of check-ins: 3 \(NOT a record: the best run in the last 30 days is 4\)/);
   });
 });
 
