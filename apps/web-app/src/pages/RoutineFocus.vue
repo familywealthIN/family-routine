@@ -1624,6 +1624,17 @@ export default {
     toggleItem(item) {
       if (!item || !item.id) return;
       const nextComplete = !item.isComplete;
+      // One tick, one write. A second toggle that lands while the first is
+      // still in flight (seen after closing the AI search modal) carries the
+      // same stale `isComplete`, so it asked for the same state again — and
+      // its `.then` posted "all done" and fired the end event a second time.
+      // Only a repeat of the SAME target is dropped: unticking straight back
+      // still goes through, and nothing is disabled while the write is out.
+      if (!this.togglesInFlight) this.togglesInFlight = {};
+      if (this.togglesInFlight[item.id] === nextComplete) return;
+      const settle = () => {
+        if (this.togglesInFlight[item.id] === nextComplete) delete this.togglesInFlight[item.id];
+      };
       const goal = (this.goals || []).find((g) => g
         && g.period === 'day'
         && (g.goalItems || []).some((gi) => gi.id === item.id));
@@ -1640,6 +1651,7 @@ export default {
         });
       }
 
+      this.togglesInFlight[item.id] = nextComplete;
       this.$goals
         .completeGoalItem({
           id: item.id,
@@ -1651,11 +1663,13 @@ export default {
           dayDate: this.date,
         })
         .then(() => {
+          settle();
           eventBus.$emit(EVENTS.ROUTINE_TICKED);
           if (nextComplete) this.onItemCompleted(item);
           if (this.$apollo.queries.goals) this.$apollo.queries.goals.refetch();
         })
         .catch(() => {
+          settle();
           this.notifyGeneric();
         });
     },
@@ -2342,6 +2356,9 @@ export default {
       });
     },
     dispatchAgentEndEvent(taskRef, goalId) {
+      // Already going out for this routine: a second "end event firing" pill
+      // (and a second webhook) is a duplicate, not a retry.
+      if (this.endEventFiring[taskRef]) return;
       const gid = goalId || this.findFirstGoalIdForRoutine(taskRef);
       this.$set(this.endEventFiring, taskRef, true);
       this.postChatEvent({

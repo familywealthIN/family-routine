@@ -1948,3 +1948,75 @@ describe('RoutineFocus goalSheetDateLocked', () => {
     expect(locked(false, { id: 'g', isComplete: true })).toBe(false);
   });
 });
+
+/**
+ * One tick, one write. After closing the AI search modal a single tick ran
+ * toggleItem twice with the same stale item, so "<item> · all done" and "All
+ * tasks complete — end event firing" were each posted twice at once.
+ */
+describe('RoutineFocus — a tick is not doubled', () => {
+  const ITEM_SW = {
+    id: 'g9', body: 'Full body workout', taskRef: 'sw', isComplete: false,
+  };
+  const tickVm = () => {
+    let resolve;
+    const vm = {
+      date: '15-10-2026',
+      goals: [],
+      $apollo: { provider: { defaultClient: {} }, queries: {} },
+      $goals: { completeGoalItem: jest.fn(() => new Promise((r) => { resolve = r; })) },
+      onItemCompleted: jest.fn(),
+      notifyGeneric: jest.fn(),
+    };
+    return { vm, finish: () => resolve() };
+  };
+
+  it('drops a second identical tick while the first is still saving', async () => {
+    const { vm, finish } = tickVm();
+    const item = { ...ITEM_SW, taskRef: '' };
+    methods.toggleItem.call(vm, item);
+    methods.toggleItem.call(vm, item);
+    expect(vm.$goals.completeGoalItem).toHaveBeenCalledTimes(1);
+    finish();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(vm.onItemCompleted).toHaveBeenCalledTimes(1);
+  });
+
+  it('still lets the item be unticked straight back', () => {
+    const { vm } = tickVm();
+    const item = { ...ITEM_SW, taskRef: '' };
+    methods.toggleItem.call(vm, item);
+    methods.toggleItem.call(vm, { ...item, isComplete: true });
+    expect(vm.$goals.completeGoalItem).toHaveBeenCalledTimes(2);
+    expect(vm.$goals.completeGoalItem.mock.calls[1][0].isComplete).toBe(false);
+  });
+
+  it('accepts the same tick again once the first has settled', async () => {
+    const { vm, finish } = tickVm();
+    const item = { ...ITEM_SW, taskRef: '' };
+    methods.toggleItem.call(vm, item);
+    finish();
+    await Promise.resolve();
+    await Promise.resolve();
+    methods.toggleItem.call(vm, item);
+    expect(vm.$goals.completeGoalItem).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not post or fire a second end event while one is going out', () => {
+    const vm = {
+      endEventFiring: {},
+      postChatEvent: jest.fn(),
+      findFirstGoalIdForRoutine: () => 'g1',
+      // eslint-disable-next-line no-param-reassign
+      $set: (o, k, v) => { o[k] = v; },
+      // eslint-disable-next-line no-param-reassign
+      $delete: (o, k) => { delete o[k]; },
+      $agent: { fireEndEvent: jest.fn(() => new Promise(() => {})) },
+    };
+    methods.dispatchAgentEndEvent.call(vm, 'sw', 'g1');
+    methods.dispatchAgentEndEvent.call(vm, 'sw', 'g1');
+    expect(vm.postChatEvent).toHaveBeenCalledTimes(1);
+    expect(vm.$agent.fireEndEvent).toHaveBeenCalledTimes(1);
+  });
+});
