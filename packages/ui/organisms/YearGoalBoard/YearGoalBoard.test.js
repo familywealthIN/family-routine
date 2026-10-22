@@ -254,3 +254,15 @@ describe('OrganismYearGoalBoard - row events reach the page', () => {
     expect(events.map((e) => e[0])).toEqual(['tick-day']);
   });
 });
+
+describe('OrganismYearGoalBoard — the left column scrolls', () => {
+  // jsdom has no layout, so the rule itself is the contract: the month card
+  // clips with `overflow: hidden`, which makes it shrinkable to 0 in this
+  // column — without `flex-shrink: 0` it squeezed to the column's height and
+  // the weeks below the fold could not be scrolled to (iPad).
+  it('keeps the column\'s children at their content height', () => {
+    // eslint-disable-next-line global-require
+    const source = require('fs').readFileSync(require.resolve('./YearGoalBoard.vue'), 'utf8');
+    expect(source).toMatch(/\.rn-ygb__left > \* \{\s*flex-shrink: 0;\s*\}/);
+  });
+});
