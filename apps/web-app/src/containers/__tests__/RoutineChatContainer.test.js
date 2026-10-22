@@ -36,6 +36,7 @@ const {
   POST_ROUTINE_CHAT_EVENT_MUTATION,
   REVISE_ROUTINE_CHAT_REPLY_MUTATION,
   ROUTINE_INSIGHT_MUTATION,
+  ROUTINE_CHAT_QUERY,
 } = require('../../composables/graphql/chatQueries');
 const {
   UPDATE_GOAL_ITEM_FIELDS_MUTATION,
@@ -1436,5 +1437,62 @@ describe('RoutineChatContainer routine insight', () => {
     const ctx = makeCtx(null, { contextTags: ['area:work'] });
     expect(ctx.insightBrief()).toBe('[area:work]\nShip the beta.\nNext steps:\n- Fix sync');
     localStorage.clear();
+  });
+});
+
+/**
+ * Swiping the deck changes only the focused routine; its checklist is already
+ * in memory, but its thread was fetched on arrival, so the card slid in showing
+ * the previous routine's chat. The neighbours' threads are read ahead instead.
+ */
+describe('RoutineChatContainer neighbour prefetch', () => {
+  const prefetchCtx = (over = {}) => makeCtx({}, {
+    neighbourRefs: ['prev', 'next'],
+    $root: { $data: { email: 'a@b.c' } },
+    $apollo: { query: jest.fn(() => Promise.resolve({ data: { routineChat: [] } })) },
+    ...over,
+  });
+
+  it('reads both neighbours\' threads into the cache', () => {
+    const ctx = prefetchCtx();
+    ctx.prefetchNeighbourThreads();
+    expect(ctx.$apollo.query.mock.calls.map(([o]) => o.variables)).toEqual([
+      { date: '12-09-2026', taskRef: 'prev' },
+      { date: '12-09-2026', taskRef: 'next' },
+    ]);
+    ctx.$apollo.query.mock.calls.forEach(([o]) => {
+      expect(o.query).toBe(ROUTINE_CHAT_QUERY);
+      expect(o.fetchPolicy).toBe('cache-first');
+    });
+  });
+
+  it('asks once per routine per day, and again on another day', () => {
+    const ctx = prefetchCtx();
+    ctx.prefetchNeighbourThreads();
+    ctx.prefetchNeighbourThreads();
+    expect(ctx.$apollo.query).toHaveBeenCalledTimes(2);
+    ctx.date = '13-09-2026';
+    ctx.prefetchNeighbourThreads();
+    expect(ctx.$apollo.query).toHaveBeenCalledTimes(4);
+  });
+
+  it('skips the focused routine and a signed-out session', () => {
+    const ctx = prefetchCtx({ neighbourRefs: ['sw', ''] });
+    ctx.prefetchNeighbourThreads();
+    expect(ctx.$apollo.query).not.toHaveBeenCalled();
+    const out = prefetchCtx({ $root: { $data: { email: '' } } });
+    out.prefetchNeighbourThreads();
+    expect(out.$apollo.query).not.toHaveBeenCalled();
+  });
+
+  it('retries a neighbour whose warm-up failed', async () => {
+    const ctx = prefetchCtx({
+      neighbourRefs: ['next'],
+      $apollo: { query: jest.fn(() => Promise.reject(new Error('offline'))) },
+    });
+    ctx.prefetchNeighbourThreads();
+    await flush();
+    ctx.prefetchNeighbourThreads();
+    expect(ctx.$apollo.query).toHaveBeenCalledTimes(2);
   });
 });

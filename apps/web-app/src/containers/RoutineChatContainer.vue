@@ -105,6 +105,12 @@ export default {
      * of its chat.
      */
     sharedScroller: { type: Boolean, default: false },
+    /**
+     * The routines one swipe away (left and right). Their threads are read into
+     * the Apollo cache ahead of the swipe, so the card that slides in shows its
+     * chat at once instead of the previous routine's until the network answers.
+     */
+    neighbourRefs: { type: Array, default: () => [] },
   },
   data() {
     return {
@@ -168,6 +174,9 @@ export default {
     },
   },
   computed: {
+    neighbourKey() {
+      return `${this.date}|${this.neighbourRefs.join(',')}`;
+    },
     taskRef() {
       return (this.routine && this.routine.id) || '';
     },
@@ -280,6 +289,12 @@ export default {
     },
   },
   watch: {
+    neighbourKey: {
+      handler() {
+        this.prefetchNeighbourThreads();
+      },
+      immediate: true,
+    },
     // A new message must land in view. On the phone the thread shares the focus
     // card's scroller (the card handles it); in the tablet/desktop chat pane the
     // scroller is this container's own ancestor, so find it and pin it down.
@@ -319,6 +334,29 @@ export default {
     },
   },
   methods: {
+    /**
+     * Warm the cache with the swipe neighbours' threads, once per routine per
+     * day. `cache-first`: a thread already read is not fetched again here — the
+     * focused query's own `cache-and-network` refreshes it when it arrives.
+     */
+    prefetchNeighbourThreads() {
+      if (!this.$root || !this.$root.$data.email || !this.$apollo) return;
+      if (!this.prefetchedThreads) this.prefetchedThreads = new Set();
+      this.neighbourRefs.forEach((ref) => {
+        if (!ref || ref === this.taskRef) return;
+        const key = `${this.date}|${ref}`;
+        if (this.prefetchedThreads.has(key)) return;
+        this.prefetchedThreads.add(key);
+        this.$apollo.query({
+          query: ROUTINE_CHAT_QUERY,
+          variables: { date: this.date, taskRef: ref },
+          fetchPolicy: 'cache-first',
+        }).catch(() => {
+          // A failed warm-up just means the swipe loads it the normal way.
+          this.prefetchedThreads.delete(key);
+        });
+      });
+    },
     /** The area/project context the brief already caches, as plain text. */
     insightBrief() {
       return this.contextTags.map((tag) => {

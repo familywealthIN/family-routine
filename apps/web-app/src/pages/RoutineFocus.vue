@@ -1171,6 +1171,9 @@ export default {
         isPastDay: this.isPastDay,
         // On the phone the thread scrolls with the card's checklist.
         sharedScroller: this.shell === 'phone',
+        neighbourRefs: [this.rows[this.focusIndex - 1], this.rows[this.focusIndex + 1]]
+          .filter((row) => this.focusIndex >= 0 && row)
+          .map((row) => row.id),
       };
     },
     chatHandlers() {
