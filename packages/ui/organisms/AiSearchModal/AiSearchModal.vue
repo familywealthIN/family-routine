@@ -676,6 +676,7 @@ export default {
     AtomCard,
     AtomCardActions,
     AtomCardText,
+    AtomCardTitle,
     AtomChip,
     AtomDialog,
     AtomIcon,
