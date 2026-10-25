@@ -12,7 +12,16 @@
     <template v-else>
       <desktop-layout />
     </template>
-    <notifications group="notify" position="bottom center" />
+    <!-- The one host for $notify: the same AppToast card the pages draw. -->
+    <app-toast
+      :title="toast.title"
+      :sub="toast.sub"
+      :icon="toast.icon"
+      :icon-color="toast.color"
+      :duration="toast.duration"
+      :seq="toast.seq"
+      @done="clearToast"
+    />
     <!-- <v-footer app></v-footer> -->
 
     <!-- Global AI Search Modal -->
@@ -37,6 +46,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { AgentResultModal } from '@routine-notes/ui/organisms';
+import AppToast from '@routine-notes/ui/molecules/AppToast/AppToast.vue';
 import { installSwipeDismiss, uninstallSwipeDismiss } from '@routine-notes/ui/utils/swipeDismiss';
 import {
   config, publicKey, isDevelopment, netlify,
@@ -50,6 +60,7 @@ import AiSearchModal from './containers/AiSearchModalContainer.vue';
 import TimezoneSync from './components/TimezoneSync.vue';
 import { isSignedIn, registerDevicePush } from './services/pushSession';
 import eventBus, { EVENTS } from './utils/eventBus';
+import { toastState, clearToast } from './plugins/notifications';
 
 export default {
   components: {
@@ -57,6 +68,7 @@ export default {
     DesktopLayout,
     AiSearchModal,
     AgentResultModal,
+    AppToast,
     TimezoneSync,
   },
   data() {
@@ -67,6 +79,7 @@ export default {
       aiSearchOpenMode: 'add',
       aiSearchTaskRef: '',
       lastActiveTime: Date.now(),
+      toast: toastState,
     };
   },
   computed: {
@@ -151,6 +164,7 @@ export default {
     uninstallSwipeDismiss();
   },
   methods: {
+    clearToast,
     onAgentResultInput(open) {
       if (!open) this.$agent.closeResultModal();
     },

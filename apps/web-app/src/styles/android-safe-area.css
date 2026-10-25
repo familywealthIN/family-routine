@@ -151,24 +151,10 @@ body.android15-soft-keys {
   transform: translateZ(0);
 }
 
-/* Notification safe area positioning */
-.android14-plus .vue-notification-group {
-  bottom: var(--safe-area-inset-bottom) !important;
-  padding-bottom: 16px !important;
-}
-
-.android14-plus .vue-notification-wrapper {
-  margin-bottom: 8px !important;
-}
-
 /* Handle landscape orientation */
 @media screen and (orientation: landscape) {
   .android14-plus .fixed-toolbar.safe-area-top {
     padding-top: max(env(safe-area-inset-top), 0px) !important;
-  }
-
-  .android14-plus .vue-notification-group {
-    bottom: max(var(--safe-area-inset-bottom), 8px) !important;
   }
 }
 
