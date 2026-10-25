@@ -426,17 +426,17 @@ describe('buildCascade', () => {
     }],
   });
 
-  // The gate is evaluateAutoComplete: every declared milestone met, and never
-  // fewer than the threshold. So the counter is the server's milestone tally
-  // over all the milestones the goal holds, floored at the threshold.
+  // The gate is evaluateAutoComplete: the threshold in met milestones (owner's
+  // rule, 25 Oct 2026). The counter is the server's milestone tally over every
+  // milestone the goal holds, floored at the threshold; the bar runs to the gate.
   it('counts the server’s met milestones against every milestone it holds', () => {
     expect(cascade.done).toBe(4);
     expect(cascade.threshold).toBe(6);
     expect(cascade.unitName).toBe('milestones');
     expect(cascade.complete).toBe(false);
     expect(cascade.statusLabel).toBe('Active');
-    expect(cascade.pct).toBe(67);
-    expect(cascade.rule).toBe('Needs all 6 day milestones met (min 5)');
+    expect(cascade.pct).toBe(80);
+    expect(cascade.rule).toBe('Needs 5 of 6 day milestones met');
   });
 
   it('keeps the threshold as the floor when fewer milestones were declared', () => {

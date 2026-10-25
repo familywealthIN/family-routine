@@ -370,7 +370,9 @@ describe('planRowTick — what one tap sends', () => {
   // The week the beta run tapped: five won days, eight milestones, so the server
   // left it open. Refusing the tap there would claim an auto-tick that never
   // happened, and the row's own counter says 5/8.
-  it('lets a hand tick through on a week the server left open at the threshold', () => {
+  // Owner's rule, 25 Oct 2026: the threshold is the gate, so a week at 5 of 8
+  // met milestones is already satisfied and the server ticks it on its read.
+  it('refuses a hand tick on a week that has reached the threshold', () => {
     const plan = planRowTick({
       row: {
         id: 'w1', period: 'week', date: WEEK_DATE, taskRef: 'sw', done: false,
@@ -384,8 +386,7 @@ describe('planRowTick — what one tap sends', () => {
       routines: ROUTINES,
       isToday: true,
     });
-    expect(plan.blocked).toBe(false);
-    expect(plan.ticks.map((tick) => tick.period)).toEqual(['week']);
+    expect(plan.blocked).toBe(true);
   });
 
   it('still lets a hand tick through below the threshold', () => {
@@ -435,7 +436,8 @@ describe('planRowTick — what one tap sends', () => {
   it('blocks a hand tick only where the server’s gate is satisfied', () => {
     expect(manualTickBlocked('lifetime', { milestonesTotal: 9, milestonesComplete: 9 })).toBe(false);
     expect(manualTickBlocked('week', { milestonesTotal: 5, milestonesComplete: 5 })).toBe(true);
-    expect(manualTickBlocked('week', { milestonesTotal: 8, milestonesComplete: 6 })).toBe(false);
+    expect(manualTickBlocked('week', { milestonesTotal: 8, milestonesComplete: 6 })).toBe(true);
+    expect(manualTickBlocked('week', { milestonesTotal: 8, milestonesComplete: 4 })).toBe(false);
     expect(manualTickBlocked('week', { progress: 5 })).toBe(false);
     expect(manualTickBlocked('week', { milestonesComplete: null })).toBe(false);
     expect(blockedTickToast('month', { milestonesTotal: 4, milestonesComplete: 4 }).sub)
@@ -524,13 +526,15 @@ describe('the rows each level draws', () => {
     expect(row.barLabel).toBe('4/5 milestones');
     expect(row.barPct).toBe(80);
     expect(row.status.label).toBe('Active');
-    expect(row.meta).toBe('Needs all 5 day milestones met (min 5)');
+    expect(row.meta).toBe('Needs 5 day milestones met');
   });
 
   // D-04: the bar used to count `progress` — one win per fully-won child DATE —
   // against the bare threshold, so a week goal with eight day milestones read
   // "5/5 days · Done" where the focus card read "6 / 8 milestones · Active".
-  it('counts the server’s met milestones, with the threshold only as a floor', () => {
+  // Owner's rule, 25 Oct 2026: the counter keeps every planned milestone, the
+  // bar and the gate run to the threshold.
+  it('counts the server’s met milestones against the plan, gated at the threshold', () => {
     const built = view(goalsFor({
       week: [{
         id: 'w1', body: 'Ship it', taskRef: 'sw', progress: 6, milestonesTotal: 8, milestonesComplete: 6,
@@ -538,10 +542,10 @@ describe('the rows each level draws', () => {
     }), { tab: 'week' });
     const row = built.groups[0].rows[0];
     expect(row.barLabel).toBe('6/8 milestones');
-    expect(row.barPct).toBe(75);
+    expect(row.barPct).toBe(100);
     expect(row.status.label).toBe('Active');
-    expect(row.blocked).toBe(false);
-    expect(row.meta).toBe('Needs all 8 day milestones met (min 5)');
+    expect(row.blocked).toBe(true);
+    expect(row.meta).toBe('Needs 5 of 8 day milestones met');
   });
 
   it('prints an em dash, never a 0, for a tally the read did not carry', () => {
@@ -834,7 +838,7 @@ describe('one week goal reads the same on /goals and the /home WEEK tab', () => 
     expect(row.barLabel).toBe(`${panel.done}/${panel.threshold} ${panel.unitName}`);
     expect(row.barLabel).toBe('1/8 milestones');
     expect(row.meta).toBe(panel.rule);
-    expect(row.meta).toBe('Needs all 8 day milestones met (min 5)');
+    expect(row.meta).toBe('Needs 5 of 8 day milestones met');
     expect(row.status.label).toBe(panel.statusLabel);
   });
 

@@ -91,6 +91,13 @@ If you want MCP next time, launch Chrome **before** starting the session:
   cannot be a goal title. "Keep the typed title" was shipped and reverted TWICE as D-15
   (6 and 11 Oct 2026). Drop any finding that asks for it at triage, and never send a fixer at
   it. The full list of decided behaviour lives in `.claude/agents/beta-tester.md`.
+- **Goal thresholds are the auto-tick rule.** A week / month / year goal ticks itself at 5 / 3 /
+  6 met milestones however many more were planned — a month goal at 3 of 5 week milestones is
+  Done. D-03 (Sep 2026) required every milestone, broke month goals, and was reverted by the
+  owner on 25 Oct 2026. Drop any finding that asks a goal to wait for all its milestones, and
+  reject any fix — yours or a fixer's — that changes `evaluateAutoComplete`'s
+  `met >= completionThreshold` or the client's matching gate. Retest it every cycle: a goal at
+  its threshold that is still Active after a reload is a defect.
 
 ### Known environment facts — exclude these from findings
 

@@ -15,9 +15,8 @@
  * week goal only once EVERY task under that routine for that day is done, and
  * five such days auto-tick the week goal (docs/redesign/chassis.md § "The goal
  * cascade"). The server's rule is milestone-shaped: `evaluateAutoComplete` ticks
- * a period goal once every child milestone the user hung off it is met, and
- * never below the threshold — `milestonesComplete` of `milestonesTotal`, with
- * the threshold as a floor.
+ * a period goal once the threshold's worth of its child milestones are met —
+ * `milestonesComplete` against the threshold, however many more it holds.
  *
  * So the server's tally is the authority on the NUMBER and on DONE (it is what
  * the server auto-ticks on, and what the focus card's cascade panel already
@@ -209,8 +208,8 @@ export function periodDone(item, period) {
 /**
  * Complete = the server's own gate, and nothing looser.
  *
- * `evaluateAutoComplete` needs every milestone met AND the threshold, so a week
- * goal five won days into eight milestones is still open — and `agendaGoals`
+ * `evaluateAutoComplete` ticks on the threshold in met milestones, which can
+ * run ahead of the won days `periodDone` counts — and `agendaGoals`
  * runs `autoCheckTaskPeriod` on this page's own read, so `isComplete` is that
  * gate's answer by the time a row draws. D-04: reading `periodDone` here printed
  * "5/5 days · Done" for the week the focus card read as "6 / 8 milestones ·
@@ -223,15 +222,15 @@ export function periodComplete(item) {
 
 /**
  * A hand tick is refused when the goal is auto-ticked, so a tap on it is a
- * question, not an edit. That is the server's gate — every milestone met, never
- * below the threshold — not `progress` against the threshold alone: a week goal
- * the server has left open still has an outstanding milestone, and refusing the
- * tap there would claim an auto-tick that never happened (D-04).
+ * question, not an edit. That is the server's gate — the threshold in met
+ * milestones — not `progress` against the threshold: `progress` counts fully
+ * won child dates, so it can lag the milestones the server ticked on, and
+ * refusing a tap on it would claim an auto-tick that never happened (D-04).
  */
 export function manualTickBlocked(period, item) {
   const tally = milestoneTally({ item, period });
   if (!tally || !tally.known) return false;
-  return tally.done >= tally.threshold;
+  return tally.done >= tally.required;
 }
 
 /**

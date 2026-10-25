@@ -241,9 +241,8 @@ async function autoCheckTaskPeriod({
 
       const dayCleanGoals = childPeriodGoals.filter((g) => g.goalItems && g.goalItems.length);
 
-      // Everything the user hung off this goal inside the period. The streak
-      // threshold alone used to close a week goal at five wins with a seventh
-      // milestone still open, so it is now a floor rather than the whole rule.
+      // Everything the user hung off this goal inside the period. The goal
+      // ticks once `completionThreshold` of them are met (evaluateAutoComplete).
       const criteria = collectPeriodCriteria(dayCleanGoals, periodGoalItem.id);
 
       // The figure the dashboard renders for "how close am I?". Derived from the
@@ -285,7 +284,7 @@ async function autoCheckTaskPeriod({
         // Judged once, on the whole period. Inside the loop above it was judged
         // against `progress`, which counts one win per child DOCUMENT, so a
         // parent whose milestones share a child document — five week milestones
-        // in one week doc — could never clear the floor however many of them
+        // in one week doc — could never clear the threshold however many of them
         // were met, while the tallies above reported 5 of 5.
         const autoComplete = evaluateAutoComplete({
           criteria,

@@ -67,6 +67,13 @@ one as a side effect of another ticket:
   prompt cannot be a goal title — never default, copy or force the plan title to the typed
   text. That change was made and reverted twice (D-15, 6 and 11 Oct 2026); a ticket asking
   for it is a product decision, so stop and report instead of fixing.
+- **Never break the threshold rule.** A week / month / year goal auto-ticks once its threshold
+  of milestones is met (5 / 3 / 6, `utils/getDates.js`), however many more were planned:
+  `evaluateAutoComplete` is `met >= completionThreshold` and nothing else. Do not add an
+  "every milestone must be met" condition, raise the gate to `milestonesTotal`, or make the
+  client gate (`milestoneTally.required`, `manualTickBlocked`) stricter than the server's. D-03
+  did exactly that in Sep 2026 and left month goals at 3/5 open until the owner reverted it
+  (25 Oct 2026). A ticket that asks for it is a product decision: stop and report.
 
 Routine chat answers through **OpenRouter's free tier only** (`chatApi.js`), with the roster
 discovered at runtime and ranked by JSON-contract support. Never pin a hardcoded roster, and

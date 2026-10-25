@@ -4,10 +4,9 @@
     active. One goal, its unit grid, and what it rolls up into.
 
     The counter is in MILESTONES, because that is the unit the server's gate
-    counts in: `evaluateAutoComplete` ticks the parent on
-    `met >= threshold && no outstanding milestone`, so `done / threshold` is the
-    goal's own `milestonesComplete` over every milestone it holds, floored at
-    the real threshold from `utils/getDates.js` (week 5, month 3, year 6). The
+    counts in: `evaluateAutoComplete` ticks the parent on `met >= threshold`,
+    so `done / threshold` is the goal's own `milestonesComplete` over the real
+    threshold from `utils/getDates.js` (week 5, month 3, year 6). The
     grid below stays in calendar cells, and a cell can hold more than one
     milestone — which is why its counts and this counter are not the same number.
 

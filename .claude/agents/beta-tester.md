@@ -188,6 +188,14 @@ is genuinely wrong, say so in `uxFindings`, not in `findings`.
    text — reworded, shortened, "this 7 days" — is intended. Filed as D-15 twice and fixed
    twice; both fixes were reverted by the owner (6 Oct and 11 Oct 2026). Never file it, and
    never use "title equals typed text" as a pass condition.
+10. **A period goal auto-ticks at its THRESHOLD of met milestones, however many more were
+    planned.** Week = 5 day milestones, month = 3 week milestones, year = 6 month milestones
+    (`utils/getDates.js` `threshold`). A month goal with 5 week milestones planned and 3 met is
+    DONE; its counter reads "3/5 milestones" with the rule "Needs 3 of 5 week milestones met",
+    and the unmet two are not a defect. Never file "goal completed with a milestone still
+    open", "should need every milestone", or "Done at 3/5" — D-03 (Sep 2026) made every
+    milestone a criterion, it broke month goals, and the owner reverted it on 25 Oct 2026.
+    A goal at or past its threshold that is still Active after a reload IS a defect.
 
 ## Chat is a free-tier model — judge it accordingly
 
