@@ -248,6 +248,11 @@ export default {
       // until the routine is checked off (RoutineFocus.chatDisabled). Offering
       // them next to a disabled composer would just be a way around it.
       if (!(this.routine && this.routine.ticked)) return [];
+      // The last reply's own follow-ups come first: they are about what was
+      // just said ("Protect Thursdays", "Break down the pricing page"), which is
+      // what keeps a conversation going instead of resetting it every turn.
+      const offered = this.offeredFollowUps();
+      if (offered.length) return [...offered, ADD_TASK_CHIP];
       const chips = [];
       if (this.openItems.length) chips.push('Break it down');
       if (this.briefDataBlocks.length) {
@@ -255,6 +260,7 @@ export default {
         chips.push('Plan from next steps');
       }
       chips.push('How am I doing?');
+      chips.push('How was my week?');
       chips.push(ADD_TASK_CHIP);
       return chips;
     },
@@ -280,6 +286,9 @@ export default {
         scoreD: Math.round(this.scores.D || 0),
         scoreK: Math.round(this.scores.K || 0),
         scoreG: Math.round(this.scores.G || 0),
+        // The area/project description + next steps, so "what's next on the
+        // project?" is answered from the project, not guessed into new tasks.
+        brief: this.insightBrief(),
         items: this.goalItems.map((item) => ({
           id: String(item.id),
           body: item.body,
@@ -356,6 +365,20 @@ export default {
           this.prefetchedThreads.delete(key);
         });
       });
+    },
+    /**
+     * The follow-ups the latest reply offered, when it is still the latest
+     * thing in the thread. A client-only turn (a brief answer) after it means
+     * the conversation has moved on, so its chips would be stale.
+     */
+    offeredFollowUps() {
+      if ((this.localMessages || []).length) return [];
+      const stored = Array.isArray(this.chatMessages) ? this.chatMessages : [];
+      const last = stored[stored.length - 1];
+      if (!last || last.from !== 'routine' || last.kind !== 'text') return [];
+      return (Array.isArray(last.suggestions) ? last.suggestions : [])
+        .filter((chip) => typeof chip === 'string' && chip.trim() && chip !== ADD_TASK_CHIP)
+        .slice(0, 3);
     },
     /** The area/project context the brief already caches, as plain text. */
     insightBrief() {

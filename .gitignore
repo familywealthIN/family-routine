@@ -89,3 +89,4 @@ fastlane/metadata/en-US/
 
 # Local secrets (n8n API key, …) — never commit
 .keys/
+apps/server/qa/chat/reports/

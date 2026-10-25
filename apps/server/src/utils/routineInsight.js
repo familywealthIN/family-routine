@@ -410,6 +410,8 @@ async function generateRoutineInsight({
       maxTokens: 2000,
       temperature: 1,
       reasoning: { effort: 'low', exclude: true },
+      // It reasons before it writes, so it gets longer than a chat turn's 20s.
+      timeoutMs: 45000,
     },
     { maxTokens: 500 },
   ];
@@ -445,6 +447,7 @@ module.exports = {
   DEFAULT_INSIGHT_MODEL,
   previousDates,
   periodDates,
+  dayStates,
   dayPlan,
   linkedGoals,
   summariseRoutineHistory,

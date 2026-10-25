@@ -132,16 +132,55 @@ describe('RoutineChatContainer quick replies', () => {
     // The chips follow the composer and both stay shut until the routine is
     // ticked, so the stub has to be past that gate to see any chip at all.
     const chips = Container.computed.quickReplies.call({
-      routine: { ticked: true }, openItems: [], briefDataBlocks: [],
+      routine: { ticked: true }, openItems: [], briefDataBlocks: [], offeredFollowUps: () => [],
     });
     expect(chips).toContain('Add a task');
   });
 
   it('offers no chips at all until the routine is ticked', () => {
     const chips = Container.computed.quickReplies.call({
-      routine: { ticked: false }, openItems: [{ id: 'g1' }], briefDataBlocks: [{}],
+      routine: { ticked: false },
+      openItems: [{ id: 'g1' }],
+      briefDataBlocks: [{}],
+      offeredFollowUps: () => [],
     });
     expect(chips).toEqual([]);
+  });
+
+  // The last reply's own follow-ups keep the conversation going; the generic
+  // set only returns once nothing more specific is on offer.
+  it('leads with the follow-ups the last reply offered', () => {
+    const offeredFollowUps = () => Container.methods.offeredFollowUps.call({
+      localMessages: [],
+      chatMessages: [
+        { from: 'me', kind: 'text', text: 'How was my week?' },
+        {
+          from: 'routine', kind: 'text', text: 'Thursday slipped.', suggestions: ['Protect Thursdays', 'Add a task', 'What next?'],
+        },
+      ],
+    });
+    const chips = Container.computed.quickReplies.call({
+      routine: { ticked: true }, openItems: [{ id: 'g1' }], briefDataBlocks: [], offeredFollowUps,
+    });
+    expect(chips).toEqual(['Protect Thursdays', 'What next?', 'Add a task']);
+  });
+
+  it('drops a reply\'s follow-ups once something else came after it', () => {
+    const base = {
+      chatMessages: [{ from: 'routine', kind: 'text', suggestions: ['Protect Thursdays'] }],
+    };
+    expect(Container.methods.offeredFollowUps.call({ ...base, localMessages: [{ id: 'local-1' }] })).toEqual([]);
+    expect(Container.methods.offeredFollowUps.call({
+      localMessages: [],
+      chatMessages: [...base.chatMessages, { from: 'routine', kind: 'event', text: 'Routine ticked' }],
+    })).toEqual([]);
+  });
+
+  it('offers "How was my week?" among the generic chips', () => {
+    const chips = Container.computed.quickReplies.call({
+      routine: { ticked: true }, openItems: [], briefDataBlocks: [], offeredFollowUps: () => [],
+    });
+    expect(chips).toContain('How was my week?');
   });
 });
 
