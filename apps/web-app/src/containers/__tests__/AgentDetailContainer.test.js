@@ -35,8 +35,18 @@ const ctx = (over = {}) => ({
 const withAgent = (vm) => ({ ...vm, agent: Container.computed.agent.call(vm) });
 
 describe('AgentDetailContainer — selection', () => {
+  // The document is handed over decorated with the store's `stalled` verdict
+  // (D-13), the way the list container decorates it with the routine join — so
+  // it is the agent's own fields plus that flag, not the stored object itself.
   it('finds the selected agent in the store', () => {
-    expect(Container.computed.agent.call(ctx())).toBe(AGENT);
+    expect(Container.computed.agent.call(ctx())).toEqual({ ...AGENT, stalled: false });
+  });
+
+  it('carries the store\'s stalled verdict onto the document (D-13)', () => {
+    const isStalled = jest.fn(() => true);
+    const vm = ctx({ $agent: { agents: [AGENT], isStalled } });
+    expect(Container.computed.agent.call(vm).stalled).toBe(true);
+    expect(isStalled).toHaveBeenCalledWith('r1');
   });
 
   it('renders nothing selected when the id is empty or unknown', () => {
@@ -62,6 +72,55 @@ describe('AgentDetailContainer — selection', () => {
 describe('AgentDetailContainer — Run test is stubbed', () => {
   it('keeps the button off until a server trigger exists', () => {
     expect(Container.computed.canRunTest.call(withAgent(ctx()))).toBe(false);
+  });
+});
+
+/**
+ * D-13. Both escape hatches go through the store: retry is the SAME end-event
+ * dispatch the home screen performs (never a second way to close a run), and
+ * cancel is the store's run-clearing.
+ */
+describe('AgentDetailContainer — clearing a stalled run', () => {
+  const stalledCtx = (over = {}) => ctx({
+    $agent: {
+      agents: [AGENT],
+      isStalled: () => true,
+      retryStalledRun: jest.fn(),
+      cancelRun: jest.fn(() => Promise.resolve(true)),
+    },
+    $notify: jest.fn(),
+    ...over,
+  });
+
+  it('retries the end event for the agent\'s routine', () => {
+    const vm = stalledCtx();
+    Container.methods.retryRun.call(withAgent(vm));
+    expect(vm.$agent.retryStalledRun).toHaveBeenCalledWith({ taskRef: 'r1' });
+  });
+
+  it('cancels the run for the agent\'s routine', async () => {
+    const vm = stalledCtx();
+    await Container.methods.cancelRun.call(withAgent(vm));
+    expect(vm.$agent.cancelRun).toHaveBeenCalledWith('r1');
+    expect(vm.$notify).not.toHaveBeenCalled();
+  });
+
+  it('says so when the cancel could not be recorded', async () => {
+    const vm = stalledCtx({
+      $agent: {
+        agents: [AGENT], isStalled: () => true, cancelRun: jest.fn(() => Promise.resolve(false)),
+      },
+    });
+    await Container.methods.cancelRun.call(withAgent(vm));
+    expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({ title: "Couldn't cancel the run" }));
+  });
+
+  it('does nothing with no agent selected', () => {
+    const vm = stalledCtx({ agentId: '' });
+    Container.methods.retryRun.call(withAgent(vm));
+    Container.methods.cancelRun.call(withAgent(vm));
+    expect(vm.$agent.retryStalledRun).not.toHaveBeenCalled();
+    expect(vm.$agent.cancelRun).not.toHaveBeenCalled();
   });
 });
 

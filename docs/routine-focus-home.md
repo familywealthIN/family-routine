@@ -212,6 +212,19 @@ the pill, the toast and the model's wording cannot outrun the donuts.
   routine still listening, so one whose counter already filled does not stay
   stuck. A webhook's success is its status code; a body that is not valid JSON
   is kept as text (`utils/responseBody.js`), not a failed run.
+- **`listening` and `stalled` are not the same open run** (D-13). A run
+  legitimately listens for hours, so nothing is judged by how long it has been
+  listening. `maybeFireAgentEndEvent` stamps the moment the end event becomes
+  *due* (`markEndEventDue`, day-scoped beside the badges so a reload keeps it),
+  and `agentStore.isStalled` reads `stalled` from it: due more than
+  `AGENT_STALL_MS` ago, nothing on the wire, and the server still has the run
+  open today. The containers hang that verdict on the document as `stalled` —
+  the way the routine join hangs `routineTime` on it — and `agentStatusKey`
+  turns it into the amber Stalled status, so the ring stops breathing, LIVE NOW
+  stops counting it, and the detail sheet offers Retry (the same `fireEndEvent`
+  dispatch) and Cancel (records `idle`, booking no success). It is derived, not
+  persisted server-side: a run left open across midnight still reads `idle`,
+  because `ranToday` means the end event can never close it anyway.
 - **The cascade counter and the cascade grid** count different things on
   purpose (D-02). The counter is in **milestones** — the server's own
   `milestonesComplete` over every milestone the goal holds, floored at the
@@ -234,6 +247,7 @@ the pill, the toast and the model's wording cannot outrun the donuts.
 | `apps/web-app/src/utils/__tests__/routineFocusModel.test.js` | current routine, window maths, button states, cascade grid |
 | `apps/web-app/src/pages/__tests__/routineFocusPage.test.js` | shell selection, tasklist dedupe, `firing` derivation, ticked-ring gesture, the computed graph (catches the rows ↔ focus cycle), end event after a server re-read / badge fallback, `fireDueEndEvents` |
 | `apps/web-app/src/store/__tests__/agentEndEvent.test.js` | `fireEndEvent`, today-only badges, run recorded open before the start webhook answers, `adoptLocalRun` |
+| `apps/web-app/src/store/__tests__/agentStalledRun.test.js` | the stall bound measured from when the end event was due, nothing stalled mid-dispatch or on a fresh run, retry through the one dispatch, cancel as `idle` (D-13) |
 | `apps/web-app/src/containers/__tests__/RoutineChatContainer.test.js` | every intent path, proposal acceptance, event posting |
 | `apps/server/src/utils/chatApi.test.js` | free-roster enforcement, runtime discovery + ranking, model failover, intent coercion, chain-of-thought filtering, outage degradation |
 | `apps/server/src/schema/RoutineChatSchema.test.js` | chat body + per-proposal encryption round trip |

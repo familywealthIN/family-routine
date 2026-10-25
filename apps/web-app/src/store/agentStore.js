@@ -1,6 +1,6 @@
 import Vue from 'vue';
 import moment from 'moment';
-import { ranToday } from '@routine-notes/ui/constants/agents';
+import { ranToday, AGENT_STALL_MS } from '@routine-notes/ui/constants/agents';
 import eventBus, { EVENTS } from '../utils/eventBus';
 import readResponseBody from '../utils/responseBody';
 import {
@@ -53,6 +53,15 @@ const state = Vue.observable({
   // The day ('DD-MM-YYYY') the badges in statusByRoutineId belong to. Badges are
   // only ever about TODAY's trigger, so readers compare this to today.
   statusDay: '',
+  // taskRef -> when the end event first became DUE for the open run (ms epoch).
+  // Day-scoped and persisted beside the badges, because the stall has to still
+  // be visible after a reload (D-13). Not "when the run started": a run may
+  // legitimately listen for hours, so only the time since the end event was
+  // owed can bound anything.
+  endDueByRoutineId: {},
+  // taskRef -> an end-event dispatch this page has on the wire right now. A run
+  // mid-dispatch is not stalled, however long it has been due.
+  endInFlightByRoutineId: {},
   lastResultByRoutineId: {},
   loading: false,
   error: null,
@@ -104,6 +113,7 @@ const persistStatus = () => {
       day: state.statusDay || todayKey(),
       statuses: state.statusByRoutineId,
       meta: statusMeta,
+      endDue: state.endDueByRoutineId,
     }));
   } catch (e) {
     // ignore quota / serialization errors — persistence is best-effort
@@ -116,8 +126,29 @@ const rollStatusDay = () => {
   const today = todayKey();
   if (state.statusDay === today) return;
   Object.keys(state.statusByRoutineId).forEach((taskRef) => Vue.delete(state.statusByRoutineId, taskRef));
+  Object.keys(state.endDueByRoutineId).forEach((taskRef) => Vue.delete(state.endDueByRoutineId, taskRef));
   statusMeta = {};
   state.statusDay = today;
+};
+
+/**
+ * The end event is owed for this routine's open run. Called by the one owner of
+ * the end rule (the page's `maybeFireAgentEndEvent`, once the slot counter is
+ * full) and kept at the FIRST time it was owed — the bound is measured from
+ * when the run should have closed, not from the last time anything looked.
+ */
+const markEndDue = (taskRef) => {
+  if (!taskRef) return;
+  rollStatusDay();
+  if (state.endDueByRoutineId[taskRef]) return;
+  Vue.set(state.endDueByRoutineId, taskRef, now());
+  persistStatus();
+};
+
+const clearEndDue = (taskRef) => {
+  if (!taskRef || state.endDueByRoutineId[taskRef] === undefined) return;
+  Vue.delete(state.endDueByRoutineId, taskRef);
+  persistStatus();
 };
 
 // resolveTo is only meaningful for a 'running' status — where the badge should
@@ -146,6 +177,7 @@ const clearStatus = (taskRef) => {
 // Wipe all badges (a new day, or logout). Persists the empty state under today.
 const clearDayStatuses = () => {
   Object.keys(state.statusByRoutineId).forEach((taskRef) => Vue.delete(state.statusByRoutineId, taskRef));
+  Object.keys(state.endDueByRoutineId).forEach((taskRef) => Vue.delete(state.endDueByRoutineId, taskRef));
   statusMeta = {};
   state.statusDay = todayKey();
   persistStatus();
@@ -168,6 +200,12 @@ const hydrateStatus = () => {
     if (parsed && parsed.day === todayKey() && parsed.statuses) {
       state.statusDay = parsed.day;
       const meta = parsed.meta || {};
+      // An end event that was already due before the reload is still due: the
+      // reload is exactly the session boundary the stall used to hide behind.
+      const endDue = parsed.endDue || {};
+      Object.keys(endDue).forEach((taskRef) => {
+        if (endDue[taskRef]) Vue.set(state.endDueByRoutineId, taskRef, endDue[taskRef]);
+      });
       let resolvedAny = false;
       Object.keys(parsed.statuses).forEach((taskRef) => {
         let status = parsed.statuses[taskRef];
@@ -265,6 +303,11 @@ const sniffResultType = (response) => {
   if (typeof data === 'string' && /<\s*html/i.test(data)) return 'html';
   return 'json';
 };
+
+// The `{{ goal_id }}` placeholder (constants/agents GOAL_ID_PLACEHOLDER). Not
+// global: `retryStalledRun` tests it, and a /g regex carries lastIndex between
+// calls.
+const GOAL_ID_PATTERN = /\{\{\s*goal_id\s*\}\}/;
 
 const substituteGoalId = (value, goalId) => {
   if (typeof value !== 'string' || !goalId) return value;
@@ -378,6 +421,9 @@ const openRun = async (apollo, agent, status = 'running') => {
   try {
     const updated = await recordExecution(apollo, { id: agent.id, status });
     if (updated) upsertAgent(updated);
+    // A run that has just opened owes no end event yet, so an earlier run's due
+    // stamp must not make this one read stalled the moment it starts.
+    clearEndDue(agent.taskRef);
     return !!updated;
   } catch (err) {
     console.warn('[agentStore] could not record the run as open', err);
@@ -669,6 +715,9 @@ const actions = {
       })
       : Promise.resolve(null);
     const settleJob = () => jobIdP.then((jid) => (jid ? settleAgentJob(jid) : null)).catch(() => {});
+    // A dispatch on the wire is not a stall, so the stall verdict reads this
+    // for as long as the webhook is answering (D-13).
+    Vue.set(state.endInFlightByRoutineId, taskRef, true);
     try {
       const result = await dispatchEvent({
         vm, event: stripGraphqlMeta(agent.endEvent), goalId,
@@ -754,7 +803,97 @@ const actions = {
         incrementFailure: 1,
       }).catch(() => {});
       return null;
+    } finally {
+      Vue.delete(state.endInFlightByRoutineId, taskRef);
     }
+  },
+
+  /**
+   * The end event is owed for this routine's open run — the page's end rule
+   * says the slot counter is full. Starts the clock the stall verdict below is
+   * measured against; the rule itself stays in one owner (D-13).
+   */
+  markEndEventDue(taskRef) {
+    markEndDue(taskRef);
+  },
+
+  /**
+   * A run that stopped short of its end event.
+   *
+   * The end event was due `AGENT_STALL_MS` ago, nothing is on the wire, and the
+   * server still has the run open today — so it will not close itself and
+   * nothing is going to report it. That is the state the beta run sat in for
+   * four days while the top bar said `hearing` and /agents said "live now"
+   * (D-13). Derived, never stored: the only new state is the day-scoped due
+   * stamp this reads.
+   */
+  isStalled(taskRef, at = undefined) {
+    if (!taskRef || state.statusDay !== todayKey()) return false;
+    const dueAt = state.endDueByRoutineId[taskRef];
+    if (!dueAt) return false;
+    if (state.endInFlightByRoutineId[taskRef]) return false;
+    const agent = state.agentsByTaskRef[taskRef];
+    if (!agent || agent.executionStatus !== 'listening' || !ranToday(agent)) return false;
+    return ((at === undefined ? now() : at) - dueAt) >= AGENT_STALL_MS;
+  },
+
+  /**
+   * Put a stalled run's end event back on the wire. Deliberately the SAME
+   * dispatch `fireEndEvent` performs — a second mechanism would be a second
+   * owner of the close — with one extra refusal: `{{ goal_id }}` is substituted
+   * from the day's goal item, which only the home screen holds, so retrying
+   * from the Agents page would otherwise call a URL with the literal
+   * placeholder in it.
+   */
+  retryStalledRun({
+    apollo, vm, taskRef, goalId,
+  }) {
+    if (!taskRef || state.endInFlightByRoutineId[taskRef]) return Promise.resolve(null);
+    const agent = state.agentsByTaskRef[taskRef];
+    if (!agent) return Promise.resolve(null);
+    const value = (agent.endEvent && agent.endEvent.value) || '';
+    if (!goalId && GOAL_ID_PATTERN.test(value)) {
+      if (vm && vm.$notify) {
+        vm.$notify({
+          title: 'Retry this one from Home',
+          text: `The end event for "${agent.name}" needs today's task, so tick it on the routine instead`,
+          group: 'notify',
+          type: 'warning',
+          duration: 4000,
+        });
+      }
+      return Promise.resolve(null);
+    }
+    return actions.fireEndEvent({
+      apollo, vm, taskRef, goalId,
+    });
+  },
+
+  /**
+   * Close a stalled run without pretending it finished.
+   *
+   * `idle` is outside `recordAgentExecution`'s closing-status guard, so this
+   * books no success and no transcript — it just stops the run being open, which
+   * is what makes it disappear from "live now" and lets the next trigger start a
+   * clean one. The day badge goes with it.
+   */
+  async cancelRun(apollo, taskRef) {
+    const agent = state.agentsByTaskRef[taskRef];
+    if (!agent) return false;
+    try {
+      const updated = await recordExecution(apollo, {
+        id: agent.id,
+        status: 'idle',
+        lastError: 'Run cancelled — its end event never completed',
+      });
+      if (updated) upsertAgent(updated);
+    } catch (err) {
+      console.warn('[agentStore.cancelRun] could not close the run', err);
+      return false;
+    }
+    clearEndDue(taskRef);
+    clearStatus(taskRef);
+    return true;
   },
 
   // Wipe agent badges — call on a new day so yesterday's tags don't linger.
@@ -767,6 +906,8 @@ const actions = {
     state.agentsByTaskRef = {};
     state.statusByRoutineId = {};
     state.statusDay = '';
+    state.endDueByRoutineId = {};
+    state.endInFlightByRoutineId = {};
     state.lastResultByRoutineId = {};
     state.loading = false;
     state.error = null;
@@ -782,6 +923,7 @@ export default {
   get agentsByTaskRef() { return state.agentsByTaskRef; },
   get statusByRoutineId() { return state.statusByRoutineId; },
   get statusDay() { return state.statusDay; },
+  get endDueByRoutineId() { return state.endDueByRoutineId; },
   get lastResultByRoutineId() { return state.lastResultByRoutineId; },
   get loading() { return state.loading; },
   get error() { return state.error; },

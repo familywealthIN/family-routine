@@ -122,6 +122,39 @@
         <pre v-else class="rn-agd__result-pre">{{ resultBody }}</pre>
       </div>
 
+      <!--
+        D-13: a run that stopped short of its end event. Until this existed the
+        pane said "Listening", with no error and nothing to press, for as long
+        as the run stayed open. Both actions are the user's way out: retry puts
+        the same end event back on the wire, cancel closes the run.
+      -->
+      <div v-if="stalled" class="rn-agd__stall" data-testid="agent-detail-stalled">
+        <div class="rn-agd__stall-head">
+          <i class="rn-mi rn-agd__stall-glyph">warning</i>
+          <div class="rn-agd__stall-text">
+            This run has stalled — its end event was due but never completed.
+          </div>
+        </div>
+        <div class="rn-agd__stall-acts">
+          <button
+            type="button"
+            class="rn-agd__btn rn-agd__btn--stall"
+            data-testid="agent-retry-run"
+            @click="$emit('retry-run', agent.id)"
+          >
+            <i class="rn-mi rn-agd__btn-glyph">replay</i>Retry end event
+          </button>
+          <button
+            type="button"
+            class="rn-agd__btn rn-agd__btn--ghost-stall"
+            data-testid="agent-cancel-run"
+            @click="$emit('cancel-run', agent.id)"
+          >
+            <i class="rn-mi rn-agd__btn-glyph">close</i>Cancel run
+          </button>
+        </div>
+      </div>
+
       <div class="rn-agd__actions">
         <button
           type="button"
@@ -245,6 +278,14 @@ export default {
     },
     hasError() {
       return this.status === 'failed' && !!(this.agent && this.agent.lastError);
+    },
+    /**
+     * The stalled verdict rides on the document as `stalled` — the container
+     * reads it off the agent store, which is the only place that knows whether
+     * an end event was due and whether anything is on the wire.
+     */
+    stalled() {
+      return this.status === 'stalled';
     },
     resultIsHtml() {
       return (this.agent && this.agent.lastResultType) === 'html';
@@ -540,6 +581,51 @@ export default {
 
 .rn-agd__link-glyph {
   font-size: 18px;
+}
+
+/* The stall notice carries the same amber as the Stalled status token, framed
+   like the error card so it reads as a state and not a toast. */
+.rn-agd__stall {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(239, 108, 0, .06);
+  border: 1px solid rgba(239, 108, 0, .25);
+}
+
+.rn-agd__stall-head {
+  display: flex;
+  gap: 10px;
+}
+
+.rn-agd__stall-glyph {
+  font-size: 20px;
+  color: #ef6c00;
+  flex-shrink: 0;
+}
+
+.rn-agd__stall-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, .78);
+}
+
+.rn-agd__stall-acts {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.rn-agd__btn--stall {
+  background: #ef6c00;
+}
+
+.rn-agd__btn--ghost-stall {
+  background: transparent;
+  border: 1px solid #ef6c00;
+  color: #ef6c00;
 }
 
 .rn-agd__actions {

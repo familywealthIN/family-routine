@@ -17,6 +17,8 @@
     @edit="$emit('edit', $event)"
     @open-routine="$emit('open-routine', $event)"
     @open-result="openResult"
+    @retry-run="retryRun"
+    @cancel-run="cancelRun"
   />
 </template>
 
@@ -45,7 +47,17 @@ export default {
   computed: {
     agent() {
       if (!this.agentId) return null;
-      return this.$agent.agents.find((candidate) => candidate.id === this.agentId) || null;
+      const found = this.$agent.agents.find((candidate) => candidate.id === this.agentId);
+      if (!found) return null;
+      // `stalled` is a run-level verdict only the store can reach — an end event
+      // that was due and never completed (D-13) — attached the same way the
+      // routine join attaches `routineTime`. `agentStatusKey` turns it into the
+      // stalled token, so the pane needs no second rule of its own.
+      const { isStalled } = this.$agent;
+      return {
+        ...found,
+        stalled: typeof isStalled === 'function' && isStalled(found.taskRef),
+      };
     },
     routine() {
       if (!this.agent) return null;
@@ -73,6 +85,32 @@ export default {
     },
   },
   methods: {
+    /**
+     * Retry is the SAME end-event dispatch the home screen performs, through the
+     * store — not a second way to close a run. The store refuses it (with a
+     * notification) when the end event needs the day's goal item, which only
+     * the home screen holds.
+     */
+    retryRun() {
+      const { agent } = this;
+      if (!agent) return;
+      this.$agent.retryStalledRun({ taskRef: agent.taskRef });
+    },
+    /** Closes the run so it stops reading live. Books no success (status idle). */
+    cancelRun() {
+      const { agent } = this;
+      if (!agent) return;
+      this.$agent.cancelRun(agent.taskRef).then((ok) => {
+        if (ok || !this.$notify) return;
+        this.$notify({
+          title: "Couldn't cancel the run",
+          text: 'The agent could not be reached. Try again in a moment.',
+          group: 'notify',
+          type: 'warning',
+          duration: 4000,
+        });
+      });
+    },
     /**
      * An HTML result is a third party's HTTP response. The app already has one
      * sandboxed viewer for it (App.vue's AgentResultModal, fed by the store), so

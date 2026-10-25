@@ -67,6 +67,18 @@ describe('AgentList — status to ring and badge', () => {
     expect(el.querySelector('[data-testid="status-ring-pulse"]')).toBeNull();
   });
 
+  /**
+   * D-13. The store flags a listening run whose end event was due and never
+   * completed. The card has to say Stalled and the ring has to stop breathing —
+   * a run going nowhere that still reads "Listening" is what hid this for days.
+   */
+  it('reads a stalled run as Stalled, with a still ring and no live count', () => {
+    const { el } = render({ agents: [agent({ executionStatus: 'listening', stalled: true })] });
+    expect(text(q(el, 'agent-status-a1'))).toBe(`${AGENT_STATUS.stalled.icon}Stalled`);
+    expect(el.querySelector('[data-testid="status-ring-pulse"]')).toBeNull();
+    expect(text(q(el, 'agent-stat-live'))).toContain('0');
+  });
+
   it('treats a missing or unknown executionStatus as idle rather than blank', () => {
     const { el } = render({ agents: [agent({ executionStatus: undefined })] });
     expect(text(q(el, 'agent-status-a1'))).toContain('Idle');

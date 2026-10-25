@@ -46,7 +46,16 @@ export default {
   },
   computed: {
     agents() {
-      return joinAgentRoutines(this.$agent.agents, this.routineItems);
+      // `stalled` rides on each document the same way `routineTime` does: the
+      // store owns the verdict (an end event that was due and never completed,
+      // D-13), `agentStatusKey` turns it into the stalled token, and LIVE NOW
+      // stops counting a run that is going nowhere.
+      const { isStalled } = this.$agent;
+      return joinAgentRoutines(this.$agent.agents, this.routineItems)
+        .map((agent) => ({
+          ...agent,
+          stalled: typeof isStalled === 'function' && isStalled(agent.taskRef),
+        }));
     },
     /**
      * D-10. `fetchAll` swallows a failed load into the store and leaves `agents`

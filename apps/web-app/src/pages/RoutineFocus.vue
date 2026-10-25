@@ -846,10 +846,18 @@ export default {
       const id = this.resolvedFocusId;
       if (!id) return 'none';
       if (this.endEventFiring[id]) return 'firing';
-      return this.effectiveAgentStatus(id) || 'none';
+      const status = this.effectiveAgentStatus(id) || 'none';
+      // D-13: a run whose end event was due and never completed is not still
+      // listening, and saying so is the only thing that told the user anything.
+      if (status === 'listening' && this.runStalled(id)) return 'stalled';
+      return status;
     },
     agentLive() {
       return AGENT_LIVE_STAGES.indexOf(this.agentStage) !== -1;
+    },
+    /** Neither working nor done — the stall needs its own branch everywhere. */
+    agentStalled() {
+      return this.agentStage === 'stalled';
     },
     /** Any of today's routines has an agent mid-run (badge running/listening). */
     anyAgentLiveToday() {
@@ -868,14 +876,15 @@ export default {
     },
     miniColor() {
       const stage = agentStageOf(this.agentStage);
-      return this.agentLive && stage ? stage.color : '#4CAF50';
+      return (this.agentLive || this.agentStalled) && stage ? stage.color : '#4CAF50';
     },
     miniGlyph() {
       const stage = agentStageOf(this.agentStage);
-      return this.agentLive && stage ? stage.glyph : 'check';
+      return (this.agentLive || this.agentStalled) && stage ? stage.glyph : 'check';
     },
     miniTitle() {
       if (this.agentLive) return 'Agent working';
+      if (this.agentStalled) return 'Agent run stalled — tap to retry or cancel it';
       if (this.agentFinished) return 'View agent result';
       return 'Ticked';
     },
@@ -1787,6 +1796,12 @@ export default {
      */
     onMiniClick() {
       if (this.agentLive) return;
+      // Retry and cancel live on the agent's detail sheet (D-13); this is the
+      // way through to them from the badge that shows the stall.
+      if (this.agentStalled) {
+        this.goTo('/agents');
+        return;
+      }
       if (this.agentFinished) {
         this.openAgentResult();
         return;
@@ -2279,6 +2294,16 @@ export default {
       if (!taskRef) return false;
       return this.dayGoalItems.some((item) => item.taskRef === taskRef && item.reward);
     },
+    /**
+     * Whether the run on a routine has stalled — its end event was due and
+     * never completed (D-13). The verdict is the store's: it holds the due
+     * stamp and knows what is on the wire. `now` is read so the page's minute
+     * ticker re-evaluates it as the bound passes.
+     */
+    runStalled(taskRef) {
+      if (!taskRef || typeof this.$agent.isStalled !== 'function') return false;
+      return this.$agent.isStalled(taskRef, this.now && this.now.valueOf());
+    },
     /** See utils/agentPointsGuard — the rule is shared with the Start sheet. */
     refuseAgentWithoutPoints(taskRef) {
       return refuseAgentWithoutPoints(this.$notify, this.tasklist.find((t) => t.id === taskRef));
@@ -2313,6 +2338,10 @@ export default {
       const total = this.countTaskTotal(task);
       const completed = this.countTaskCompleted(task);
       if (total <= 0 || completed < total) return;
+      // The counter is full, so the end event is OWED from here on however this
+      // call ends. That stamp is what bounds the stall (D-13) — without it a
+      // run that never closed looked identical to one still listening.
+      if (typeof this.$agent.markEndEventDue === 'function') this.$agent.markEndEventDue(taskRef);
 
       // Say nothing unless something is actually going out. `fireEndEvent`
       // refuses three ways — no end event configured, no run open, or a run

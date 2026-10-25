@@ -304,6 +304,19 @@ export default {
     agentRing() {
       return this.agentLive ? agentStageOf(this.agentStage) : null;
     },
+    /**
+     * `stalled` (D-13) is deliberately NOT a live stage, so nothing breathes —
+     * but it still owns the button, because a run whose end event was due and
+     * never completed must not sit there in the routine's own colour as though
+     * nothing had happened.
+     */
+    agentStalledStage() {
+      return this.agentStage === 'stalled' ? agentStageOf('stalled') : null;
+    },
+    /** The stage that paints the button: the live one, else a stall. */
+    buttonStage() {
+      return this.agentRing || this.agentStalledStage;
+    },
     breatheOne() {
       if (!this.agentRing) return 'none';
       return `rn-breathe ${this.agentRing.ringMs}ms ease-out infinite`;
@@ -389,11 +402,12 @@ export default {
       return RING_CIRCUMFERENCE * (1 - pct);
     },
     tickGlyph() {
-      if (this.agentRing && this.agentRing.glyph) return this.agentRing.glyph;
+      const stage = this.buttonStage;
+      if (stage && stage.glyph) return stage.glyph;
       return this.routine.buttonGlyph || 'more_horiz';
     },
     tickStyle() {
-      const stage = this.agentRing;
+      const stage = this.buttonStage;
       const px = `${this.tickInset}px`;
       return {
         top: px, right: px, bottom: px, left: px,
@@ -418,6 +432,7 @@ export default {
     },
     tickTitle() {
       if (this.agentLive) return 'Agent working…';
+      if (this.agentStalledStage) return 'Agent run stalled — retry or cancel it on Agents';
       if (this.routine.ticked) return 'Ticked · tap to undo';
       if (this.routine.redeemable) return 'Redeem with points';
       return 'Tick routine';
