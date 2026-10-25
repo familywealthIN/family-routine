@@ -113,6 +113,7 @@ describe('RoutineFocus agent stage', () => {
     resolvedFocusId: 'sw',
     endEventFiring: {},
     effectiveAgentStatus: () => '',
+    runStalled: () => false,
     ...over,
   });
 
@@ -123,6 +124,31 @@ describe('RoutineFocus agent stage', () => {
   it('reports the store status when nothing is firing', () => {
     expect(call('agentStage', ctx({ effectiveAgentStatus: () => 'listening' })))
       .toBe('listening');
+  });
+
+  // D-13. A run whose end event was due and never completed sat on 'listening'
+  // — breathing ring, `hearing` glyph — for four days with nothing to press.
+  it('reports stalled for a listening run the store has given up on', () => {
+    const vm = ctx({ effectiveAgentStatus: () => 'listening', runStalled: () => true });
+    expect(call('agentStage', vm)).toBe('stalled');
+  });
+
+  it('leaves every other stage alone when the store reports a stall', () => {
+    ['running', 'waiting', 'finished', 'failed'].forEach((status) => {
+      const vm = ctx({ effectiveAgentStatus: () => status, runStalled: () => true });
+      expect(call('agentStage', vm)).toBe(status);
+    });
+  });
+
+  // The page's end rule is the only thing that knows the counter is full, so it
+  // is the only thing that may start the stall clock.
+  it('is still firing while this page has the end event on the wire', () => {
+    const vm = ctx({
+      endEventFiring: { sw: true },
+      effectiveAgentStatus: () => 'listening',
+      runStalled: () => true,
+    });
+    expect(call('agentStage', vm)).toBe('firing');
   });
 
   // The store has no end-event status of its own — it shows 'running' for both

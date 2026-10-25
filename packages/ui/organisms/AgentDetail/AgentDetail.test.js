@@ -201,6 +201,51 @@ describe('AgentDetail — Run test', () => {
   });
 });
 
+/**
+ * D-13. A run whose end event was due and never completed read "Listening",
+ * blue and breathing, with nothing on screen to press. `stalled` rides on the
+ * document (the container reads the verdict off the agent store) and
+ * `agentStatusKey` turns it into the amber Stalled status.
+ */
+describe('AgentDetail — a stalled run', () => {
+  const stalledAgent = (over = {}) => agent({ executionStatus: 'listening', stalled: true, ...over });
+
+  it('reads Stalled rather than Listening, and stops breathing', () => {
+    const { el } = render({ agent: stalledAgent() });
+    expect(text(q(el, 'agent-status-desc'))).toBe(AGENT_STATUS.stalled.desc);
+    const listening = dot(el, 'listening');
+    expect(listening.style.background).toBe('rgb(239, 108, 0)');
+    expect(text(listening)).toBe('priority_high');
+    expect(listening.getAttribute('data-breathing')).toBe('false');
+    // The steps before it still happened.
+    expect(dot(el, 'start').style.background).toBe('rgb(76, 175, 80)');
+  });
+
+  it('says what went wrong and offers both ways out', () => {
+    const { el } = render({ agent: stalledAgent() });
+    expect(text(q(el, 'agent-detail-stalled'))).toContain('never completed');
+    expect(q(el, 'agent-retry-run')).not.toBeNull();
+    expect(q(el, 'agent-cancel-run')).not.toBeNull();
+  });
+
+  it('emits retry-run and cancel-run for the agent', () => {
+    const { el, detail } = render({ agent: stalledAgent() });
+    const seen = [];
+    detail.$on('retry-run', (id) => seen.push(['retry-run', id]));
+    detail.$on('cancel-run', (id) => seen.push(['cancel-run', id]));
+    q(el, 'agent-retry-run').click();
+    q(el, 'agent-cancel-run').click();
+    expect(seen).toEqual([['retry-run', 'a1'], ['cancel-run', 'a1']]);
+  });
+
+  it('offers neither while the run is healthy', () => {
+    expect(q(render().el, 'agent-detail-stalled')).toBeNull();
+    // A `stalled` flag on anything but a listening run is not a stall.
+    const finished = render({ agent: agent({ executionStatus: 'finished', stalled: true }) });
+    expect(q(finished.el, 'agent-detail-stalled')).toBeNull();
+  });
+});
+
 describe('AgentDetail — header and empty state', () => {
   it('names the bound routine', () => {
     const { el } = render();

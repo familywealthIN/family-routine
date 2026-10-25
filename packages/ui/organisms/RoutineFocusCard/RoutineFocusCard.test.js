@@ -240,7 +240,7 @@ describe('OrganismRoutineFocusCard — agent states', () => {
   // Only a domain reason (`buttonDisabled`) locks it. This suite previously
   // asserted the opposite and so locked the defect in.
   it('never disables the tick for an agent stage, whatever the stage', () => {
-    ['waiting', 'running', 'listening', 'firing', 'finished', 'failed', 'none']
+    ['waiting', 'running', 'listening', 'firing', 'finished', 'failed', 'stalled', 'none']
       .forEach((stage) => {
         expect(stageOf(stage).card.tickDisabled).toBe(false);
       });
@@ -256,6 +256,17 @@ describe('OrganismRoutineFocusCard — agent states', () => {
     const { card, el } = stageOf('finished');
     expect(el.querySelectorAll('.rn-focus-card__ring-breathe')).toHaveLength(0);
     expect(card.tickGlyph).toBe('more_horiz');
+  });
+
+  // D-13. A stalled run is not live either — nothing breathes — but it still
+  // owns the button, because the whole defect was a run going nowhere that
+  // looked exactly like a healthy one.
+  it('marks a stalled run on the button without breathing it', () => {
+    const { card, el } = stageOf('stalled');
+    expect(el.querySelectorAll('.rn-focus-card__ring-breathe')).toHaveLength(0);
+    expect(card.tickGlyph).toBe('warning');
+    expect(card.tickStyle.background).toBe('#ef6c00');
+    expect(card.tickTitle).toContain('stalled');
   });
 });
 
