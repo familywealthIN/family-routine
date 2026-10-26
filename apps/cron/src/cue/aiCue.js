@@ -5,7 +5,9 @@
  * reward at stake vivid and near (points, the next day of the run, a
  * milestone within reach), ties it to their own last 7 days ("4 of the last
  * 7") or to this calendar week, never one dressed up as the other,
- * keeps the ask to two minutes, and frames it as an identity vote.
+ * makes the ask the routine's first step — the obvious, tiny action that
+ * starts it, like shoes on for a run (Atomic Habits) — or two minutes of it
+ * when it has no steps, and frames it as an identity vote.
  *
  * Models: OpenRouter's FREE tier first, a cheap paid Qwen only when no free
  * model produced a cue that passes the guardrails. Cues are high-volume (one
@@ -17,7 +19,8 @@
  * - The model only sees the facts below — no email, no other people's data.
  * - The output must validate (validateCue): length limits, the routine is
  *   named, no number that is not in the facts (no invented streaks or
- *   points), no guilt or shame words, at most two emoji, no links.
+ *   points), no guilt or shame words, at most two emoji, no links, and —
+ *   when the routine has steps — the first step (the cue) is named.
  * - A model that fails (timeout, refusal, bad JSON, failed validation) hands
  *   over to the next; when every model has failed, or there is no
  *   OPENROUTER_API_KEY, the result is null and the caller sends the template.
@@ -64,17 +67,42 @@ const COUNT_WORDS = {
 
 const SYSTEM = `You write one push notification that cues a person to start a habit right now.
 
-Goal: a strong pull to act in the next few minutes. Dopamine rises when a cue
-predicts a reward the person wants, so make the reward they are about to earn
-vivid, specific and close — the points, the next day of their run, a milestone
-within reach — and anchor it in what they have actually done. A touch of
-curiosity or a near-win ("one more makes it 5 of the last 7") works better
-than a generic reminder. Ask only for the two-minute first step. Frame it as a vote for who
-they are becoming.
+The cue is the first step. In Atomic Habits the cue for a run is not "go for a
+run" but the shoes by the door: one obvious, tiny physical action that starts
+the habit by itself. When firstStep is given, it is THE ask:
+- Lead with it, in its own words, as the one small thing to do now.
+- Build a little curiosity or anticipation around taking it: once that step
+  is done, the rest follows ("Shoes by the door? Lace them up — the run
+  starts itself.").
+- Ask only for firstStep. nextStep, when given, is only what comes after it;
+  never list the steps.
+When there is no firstStep, ask only for the two-minute version of the
+routine (twoMinuteStart).
+
+Shape: the title is a pull, not a label. It is a light question or a tiny dare
+about the step, so the person pictures doing it. The body says what taking
+the step sets in motion, and the reward it is closing in on.
+- Good (routine Yoga, step "Roll out your mat"): "Mat still rolled up?" /
+  "Unroll it and Yoga has already begun. Your run grows by one."
+- Good (routine Reading, step "Open to your bookmark"): "Where did you leave
+  off?" / "Open to your bookmark: one page in, the chapter pulls you along."
+- Bad: "Yoga: roll out mat". It is a label, and nobody feels pulled by it.
+- Bad: "Roll out your mat — your first step." It names the step but gives no
+  reason to take it.
+The examples show the shape only. Write fresh words for this routine and this
+step, and never reuse the examples' phrasing.
+
+The payoff: dopamine rises when a cue predicts a reward the person wants, so
+make the reward they are about to earn vivid, specific and close — the
+points, the next day of their run, a milestone within reach — and anchor it
+in what they have actually done. A near-win ("one more makes it 5 of the
+last 7") works better than a generic reminder. Frame taking the step as a
+vote for who they are becoming.
 
 Rules:
 - Use only the facts given. Never invent numbers, days, times or names.
 - Name the routine exactly as given.
+- When firstStep is given, the copy must name that step or its key words.
 - "This week" means the calendar week, Sunday to today: only doneThisWeek and
   doneThisWeekIfDoneToday are counts for this week. doneInLast7Days is the
   last 7 days, which can reach back into last week; call it "the last 7 days",
@@ -137,10 +165,52 @@ function buildCueContext({
       atRisk: 'an automatic habit running late against their usual time',
       stack: `just finished "${anchor}" — this routine follows it`,
     }[kind] || 'routine time',
+    // The cue: the routine's first step is the obvious, tiny action that
+    // starts it (shoes by the door for a run). Null when it has no steps.
+    firstStep: steps[0] || null,
+    nextStep: steps[1] || null,
+    stepCount: steps.length,
     twoMinuteStart: steps[0] || 'just two minutes of it',
     identity: identity || null,
     latestInsight: insight ? insight.slice(0, 300) : null,
   };
+}
+
+// Words that never carry a step on their own: "Put on shoes" is about the
+// shoes, "Do 10 push-ups" about the push-ups.
+const STEP_FILLER = new Set([
+  'a', 'an', 'the', 'and', 'or', 'of', 'on', 'in', 'into', 'to', 'at', 'by', 'for', 'from', 'with', 'up', 'out', 'off',
+  'it', 'its', 'my', 'your', 'some', 'this', 'that', 'just', 'then', 'now', 'first', 'next', 'one', 'two', 'minute',
+  'minutes', 'put', 'get', 'take', 'make', 'do', 'go', 'have', 'set', 'start',
+]);
+
+/** A word's stem, so "shoes" matches "shoe" and "journal" matches "journaling". */
+function stem(word) {
+  let w = word.replace(/(ing|ed)$/, '');
+  if (w !== word && /([b-df-hj-np-tv-z])\1$/.test(w)) w = w.slice(0, -1); // running → run
+  if (w === word) w = w.replace(/s$/, '');
+  if (w.length > 4) w = w.replace(/e$/, ''); // write → writ (writing)
+  return w.length >= 3 ? w : word;
+}
+
+/**
+ * The words that identify a step, as written: its content words, falling
+ * back to every word when a step is all filler ("Get up").
+ */
+function stepWords(step) {
+  const words = String(step || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+  const content = words.filter((w) => w.length >= 3 && !STEP_FILLER.has(w));
+  return Array.from(new Set(content.length ? content : words));
+}
+
+/** Those words stemmed, for matching the copy. */
+const stepKeywords = (step) => Array.from(new Set(stepWords(step).map(stem)));
+
+/** True when the copy names the step or one of its key words. */
+function namesStep(text, step) {
+  const lower = text.toLowerCase();
+  if (lower.includes(String(step).toLowerCase())) return true;
+  return stepKeywords(step).some((k) => new RegExp(`(^|[^\\p{L}\\p{N}])${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u').test(lower));
 }
 
 /** Every number the model is allowed to write. */
@@ -169,6 +239,9 @@ function validateCue(out, ctx) {
     .map(([, n]) => (n.toLowerCase() in COUNT_WORDS ? COUNT_WORDS[n.toLowerCase()] : Number(n)))
     .find((n) => !weekCounts.includes(n));
   if (notThisWeek !== undefined) return `not-this-week:${notThisWeek}`;
+  // The first step is the cue: copy that skips it is a generic reminder.
+  // Checked last, so a safety failure is always the reason reported.
+  if (ctx.firstStep && !namesStep(both, ctx.firstStep)) return 'step-not-named';
   return null;
 }
 
@@ -268,6 +341,11 @@ function fixFor(problem, out, ctx) {
       + `yours are ${title.length} and ${body.length}. Shorten them.`;
   }
   if (problem === 'routine-not-named') return `Name the routine exactly as "${ctx.routine}".`;
+  if (problem === 'step-not-named') {
+    const words = stepWords(ctx.firstStep);
+    return `Lead with the first step, "${ctx.firstStep}": it is the ask, so name it in its own words`
+      + `${words.length ? ` (at least "${words[0]}")` : ''}.`;
+  }
   if (problem.startsWith('invented-number:')) {
     return `${problem.split(':')[1]} is not in the facts. Use only numbers that appear in the facts.`;
   }
@@ -381,6 +459,7 @@ module.exports = {
   SYSTEM,
   SCHEMA,
   buildCueContext,
+  stepKeywords,
   validateCue,
   generateAiCue,
 };

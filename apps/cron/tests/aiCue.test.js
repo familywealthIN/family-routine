@@ -1,6 +1,6 @@
 const {
-  buildCueContext, validateCue, generateAiCue, resolveFreeModels, clearFreeModels,
-  PAID_MODELS, FALLBACK_FREE_MODELS, SCHEMA,
+  buildCueContext, validateCue, generateAiCue, resolveFreeModels, clearFreeModels, stepKeywords,
+  PAID_MODELS, FALLBACK_FREE_MODELS, SCHEMA, SYSTEM,
 } = require('../src/cue/aiCue');
 const { itemHistory, historyDates } = require('../src/cue/cueEngine');
 
@@ -40,6 +40,9 @@ describe('7-day context', () => {
     expect(ctx.doneThisWeekIfDoneToday).toBe(3);
     expect(ctx.currentRun).toBe(2);
     expect(ctx.twoMinuteStart).toBe('Put on shoes');
+    expect(ctx.firstStep).toBe('Put on shoes');
+    expect(ctx.nextStep).toBeNull();
+    expect(ctx.stepCount).toBe(1);
     expect(JSON.stringify(ctx)).not.toMatch('x@y.z');
     expect(JSON.stringify(ctx)).not.toMatch(/\d{2}-\d{2}-\d{4}/);
   });
@@ -97,8 +100,64 @@ describe('this week is the calendar week, not the last 7 days', () => {
       .toBe('not-this-week:8');
     expect(validateCue({ title: 'Morning Run', body: '7 strong — one more and you\'re at 7 this week.' }, sun))
       .toBe('not-this-week:7');
-    expect(validateCue({ title: 'Morning Run', body: 'Seven of the last 7 — make it your first this week.' }, sun)).toBeNull();
-    expect(validateCue({ title: 'Morning Run', body: '3 of the last 7. One more makes 1 this week.' }, thu)).toBeNull();
+    expect(validateCue({ title: 'Morning Run', body: 'Seven of the last 7 — shoes on, make it your first this week.' }, sun)).toBeNull();
+    expect(validateCue({ title: 'Morning Run', body: '3 of the last 7. Shoes on: one more makes 1 this week.' }, thu)).toBeNull();
+  });
+});
+
+describe('the first step is the cue', () => {
+  const stepCtx = (steps) => buildCueContext({
+    item: { ...ITEM, steps }, history, kind: 'reward', nextTarget: 3,
+  });
+
+  it('passes the first step, the next one and the count', () => {
+    const c = stepCtx([{ name: 'Lay out running shoes' }, { name: 'Warm up' }, { name: '' }]);
+    expect(c).toMatchObject({ firstStep: 'Lay out running shoes', nextStep: 'Warm up', stepCount: 2 });
+  });
+
+  it('without steps, behaves as before: no step, the two-minute ask', () => {
+    const c = stepCtx([]);
+    expect(c).toMatchObject({ firstStep: null, nextStep: null, stepCount: 0, twoMinuteStart: 'just two minutes of it' });
+    expect(validateCue({ title: 'Morning Run is up', body: '+10 pts and day 3 of your run.' }, c)).toBeNull();
+  });
+
+  it('tells the model the first step is THE ask, with curiosity, and the reward as the payoff', () => {
+    expect(SYSTEM).toMatch('When firstStep is given, it is THE ask');
+    expect(SYSTEM).toMatch('shoes by the door');
+    expect(SYSTEM).toMatch(/curiosity or anticipation/);
+    expect(SYSTEM).toMatch('When firstStep is given, the copy must name that step or its key words.');
+    expect(SYSTEM).toMatch(/vote for who they are becoming/);
+  });
+
+  it('keys a step on its content words, not filler', () => {
+    expect(stepKeywords('Put on shoes')).toEqual(['shoe']);
+    expect(stepKeywords('Write in journal')).toEqual(['writ', 'journal']);
+    expect(stepKeywords('Get up')).toEqual(['get', 'up']);
+  });
+
+  it('rejects copy that skips the first step, and accepts its key words in any form', () => {
+    expect(validateCue({ title: 'Morning Run is up', body: '+10 pts and day 3 of your run.' }, ctx))
+      .toBe('step-not-named');
+    expect(validateCue({ title: 'Morning Run', body: 'Shoes by the door? Lace them up, +10 pts.' }, ctx)).toBeNull();
+    const journal = stepCtx([{ name: 'Write in journal' }]);
+    expect(validateCue({ title: 'Morning Run', body: 'Open the journal: three lines and the day settles.' }, journal)).toBeNull();
+    expect(validateCue({ title: 'Morning Run', body: 'Start writing, +10 pts.' }, journal)).toBeNull();
+    expect(validateCue({ title: 'Morning Run', body: 'Time to unwind, +10 pts.' }, journal)).toBe('step-not-named');
+  });
+
+  it('a safety guardrail is reported before a missing step', () => {
+    expect(validateCue({ title: 'Morning Run', body: 'Day 40 of your run!' }, ctx)).toBe('invented-number:40');
+  });
+
+  it('repairs a cue that skips the step in one turn on the same model', async () => {
+    const generic = JSON.stringify({ title: 'Morning Run is calling', body: '+10 pts and day 3 of your run.' });
+    const chat = jest.fn()
+      .mockResolvedValueOnce(answer(generic))
+      .mockResolvedValueOnce(answer(good));
+    const result = await generateAiCue(ctx, { apiKey: 'k', chat, freeModels: () => Promise.resolve(FREE) });
+    expect(result).toMatchObject({ tier: 'free', cue: { body: expect.stringMatching('Put on shoes') } });
+    const repair = chat.mock.calls[1][0].messages;
+    expect(repair[3].content).toBe('Lead with the first step, "Put on shoes": it is the ask, so name it in its own words (at least "shoes").');
   });
 });
 

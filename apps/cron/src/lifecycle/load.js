@@ -40,7 +40,7 @@ async function planForTimezone(db, timezone, group, now, options = {}) {
     db.collection('routineitems')
       .find({ email: { $in: emails } }, {
         projection: {
-          email: 1, name: 1, time: 1, points: 1,
+          email: 1, name: 1, time: 1, points: 1, 'steps.name': 1,
         },
       })
       .toArray(),
@@ -93,7 +93,12 @@ async function planForTimezone(db, timezone, group, now, options = {}) {
       today,
       nowMinute,
       prefs: withDefaults(user.notificationPrefs),
-      items: items.filter((i) => i.email === email).map((i) => ({ ...i, name: dec(i.name) })),
+      items: items.filter((i) => i.email === email).map((i) => ({
+        ...i,
+        name: dec(i.name),
+        // The first step is the morning brief's cue ("first up: … — first step: …").
+        steps: (i.steps || []).map((s) => ({ ...s, name: dec(s.name) })),
+      })),
       routines: routines.filter((r) => r.email === email),
       dayGoals: goalItemsOf(goals, email, 'day', today),
       carryOver: goalItemsOf(goals, email, 'day', dates.yesterday),

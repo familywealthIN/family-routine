@@ -81,6 +81,25 @@ describe('morning', () => {
     expect(at('07:11', [], { morningTime: '07:11' })).toMatch('first up: Start Work at 09:00');
   });
 
+  it('adds the first-up routine\'s first step, the cue that starts it', () => {
+    const items = DAY.map((i) => (i._id === 'jog'
+      ? { ...i, steps: [{ name: 'Put on your running shoes' }, { name: 'Warm up' }] } : i));
+    const body = (time) => only('morning', planNotifications(base({
+      ...fullDay(['wake'], items), nowMinute: toMinutes(time), prefs: withDefaults({ morningTime: time }),
+    })))[0].body;
+    expect(body('06:10')).toMatch('first up: Jogging at 06:15 — first step: Put on your running shoes');
+    expect(body('06:10')).not.toMatch('Warm up');
+    expect(body('07:00')).toMatch('first up: Meditation at 06:40 ·'); // no steps, no step clause
+  });
+
+  it('clips a long morning body with a step at 160 characters', () => {
+    const items = DAY.map((i) => (i._id === 'med' ? { ...i, steps: [{ name: 'x'.repeat(80) }] } : i));
+    const dayGoals = [{ body: 'a', isComplete: false }, { body: 'b', isComplete: false }];
+    const [n] = only('morning', planNotifications(base({ ...fullDay([], items), nowMinute: toMinutes('07:00'), dayGoals })));
+    expect(n.body.length).toBeLessThanOrEqual(160);
+    expect(n.body).toMatch('first up: Meditation at 06:40 — first step: x');
+  });
+
   it('drops the first-up clause when nothing is left to tick today', () => {
     const early = DAY.slice(0, 3);
     const [n] = only('morning', planNotifications(base({ ...fullDay([], early), nowMinute: toMinutes('07:15') })));

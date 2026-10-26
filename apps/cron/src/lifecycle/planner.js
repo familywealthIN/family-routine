@@ -18,7 +18,7 @@
  */
 const moment = require('moment');
 const {
-  toMinutes, historyDates, shiftDate, itemHistory,
+  toMinutes, historyDates, shiftDate, itemHistory, firstStep,
 } = require('../cue/cueEngine');
 
 const DAILY_CAP = 4;
@@ -90,7 +90,11 @@ function morning(ctx) {
   if (!list.length) return null;
   const first = nextOpen(list, ctx.nowMinute);
   const parts = [`${plural(list.length, 'routine')} today`];
-  if (first) parts.push(`first up: ${first.item.name} at ${first.item.time}`);
+  if (first) {
+    // The routine's first step is the cue that starts it; name it here too.
+    const step = firstStep(first.item);
+    parts.push(`first up: ${first.item.name} at ${first.item.time}${step ? ` — first step: ${step}` : ''}`);
+  }
   const atStake = runs.filter((r) => r.before >= 2).sort((a, b) => b.before - a.before)[0];
   if (atStake) parts.push(`keep your ${atStake.before}-day ${atStake.item.name} run going`);
   const planned = ctx.dayGoals.filter(isOpen).length;
