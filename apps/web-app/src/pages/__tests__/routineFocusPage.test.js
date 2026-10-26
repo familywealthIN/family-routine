@@ -1522,13 +1522,17 @@ describe('RoutineFocus capture', () => {
  * the shell measuring something else. These tests hold the page to the design's
  * own figures (frame 6a, iPad mini 1133x744; frame 6b, desktop 1440x900).
  *
- * They read the SFC's `<style>` text, which is the only place these values live
- * — the page has no scoped styles and vue-jest does not hand the compiled CSS
- * back (the GoalsTime.vue / AppShell.vue suites read source the same way).
+ * They read the page's stylesheet text, which is the only place these values
+ * live — the page has no scoped styles and vue-jest does not hand the compiled
+ * CSS back (the GoalsTime.vue / AppShell.vue suites read source the same way).
+ * RoutineFocus.vue loads it with `<style src>` from packages/ui/styles/app.
  */
 describe('RoutineFocus shell geometry', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'RoutineFocus.vue'), 'utf8');
-  const css = source.slice(source.lastIndexOf('<style>'));
+  const css = fs.readFileSync(
+    path.join(__dirname, '..', '..', '..', '..', '..', 'packages', 'ui', 'styles', 'app', 'pages', 'RoutineFocus.css'),
+    'utf8',
+  );
 
   /** The declarations of the first rule whose selector list mentions `selector`. */
   const declarations = (selector) => {

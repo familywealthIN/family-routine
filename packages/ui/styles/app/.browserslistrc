@@ -1,0 +1,6 @@
+# The web-app's own targets (apps/web-app/package.json), so the page styles
+# moved here compile with the same vendor prefixes they had inside the app.
+> 1%
+last 2 versions
+iOS 9
+ie 11

@@ -293,32 +293,4 @@ export default {
 };
 </script>
 
-<style>
-.v-toolbar--fixed {
-  z-index: 5;
-}
-
-/* Toolbar positioning below safe area — native WebView only. On mobile
-   web the browser owns the status bar and Vuetify sizes the toolbar
-   itself (56px on xs); forcing 64px here made the web header too tall. */
-.capacitor-native .v-toolbar {
-  margin-top: max(var(--system-top-inset, 0px), env(safe-area-inset-top)) !important;
-  padding-top: 0 !important;
-  height: 64px !important;
-}
-
-/* Android 15 soft keys handling */
-.android15-soft-keys {
-  padding-bottom: 48px;
-}
-
-.android15-no-soft-keys {
-  padding-bottom: 0;
-}
-
-@media (max-height: 600px) {
-  .android15-soft-keys {
-    padding-bottom: 40px;
-  }
-}
-</style>
+<style src="@routine-notes/ui/styles/app/App.css"></style>

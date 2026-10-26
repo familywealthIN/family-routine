@@ -1032,8 +1032,4 @@ export default {
 };
 </script>
 
-<style>
-.routine-chat-container {
-  min-width: 0;
-}
-</style>
+<style src="@routine-notes/ui/styles/app/containers/RoutineChatContainer.css"></style>

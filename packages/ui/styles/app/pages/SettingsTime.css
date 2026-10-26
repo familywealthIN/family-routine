@@ -1,0 +1,19 @@
+/* Styles for apps/web-app/src/pages/SettingsTime.vue, loaded there with <style src> (global, root-class prefixed). */
+.rn-routines {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.rn-routines--tablet,
+.rn-routines--desktop {
+  flex: 1;
+  height: 100%;
+}
+
+.rn-routines--tablet > *,
+.rn-routines--desktop > * {
+  flex: 1;
+  min-height: 0;
+}

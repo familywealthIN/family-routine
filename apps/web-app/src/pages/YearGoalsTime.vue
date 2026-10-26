@@ -871,29 +871,4 @@ export default {
 };
 </script>
 
-<style>
-/*
-  Root-class prefixed: this page renders the chassis shell, so nothing here may
-  leak into the legacy toolbar layouts (MEMORY: web-app CSS lives inline in
-  organisms).
-*/
-.year-goals {
-  min-width: 0;
-}
-
-/* Tablet and desktop give the board the shell body's full height, because its
-   two columns scroll independently of each other. */
-.year-goals--tablet,
-.year-goals--desktop {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.year-goals--tablet > *,
-.year-goals--desktop > * {
-  flex: 1;
-  min-height: 0;
-}
-</style>
+<style src="@routine-notes/ui/styles/app/pages/YearGoalsTime.css"></style>

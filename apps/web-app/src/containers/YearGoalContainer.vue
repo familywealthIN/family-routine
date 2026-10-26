@@ -176,25 +176,4 @@ export default {
 };
 </script>
 
-<style>
-.year-goal-container__state {
-  padding: 32px 16px;
-  text-align: center;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  color: rgba(0, 0, 0, .54);
-  font-size: 14px;
-}
-
-.year-goal-container__state-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: rgba(0, 0, 0, .87);
-  margin-bottom: 4px;
-}
-
-.year-goal-container__state-sub {
-  max-width: 320px;
-  margin: 0 auto;
-  line-height: 1.5;
-}
-</style>
+<style src="@routine-notes/ui/styles/app/containers/YearGoalContainer.css"></style>
