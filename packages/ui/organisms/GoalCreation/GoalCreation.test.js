@@ -115,9 +115,15 @@ describe('OrganismGoalCreation status chip', () => {
   // D-03: the chip resolves a stored status the tick has outlived. The dialog
   // reads the same item as /search, so it has to resolve it the same way.
   it('reads a ticked item as done however stale its stored status', () => {
-    const vm = context(dayItem({ status: 'missed', isComplete: true }));
+    const vm = context(dayItem({ status: 'progress', isComplete: true }));
 
     expect(GoalCreation.computed.statusChip.call(vm)).toBe('done');
+  });
+
+  it('reads a late-ticked item as missed: status is one-to-one with timing', () => {
+    const vm = context(dayItem({ status: 'missed', isComplete: true }));
+
+    expect(GoalCreation.computed.statusChip.call(vm)).toBe('missed');
   });
 });
 

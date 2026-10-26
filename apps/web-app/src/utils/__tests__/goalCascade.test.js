@@ -153,9 +153,9 @@ describe('the cascade ladder is the navigation', () => {
     expect(ruleFor('day', { selectedDate: TODAY, today: TODAY }))
       .toContain('5 days auto-tick it');
     expect(ruleFor('week', { selectedDate: TODAY, today: TODAY }))
-      .toBe('Week 37 · 6–12 Sep. A week goal auto-ticks once every day milestone on it is met (min 5).');
+      .toBe('Week 37 · 6–12 Sep. A week goal auto-ticks once 5 of its day milestones are met.');
     expect(ruleFor('month', { selectedDate: TODAY, today: TODAY }))
-      .toBe('September 2026. A month goal auto-ticks once every week milestone on it is met (min 3).');
+      .toBe('September 2026. A month goal auto-ticks once 3 of its week milestones are met.');
     expect(ruleFor('year', { selectedDate: TODAY, today: TODAY }))
       .toBe('2026. A year goal auto-ticks after 6 month goals. Tap one to open it.');
     expect(ruleFor('lifetime', { selectedDate: TODAY, today: TODAY }))
@@ -513,6 +513,30 @@ describe('the rows each level draws', () => {
     expect(built.groups[0].rows[0]).toMatchObject({
       kind: 'check', strike: true, done: true, body: 'Write 3 pages',
     });
+  });
+
+  // A skip (markGoalItemMissed) leaves the item open with status `missed`; a
+  // tick afterwards is a late tick, which is done and never missed.
+  it('marks a missed day goal Missed, ticked late or not; the tick stays separate', () => {
+    const { rows } = view(goalsFor({
+      day: [
+        {
+          id: 'd1', body: 'Skipped', taskRef: 'mp', status: 'missed', isComplete: false,
+        },
+        {
+          id: 'd2', body: 'Ticked late', taskRef: 'mp', status: 'missed', isComplete: true,
+        },
+        {
+          id: 'd3', body: 'Never missed', taskRef: 'mp', status: 'todo', isComplete: false,
+        },
+      ],
+    })).groups[0];
+    expect(rows[0]).toMatchObject({ done: false, missed: true });
+    expect(rows[0].status.label).toBe('Missed');
+    expect(rows[1]).toMatchObject({ done: true, missed: true });
+    expect(rows[1].status.label).toBe('Missed');
+    expect(rows[2].missed).toBeUndefined();
+    expect(rows[2].status).toBeUndefined();
   });
 
   it('gives a week goal a streak bar against the threshold', () => {

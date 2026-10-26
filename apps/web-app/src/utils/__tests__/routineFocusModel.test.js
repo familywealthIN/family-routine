@@ -616,6 +616,33 @@ describe('buildCascade', () => {
     expect(sorted.linked[2].detail.tags).toEqual(['deep']);
   });
 
+  it('reads a missed item as Missed whether or not it was ticked late (status is one-to-one with timing)', () => {
+    const { linked } = buildCascade({
+      period: 'week',
+      goals: weekGoals,
+      focusRow: { id: 'sw', items: [] },
+      date: '12-09-2026',
+      children: [{
+        id: 'd4',
+        period: 'day',
+        date: '12-09-2026',
+        goalItems: [
+          {
+            id: 'skip', body: 'Skipped', status: 'missed', isComplete: false,
+          },
+          {
+            id: 'late', body: 'Ticked late', status: 'missed', isComplete: true,
+          },
+          {
+            id: 'open', body: 'Still open', status: 'todo', isComplete: false,
+          },
+        ],
+      }],
+    });
+    expect(linked.map((row) => row.detail.status)).toEqual(['Missed', 'Missed', 'Open']);
+    expect(linked[1].isComplete).toBe(true);
+  });
+
   it('numbers a month goal’s linked weeks by their place in the grid', () => {
     const month = buildCascade({
       period: 'month',

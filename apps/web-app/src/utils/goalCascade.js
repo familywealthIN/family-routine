@@ -43,11 +43,13 @@ import {
   RING_DEFAULT,
   RING_DONE,
   RING_NOW,
+  GOAL_STATUS,
   addLabelFor,
   statusChip,
   thresholdChip,
 } from '@routine-notes/ui/constants/goalsCascade';
 import { periodGoalDates } from '@routine-notes/ui/utils/getDates';
+import { isMissed } from '@routine-notes/ui/utils/taskStatus';
 import { findCurrentRoutine, milestoneTally, toMinutes } from './routineFocusModel';
 import { isYearGoalItem } from './yearGoalModel';
 
@@ -466,7 +468,7 @@ export function planRowTick({
 // ---------------------------------------------------------------------------
 
 function dayRow(item) {
-  return {
+  const row = {
     key: item.id,
     id: item.id,
     kind: 'check',
@@ -478,6 +480,13 @@ function dayRow(item) {
     isMilestone: !!item.isMilestone,
     strike: true,
   };
+  // Missed (not done in its window) is the status, ticked late or not; the
+  // tick itself is `done` above and still counts.
+  if (isMissed(item)) {
+    row.missed = true;
+    row.status = GOAL_STATUS.missed;
+  }
+  return row;
 }
 
 /**

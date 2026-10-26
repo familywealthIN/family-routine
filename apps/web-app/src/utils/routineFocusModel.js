@@ -9,6 +9,7 @@
  */
 import moment from 'moment';
 import { CASCADE_UNIT_STYLE, STIMULI } from '@routine-notes/ui/constants/routineFocus';
+import { isMissed } from '@routine-notes/ui/utils/taskStatus';
 import { threshold } from './getDates';
 
 /**
@@ -458,11 +459,14 @@ export function linkedGoals({
       if (!child) return;
       const done = !!child.isComplete;
       const childPeriod = goal.period || (CASCADE_META[period] || {}).stepDown || '';
-      // A window that closed before the viewed day without the tick is missed.
+      // A window that closed before the viewed day without the tick is missed,
+      // and so is one recorded as missed (markGoalItemMissed) inside its window.
       const ended = at.isValid() && viewed.isValid()
         && at.isBefore(viewed, CASCADE_UNIT_GRANULARITY[period] || 'day');
+      // Status is one-to-one with timing: missed stays Missed after a late tick.
       let status = 'Open';
-      if (done) status = 'Done';
+      if (isMissed(child)) status = 'Missed';
+      else if (done) status = 'Done';
       else if (ended) status = 'Missed';
       rows.push({
         id: String(child.id || `${goal.date}-${order}`),
