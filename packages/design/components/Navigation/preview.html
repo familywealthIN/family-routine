@@ -1,0 +1,64 @@
+<!-- @dsCard group="Navigation" height=430 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navigation</title>
+<link rel="stylesheet" href="../../tokens.css">
+<style>
+  body { margin: 0; padding: 20px 16px; background: var(--bg-app); font-family: var(--family-sans); color: var(--text); }
+  .label { font: var(--font-overline); letter-spacing: .5px; text-transform: uppercase; color: var(--text-tertiary); margin: 0 0 10px; }
+  .wrap { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .tabbar { width: 380px; max-width: 100%; height: 64px; background: var(--surface); box-shadow: 0 -1px 3px rgba(0,0,0,.08); display: flex; padding-bottom: 4px; box-sizing: border-box; border-radius: 0 0 16px 16px; }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: var(--font-nav-label); color: var(--text-secondary); }
+  .tab .mi { font-size: 24px; }
+  .tab--active { color: var(--primary); }
+  .rail { width: 76px; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-card); padding: 22px 0 14px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .rail-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font: var(--font-rail-label); color: var(--text-secondary); }
+  .pill { width: 52px; height: 30px; border-radius: var(--radius-pill); display: flex; align-items: center; justify-content: center; }
+  .pill .mi { font-size: 22px; }
+  .rail-item--active { color: var(--primary-dark); }
+  .rail-item--active .pill { background: var(--primary-tint); color: var(--primary); }
+  .sidebar { width: 264px; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-card); padding: 14px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .side { height: 40px; border-radius: 10px; display: flex; align-items: center; gap: 12px; padding: 0 12px; font: 600 14px/1 var(--family-sans); color: var(--text); }
+  .side .mi { font-size: 22px; color: var(--text-secondary); }
+  .side--active { background: var(--primary-tint); color: var(--primary-dark); }
+  .side--active .mi { color: var(--primary); }
+  .more { margin-top: 6px; font: 600 13px/1 var(--family-sans); color: var(--text-secondary); display: flex; align-items: center; gap: 4px; padding: 8px 12px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div>
+      <div class="label">Phone · bottom bar 64 px</div>
+      <div class="tabbar">
+        <div class="tab tab--active"><span class="mi">home</span>Home</div>
+        <div class="tab"><span class="mi">dashboard</span>Priority</div>
+        <div class="tab"><span class="mi">smart_toy</span>Agents</div>
+        <div class="tab"><span class="mi">assignment</span>Goals</div>
+      </div>
+    </div>
+    <div>
+      <div class="label">iPad · rail 76 px</div>
+      <div class="rail">
+        <div class="rail-item rail-item--active"><span class="pill"><span class="mi">home</span></span>Home</div>
+        <div class="rail-item"><span class="pill"><span class="mi">dashboard</span></span>Priority</div>
+        <div class="rail-item"><span class="pill"><span class="mi">smart_toy</span></span>Agents</div>
+        <div class="rail-item"><span class="pill"><span class="mi">assignment</span></span>Goals</div>
+        <div class="rail-item"><span class="pill"><span class="mi">more_horiz</span></span>More</div>
+      </div>
+    </div>
+    <div>
+      <div class="label">Desktop · sidebar 264 px</div>
+      <div class="sidebar">
+        <div class="side side--active"><span class="mi">home</span>Home</div>
+        <div class="side"><span class="mi">dashboard</span>Priority</div>
+        <div class="side"><span class="mi">smart_toy</span>Agents</div>
+        <div class="side"><span class="mi">assignment</span>Goals</div>
+        <div class="more">More <span class="mi" style="font-size:18px">expand_more</span></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

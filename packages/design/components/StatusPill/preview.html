@@ -1,0 +1,37 @@
+<!-- @dsCard group="Status" height=170 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Status pill</title>
+<link rel="stylesheet" href="../../tokens.css">
+<style>
+  body { margin: 0; padding: 20px 16px; background: var(--bg-app); font-family: var(--family-sans); color: var(--text); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .label { font: var(--font-overline); letter-spacing: .5px; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+  .pill { font: 700 10px/1.6 var(--family-sans); padding: 1px 7px; border-radius: var(--radius-pill); }
+  .pill--lg { font-size: 12px; padding: 2px 10px; }
+  .active { background: var(--now-tint); color: var(--now-dark); }
+  .done { background: rgba(76,175,80,.14); color: var(--success-dark); }
+  .inactive { background: rgba(0,0,0,.06); color: var(--text-secondary); }
+  .now { font: 700 9px/1.5 var(--family-sans); letter-spacing: .4px; padding: 1px 6px; border-radius: var(--radius-pill); background: rgba(255,152,0,.14); color: var(--now-dark); }
+  .missed { background: rgba(229,57,53,.12); color: #c62828; }
+</style>
+</head>
+<body>
+  <div class="label">Goal status</div>
+  <div class="row">
+    <span class="pill active">Active</span>
+    <span class="pill done">Done</span>
+    <span class="pill inactive">Inactive</span>
+    <span class="pill pill--lg active">Active</span>
+    <span class="pill pill--lg done">Done</span>
+  </div>
+  <div class="label">Routine and item state</div>
+  <div class="row">
+    <span class="now">NOW</span>
+    <span class="pill missed">Missed</span>
+  </div>
+</body>
+</html>

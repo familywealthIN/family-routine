@@ -1,0 +1,89 @@
+<!-- @dsCard group="Progress" height=330 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progress ring</title>
+<link rel="stylesheet" href="../../tokens.css">
+<style>
+  body { margin: 0; padding: 20px 16px; background: var(--bg-app); font-family: var(--family-sans); color: var(--text); }
+  .label { font: var(--font-overline); letter-spacing: .5px; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+  .row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 22px; margin-bottom: 22px; }
+  figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  figcaption { font: var(--font-caption); color: var(--text-secondary); text-align: center; }
+  .ring { position: relative; line-height: 0; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+  .ring circle { fill: none; stroke-linecap: round; }
+  .ring .centre { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; line-height: 1; font-weight: 700; }
+  .dkg { display: flex; align-items: center; gap: 16px; background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 16px; max-width: 360px; }
+  .legend { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .legend-row { display: flex; align-items: center; gap: 8px; }
+  .badge { width: 22px; height: 22px; border-radius: 6px; font: 800 12px/22px var(--family-sans); text-align: center; }
+  .legend-label { font: 600 13px/1.2 var(--family-sans); }
+  .legend-hint { font: var(--font-caption); color: var(--text-secondary); }
+</style>
+</head>
+<body>
+  <div class="label">One ring, many sizes. Blue in progress, orange today, green at 100%</div>
+  <div class="row">
+    <!-- Goals ladder step: 44 px in a 48 box, r 20, stroke 4. c = 125.66 -->
+    <figure>
+      <div class="ring" style="width:44px;height:44px">
+        <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" stroke="rgba(0,0,0,.08)" stroke-width="4"/><circle cx="24" cy="24" r="20" stroke="#288bd5" stroke-width="4" stroke-dasharray="125.66" stroke-dashoffset="50.26"/></svg>
+        <div class="centre" style="font-size:11px">3/5</div>
+      </div>
+      <figcaption>Ladder step<br>44 · r20 · 4</figcaption>
+    </figure>
+    <!-- Calendar day: 34 px, r 21 (vb 48), stroke 3. c = 131.95 -->
+    <figure>
+      <div class="ring" style="width:34px;height:34px">
+        <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" stroke="#4CAF50" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="0"/></svg>
+        <div class="centre" style="font-size:12px;font-weight:600">22</div>
+      </div>
+      <figcaption>Day, done</figcaption>
+    </figure>
+    <figure>
+      <div class="ring" style="width:34px;height:34px">
+        <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" stroke="rgba(0,0,0,.08)" stroke-width="3"/><circle cx="24" cy="24" r="21" stroke="#FF9800" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="105.56"/></svg>
+        <div class="centre" style="font-size:12px;font-weight:700;color:#e68900">25</div>
+      </div>
+      <figcaption>Today</figcaption>
+    </figure>
+    <figure>
+      <div class="ring" style="width:34px;height:34px">
+        <div class="centre" style="font-size:12px;font-weight:500;color:rgba(0,0,0,.45)">26</div>
+      </div>
+      <figcaption>Future</figcaption>
+    </figure>
+    <!-- Year hero: 120 px, vb 96, r 42, stroke 7. c = 263.9 -->
+    <figure>
+      <div class="ring" style="width:120px;height:120px">
+        <svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="42" stroke="rgba(0,0,0,.08)" stroke-width="7"/><circle cx="48" cy="48" r="42" stroke="#288bd5" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="44.86"/></svg>
+        <div class="centre" style="flex-direction:column;gap:2px"><span style="font-size:24px">83%</span><span style="font-size:11px;font-weight:600;color:rgba(0,0,0,.54)">5 of 6 months</span></div>
+      </div>
+      <figcaption>Year hero · r42 · 7</figcaption>
+    </figure>
+  </div>
+
+  <div class="label">D/K/G trio · 128 px, r 56 / 42 / 28, stroke 10</div>
+  <div class="dkg">
+    <div class="ring" style="width:128px;height:128px">
+      <svg viewBox="0 0 128 128">
+        <circle cx="64" cy="64" r="56" stroke="rgba(76,175,80,.12)" stroke-width="10"/>
+        <circle cx="64" cy="64" r="56" stroke="#4CAF50" stroke-width="10" stroke-dasharray="351.86" stroke-dashoffset="126.67"/>
+        <circle cx="64" cy="64" r="42" stroke="rgba(229,57,53,.12)" stroke-width="10"/>
+        <circle cx="64" cy="64" r="42" stroke="#E53935" stroke-width="10" stroke-dasharray="263.89" stroke-dashoffset="0"/>
+        <circle cx="64" cy="64" r="28" stroke="rgba(33,150,243,.12)" stroke-width="10"/>
+        <circle cx="64" cy="64" r="28" stroke="#2196F3" stroke-width="10" stroke-dasharray="175.93" stroke-dashoffset="77.41"/>
+      </svg>
+    </div>
+    <div class="legend">
+      <div style="font: var(--font-overline); letter-spacing:.5px; color: var(--text-tertiary)">THIS WEEK</div>
+      <div class="legend-row"><span class="badge" style="background:rgba(76,175,80,.12);color:#4CAF50">D</span><div><div class="legend-label">Discipline 64%</div><div class="legend-hint">showing up on time</div></div></div>
+      <div class="legend-row"><span class="badge" style="background:rgba(229,57,53,.12);color:#E53935">K</span><div><div class="legend-label">Kinetics 100%</div><div class="legend-hint">movement and energy</div></div></div>
+      <div class="legend-row"><span class="badge" style="background:rgba(33,150,243,.12);color:#2196F3">G</span><div><div class="legend-label">Geniuses 56%</div><div class="legend-hint">focused output</div></div></div>
+    </div>
+  </div>
+</body>
+</html>
