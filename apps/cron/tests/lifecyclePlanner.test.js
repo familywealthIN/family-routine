@@ -35,6 +35,20 @@ const base = (over = {}) => ({
   ...over,
 });
 const kinds = (list) => list.map((n) => n.kind);
+// The beta account's day: three routines close before 07:00 (time + 30 min).
+const DAY = [
+  ['wake', 'Wake Up', '06:00'], ['jog', 'Jogging', '06:15'], ['med', 'Meditation', '06:40'],
+  ['work', 'Start Work', '09:00'], ['wind', 'Wind-down', '11:30'], ['sleep', 'Sleep Time', '23:00'],
+].map(([_id, name, time]) => ({
+  _id, name, time, points: 5,
+}));
+const fullDay = (ticked = [], items = DAY) => ({
+  items,
+  routines: [
+    ...historyDates(TODAY, 3).slice(1).map((date) => ({ date, tasklist: items.map((i) => ({ _id: i._id, ticked: true })) })),
+    { date: TODAY, tasklist: items.map((i) => ({ _id: i._id, ticked: ticked.includes(i._id) })) },
+  ],
+});
 const only = (kind, list) => list.filter((n) => n.kind === kind);
 
 describe('morning', () => {
@@ -55,6 +69,23 @@ describe('morning', () => {
   it('says rest day on a skipped day', () => {
     const routines = [...past(3, ['run']), day(TODAY, [], { skip: true })];
     expect(planNotifications(base({ routines }))[0].title).toMatch('Rest day');
+  });
+
+  it('never names a routine whose tick window has closed as first up', () => {
+    const at = (time, ticked, prefs = {}) => only('morning', planNotifications(base({
+      ...fullDay(ticked), nowMinute: toMinutes(time), prefs: withDefaults(prefs),
+    })))[0].body;
+    expect(at('07:00')).toMatch('first up: Meditation at 06:40'); // closes 07:10
+    expect(at('07:00', ['med'])).toMatch('first up: Start Work at 09:00');
+    expect(at('08:15', [], { morningTime: '08:15' })).toMatch('first up: Start Work at 09:00');
+    expect(at('07:11', [], { morningTime: '07:11' })).toMatch('first up: Start Work at 09:00');
+  });
+
+  it('drops the first-up clause when nothing is left to tick today', () => {
+    const early = DAY.slice(0, 3);
+    const [n] = only('morning', planNotifications(base({ ...fullDay([], early), nowMinute: toMinutes('07:15') })));
+    expect(n.body).toMatch('3 routines today');
+    expect(n.body).not.toMatch('first up');
   });
 
   it('follows the user\'s own morning time', () => {
@@ -90,6 +121,20 @@ describe('evening progress', () => {
     expect(n.title).toBe('Today: 1/2 routines');
     expect(n.body).toMatch('+10 pts');
     expect(n.body).toMatch('still time for Read');
+  });
+
+  it('never offers a routine whose window has closed as still to do', () => {
+    const [n] = only('evening', planNotifications(base({ ...fullDay(), nowMinute: toMinutes('21:00') })));
+    expect(n.title).toBe('Today: 0/6 routines');
+    expect(n.body).toMatch('still time for Sleep Time');
+    DAY.slice(0, 5).forEach((i) => expect(n.body).not.toMatch(i.name));
+  });
+
+  it('drops the still-time clause when every open routine is done or closed', () => {
+    const [n] = only('evening', planNotifications(base({ ...fullDay(['sleep']), nowMinute: toMinutes('21:00') })));
+    expect(n.title).toBe('Today: 1/6 routines');
+    expect(n.body).not.toMatch('still time');
+    expect(n.body).toMatch('tomorrow starts with Wake Up at 06:00');
   });
 
   it('celebrates a perfect day', () => {

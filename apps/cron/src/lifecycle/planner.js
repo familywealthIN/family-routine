@@ -33,6 +33,9 @@ const MILESTONES = [3, 7, 14, 21, 30, 50, 100];
 const STREAK_DAYS = 100; // history loaded; runs are counted up to this long
 const INSIGHT_ICON = 'tips_and_updates';
 const MAX_BODY = 160;
+// A routine can be ticked until 30 minutes after its time; after that only the
+// paid late check-in can tick it, so it is never suggested as still to do.
+const TICK_CLOSES_AFTER = 30;
 
 const inWindow = (nowMinute, start) => start !== null
   && nowMinute >= start && nowMinute < start + WINDOW;
@@ -42,6 +45,9 @@ const findTask = (routine, id) => routine && (routine.tasklist || [])
   .find((t) => String(t._id || t.id) === String(id));
 const parseDate = (date) => moment(date, 'DD-MM-YYYY');
 const isOpen = (g) => g && !g.isComplete && g.status !== 'done';
+/** The first routine not ticked yet whose tick window has not closed. */
+const nextOpen = (list, nowMinute) => list
+  .find((x) => !x.ticked && toMinutes(x.item.time) + TICK_CLOSES_AFTER >= nowMinute);
 
 /** Whole days since the person last opened the app (a day doc exists). */
 function daysAway(routines, today) {
@@ -82,8 +88,9 @@ function morning(ctx) {
     return { title: 'Good morning ☀️ Rest day', body: 'Your routines are paused today — enjoy it.', route: '/home' };
   }
   if (!list.length) return null;
-  const first = list.find((x) => !x.ticked) || list[0];
-  const parts = [`${plural(list.length, 'routine')} today`, `first up: ${first.item.name} at ${first.item.time}`];
+  const first = nextOpen(list, ctx.nowMinute);
+  const parts = [`${plural(list.length, 'routine')} today`];
+  if (first) parts.push(`first up: ${first.item.name} at ${first.item.time}`);
   const atStake = runs.filter((r) => r.before >= 2).sort((a, b) => b.before - a.before)[0];
   if (atStake) parts.push(`keep your ${atStake.before}-day ${atStake.item.name} run going`);
   const planned = ctx.dayGoals.filter(isOpen).length;
@@ -112,7 +119,7 @@ function evening(ctx) {
   const done = list.filter((x) => x.ticked);
   const points = done.reduce((sum, x) => sum + (Number(x.item.points) || 0), 0);
   const extended = runs.filter((r) => r.tickedToday && r.now >= 2).length;
-  const next = list.find((x) => !x.ticked);
+  const next = nextOpen(list, ctx.nowMinute);
   const perfect = done.length === list.length;
   const parts = [];
   if (points) parts.push(`+${points} pts`);

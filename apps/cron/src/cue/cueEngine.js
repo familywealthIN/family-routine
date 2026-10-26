@@ -68,10 +68,12 @@ function historyDates(today, days = HISTORY_DAYS) {
 }
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-function weekday(date) {
+/** 0 (Sunday) to 6 (Saturday): the app's week runs Sunday to Saturday (moment's .week()). */
+function dayOfWeek(date) {
   const [dd, mm, yyyy] = date.split('-').map(Number);
-  return WEEKDAYS[new Date(Date.UTC(yyyy, mm - 1, dd)).getUTCDay()];
+  return new Date(Date.UTC(yyyy, mm - 1, dd)).getUTCDay();
 }
+const weekday = (date) => WEEKDAYS[dayOfWeek(date)];
 
 function median(values) {
   const s = [...values].sort((a, b) => a - b);
@@ -118,10 +120,18 @@ function itemHistory({
   const missedTwice = missedYesterday && (counted[1] === 'missed' || counted[1] === 'absent');
   const everDone = counted.includes('done');
 
-  // Timing is learned from the recent fortnight only, however long the run.
+  // This calendar week (Sunday to today), not the rolling last 7 days.
+  const todayTask = findTask(byDate.get(today), itemId);
+  const doneToday = !!(todayTask && todayTask.ticked && !(byDate.get(today) || {}).skip);
+  const doneThisWeek = states.slice(0, dayOfWeek(today)).filter((s) => s === 'done').length
+    + (doneToday ? 1 : 0);
+
+  // Timing is learned from the recent fortnight only, however long the run,
+  // and from ticks made in the window: a late check-in (redeemed) records
+  // when the person caught up, not when they do the habit.
   const samples = historyDates(today).slice(1)
     .map((date) => findTask(byDate.get(date), itemId))
-    .filter((t) => t && t.ticked && t.tickedAt)
+    .filter((t) => t && t.ticked && t.tickedAt && !t.redeemed)
     .map((t) => minuteOfDay(t.tickedAt, timezone));
 
   let usual = null;
@@ -141,6 +151,7 @@ function itemHistory({
 
   return {
     streak, missedYesterday, missedTwice, everDone, usual, spread, samples: samples.length, week,
+    doneToday, doneThisWeek,
   };
 }
 

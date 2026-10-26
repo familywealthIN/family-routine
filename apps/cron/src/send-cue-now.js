@@ -3,16 +3,16 @@
  * would send (7-day context, AI copy with template fallback, action buttons by
  * AI level, every signed-in device).
  *
- *   node send-cue-now.js <email> [routine name] [--dry-run]
+ *   node send-cue-now.js <email> [routine name] [--dry-run [--date DD-MM-YYYY]]
  *
  * Without a routine name it picks the person's next routine today. With
- * --dry-run it prints the cue and sends nothing.
+ * --dry-run it prints the cue and sends nothing; --date (dry run only) builds
+ * the cue as if it were that day, for the beta cycle's simulated days.
  */
 require('./utils/suppressMongooseWarnings')();
 require('dotenv').config();
 
 const mongoose = require('mongoose');
-const admin = require('firebase-admin');
 
 const { getLocalDate, resolveTimezone } = require('./utils/timezone');
 const { encryption } = require('./utils/encryption');
@@ -23,18 +23,18 @@ const {
 const { buildCueContext, generateAiCue } = require('./cue/aiCue');
 const { routineActions, routineRoute } = require('./cue/routineActions');
 
-const serviceAccount = require('../serviceAccountKey.json');
-
 const { MONGDO_DB, DOMAIN } = process.env;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
-const [email, ...nameParts] = args.filter((a) => a !== '--dry-run');
+const dateAt = args.indexOf('--date');
+const date = dateAt === -1 ? undefined : args[dateAt + 1];
+const [email, ...nameParts] = args.filter((a, i) => a !== '--dry-run' && (dateAt === -1 || (i !== dateAt && i !== dateAt + 1)));
 const wanted = nameParts.join(' ').trim().toLowerCase();
 
-if (!email) {
-  console.error('usage: node send-cue-now.js <email> [routine name] [--dry-run]');
+if (!email || (date !== undefined && (!dryRun || !/^\d{2}-\d{2}-\d{4}$/.test(date)))) {
+  console.error('usage: node send-cue-now.js <email> [routine name] [--dry-run [--date DD-MM-YYYY]]');
   process.exit(2);
 }
 
@@ -67,14 +67,14 @@ async function main(db) {
 
   const timezone = resolveTimezone(user.timezone);
   const now = new Date();
-  const today = getLocalDate(timezone, now);
+  const today = date || getLocalDate(timezone, now);
   const nowMinute = minuteOfDay(now, timezone);
 
   const [rawItems, routines] = await Promise.all([
     db.collection('routineitems').find({ email }).toArray(),
     db.collection('routines').find({ email, date: { $in: historyDates(today) } }, {
       projection: {
-        date: 1, skip: 1, 'tasklist._id': 1, 'tasklist.ticked': 1, 'tasklist.tickedAt': 1,
+        date: 1, skip: 1, 'tasklist._id': 1, 'tasklist.ticked': 1, 'tasklist.tickedAt': 1, 'tasklist.redeemed': 1,
       },
     }).toArray(),
   ]);
@@ -135,7 +135,7 @@ async function main(db) {
     routine: item.name,
     time: item.time,
     devices: deviceTokens(user).length,
-    copy: ai.cue ? 'ai' : `template (${ai.reason})`,
+    copy: ai.cue ? `ai (${ai.tier}: ${ai.model})` : `template (${ai.reason})`,
     title: copy.title,
     body: copy.body,
     buttons: actions.category,
@@ -165,7 +165,13 @@ async function main(db) {
   console.log(`sent to ${result.sent} device(s)${result.pruned ? `, pruned ${result.pruned} dead` : ''}`);
 }
 
-admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+// Firebase only when sending: a dry run (the beta cycle's notification check)
+// needs no service account, so it runs on a machine without one.
+let admin;
+if (!dryRun) {
+  admin = require('firebase-admin'); // eslint-disable-line global-require
+  admin.initializeApp({ credential: admin.credential.cert(require('../serviceAccountKey.json')) }); // eslint-disable-line global-require
+}
 mongoose.connect(MONGDO_DB, { useNewUrlParser: true });
 const db = mongoose.connection;
 db.once('open', () => main(db)

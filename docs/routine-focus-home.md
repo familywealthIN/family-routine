@@ -97,7 +97,11 @@ is high-volume, interactive and must never spend credits.
   truncated monologues are replaced with a short fallback, because pasting a
   model's thinking into a chat bubble is worse than saying nothing.
 - `OPENROUTER_FREE_MODELS` (comma-separated) overrides discovery outright, for
-  pinning a roster without a deploy.
+  pinning a roster without a deploy. **Leave it unset** (owner, 26 Oct 2026):
+  a pinned list went stale within weeks, with every model gone or
+  rate-limited, and a pin switches discovery off. It is removed from the
+  root `.env` and from the repo variables, and `deploy-server.yml` drops it
+  from the deployed secrets.
 - Every id must end in `:free`. Ids without the suffix are **dropped at
   runtime** — a paid id slipping into the env override would silently start
   charging.

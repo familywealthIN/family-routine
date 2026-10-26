@@ -53,6 +53,19 @@ describe('itemHistory', () => {
     expect(h.missedYesterday).toBe(false);
   });
 
+  it('learns only from ticks in the window, not late check-ins', () => {
+    const routines = [
+      ...doneDays(3, '07:20'),
+      ...doneDays(5, '21:40', { redeemed: true }).slice(3),
+    ];
+    const h = itemHistory({
+      itemId: 'run', routines, today: TODAY, timezone: TZ,
+    });
+    expect(h.samples).toBe(3);
+    expect(h.usual).toBe(toMinutes('07:20'));
+    expect(h.streak).toBe(5); // a late check-in still keeps the run
+  });
+
   it('does not trust fewer than three samples', () => {
     const h = itemHistory({
       itemId: 'run', routines: doneDays(2, '07:20'), today: TODAY, timezone: TZ,

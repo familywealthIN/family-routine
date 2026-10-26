@@ -1,4 +1,5 @@
 /* eslint-disable quote-props */
+require('./utils/suppressMongooseWarnings')();
 require('dotenv').config();
 
 const mongoose = require('mongoose');
@@ -113,7 +114,8 @@ const MAX_AI_CUES_PER_RUN = 40; // cost and the 59 s run limit
 const aiEnabled = () => process.env.CUE_AI !== 'off' && !!process.env.OPENROUTER_API_KEY;
 
 /**
- * Replace template copy with Claude's 7-day-context cue where it validates.
+ * Replace template copy with the AI-written 7-day-context cue (a free model
+ * first, a paid Qwen fallback) where it validates.
  * Alarms (a fixed promise) and batches keep their template. Mutates `due`.
  */
 async function writeAiCues(db, due, emails, dueIds, now) {
@@ -213,7 +215,7 @@ db.once('open', async () => {
             { email: { $in: emails }, date: { $in: historyDates(today) } },
             {
               projection: {
-                date: 1, email: 1, skip: 1, 'tasklist._id': 1, 'tasklist.ticked': 1, 'tasklist.tickedAt': 1,
+                date: 1, email: 1, skip: 1, 'tasklist._id': 1, 'tasklist.ticked': 1, 'tasklist.tickedAt': 1, 'tasklist.redeemed': 1,
               },
             },
           )
