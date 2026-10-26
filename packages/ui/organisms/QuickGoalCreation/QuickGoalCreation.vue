@@ -1077,10 +1077,18 @@ export default {
   margin-top: 8px;
 }
 
-/* Below the narrow phone breakpoint two priced buttons cannot share a row. */
+/* Below the narrow phone breakpoint two priced buttons cannot share a row.
+   Stacked, `flex: 1` would grow them along the column instead of across it,
+   and its zero basis beats `height`: on a 390px iPhone 13 both buttons
+   collapsed to their 21px text line. Full width at their own 44px instead. */
 @media (max-width: 400px) {
   .rn-qg__foot {
     flex-direction: column;
+  }
+
+  .rn-qg__btn {
+    flex: none;
+    width: 100%;
   }
 }
 </style>

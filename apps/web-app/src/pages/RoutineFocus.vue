@@ -436,6 +436,7 @@ import {
   REDEEM_ROUTINE_ITEM_MUTATION,
 } from '../composables/graphql/queries';
 import { XP_PAYWALL_PURCHASE } from '../config/featureFlags';
+import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 import {
   updateRoutineTaskInCache,
   updateRoutineTaskKEarnedInCache,
@@ -484,6 +485,9 @@ const WEEK_STRIP_OPEN_PX = 68;
 const REWARD_SEEN_KEY = 'rn-reward-seen';
 // Shortest time the pull-to-refresh spinner shows, so a fast refetch still reads as one.
 const PULL_MIN_SPIN_MS = 600;
+// How long a push deep link waits for pass/wait maintenance to settle its
+// routine before saying so, rather than acting on flags still being written.
+const ROUTE_SETTLE_MS = 15000;
 // Day-goal quick-picks on the goal-item page: today, tomorrow, and the start of
 // next week (the design's "Mon").
 const DATE_PICKS = [
@@ -651,6 +655,11 @@ export default {
       loadError: false,
       xpBalanceError: false,
       dispatchedRouteAction: '',
+      // The deep link waiting for its routine's flags to settle, and whether
+      // that wait has run out (see `awaitRouteSettle`).
+      routeSettleKey: '',
+      routeSettleExpired: '',
+      routeSettleTimer: null,
       mountTime: Date.now(),
     };
   },
@@ -1392,6 +1401,7 @@ export default {
     this.stopIntelligentRefresh();
     if (this.nowTimerId) clearInterval(this.nowTimerId);
     if (this.flyTimer) clearTimeout(this.flyTimer);
+    if (this.routeSettleTimer) clearTimeout(this.routeSettleTimer);
   },
   methods: {
     drawerTiming,
@@ -2554,10 +2564,10 @@ export default {
 
       const dispatchKey = `${routineId}:${action}`;
       if (this.dispatchedRouteAction === dispatchKey) return;
-      this.dispatchedRouteAction = dispatchKey;
 
       const row = this.rows.find((r) => r.id === routineId);
       if (!row) {
+        this.dispatchedRouteAction = dispatchKey;
         this.$notify({
           title: 'Routine not found',
           text: "That routine isn't on today's list.",
@@ -2569,9 +2579,22 @@ export default {
         return;
       }
 
+      // Complete and Start decide from `ticked`/`passed`/`wait`, and on a cold
+      // open those are still being written: the first rows of a new day carry
+      // the template's `wait`, and a routine past its window is not `passed`
+      // until the sweep's response lands. Deciding on the first rows ticked
+      // nothing (tickRoutine refuses `wait`) or ticked a missed routine for free.
+      if ((action === 'complete' || action === 'start') && !this.routeRowSettled(row, action)) {
+        this.awaitRouteSettle(dispatchKey, row);
+        return;
+      }
+      this.dispatchedRouteAction = dispatchKey;
+      if (this.routeSettleTimer) clearTimeout(this.routeSettleTimer);
+      this.routeSettleTimer = null;
+
       this.focusRoutineId = row.id;
       if (action === 'complete') {
-        if (!row.ticked) this.tickRoutine(row);
+        this.completeFromRoute(row);
         return;
       }
       // "Do now" and body taps open the routine; an insight nudge also brings
@@ -2598,8 +2621,102 @@ export default {
         });
         return;
       }
-      if (action === 'start') this.onStartAgent();
+      if (action === 'start') this.startFromRoute(row);
       if (action === 'build') this.onBuildAgent();
+    },
+    /**
+     * Whether pass/wait maintenance has caught up with a routine — the same
+     * clock rule `routinePassWaitMixin` writes from: `passed` once it is
+     * TIMES_UP_TIME past, `wait` cleared PROACTIVE_START_TIME before. Both flags
+     * only ever move toward the clock, so a row that already agrees is settled.
+     * Start also reads the day's goal items, so it waits for those to load.
+     */
+    routeRowSettled(row, action) {
+      if (!row) return false;
+      if (action === 'start' && this.goalsFirstLoad) return false;
+      if (row.ticked) return true;
+      if (!this.canMaintainPassWait) return false;
+      const minutes = moment.duration(moment(row.time, 'HH:mm').diff(moment())).asMinutes();
+      if (minutes < -TIMES_UP_TIME && !row.passed) return false;
+      if (minutes < PROACTIVE_START_TIME && row.wait) return false;
+      return true;
+    },
+    /**
+     * Hold a deep link until its routine settles. The rows watcher re-runs the
+     * dispatch as the sweep's responses land; if they never do (a failed
+     * mutation, a document that never loads) the link is consumed with a toast
+     * instead of acting on the unsettled flags.
+     */
+    awaitRouteSettle(dispatchKey, row) {
+      if (this.routeSettleExpired === dispatchKey) {
+        this.dispatchedRouteAction = dispatchKey;
+        this.$notify({
+          title: `Couldn't open ${row.name}`,
+          text: "Today's routine is still updating. Tap the ring to try again.",
+          group: 'notify',
+          type: 'warning',
+          duration: 4000,
+        });
+        return;
+      }
+      if (this.routeSettleKey === dispatchKey) return;
+      this.routeSettleKey = dispatchKey;
+      this.focusRoutineId = row.id;
+      if (this.routeSettleTimer) clearTimeout(this.routeSettleTimer);
+      this.routeSettleTimer = setTimeout(() => {
+        this.routeSettleTimer = null;
+        this.routeSettleExpired = dispatchKey;
+        this.maybeDispatchRouteAction();
+      }, ROUTE_SETTLE_MS);
+    },
+    /**
+     * Push "Complete" is the sheet's Start Task, reached the way the ring
+     * reaches it: an open routine ticks (no agent), a passed one goes through
+     * the late check-in sheet and its price, and one that cannot be ticked says
+     * why.
+     */
+    completeFromRoute(row) {
+      if (row.ticked) return;
+      if (row.redeemable) {
+        this.onRingAction();
+        return;
+      }
+      if (row.buttonDisabled) {
+        this.notifyRouteRefused(row);
+        return;
+      }
+      this.tickRoutine(row, { fireAgent: false });
+    },
+    /**
+     * Push "Start agent" is the sheet's Start Agent. An agent has nothing to run
+     * against without an open goal item, and the sheet is where one is typed, so
+     * without one — or on a passed routine, whose late check-in is confirmed
+     * there — it opens the sheet and ticks nothing.
+     */
+    startFromRoute(row) {
+      if (!row.ticked) {
+        if (row.buttonDisabled) {
+          this.notifyRouteRefused(row);
+          return;
+        }
+        const hasOpenItem = (row.items || []).some((item) => item && !item.isComplete);
+        if (row.redeemable || !hasOpenItem) {
+          this.onRingAction();
+          return;
+        }
+      }
+      this.onStartAgent();
+    },
+    notifyRouteRefused(row) {
+      this.$notify({
+        title: row.wait ? `${row.name} isn't open yet` : `${row.name} can't be ticked now`,
+        text: row.wait
+          ? `It opens ${PROACTIVE_START_TIME} minutes before ${row.time}.`
+          : 'Its window has closed.',
+        group: 'notify',
+        type: 'info',
+        duration: 3000,
+      });
     },
 
     // =====================================================================
