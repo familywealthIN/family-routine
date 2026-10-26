@@ -2307,4 +2307,6 @@ const mutation = {
   },
 };
 
-module.exports = { query, mutation, autoCheckTaskPeriod };
+module.exports = {
+  query, mutation, autoCheckTaskPeriod, periodChildDates,
+};

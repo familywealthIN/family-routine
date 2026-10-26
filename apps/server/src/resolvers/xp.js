@@ -105,6 +105,9 @@ const mutation = {
             'tasklist.$.ticked': true,
             'tasklist.$.redeemed': true,
             'tasklist.$.stimuli': stimuli,
+            // A redeemed tick is a full tick, so it records when it happened
+            // the way tickRoutineItem does.
+            'tasklist.$.tickedAt': new Date(),
           },
         },
         { new: true },

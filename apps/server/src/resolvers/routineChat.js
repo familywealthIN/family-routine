@@ -22,6 +22,7 @@ const { chatWithRoutine, PROPOSAL_INTENTS } = require('../utils/chatApi');
 const { chatWeekDates, weekDigest } = require('../utils/chatWeek');
 const { RoutineModel } = require('../schema/RoutineSchema');
 const { GoalModel } = require('../schema/GoalSchema');
+const { periodChildDates } = require('./goal');
 const {
   previousDates,
   periodDates,
@@ -87,16 +88,20 @@ async function loadWeek({ email, date, taskRef }) {
   try {
     const dates = chatWeekDates(date);
     const { week, month } = periodDates(date);
+    // The week goal's milestones sit on its own Sunday..Saturday, which can
+    // run past today, so its tally reads those day docs too.
+    const weekDates = periodChildDates('week', date);
+    const goalDates = [...new Set([...dates, ...weekDates])];
     const [routines, goals, periodGoals] = await Promise.all([
       RoutineModel.find({ email, date: { $in: dates } }).lean().exec(),
-      GoalModel.find({ email, period: 'day', date: { $in: dates } }).exec(),
+      GoalModel.find({ email, period: 'day', date: { $in: goalDates } }).exec(),
       GoalModel.find({
         email,
         $or: [{ period: 'week', date: week }, { period: 'month', date: month }],
       }).exec(),
     ]);
     return weekDigest({
-      routines, goals, periodGoals, taskRef, today: date,
+      routines, goals, periodGoals, weekDates, taskRef, today: date,
     });
   } catch (error) {
     console.warn('[routineChat] week context unavailable:', error.message);

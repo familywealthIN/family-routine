@@ -62,8 +62,14 @@ function previousDates(date, count = LOOKBACK_DAYS) {
  * One state per calendar day, newest first: 'onTime' | 'late' | 'missed' |
  * 'skipped' | 'off' (the routine was not on that day's list) | 'absent' (no
  * routine document — the app was not opened, so nothing was done).
+ *
+ * `justTicked` is for the post-tick card, which runs because today was just
+ * ticked; a reader that is not answering a tick (the chat) passes false and
+ * gets today as the document has it.
  */
-function dayStates({ routines, taskRef, today }) {
+function dayStates({
+  routines, taskRef, today, justTicked = true,
+}) {
   const ref = String(taskRef);
   const byDate = new Map(routines.map((r) => [r.date, r]));
   const dates = today ? [today, ...previousDates(today)] : routines
@@ -79,7 +85,7 @@ function dayStates({ routines, taskRef, today }) {
     // This runs because today's routine was just ticked, so today counts even
     // if the tick has not reached the document yet. `passed` is stamped when
     // the window closes untouched, so a tick on a passed task was late.
-    const ticked = task.ticked || date === today;
+    const ticked = task.ticked || (justTicked && date === today);
     if (ticked) return { date, state: task.passed ? 'late' : 'onTime', task };
     return { date, state: 'missed', task };
   });
@@ -156,10 +162,23 @@ function linkedGoals(periodGoals, taskRef) {
   (periodGoals || []).forEach((goal) => {
     (goal.goalItems || []).forEach((item) => {
       if (String(item.taskRef) !== ref || !item.body) return;
-      out.push({ period: goal.period, body: item.body, done: !!item.isComplete });
+      out.push({
+        id: item._id || item.id, period: goal.period, body: item.body, done: !!item.isComplete,
+      });
     });
   });
   return out;
+}
+
+/**
+ * Where one goal item stands: 'done' | 'late' | 'skipped' | 'not done'.
+ * Its status is one-to-one with timing: `missed` = not done within its window.
+ * 'late' is a missed item that was then ticked (it still counts); 'skipped' is
+ * a missed item never ticked (markGoalItemMissed, or no tick at all).
+ */
+function goalItemState(item) {
+  if (item.isComplete) return item.status === 'missed' ? 'late' : 'done';
+  return item.status === 'missed' ? 'skipped' : 'not done';
 }
 
 /**
@@ -240,14 +259,17 @@ function summariseRoutineHistory({
     .forEach((goal) => {
       (goal.goalItems || []).forEach((item) => {
         if (String(item.taskRef) !== ref) return;
-        if (item.isComplete && item.status === 'missed') summary.itemsLate += 1;
-        else if (item.isComplete) summary.itemsDone += 1;
+        const itemState = goalItemState(item);
+        if (itemState === 'late') summary.itemsLate += 1;
+        else if (itemState === 'done') summary.itemsDone += 1;
         else summary.itemsOpen += 1;
         if (!item.body) return;
         // Trailing punctuation would end the fallback's sentence mid-quote.
         const body = String(item.body).trim().replace(/[.!?]+$/, '');
         if (item.isComplete) doneCounts.set(body, (doneCounts.get(body) || 0) + 1);
-        const state = item.isComplete ? (item.status === 'missed' ? 'late' : 'done') : 'not done';
+        // The card's strategy reads done / late / not done; to it a skipped
+        // item is still not done.
+        const state = itemState === 'skipped' ? 'not done' : itemState;
         if (goal.date === today) summary.todayItems.push(`${body} (${state})`);
         if (summary.activities.length < MAX_ACTIVITIES) {
           summary.activities.push(`${item.body} (${state})`);
@@ -450,6 +472,7 @@ module.exports = {
   dayStates,
   dayPlan,
   linkedGoals,
+  goalItemState,
   summariseRoutineHistory,
   nextMilestone,
   parseCard,

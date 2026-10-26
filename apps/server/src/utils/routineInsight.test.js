@@ -6,6 +6,8 @@ const {
   previousDates,
   periodDates,
   dayPlan,
+  dayStates,
+  goalItemState,
   summariseRoutineHistory,
   nextMilestone,
   parseCard,
@@ -49,6 +51,45 @@ describe('summariseRoutineHistory', () => {
   it('lists the routine\'s own activities newest first with their state', () => {
     const s = summariseRoutineHistory({ routines, goals, taskRef: 'r1' });
     expect(s.activities).toEqual(['Write notes (done)', 'Open one (not done)', 'Late one (late)']);
+  });
+
+  it('keeps a skipped item as not done on the card, whose strategy has no word for it', () => {
+    const skipped = [{
+      date: '05-10-2026',
+      goalItems: [{
+        taskRef: 'r1', body: 'Skipped one', isComplete: false, status: 'missed',
+      }],
+    }];
+    const s = summariseRoutineHistory({
+      routines, goals: skipped, taskRef: 'r1', today: '05-10-2026',
+    });
+    expect(s.todayItems).toEqual(['Skipped one (not done)']);
+    expect(s.itemsOpen).toBe(1);
+  });
+});
+
+describe('goalItemState', () => {
+  // The one reading of status 'missed', shared by the coach card and the chat.
+  it('reads missed on a ticked item as late and on an open one as skipped', () => {
+    expect(goalItemState({ isComplete: true, status: 'done' })).toBe('done');
+    expect(goalItemState({ isComplete: true, status: 'missed' })).toBe('late');
+    expect(goalItemState({ isComplete: false, status: 'missed' })).toBe('skipped');
+    expect(goalItemState({ isComplete: false, status: 'todo' })).toBe('not done');
+    expect(goalItemState({ isComplete: false })).toBe('not done');
+  });
+});
+
+describe('dayStates', () => {
+  const routines = [{ date: '05-10-2026', tasklist: [task({ ticked: false })] }];
+
+  it('counts today as ticked for the post-tick card', () => {
+    expect(dayStates({ routines, taskRef: 'r1', today: '05-10-2026' })[0].state).toBe('onTime');
+  });
+
+  it('reads today as the document has it when justTicked is false', () => {
+    expect(dayStates({
+      routines, taskRef: 'r1', today: '05-10-2026', justTicked: false,
+    })[0].state).toBe('missed');
   });
 });
 

@@ -154,9 +154,9 @@ function refreshStimuliSplitRates(stimuli, taskId, tasklist) {
  * Clear the per-day state on a routine item seeded from the shared
  * `routineItems` template.
  *
- * One routineItem document is reused by every day, so `ticked` / `passed` /
- * `redeemed` / `passedPoints` only ever mean anything on the copy inside a
- * day's `routines.tasklist[]`. Every writer already respects that (see
+ * One routineItem document is reused by every day, so `ticked` / `tickedAt` /
+ * `passed` / `redeemed` / `passedPoints` only ever mean anything on the copy
+ * inside a day's `routines.tasklist[]`. Every writer already respects that (see
  * xp.js redeemRoutineItem and passRoutineItem below, which both write
  * `tasklist.$.*`), but the seeding paths used to inherit whatever the template
  * happened to carry. Resetting explicitly makes "per day" an invariant rather
@@ -169,6 +169,7 @@ function resetDayState(task) {
   task.passed = false;
   task.redeemed = false;
   task.passedPoints = undefined;
+  task.tickedAt = undefined;
 }
 
 // Threshold constants for G stimulus scaling
@@ -337,6 +338,9 @@ const query = {
             task.ticked = foundTask.ticked;
             task.redeemed = foundTask.redeemed;
             task.passedPoints = foundTask.passedPoints;
+            // When the tick happened: the cue engine learns a routine's usual
+            // time from it, so dropping it here erased it on every read.
+            task.tickedAt = foundTask.tickedAt;
             // splitRate is a property of the schedule, not of the day: it is
             // recomputed from the current times on every read, while `earned`
             // (the only part the day owns) is carried over. Without this, every

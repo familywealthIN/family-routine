@@ -400,9 +400,10 @@ Routine Notes vocabulary:
 - D/K/G are the three stimuli: Discipline (habits kept), Kinetics (body moved), Geniuses (focused output).
 - Ticking a routine earns its stimulus points. Completing checklist items moves Kinetics on that routine.
 
-What you know, and only this: today's checklist, the LAST 7 DAYS of this routine (how each
-session went and the items done or left open), and the AREA / PROJECT context this routine
-belongs to (its description and next steps), when they are given below.
+What you know, and only this: today's checklist, the LAST 7 DAYS of this routine, today
+included (how each session went, the items done, done late, skipped or left open, and the
+milestone tally of the goals it feeds), and the AREA / PROJECT context this routine belongs to
+(its description and next steps), when they are given below.
 
 How to talk:
 - Answer the question that was asked, first. When the user asks about their week, their
@@ -509,7 +510,7 @@ Checklist: ${doneCount || 0} of ${totalCount || 0} done.
 ${checklist}
 Today's stimuli: Discipline ${scores.D || 0}% · Kinetics ${scores.K || 0}% · Geniuses ${scores.G || 0}%.
 
-THIS ROUTINE, LAST 7 DAYS (before today):
+THIS ROUTINE, LAST 7 DAYS (today included):
 ${week || '(no history yet)'}
 
 AREA / PROJECT CONTEXT:
