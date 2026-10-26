@@ -35,7 +35,16 @@ Specifically, **do not**:
 - change any `@capacitor/*` version;
 - reintroduce the `busy` disable-during-load prop (it was removed deliberately);
 - move CSS out of the inline root-class-prefixed `<style>` blocks in organisms;
-- reuse an entity's id for a filtered projection.
+- put CSS inline in `apps/web-app`: page, layout, view and container styles live in
+  `packages/ui/styles/app/**`, loaded by the `.vue` with `<style [scoped] src>` (so
+  `RoutineFocus.vue`'s CSS is `packages/ui/styles/app/pages/RoutineFocus.css`), and
+  `cssLivesInUi.test.js` fails otherwise;
+- reuse an entity's id for a filtered projection;
+- derive a goal item's status from its tick. Status is one-to-one with timing: a late tick
+  stays `missed` and reads Missed, ticked; "Complete" is only on-time. Go through
+  `resolveDisplayStatus` / `isMissed` (`packages/ui/utils/taskStatus.js`) and read
+  `docs/task-status-system.md` first;
+- add a server-side time-window check to a tick. Late ticks are allowed and count.
 
 ## The new home screen
 

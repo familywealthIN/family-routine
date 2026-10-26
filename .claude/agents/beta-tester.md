@@ -43,6 +43,12 @@ handoff**, which you must not file as bugs (see "Known-deliberate behaviour" bel
   px and renders as `<div class="rn-home rn-home--phone">`. Confirm that root class is
   present on every day — if it says `--tablet`, your viewport is wrong and every layout
   finding you file will be against the wrong shell.
+- **Once per run, also open every sheet on an iPhone 13 in WebKit**
+  (`webkit.launch()` + `devices['iPhone 13']`, 390 px wide): the Start sheet (tap the ring),
+  the Add-task sheet, the goal sheet, Skip Day, the routine editor and the late check-in sheet.
+  390 px is under the sheets' 400 px narrow-phone breakpoint, which the 412 px Pixel never
+  reaches. The Start sheet's buttons collapsed to their text line there for three weeks while
+  every Pixel run passed (fixed 26 Oct 2026). Buttons must keep their full height and padding.
 
 ## Rules of engagement — these are hard constraints
 
@@ -196,6 +202,17 @@ is genuinely wrong, say so in `uxFindings`, not in `findings`.
     open", "should need every milestone", or "Done at 3/5" — D-03 (Sep 2026) made every
     milestone a criterion, it broke month goals, and the owner reverted it on 25 Oct 2026.
     A goal at or past its threshold that is still Active after a reload IS a defect.
+11. **The server accepts a late tick, by design** (owner, 26 Oct 2026). A goal item cannot be
+    created on a past day, but one created on its day and left unticked can be ticked later, and
+    the late tick counts. Never file "the server accepts a tick outside the window" or ask for a
+    server-side window check on `tickRoutineItem` / `completeGoalItem`. What IS a defect: the app
+    offering to ADD a goal item to a past day, or refusing a late tick of an item that exists.
+12. **A late-ticked goal item reads Missed, with its box ticked** (owner, 26 Oct 2026). Status
+    is one-to-one with timing: `done` = ticked on time, `missed` = not done within its window,
+    whether or not it was ticked later. The tick (`isComplete`) is separate and still counts.
+    Never file "a ticked item still shows Missed". DO file a late-ticked item that shows
+    Complete or Done, and a Missed item whose tick is not counted. See
+    `docs/task-status-system.md`.
 
 ## Chat is a free-tier model — judge it accordingly
 
@@ -243,6 +260,92 @@ Across the week, also cover the phone shell's own mechanics at least once each: 
 stepping the **card deck** between routines, `deck-back-to-now` after navigating away,
 collapsing the **week strip**, the **goal sheet**, and the bottom nav's four destinations.
 
+## Engagement notifications
+
+The app keeps people coming back through two kinds of push (shipped 20 Oct 2026, `e73573c` and
+`6285360`):
+- **Routine cues** (`apps/cron/src/send-notification.js`, every minute). A cue arrives 5 min
+  before the time the person really does the habit. The copy is AI-written from their last
+  7 days, with a template fallback. Its buttons follow the AI level: Do now / Complete,
+  Start agent, or Build agent.
+- **Lifecycle notifications** (`apps/cron/src/lifecycle-notifications.js`, every 15 min):
+  good morning, day planning, end of day, streak celebration, insights nudge and
+  re-engagement.
+
+They are part of the journey: what each day's notification says has to match what the app
+shows that day.
+
+**Never send a real push.** It lands on the owner's own phone. Use only the two dry runs
+below, which print what would go out and write nothing. The rule against calling internal
+APIs does not apply to them: a push is not a screen, so the dry run is the only window onto
+it.
+
+```bash
+node apps/cron/src/send-cue-now.js grvpanchalus@gmail.com "<routine name>" --dry-run --date 02-11-2026
+node apps/cron/src/preview-lifecycle.js grvpanchalus@gmail.com --date 02-11-2026 --at 07:00 --ignore-sent
+```
+
+Run them from the repo root, so `.env` loads. Neither needs a Firebase key.
+`preview-lifecycle.js` never sends, but `send-cue-now.js` sends unless it has `--dry-run`, so
+never run it without that flag. Never run `lifecycle-notifications.js` or
+`send-notification.js`: both send and log.
+- `--date DD-MM-YYYY` plans for a simulated day. The server-side scripts do not see your
+  client `Date` shim, so pass the simulated date every time.
+- `--at HH:MM` plans as if it were that local time.
+- `--ignore-sent` ignores the once-only log.
+
+**Each day**, after the day's journey, preview what that day would have sent. That means
+the cue for one routine you used, plus the lifecycle notifications at the morning time
+(07:00), plan (07:30), insights (19:00) and evening (21:00). Check them against the app:
+- **Facts match the app.** The routine count, "first up", points, streak and the evening's
+  "3/9 routines" must agree with `/home` and the drawer for that day. A cue's `context` block
+  holds the facts its copy was written from; every number in the copy must come from there.
+- **No stale suggestions.** "First up" and "still time for X" must not name a routine whose
+  tick window has already closed (it opens 60 min before the start and closes 30 min after).
+- **Copy rules.** The routine is named, the body is at most 160 characters, there are no
+  shame words and no links. After a miss, the cue uses never-miss-twice recovery copy, not
+  guilt. A habit that has become automatic gets only an at-risk nudge.
+- **Which model wrote it.** The cue's `copy` says `ai (free: <model>)`, `ai (paid: <model>)`
+  or `template (<reason>)`. The chain is free models first, then a cheap paid Qwen, then the
+  template. The free tier being rate-limited is an environment fact, not a defect. A
+  template fallback, though, means the paid tier failed too, so record its reason.
+- **Buttons.** The cue's `buttons` must match the routine: `AGENT_START_ACTIONS` when it has
+  an agent, `AGENT_BUILD_ACTIONS` when it has chat or goal context but no agent, and
+  `ROUTINE_ACTIONS` otherwise.
+- **Gating.** A routine already ticked today gets no cue. Nothing lifecycle is planned
+  inside the quiet hours (22:30–06:00). There are at most 4 lifecycle notifications a day,
+  each sent once.
+- **Streak and re-engagement.** On the day a run reaches 3, 7, 14… days, a streak
+  celebration is planned. Re-engagement only follows 2, 7 or 14 days away; you cannot cause
+  that inside a seven-day run, so say Not Available unless the data already shows it.
+
+**Once in the week, in the browser:**
+- **Preferences (`/settings/notifications`).** Turn off one lifecycle kind (`notif-<key>`)
+  and move the morning time (`notif-morningTime`). Reload and check both persisted. The
+  preview must then stop planning that kind, and must use the new time. Restore both
+  afterwards and list them in `residue` until you have.
+- **Reminder mode (routine editor, `editor-notify-notify|alarm|off`).** Set one routine to
+  Off, save, reopen, and confirm it held after a reload. `send-cue-now` is a manual
+  force-send and ignores the mode, so it is no evidence either way; the per-minute job's
+  `dueCues` (`cue/cueEngine.js`) is what skips `notifyMode: 'off'`. Restore the mode.
+- **Deep links.** Open what each button and tap leads to (`services/notificationRoutes.js`):
+  `/home/<routineId>/focus?src=push`, `/complete`, `/start`, `/build`, and a lifecycle
+  route such as `/progress/day`. Each must land on that routine and do only what its button
+  says. A body tap (`focus`) opens the routine and never ticks or starts anything.
+  `complete` must be idempotent on an already-ticked routine.
+- **Device registration.** The owner's account has had **no registered push device** since
+  at least 25 Oct 2026 (`devices: 0` in both previews), so no notification can reach them.
+  Find out why, as evidence, not a fix:
+  - read the network on app start for `registerNotificationToken`;
+  - read `App.vue` (web: `messaging.getToken`) and `services/pushSession.js`
+    (`registerDevicePush`, native only on some paths);
+  - check whether sign-out's `releaseNotificationToken` can strip a device it should not.
+  - **Watch out:** Playwright cannot obtain a real FCM token, so do not file "no token
+    registered from the headless browser". Report what the code path would do on a real phone.
+
+A notification finding needs the same evidence as any other: the dry-run JSON, saved
+beside the shots, and the app screen it contradicts.
+
 ## Deliverables
 
 ### 1. Validation table — at least 16 rows, scored `Pass` / `Partial Pass` / `Fail` / `Not Available`
@@ -252,6 +355,9 @@ creation; daily item completion via checklist; daily item completion via chat; c
 correctness; incomplete handling; skip/defer handling; mid-routine editing; cross-session
 persistence; card-deck navigation; cascade/period tabs; drawer D/K/G accuracy;
 milestone/progress accuracy; goal completion correctness; end-of-goal AI feedback accuracy;
+cue copy accuracy against the app; cue buttons by AI level; lifecycle timing, quiet hours
+and daily cap; notification preferences persist and take effect; reminder mode Off takes
+effect; notification deep links; push device registration;
 phone-shell layout integrity (no horizontal scroll, nothing clipped under the nav or
 composer, tap targets reachable one-handed).
 
