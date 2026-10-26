@@ -694,3 +694,177 @@ describe('the sheet presentation', () => {
     expect(desktop.el.querySelector('.rn-rsheet__panel').style.width).toBe('560px');
   });
 });
+
+/**
+ * Standard steps: a NEW routine's steps pre-fill from its name, step 1 being
+ * the cue the reminder leads with. The container fetches; the sheet only says
+ * what the name is and takes the answer while the list is still untouched.
+ */
+describe('suggested steps for a new routine', () => {
+  const JOGGING = ['Put on your running shoes', 'Step out the door', 'Run an easy 10 minutes'];
+  const HINT = 'Suggested steps — the first one is your cue';
+
+  /** The sheet with a `suggestedSteps` prop the test can change, like the container does. */
+  const renderLive = (props = {}) => {
+    const parent = new Vue({
+      data: { suggestion: null, routine: props.routine || null },
+      render(h) {
+        return h(RoutineEditorSheet, {
+          props: {
+            open: true,
+            shell: 'phone',
+            siblings: SIBLINGS,
+            ...props,
+            routine: this.routine,
+            suggestedSteps: this.suggestion,
+          },
+        });
+      },
+    }).$mount();
+    const sheet = parent.$children[0];
+    const events = { name: [], edited: 0, saved: [] };
+    sheet.$on('name-input', (name) => events.name.push(name));
+    sheet.$on('steps-edited', () => { events.edited += 1; });
+    sheet.$on('save', (payload) => events.saved.push(payload));
+    const suggest = async (name, steps) => {
+      parent.suggestion = { name, steps };
+      await tick();
+    };
+    return {
+      parent, el: parent.$el, sheet, events, suggest,
+    };
+  };
+
+  const stepNames = (el) => all(el, 'editor-step').map((row) => text(row.querySelector('.rn-red__step-name')));
+  const nameAs = async (el, value) => {
+    type(q(el, 'editor-name'), value);
+    await tick();
+  };
+
+  it('says the new routine\'s name as it is typed', async () => {
+    const { el, events } = renderLive();
+    await nameAs(el, 'Jog');
+    await nameAs(el, ' Jogging ');
+    expect(events.name).toEqual(['Jog', 'Jogging']);
+  });
+
+  it('pre-fills the steps as ordinary rows, with the cue line under them', async () => {
+    const { el, sheet, suggest } = renderLive();
+    await nameAs(el, 'Jogging');
+    expect(q(el, 'editor-steps-suggested')).toBe(null);
+    await suggest('Jogging', JOGGING);
+    expect(stepNames(el)).toEqual(JOGGING);
+    expect(text(q(el, 'editor-steps-suggested'))).toBe(HINT);
+    // Normal rows: each can be removed and moved like a typed one.
+    expect(all(el, 'editor-step-remove')).toHaveLength(3);
+    expect(sheet.draft.steps.every((step) => step.id === '')).toBe(true);
+  });
+
+  it('saves the pre-filled steps as id-less steps for the container to mint', async () => {
+    const { el, events, suggest } = renderLive();
+    await nameAs(el, 'Jogging');
+    await suggest('Jogging', JOGGING);
+    click(q(el, 'editor-save'));
+    expect(events.saved[0].steps).toEqual(JOGGING.map((name) => ({ id: '', name })));
+  });
+
+  it('ignores an answer for a name that is no longer in the field', async () => {
+    const { el, suggest } = renderLive();
+    await nameAs(el, 'Meditation');
+    await suggest('Jogging', JOGGING);
+    expect(all(el, 'editor-step')).toHaveLength(0);
+    expect(q(el, 'editor-steps-suggested')).toBe(null);
+  });
+
+  it('swaps an untouched suggestion when the name changes', async () => {
+    const { el, suggest } = renderLive();
+    await nameAs(el, 'Jogging');
+    await suggest('Jogging', JOGGING);
+    await nameAs(el, 'Meditation');
+    await suggest('Meditation', ['Sit on your cushion', 'Set a 2-minute timer']);
+    expect(stepNames(el)).toEqual(['Sit on your cushion', 'Set a 2-minute timer']);
+    // A name with no steps clears a suggestion that no longer fits.
+    await nameAs(el, 'Pottery');
+    await suggest('Pottery', []);
+    expect(all(el, 'editor-step')).toHaveLength(0);
+    expect(q(el, 'editor-steps-suggested')).toBe(null);
+  });
+
+  it('stops for good once the user removes a step', async () => {
+    const { el, events, suggest } = renderLive();
+    await nameAs(el, 'Jogging');
+    await suggest('Jogging', JOGGING);
+    click(all(el, 'editor-step-remove')[2]);
+    await tick();
+    expect(events.edited).toBe(1);
+    expect(q(el, 'editor-steps-suggested')).toBe(null);
+    expect(stepNames(el)).toEqual(JOGGING.slice(0, 2));
+
+    // No more asking, and a late answer cannot overwrite the user's list.
+    await nameAs(el, 'Running');
+    expect(events.name).toEqual(['Jogging']);
+    await suggest('Running', ['Something else', 'Entirely']);
+    expect(stepNames(el)).toEqual(JOGGING.slice(0, 2));
+  });
+
+  it('stops once the user adds a step of their own', async () => {
+    const { el, events, suggest } = renderLive();
+    await nameAs(el, 'Jogging');
+    type(q(el, 'editor-step-input'), 'Stretch calves');
+    key(q(el, 'editor-step-input'), 'Enter');
+    await tick();
+    expect(events.edited).toBe(1);
+    await suggest('Jogging', JOGGING);
+    expect(stepNames(el)).toEqual(['Stretch calves']);
+  });
+
+  it('stops once the user reorders the suggestion', async () => {
+    const { el, events, suggest } = renderLive();
+    await nameAs(el, 'Jogging');
+    await suggest('Jogging', JOGGING);
+    click(all(el, 'editor-step-down')[0]);
+    await tick();
+    expect(events.edited).toBe(1);
+    expect(q(el, 'editor-steps-suggested')).toBe(null);
+    expect(stepNames(el)[0]).toBe('Step out the door');
+  });
+
+  it('keeps a list the user emptied empty', async () => {
+    const { el, suggest } = renderLive();
+    await nameAs(el, 'Jogging');
+    await suggest('Jogging', ['Put on your running shoes', 'Step out the door']);
+    click(all(el, 'editor-step-remove')[0]);
+    await tick();
+    click(all(el, 'editor-step-remove')[0]);
+    await tick();
+    await suggest('Jogging', JOGGING.slice());
+    expect(all(el, 'editor-step')).toHaveLength(0);
+  });
+
+  it('never touches an existing routine\'s steps', async () => {
+    const { el, events, suggest } = renderLive({ routine: ROUTINE });
+    await nameAs(el, 'Jogging');
+    expect(events.name).toEqual([]);
+    await suggest('Jogging', JOGGING);
+    expect(stepNames(el)).toEqual(['Check calendar', 'Pick top 3']);
+    expect(q(el, 'editor-steps-suggested')).toBe(null);
+  });
+
+  it('starts over on the next new routine', async () => {
+    const { parent, el, sheet, suggest } = renderLive();
+    await nameAs(el, 'Jogging');
+    await suggest('Jogging', JOGGING);
+    click(all(el, 'editor-step-remove')[0]);
+    await tick();
+    expect(sheet.stepsEdited).toBe(true);
+    // Edit another routine, then open a new one again.
+    parent.routine = ROUTINE;
+    await tick();
+    parent.routine = null;
+    await tick();
+    expect(sheet.stepsEdited).toBe(false);
+    await nameAs(sheet.$el, 'Reading');
+    await suggest('Reading', ['Pick up your book', 'Read one page']);
+    expect(stepNames(sheet.$el)).toEqual(['Pick up your book', 'Read one page']);
+  });
+});

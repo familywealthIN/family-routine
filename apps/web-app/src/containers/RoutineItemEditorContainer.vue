@@ -11,11 +11,14 @@
     :agent="agent"
     :year-goal="yearGoal"
     :error-message="errorMessage"
+    :suggested-steps="suggestedSteps"
     @close="close"
     @save="save"
     @delete="remove"
     @manage-agent="$emit('manage-agent', routine && routine.id)"
     @open-goal="$emit('open-goal', $event)"
+    @name-input="onNameInput"
+    @steps-edited="onStepsEdited"
   />
 </template>
 
@@ -47,6 +50,14 @@
  * - Create and delete change the LIST, and Apollo 2.x has no `cache.evict`, so
  *   those two refetch the page's one read (`refetchQueries`) rather than cloning
  *   it. An update refetches nothing.
+ *
+ * STANDARD STEPS
+ * --------------
+ * A NEW routine's steps pre-fill from its name (`suggestRoutineSteps`, step 1
+ * being the cue the reminder leads with). The sheet emits each name; this asks
+ * once the typing pauses, and only while the user has not touched the steps.
+ * Once they have, the create says `suggestSteps: false`, so an empty list the
+ * user made is not filled in by the server's own default either.
  */
 import RoutineEditorSheet from '@routine-notes/ui/organisms/RoutineEditorSheet/RoutineEditorSheet.vue';
 import { fromMinutes, maxPointsFor } from '@routine-notes/ui/utils/dayDial';
@@ -55,8 +66,14 @@ import {
   ADD_ROUTINE_ITEM_MUTATION,
   DELETE_ROUTINE_ITEM_MUTATION,
   ROUTINE_SETTINGS_ITEMS_QUERY,
+  SUGGEST_ROUTINE_STEPS_QUERY,
   UPDATE_ROUTINE_ITEM_MUTATION,
 } from '../composables/graphql/routineSettingsQueries';
+
+/** How long the name has to sit still before its steps are asked for. */
+export const SUGGEST_DEBOUNCE_MS = 600;
+/** Shorter than this is a name still being typed, not one worth asking about. */
+export const SUGGEST_MIN_CHARS = 3;
 
 /** A step id has to exist before the step is saved — it is the list's key. */
 const newStepId = () => {
@@ -106,7 +123,21 @@ export default {
       routine: null,
       defaultTime: '',
       errorMessage: '',
+      /** `{ name, steps }` for the sheet, or null. */
+      suggestedSteps: null,
+      /** The user has edited this new routine's steps; suggest nothing more. */
+      stepsEdited: false,
     };
+  },
+
+  created() {
+    // Not reactive: a timer handle and a request counter are bookkeeping.
+    this.suggestTimer = null;
+    this.suggestSeq = 0;
+  },
+
+  beforeDestroy() {
+    clearTimeout(this.suggestTimer);
   },
 
   computed: {
@@ -142,6 +173,7 @@ export default {
   methods: {
     /** @param {number} [minutes] the gap row's midpoint, when one was tapped. */
     openNew(minutes = null) {
+      this.resetSuggestion();
       this.routine = null;
       this.defaultTime = minutes == null ? '' : fromMinutes(minutes);
       this.errorMessage = '';
@@ -150,10 +182,64 @@ export default {
 
     openEdit(routine) {
       if (!routine || !routine.id) return;
+      this.resetSuggestion();
       this.routine = routine;
       this.defaultTime = '';
       this.errorMessage = '';
       this.open = true;
+    },
+
+    /** Forget the last routine's suggestion, and drop any answer still on its way. */
+    resetSuggestion() {
+      clearTimeout(this.suggestTimer);
+      this.suggestTimer = null;
+      this.suggestSeq += 1;
+      this.suggestedSteps = null;
+      this.stepsEdited = false;
+    },
+
+    /** Only a NEW routine whose steps the user has not touched asks. */
+    canSuggest() {
+      return this.open && !this.routine && !this.stepsEdited;
+    },
+
+    /** The sheet's name field, debounced into one suggestion request. */
+    onNameInput(name) {
+      clearTimeout(this.suggestTimer);
+      this.suggestTimer = null;
+      const clean = String(name || '').trim();
+      if (!this.canSuggest() || clean.length < SUGGEST_MIN_CHARS) return;
+      this.suggestTimer = setTimeout(() => {
+        this.suggestTimer = null;
+        this.fetchSuggestion(clean);
+      }, SUGGEST_DEBOUNCE_MS);
+    },
+
+    onStepsEdited() {
+      this.stepsEdited = true;
+      clearTimeout(this.suggestTimer);
+      this.suggestTimer = null;
+    },
+
+    async fetchSuggestion(name) {
+      this.suggestSeq += 1;
+      const seq = this.suggestSeq;
+      try {
+        const { data } = await this.$apollo.query({
+          query: SUGGEST_ROUTINE_STEPS_QUERY,
+          variables: { name },
+          // Explicit: the app's default is cache-and-network, which a one-shot
+          // `query` refuses outright. A name's standard steps do not change.
+          fetchPolicy: 'cache-first',
+        });
+        // A newer name, another routine, or the user's own steps won meanwhile.
+        if (seq !== this.suggestSeq || !this.canSuggest()) return;
+        const steps = ((data && data.suggestRoutineSteps) || []).filter(Boolean);
+        this.suggestedSteps = { name, steps };
+      } catch (error) {
+        // No suggestion is not an error the user needs to hear about: the
+        // steps field is right there to type into.
+      }
     },
 
     close() {
@@ -185,7 +271,8 @@ export default {
         const { data } = await this.$apollo.mutate({
           mutation: creating ? ADD_ROUTINE_ITEM_MUTATION : UPDATE_ROUTINE_ITEM_MUTATION,
           variables: creating
-            ? this.variablesFor(payload)
+            // A list the user emptied themselves stays empty on the server too.
+            ? { ...this.variablesFor(payload), suggestSteps: !this.stepsEdited }
             : { id: payload.id, ...this.variablesFor(payload) },
           // Only the list shape needs healing, and only when it changed.
           refetchQueries: creating ? [{ query: ROUTINE_SETTINGS_ITEMS_QUERY }] : [],

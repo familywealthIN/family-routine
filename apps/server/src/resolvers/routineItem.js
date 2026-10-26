@@ -1,4 +1,6 @@
+const { randomUUID } = require('crypto');
 const {
+  GraphQLBoolean,
   GraphQLID,
   GraphQLInt,
   GraphQLString,
@@ -11,6 +13,7 @@ const { RoutineItemModel, RoutineItemType } = require('../schema/RoutineItemSche
 const getEmailfromSession = require('../utils/getEmailfromSession');
 const ApiError = require('../utils/ApiError');
 const { enhanceRoutineItemWithAI } = require('../utils/aiApi');
+const { suggestRoutineSteps } = require('../utils/routineSteps');
 
 /**
  * The routine points rules, made authoritative here (E2E BUG-4). They mirror the
@@ -64,7 +67,33 @@ const assertWithinBudget = (items, incoming) => {
   }
 };
 
+/** True when a caller sent no steps at all — missing, null or an empty list. */
+const noSteps = (steps) => !Array.isArray(steps) || steps.length === 0;
+
+/**
+ * The standard steps for a new routine, as stored steps (each with the id the
+ * editor keys its rows on). [] when there are none — never throws.
+ */
+const standardStepsFor = async (name) => {
+  const names = await suggestRoutineSteps(name);
+  return names.map((step) => ({ id: randomUUID(), name: step }));
+};
+
 const query = {
+  /**
+   * The standard steps for a routine name, step 1 being the cue that starts it
+   * (utils/routineSteps.js). The editor pre-fills a NEW routine with these.
+   */
+  suggestRoutineSteps: {
+    type: new GraphQLList(GraphQLString),
+    args: {
+      name: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: (root, args, context) => {
+      getEmailfromSession(context);
+      return suggestRoutineSteps(args.name);
+    },
+  },
   routineItems: {
     type: GraphQLList(RoutineItemType),
     resolve: (root, args, context) => {
@@ -155,6 +184,12 @@ const mutation = {
       endEvent: { type: GraphQLString },
       tags: { type: new GraphQLList(GraphQLString) },
       notifyMode: { type: GraphQLString },
+      /**
+       * Whether a routine created with no steps gets the standard ones
+       * (default yes). The editor sends `false` once the user has edited the
+       * step list themselves — an empty list they made is their answer.
+       */
+      suggestSteps: { type: GraphQLBoolean },
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
@@ -163,8 +198,14 @@ const mutation = {
       assertMinPoints(args.points);
       assertWithinBudget(await RoutineItemModel.find({ email }).exec(), [{ points: args.points }]);
 
+      const { suggestSteps, ...fields } = args;
+      // Steps the caller sent are theirs and are never replaced.
+      if (suggestSteps !== false && noSteps(fields.steps)) {
+        fields.steps = await standardStepsFor(fields.name);
+      }
+
       const routineItem = new RoutineItemModel({
-        ...args,
+        ...fields,
         email,
         passed: false,
         ticked: false,
@@ -235,12 +276,16 @@ const mutation = {
         // Process each routine item with AI enhancement
         const enhancedItems = await Promise.all(
           routineItems.map(async (item) => {
-            const enhanced = await enhanceRoutineItemWithAI(item);
+            // The welcome wizard sends no steps; any it does send are kept.
+            const [enhanced, steps] = await Promise.all([
+              enhanceRoutineItemWithAI(item),
+              noSteps(item.steps) ? standardStepsFor(item.name) : item.steps,
+            ]);
 
             const routineItem = new RoutineItemModel({
               ...item,
               description: enhanced.description,
-              steps: enhanced.steps,
+              steps,
               email,
               passed: false,
               ticked: false,

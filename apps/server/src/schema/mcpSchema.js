@@ -30,6 +30,8 @@ type Query {
   projectTags: [String]
   # Get all area: prefixed tags from routine items
   areaTags: [String]
+  # Standard steps for a routine name (step 1 is the cue that starts it)
+  suggestRoutineSteps(name: String!): [String]
 
   # ── Routines (daily snapshots) ─────────────────────────────────────────────
   # Get all non-skipped routines for the user
@@ -147,6 +149,8 @@ type Mutation {
     endEvent: String
     tags: [String]
     notifyMode: String # off | notify | alarm
+    # With no steps sent, the routine gets the standard ones; false opts out
+    suggestSteps: Boolean
   ): RoutineItem
   updateRoutineItem(
     id: ID!
