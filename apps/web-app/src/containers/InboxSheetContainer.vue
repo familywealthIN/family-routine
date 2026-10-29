@@ -224,7 +224,7 @@ export default {
     assign(item, routine) {
       if (!item || !item.id || !routine || !routine.id) return;
       const goalRef = item.goalRef || routine.goalRef || '';
-      guardFields('GoalItem', item.id, ['taskRef', 'goalRef']);
+      guardFields('GoalItem', item.id, { taskRef: String(routine.id), goalRef });
 
       this.$apollo
         .mutate({

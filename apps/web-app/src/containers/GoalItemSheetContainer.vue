@@ -137,7 +137,7 @@ export default {
 
       // Pin the fields we are changing so a `cache-and-network` read that left
       // before this write cannot land on top of it (utils/cacheGuard.js).
-      guardFields('GoalItem', item.id, Object.keys(changes));
+      guardFields('GoalItem', item.id, changes);
 
       return this.$apollo
         .mutate({
@@ -261,7 +261,7 @@ export default {
      */
     onRenameSubtask({ item, subtask, body }) {
       if (isTempSubTaskId(subtask.id)) return;
-      guardFields('SubTaskItem', subtask.id, ['body']);
+      guardFields('SubTaskItem', subtask.id, { body });
       this.$apollo
         .mutate({
           mutation: RENAME_SUB_TASK_ITEM_MUTATION,
@@ -302,7 +302,8 @@ export default {
       reordered[index - 1] = ids[index];
       reordered[index] = ids[index - 1];
 
-      guardFields('GoalItem', item.id, ['subTasks']);
+      // No guard: a list is never guarded (utils/cacheGuard.js § SCOPE). The
+      // result is the parent with its new order, which is what lands.
       this.$apollo
         .mutate({
           mutation: REORDER_SUB_TASK_ITEMS_MUTATION,
@@ -312,7 +313,6 @@ export default {
         })
         .then(() => this.$emit('changed', { op: 'reorder-subtasks', id: item.id }))
         .catch((error) => {
-          releaseEntity('GoalItem', item.id);
           this.notifyError(error, "Couldn't move that subtask.");
         });
     },
