@@ -66,20 +66,8 @@ export const Editable = () => ({
   template: '<GoalItemList :goal="goal" editMode />',
 });
 
-export const EmptyState = () => ({
-  components: { GoalItemList },
-  data() {
-    return {
-      goal: {
-        id: 'goal-empty',
-        period: 'day',
-        date: '22-12-2025',
-        goalItems: [],
-      },
-    };
-  },
-  template: '<GoalItemList :goal="goal" />',
-});
+// No empty-state story: with no goalItems the list renders nothing, and the
+// page around it shows the empty message.
 
 export const WeeklyGoalItems = () => ({
   components: { GoalItemList },

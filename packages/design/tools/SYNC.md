@@ -24,12 +24,12 @@ In Claude Code, from the repo root:
 /design-sync packages/design
 ```
 
-The first run asks you to pick or create a design-system project on claude.ai/design (create one
-called "Routine Notes"). It then shows the exact list of files it will write or delete and waits for
-your approval before uploading anything. Later runs compare the folder with the project and push
-only what changed.
+The project already exists: "Routine Notes", pinned in `.design-sync/config.json`. The sync stages
+this folder with `node .design-sync/stage.mjs` into `ds-bundle/` (cards upload as `<Name>.html`, so the
+Design System pane shows real names), shows the exact files it will write or delete, and waits for
+your approval before uploading anything. `.design-sync/NOTES.md` records how it's done and why.
 
-Leave out of the sync: `tools/` (build scripts) and `canvases/manifest.json`.
+Left out of the sync: `tools/` (build scripts) and `canvases/manifest.json`.
 
 ## 3. Use it in Claude Design
 

@@ -23,7 +23,7 @@ Completed.args = {
     id: '1',
     body: 'Complete project documentation',
     period: 'week',
-    date: '2025-W51',
+    date: '20-12-2025',
     isComplete: true,
   },
 };
@@ -34,7 +34,7 @@ Incomplete.args = {
     id: '2',
     body: 'Review code changes',
     period: 'day',
-    date: '2025-12-22',
+    date: '22-12-2025',
     isComplete: false,
   },
 };
@@ -45,7 +45,7 @@ MonthGoal.args = {
     id: '3',
     body: 'Launch new feature',
     period: 'month',
-    date: '2025-12',
+    date: '31-12-2025',
     isComplete: false,
   },
 };

@@ -1,94 +1,72 @@
 import PriorityQuadrant from './PriorityQuadrant.vue';
 
+// One quadrant of the 2×2 priority map: a titled card around a PriorityGoalList.
+// `color` is a Vuetify colour name (error, primary, warning, grey darken-1).
 export default {
   title: 'Molecules/PriorityQuadrant',
   component: PriorityQuadrant,
   argTypes: {
-    quadrant: {
-      control: { type: 'select' },
-      options: ['urgent-important', 'not-urgent-important', 'urgent-not-important', 'not-urgent-not-important'],
-    },
+    title: { control: 'text' },
+    subtitle: { control: 'text' },
     color: {
-      control: 'color',
+      control: { type: 'select' },
+      options: ['error', 'primary', 'warning', 'grey darken-1'],
     },
+    icon: { control: 'text' },
+    items: { control: 'object' },
+    tasklist: { control: 'object' },
   },
 };
 
 const Template = (args, { argTypes }) => ({
   props: Object.keys(argTypes),
   components: { PriorityQuadrant },
-  data() {
-    return {
-      tasks: [
-        { id: 1, title: 'Task 1', completed: false },
-        { id: 2, title: 'Task 2', completed: true },
-        { id: 3, title: 'Task 3', completed: false },
-      ],
-    };
-  },
-  template: '<PriorityQuadrant :tasks="tasks" v-bind="$props" />',
+  template: '<div style="max-width: 420px;"><PriorityQuadrant v-bind="$props" /></div>',
 });
+
+const tasklist = [
+  { id: 't-deep', taskId: 't-deep', name: 'Deep Work' },
+  { id: 't-office', taskId: 't-office', name: 'Start office work' },
+  { id: 't-jog', taskId: 't-jog', name: 'Jogging' },
+];
 
 export const Default = Template.bind({});
 Default.args = {
-  quadrant: 'urgent-important',
+  title: 'Do',
+  subtitle: 'Urgent and important',
+  color: 'error',
+  icon: 'priority_high',
+  tasklist,
+  items: [
+    {
+      id: 'g1', body: 'Ship the pricing page', isComplete: false, taskRef: 't-deep', parentGoalBody: 'Launch the website',
+    },
+    {
+      id: 'g2', body: 'Email two beta users', isComplete: true, taskRef: 't-office', parentGoalBody: '',
+    },
+  ],
 };
 
-export const UrgentImportant = Template.bind({});
-UrgentImportant.args = {
-  quadrant: 'urgent-important',
-  color: '#f44336',
+export const Plan = Template.bind({});
+Plan.args = {
+  title: 'Plan',
+  subtitle: 'Important, not urgent',
+  color: 'primary',
+  icon: 'event',
+  tasklist,
+  items: [
+    {
+      id: 'g3', body: 'Run 5 km', isComplete: false, taskRef: 't-jog', parentGoalBody: 'Get fit this quarter',
+    },
+  ],
 };
 
-export const NotUrgentImportant = Template.bind({});
-NotUrgentImportant.args = {
-  quadrant: 'not-urgent-important',
-  color: '#2196f3',
+export const Empty = Template.bind({});
+Empty.args = {
+  title: 'Delegate',
+  subtitle: 'Urgent, not important',
+  color: 'warning',
+  icon: 'people',
+  tasklist,
+  items: [],
 };
-
-export const UrgentNotImportant = Template.bind({});
-UrgentNotImportant.args = {
-  quadrant: 'urgent-not-important',
-  color: '#ff9800',
-};
-
-export const NotUrgentNotImportant = Template.bind({});
-NotUrgentNotImportant.args = {
-  quadrant: 'not-urgent-not-important',
-  color: '#9e9e9e',
-};
-
-export const WithTasks = () => ({
-  components: { PriorityQuadrant },
-  data() {
-    return {
-      urgentImportant: [
-        { id: 1, title: 'Client deadline tomorrow', completed: false },
-        { id: 2, title: 'Emergency bug fix', completed: false },
-      ],
-      notUrgentImportant: [
-        { id: 3, title: 'Learn new framework', completed: false },
-        { id: 4, title: 'Exercise routine', completed: true },
-        { id: 5, title: 'Career planning', completed: false },
-      ],
-    };
-  },
-  template: `
-    <v-layout wrap>
-      <v-flex xs12 sm6 class="pa-2">
-        <PriorityQuadrant 
-          quadrant="urgent-important" 
-          :tasks="urgentImportant"
-          color="#f44336"
-        />
-      </v-flex>
-      <v-flex xs12 sm6 class="pa-2">
-        <PriorityQuadrant 
-          quadrant="not-urgent-important" 
-          :tasks="notUrgentImportant"
-          color="#2196f3"
-        />
-      </v-flex>
-    </v-layout>
-  `,
-});

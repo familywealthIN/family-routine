@@ -190,15 +190,31 @@ function summaryOf(level, name) {
 }
 
 async function listStories(page, base) {
+  // A preview that throws on load (a bad .storybook/preview.js) never finishes
+  // initialising, and cacheAllCSFFiles() then waits forever: fail with its error.
+  const errors = [];
+  const onError = (err) => errors.push(err.message.split('\n')[0]);
+  page.on('pageerror', onError);
   await page.goto(`${base}/iframe.html`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__STORYBOOK_STORY_STORE__ || window.__STORYBOOK_PREVIEW__, null, { timeout: 60000 });
-  return page.evaluate(async () => {
-    const ss = window.__STORYBOOK_STORY_STORE__;
-    if (ss && ss.raw) return ss.raw().map((s) => ({ id: s.id, title: s.kind, name: s.name }));
-    const store = window.__STORYBOOK_PREVIEW__.storyStore;
-    if (store.cacheAllCSFFiles) await store.cacheAllCSFFiles();
-    return store.raw().map((s) => ({ id: s.id, title: s.title, name: s.name }));
+  let timer;
+  const timeout = new Promise((resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(`Storybook never listed its stories${errors.length ? `; the preview threw: ${errors.join('; ')}` : ''}`)), 90000);
   });
+  const list = page.evaluate(async () => {
+    // Load every CSF file before reading: raw() throws until they are cached,
+    // and whether they already are when this runs is a race.
+    const store = (window.__STORYBOOK_PREVIEW__ && window.__STORYBOOK_PREVIEW__.storyStore)
+      || window.__STORYBOOK_STORY_STORE__;
+    if (store.cacheAllCSFFiles) await store.cacheAllCSFFiles();
+    return store.raw().map((s) => ({ id: s.id, title: s.title || s.kind, name: s.name }));
+  });
+  try {
+    return await Promise.race([list, timeout]);
+  } finally {
+    clearTimeout(timer);
+    page.off('pageerror', onError);
+  }
 }
 
 function pick(stories, max) {
@@ -221,7 +237,8 @@ async function drawnBox(page) {
       if (r.width >= window.innerWidth - 1 && r.height >= window.innerHeight - 1) return;
       const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
       const graphic = /^(svg|img|canvas|input|textarea|select|button|i)$/i.test(el.tagName);
-      const bg = style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent';
+      // A v-img paints its picture as a background-image.
+      const bg = (style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent') || style.backgroundImage !== 'none';
       const edge = style.boxShadow !== 'none' || parseFloat(style.borderTopWidth) > 0 || parseFloat(style.borderBottomWidth) > 0;
       if (!ownText && !graphic && !bg && !edge) return;
       x1 = Math.min(x1, r.left); y1 = Math.min(y1, r.top); x2 = Math.max(x2, r.right); y2 = Math.max(y2, r.bottom);
@@ -250,6 +267,8 @@ async function shoot(page, base, story) {
   page.on('pageerror', onError);
   try {
     await page.goto(`${base}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story`, { waitUntil: 'load' });
+    // A v-img draws nothing until its picture has downloaded.
+    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
     await page.addStyleTag({ content: 'html,body,#root,.application,.application--wrap,.v-application,.v-content,.v-content__wrap,.sb-show-main{background:#f4f4f4 !important}' });
     await page.waitForFunction(() => {
       const root = document.querySelector('#root');
@@ -265,9 +284,28 @@ async function shoot(page, base, story) {
       if (!shown) problems.push('rendered nothing visible');
       return { ...story, ok: false, problems };
     }
-    const clip = { ...box, height: Math.min(box.height, 1600) };
+    // A story can draw past the page (a menu or tooltip placed off to the side):
+    // crop to the page, or Playwright refuses the clip.
+    const page_ = await page.evaluate(() => ({
+      w: Math.max(document.documentElement.scrollWidth, window.innerWidth),
+      h: Math.max(document.documentElement.scrollHeight, window.innerHeight),
+    }));
+    const x = Math.min(box.x, page_.w - 1);
+    const y = Math.min(box.y, page_.h - 1);
+    const clip = {
+      x, y, width: Math.min(box.width, page_.w - x), height: Math.min(box.height, page_.h - y, 1600),
+    };
+    if (clip.width < 8 || clip.height < 8) {
+      problems.push('drew only outside the page');
+      return { ...story, ok: false, problems };
+    }
     const file = path.join(SHOTS, `${story.id}.jpg`);
-    await page.screenshot({ path: file, clip, type: 'jpeg', quality: 82 });
+    try {
+      await page.screenshot({ path: file, clip, fullPage: true, type: 'jpeg', quality: 82 });
+    } catch (error) {
+      problems.push(`screenshot: ${error.message.split('\n')[0]}`);
+      return { ...story, ok: false, problems };
+    }
     return {
       ...story, ok: true, file: `shots/${story.id}.jpg`, width: clip.width, height: clip.height, problems,
     };
@@ -438,8 +476,10 @@ async function main() {
         for (const story of pick(own, level.perComponent)) {
           // Tablet- and desktop-shell stories need the wide viewport.
           const target = /tablet|desktop|ipad/i.test(story.name) ? wide : page;
+          // One story that throws is reported, not the end of the run.
           // eslint-disable-next-line no-await-in-loop
-          const result = await shoot(target, base, story);
+          const result = await shoot(target, base, story)
+            .catch((error) => ({ ...story, ok: false, problems: [`shoot: ${error.message.split('\n')[0]}`] }));
           shots.push(result);
           console.log(`${result.ok ? 'ok  ' : 'FAIL'} ${story.id}${result.problems.length ? `  (${result.problems[0]})` : ''}`);
         }

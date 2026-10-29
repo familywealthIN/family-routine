@@ -45,7 +45,8 @@ async function drawnBox(page) {
       // Count only what paints: text, a graphic, a field, or a visible box.
       const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
       const graphic = /^(svg|img|canvas|input|textarea|select|button|i)$/i.test(el.tagName);
-      const bg = style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent';
+      // A v-img paints its picture as a background-image.
+      const bg = (style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent') || style.backgroundImage !== 'none';
       const edge = style.boxShadow !== 'none' || parseFloat(style.borderTopWidth) > 0 || parseFloat(style.borderBottomWidth) > 0;
       if (!ownText && !graphic && !bg && !edge) return;
       x1 = Math.min(x1, r.left); y1 = Math.min(y1, r.top);

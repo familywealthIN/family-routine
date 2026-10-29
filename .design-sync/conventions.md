@@ -1,6 +1,8 @@
 # Building with the Routine Notes design system
 
-**There is no component bundle.** The app is Vue 2 + Vuetify, so its components can't be loaded here. Build designs with your own markup, styled only from this system's tokens. The cards in `components/<Name>/<Name>.html` are the patterns to copy: open the one closest to what you're building and reuse its structure, sizes and token choices.
+**There is no component bundle.** The app is Vue 2 + Vuetify, so its components can't be loaded here. Build designs with your own markup, styled only from this system's tokens. There are two kinds of card to copy from:
+- **The hand-built cards** (`components/Button`, `GoalRow`, `FocusCard`, `ChatThread` and the rest) are HTML built from the tokens, with rules in the `README.md` beside each. Open the one closest to what you're building and reuse its structure, sizes and token choices.
+- **The atomic cards** (`components/Atom-*`, `Molecule-*` and `Organism-*`) are screenshots of every shipped `packages/ui` component, rendered from Storybook. They show how each one really looks; match it, but build it with tokens because the screenshot isn't markup. The `README.md` beside each says where it's used. An organism grouped "Legacy" is no longer on any screen, so don't design with it. `canvases/Atoms.html`, `Molecules.html` and `Organisms-<Page>.html` show a whole level, or a whole page's organisms, at once.
 
 **Setup.** Load `styles.css`. It imports `tokens.css`, which defines every token as a CSS variable on `:root` and loads the fonts: Plus Jakarta Sans, Montserrat and Material Icons. Without it, nothing has the brand's colours or type. Page background is `var(--bg-app)`, cards are `var(--surface)`, and text is `var(--text)` in `var(--family-sans)`.
 
