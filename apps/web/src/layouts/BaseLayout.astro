@@ -17,7 +17,7 @@ const {
   ogImage = '/og.png',
 } = Astro.props;
 
-const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://routinenotes.ai').toString();
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://routinenotes.app').toString();
 ---
 
 <!doctype html>
@@ -34,7 +34,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://routinenote
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content={new URL(ogImage, Astro.site ?? 'https://routinenotes.ai').toString()} />
+    <meta property="og:image" content={new URL(ogImage, Astro.site ?? 'https://routinenotes.app').toString()} />
     <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
