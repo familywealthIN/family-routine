@@ -51,7 +51,7 @@
 <script>
 /**
  * /settings/notifications — the day-level notifications sent by
- * apps/cron/src/lifecycle-notifications.js, each on/off, plus the person's own
+ * apps/cron/src/lifecycle-notifications.js and the missed-days email, each on/off, plus the person's own
  * morning and evening times. Every change saves at once.
  */
 import gql from 'graphql-tag';
@@ -60,7 +60,7 @@ import { signOut } from '../utils/signOut';
 
 const LOGOUT_KEY = 'logout';
 
-const PREF_FIELDS = 'morning plan evening streak reengage insights morningTime eveningTime';
+const PREF_FIELDS = 'morning plan evening streak reengage insights missedEmail morningTime eveningTime';
 
 export const NOTIFICATION_PREFS_QUERY = gql`
   query notificationPrefs {
@@ -85,6 +85,7 @@ export const PREF_ROWS = [
   { key: 'streak', title: 'Streak celebrations', desc: 'When a routine reaches 3, 7, 14, 21, 30… days in a row.' },
   { key: 'insights', title: 'Insights for you', desc: 'When your routines have insights you have not opened yet.' },
   { key: 'reengage', title: 'Welcome back', desc: 'A gentle nudge after a couple of days away — three at most.' },
+  { key: 'missedEmail', title: 'Missed days email', desc: 'One email if you miss your routines three days in a row.' },
 ];
 
 const DEFAULTS = {
@@ -94,6 +95,7 @@ const DEFAULTS = {
   streak: true,
   reengage: true,
   insights: true,
+  missedEmail: true,
   morningTime: '07:00',
   eveningTime: '21:00',
 };

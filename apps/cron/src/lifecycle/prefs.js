@@ -7,6 +7,7 @@ const NOTIFICATION_PREF_DEFAULTS = {
   streak: true,
   reengage: true,
   insights: true,
+  missedEmail: true, // sent by apps/server (missed-days email), not by cron
   morningTime: '07:00',
   eveningTime: '21:00',
 };

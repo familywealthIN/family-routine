@@ -112,7 +112,7 @@ type Mutation {
   releaseNotificationToken(notificationId: String!): Boolean
   # Register this signed-in device's push token (one of several devices per user)
   registerNotificationToken(notificationId: String!): Boolean
-  # Day-level notification preferences (morning, plan, evening, streak, reengage, insights)
+  # Day-level notification preferences (morning, plan, evening, streak, reengage, insights, missedEmail)
   updateNotificationPrefs(prefs: NotificationPrefsInput!): NotificationPrefs
 
   # ── User ──────────────────────────────────────────────────────────────────
@@ -278,6 +278,7 @@ type NotificationPrefs {
   streak: Boolean
   reengage: Boolean
   insights: Boolean
+  missedEmail: Boolean
   morningTime: String # HH:mm local
   eveningTime: String # HH:mm local
 }
@@ -289,6 +290,7 @@ input NotificationPrefsInput {
   streak: Boolean
   reengage: Boolean
   insights: Boolean
+  missedEmail: Boolean
   morningTime: String
   eveningTime: String
 }
