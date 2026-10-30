@@ -1,0 +1,83 @@
+---
+import { Icon } from 'astro-icon/components';
+import { LINKS } from '~/lib/links';
+
+/**
+ * The two download buttons: App Store and Google Play, side by side.
+ * `tone="brand"` sits on light sections (Hero); `tone="light"` sits on the
+ * blue gradient (FinalCta).
+ */
+interface Props {
+  tone?: 'brand' | 'light';
+  class?: string;
+}
+const { tone = 'brand', class: className = '' } = Astro.props;
+
+const stores = [
+  { href: LINKS.appStore, icon: 'ph:apple-logo-fill', label: 'Download for iOS', store: 'App Store' },
+  { href: LINKS.playStore, icon: 'ph:google-play-logo-fill', label: 'Download for Android', store: 'Google Play' },
+];
+---
+
+<div class:list={['flex flex-wrap items-center gap-3', className]}>
+  {stores.map((s, i) => (
+    <a
+      href={s.href}
+      target="_blank"
+      rel="noopener"
+      aria-label={`${s.label} on ${s.store}`}
+      class:list={['store-btn', `store-btn--${tone}`, i === 0 ? 'store-btn--primary' : 'store-btn--secondary']}
+    >
+      <Icon name={s.icon} width={20} height={20} />
+      {s.label}
+    </a>
+  ))}
+</div>
+
+<style>
+  .store-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    border-radius: 999px;
+    padding: 0.875rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: transform 200ms var(--ease-out-soft), box-shadow 200ms var(--ease-out-soft),
+      background 200ms var(--ease-out-soft);
+  }
+  .store-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .store-btn--brand.store-btn--primary {
+    background: linear-gradient(180deg, var(--color-brand-500) 0%, var(--color-brand-700) 100%);
+    color: #fff;
+    box-shadow: var(--shadow-card);
+  }
+  .store-btn--brand.store-btn--secondary {
+    background: var(--color-surface);
+    color: var(--color-ink-900);
+    border: 1px solid var(--color-ink-200);
+  }
+  .store-btn--brand.store-btn--secondary:hover {
+    border-color: var(--color-brand-400);
+    color: var(--color-brand-700);
+  }
+
+  .store-btn--light.store-btn--primary {
+    background: #fff;
+    color: var(--color-brand-700);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  }
+  .store-btn--light.store-btn--secondary {
+    background: rgb(255 255 255 / 0.1);
+    color: #fff;
+    border: 1px solid rgb(255 255 255 / 0.3);
+    backdrop-filter: blur(4px);
+  }
+  .store-btn--light.store-btn--secondary:hover {
+    background: rgb(255 255 255 / 0.2);
+  }
+</style>
