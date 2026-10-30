@@ -290,6 +290,9 @@ loadData().then(() => {
     if (Capacitor.isNativePlatform()) {
       const PushService1 = (await import('./services/pushService.js')).default;
       await PushService1.init();
+      // iPhone: routine Live Activities and alarms, and their buttons.
+      const { startRoutineCues } = await import('./services/routineCues.js');
+      startRoutineCues(apolloClient);
     }
   });
 });

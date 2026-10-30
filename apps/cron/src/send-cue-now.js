@@ -16,7 +16,9 @@ const mongoose = require('mongoose');
 
 const { getLocalDate, resolveTimezone } = require('./utils/timezone');
 const { encryption } = require('./utils/encryption');
-const { deviceTokens, sendToUser, DEFAULT_CHANNEL } = require('./utils/push');
+const {
+  deviceTokens, liveActivityStarts, sendToUser, DEFAULT_CHANNEL,
+} = require('./utils/push');
 const {
   itemHistory, historyDates, minuteOfDay, toMinutes, nextTarget, cueCopy, cueTiming,
 } = require('./cue/cueEngine');
@@ -59,7 +61,7 @@ async function main(db) {
     { email },
     {
       projection: {
-        email: 1, notificationId: 1, notificationIds: 1, notificationActionTokens: 1, timezone: 1, motto: 1,
+        email: 1, notificationId: 1, notificationIds: 1, notificationActionTokens: 1, liveActivityTokens: 1, alarmDevices: 1, timezone: 1, motto: 1,
       },
     },
   );
@@ -137,6 +139,8 @@ async function main(db) {
     devices: deviceTokens(user).length,
     // Of those, Android devices that draw the cue with its buttons themselves.
     appDrawn: deviceTokens(user).filter((t) => (user.notificationActionTokens || []).includes(t)).length,
+    // iPhones that get it as a Live Activity (lock-screen buttons) instead.
+    liveActivity: deviceTokens(user).filter((t) => liveActivityStarts(user).has(t)).length,
     copy: ai.cue ? `ai (${ai.tier}: ${ai.model})` : `template (${ai.reason})`,
     title: copy.title,
     body: copy.body,
@@ -163,6 +167,7 @@ async function main(db) {
     },
     category: actions.category,
     channel: DEFAULT_CHANNEL,
+    liveActivity: { routineId, name: item.name, time: item.time },
   });
   console.log(`sent to ${result.sent} device(s)${result.pruned ? `, pruned ${result.pruned} dead` : ''}`);
 }

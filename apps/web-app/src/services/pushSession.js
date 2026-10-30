@@ -18,6 +18,7 @@
 import gql from 'graphql-tag';
 import { Capacitor } from '@capacitor/core';
 import { GC_AUTH_TOKEN, GC_NOTIFICATION_TOKEN } from '../constants/settings';
+import { clearRoutineCues, syncRoutineCues } from './routineCues';
 
 export const PENDING_RELEASE_KEY = 'pending-push-release';
 
@@ -74,6 +75,7 @@ async function clearDeviceNotifications() {
     }
     await LocalNotifications.removeAllDeliveredNotifications();
     await PushNotifications.removeAllDeliveredNotifications();
+    await clearRoutineCues();
   } catch (error) {
     console.log(error);
   }
@@ -124,5 +126,8 @@ export async function registerDevicePush(client, token) {
       console.log('push actions register failed', error);
     }
   }
+  // An iPhone shows routine cues with their buttons as a Live Activity, and
+  // rings alarm routines itself (routineCues.js).
+  await syncRoutineCues(client, token, { force: true });
   return true;
 }

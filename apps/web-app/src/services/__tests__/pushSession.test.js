@@ -1,5 +1,10 @@
 jest.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: jest.fn(() => false), getPlatform: jest.fn(() => 'web') },
+  registerPlugin: jest.fn(() => ({
+    status: jest.fn(() => Promise.resolve({ liveActivities: true, startToken: 'ab12', alarms: 'unsupported' })),
+    endLiveActivities: jest.fn(() => Promise.resolve()),
+    syncAlarms: jest.fn(() => Promise.resolve({ scheduled: 0 })),
+  })),
 }));
 jest.mock('@capacitor/local-notifications', () => ({
   LocalNotifications: {
@@ -107,5 +112,18 @@ describe('pushSession', () => {
     Capacitor.getPlatform.mockReturnValue('android');
     const c = { mutate: jest.fn().mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Unknown field')) };
     await expect(registerDevicePush(c, 'fcm-phone')).resolves.toBe(true);
+  });
+
+  it('on iOS also registers its Live Activity token; a failure there costs nothing', async () => {
+    localStorage.setItem(GC_AUTH_TOKEN, 'jwt');
+    Capacitor.getPlatform.mockReturnValue('ios');
+    const c = client();
+    await expect(registerDevicePush(c, 'fcm-iphone')).resolves.toBe(true);
+    expect(c.mutate.mock.calls.map(([call]) => call.mutation.definitions[0].name.value))
+      .toEqual(['registerNotificationToken', 'registerLiveActivity']);
+    expect(c.mutate.mock.calls[1][0].variables).toEqual({ notificationId: 'fcm-iphone', startToken: 'ab12' });
+
+    const failing = { mutate: jest.fn().mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Unknown field')) };
+    await expect(registerDevicePush(failing, 'fcm-iphone')).resolves.toBe(true);
   });
 });

@@ -22,6 +22,8 @@ type Query {
   pendingInvites: [UserItem]
   # Day-level notification preferences, defaults filled in
   notificationPrefs: NotificationPrefs
+  # Alarms an iPhone rings itself (AlarmKit) for routines set to Alarm, next days
+  deviceAlarms(days: Int): DeviceAlarmPlan
 
   # ── Routine Items (templates) ──────────────────────────────────────────────
   # Get all routine item templates for the user
@@ -114,6 +116,10 @@ type Mutation {
   registerNotificationToken(notificationId: String!): Boolean
   # This device's app draws routine cues with their buttons itself (Android)
   registerNotificationActions(notificationId: String!): Boolean
+  # This iPhone shows routine cues as a Live Activity (no startToken = turned off)
+  registerLiveActivity(notificationId: String!, startToken: String): Boolean
+  # This iPhone has its alarms scheduled up to through (no through = alarms off)
+  registerAlarmDevice(notificationId: String!, through: String, routines: [String]): Boolean
   # Day-level notification preferences (morning, plan, evening, streak, reengage, insights, missedEmail)
   updateNotificationPrefs(prefs: NotificationPrefsInput!): NotificationPrefs
 
@@ -283,6 +289,22 @@ type NotificationPrefs {
   missedEmail: Boolean
   morningTime: String # HH:mm local
   eveningTime: String # HH:mm local
+}
+
+type DeviceAlarm {
+  routineId: String
+  time: String
+  date: String
+  fireAt: String
+  title: String
+  button: String
+  buttonTitle: String
+  repeat: Boolean
+}
+
+type DeviceAlarmPlan {
+  through: String
+  alarms: [DeviceAlarm]
 }
 
 input NotificationPrefsInput {

@@ -1,5 +1,8 @@
+const fs = require('fs');
+const path = require('path');
 const {
   deviceTokens, deadTokens, sendToUser, HAS_DEVICE,
+  buildLiveActivityMessage, liveActivityStarts, localAlarmDevices,
 } = require('../src/utils/push');
 
 const makeDb = () => {
@@ -67,7 +70,12 @@ describe('sendToUser', () => {
       messaging, db, user, title: 'T', body: 'B',
     })).resolves.toEqual({ sent: 1, pruned: 1 });
     expect(updateOne).toHaveBeenCalledWith({ _id: 'u' }, {
-      $pull: { notificationIds: { $in: ['old'] }, notificationActionTokens: { $in: ['old'] } },
+      $pull: {
+        notificationIds: { $in: ['old'] },
+        notificationActionTokens: { $in: ['old'] },
+        liveActivityTokens: { device: { $in: ['old'] } },
+        alarmDevices: { device: { $in: ['old'] } },
+      },
     });
     expect(updateOne).toHaveBeenCalledWith({ _id: 'u' }, { $unset: { notificationId: 1 } });
   });
@@ -138,6 +146,172 @@ describe('sendToUser', () => {
       expect(messaging.sendEachForMulticast).toHaveBeenCalledTimes(1);
       expect(messaging.sendEachForMulticast.mock.calls[0][0].notification).toBeDefined();
     });
+  });
+
+  describe('iPhones with a Live Activity', () => {
+    const ok = (n) => ({ successCount: n, responses: Array.from({ length: n }, () => ({ success: true })) });
+    const START = 'ab'.repeat(32);
+    const user = {
+      _id: 'u',
+      email: 'x@y',
+      notificationIds: ['iphone', 'old-iphone'],
+      liveActivityTokens: [{ device: 'iphone', start: START }, { device: 'signed-out', start: 'cd'.repeat(32) }],
+    };
+    const now = new Date('2026-10-30T11:00:00Z');
+    const cue = {
+      title: 'Yoga: fresh start', body: 'Yoga mat — the whole start.', data: { routineId: 'r1' }, category: 'ROUTINE_ACTIONS',
+      liveActivity: { routineId: 'r1', name: 'Yoga', time: '07:00' }, now,
+    };
+    const messagingWith = (live) => ({
+      sendEachForMulticast: jest.fn((m) => Promise.resolve(ok(m.tokens.length))),
+      sendEach: jest.fn(live || ((ms) => Promise.resolve(ok(ms.length)))),
+    });
+
+    it('start the activity instead of the notification; other devices get the usual one', async () => {
+      const messaging = messagingWith();
+      const { db } = makeDb();
+      await expect(sendToUser({
+        messaging, db, user, ...cue,
+      })).resolves.toEqual({ sent: 2, pruned: 0 });
+      expect(messaging.sendEachForMulticast.mock.calls[0][0].tokens).toEqual(['old-iphone']);
+      const [[messages]] = messaging.sendEach.mock.calls;
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toEqual(buildLiveActivityMessage({
+        token: 'iphone', startToken: START, title: cue.title, body: cue.body, category: 'ROUTINE_ACTIONS', liveActivity: cue.liveActivity, now,
+      }));
+      expect(messages[0].apns.payload.aps).toMatchObject({
+        timestamp: 1793358000,
+        event: 'start',
+        'attributes-type': 'RoutineActivityAttributes',
+        attributes: { routineId: 'r1', name: 'Yoga', time: '07:00' },
+        'content-state': { title: cue.title, body: cue.body, category: 'ROUTINE_ACTIONS' },
+        'stale-date': 1793358000 + 3600,
+      });
+    });
+
+    it('a failed start falls back to the notification, and a refused token is dropped', async () => {
+      const messaging = messagingWith(() => Promise.resolve({
+        successCount: 0, responses: [{ success: false, error: { code: 'messaging/invalid-argument' } }],
+      }));
+      const { db, updateOne } = makeDb();
+      await expect(sendToUser({
+        messaging, db, user, ...cue,
+      })).resolves.toEqual({ sent: 2, pruned: 0 });
+      const tokens = messaging.sendEachForMulticast.mock.calls.map(([m]) => m.tokens).flat().sort();
+      expect(tokens).toEqual(['iphone', 'old-iphone']);
+      expect(updateOne).toHaveBeenCalledWith({ _id: 'u' }, { $pull: { liveActivityTokens: { device: { $in: ['iphone'] } } } });
+    });
+
+    it('a transient failure falls back but keeps the token', async () => {
+      const messaging = messagingWith(() => Promise.reject(new Error('unavailable')));
+      const { db, updateOne } = makeDb();
+      await sendToUser({
+        messaging, db, user, ...cue,
+      });
+      expect(messaging.sendEachForMulticast).toHaveBeenCalledTimes(2);
+      expect(updateOne).not.toHaveBeenCalled();
+    });
+
+    it('only for a routine cue: alarms, batches and lifecycle notifications stay notifications', async () => {
+      const messaging = messagingWith();
+      const { db } = makeDb();
+      await sendToUser({
+        messaging, db, user, ...cue, liveActivity: undefined,
+      });
+      await sendToUser({
+        messaging, db, user, title: 'Good morning', body: 'B', liveActivity: cue.liveActivity,
+      });
+      expect(messaging.sendEach).not.toHaveBeenCalled();
+    });
+
+    it('is a message firebase-admin accepts', () => {
+      const message = buildLiveActivityMessage({
+        token: 'iphone', startToken: START, title: 'T', body: 'B', category: 'AGENT_START_ACTIONS', liveActivity: cue.liveActivity, now,
+      });
+      const main = require.resolve('firebase-admin');
+      const root = main.slice(0, main.lastIndexOf(`node_modules${path.sep}firebase-admin`) + 'node_modules/firebase-admin'.length);
+      // eslint-disable-next-line global-require, import/no-dynamic-require
+      const { validateMessage } = require(path.join(root, 'lib/messaging/messaging-internal.js'));
+      expect(() => validateMessage(message)).not.toThrow();
+      expect(message.apns.live_activity_token).toBe(START);
+    });
+
+    it('stays matched to the iOS ActivityAttributes', () => {
+      const swift = fs.readFileSync(path.join(__dirname, '../../ios/App/Shared/RoutineActivity.swift'), 'utf8');
+      expect(swift).toMatch(/struct RoutineActivityAttributes: ActivityAttributes/);
+      ['routineId', 'name', 'time', 'title', 'body', 'category'].forEach((key) => {
+        expect(swift).toMatch(new RegExp(`var ${key}: String`));
+      });
+    });
+  });
+
+  describe('iPhones ringing their own alarms', () => {
+    const ok = (n) => ({ successCount: n, responses: Array.from({ length: n }, () => ({ success: true })) });
+    const now = new Date('2026-10-30T11:00:00Z');
+    const user = {
+      _id: 'u',
+      email: 'x@y',
+      notificationIds: ['iphone', 'android', 'lapsed-iphone'],
+      alarmDevices: [
+        { device: 'iphone', through: new Date('2026-11-06T04:00:00Z'), routines: ['r1@07:00'] },
+        { device: 'lapsed-iphone', through: new Date('2026-10-30T10:00:00Z'), routines: ['r1@07:00'] },
+      ],
+    };
+    const alarmCue = {
+      title: '⏰ Yoga · 07:00', body: 'B', category: 'ROUTINE_ACTIONS', timeSensitive: true, now,
+    };
+
+    it('get no push for an alarm they scheduled, while their schedule lasts', async () => {
+      const messaging = { sendEachForMulticast: jest.fn((m) => Promise.resolve(ok(m.tokens.length))) };
+      const { db } = makeDb();
+      await sendToUser({
+        messaging, db, user, ...alarmCue, alarm: { routineId: 'r1', time: '07:00' },
+      });
+      expect(messaging.sendEachForMulticast.mock.calls[0][0].tokens).toEqual(['android', 'lapsed-iphone']);
+    });
+
+    it('still get an alarm they did not schedule: set to Alarm or moved since', async () => {
+      const messaging = { sendEachForMulticast: jest.fn((m) => Promise.resolve(ok(m.tokens.length))) };
+      const { db } = makeDb();
+      await sendToUser({
+        messaging, db, user, ...alarmCue, alarm: { routineId: 'r1', time: '07:30' },
+      });
+      await sendToUser({
+        messaging, db, user, ...alarmCue, alarm: { routineId: 'r2', time: '07:00' },
+      });
+      messaging.sendEachForMulticast.mock.calls.forEach(([m]) => {
+        expect(m.tokens).toEqual(['iphone', 'android', 'lapsed-iphone']);
+      });
+    });
+
+    it('still get every other notification', async () => {
+      const messaging = { sendEachForMulticast: jest.fn((m) => Promise.resolve(ok(m.tokens.length))) };
+      const { db } = makeDb();
+      await sendToUser({
+        messaging, db, user, title: 'Yoga', body: 'B', category: 'ROUTINE_ACTIONS', now,
+      });
+      expect(messaging.sendEachForMulticast.mock.calls[0][0].tokens).toEqual(['iphone', 'android', 'lapsed-iphone']);
+      expect(localAlarmDevices(user, { routineId: 'r1', time: '07:00' }, now)).toEqual(new Set(['iphone']));
+    });
+  });
+
+  it('a dead device also loses its Live Activity and alarm entries', async () => {
+    const messaging = {
+      sendEachForMulticast: jest.fn(() => Promise.resolve({
+        successCount: 0, responses: [{ success: false, error: { code: 'messaging/registration-token-not-registered' } }],
+      })),
+    };
+    const { db, updateOne } = makeDb();
+    await sendToUser({
+      messaging, db, user: { _id: 'u', email: 'x@y', notificationIds: ['gone'] }, title: 'T', body: 'B',
+    });
+    expect(updateOne.mock.calls[0][1].$pull).toEqual({
+      notificationIds: { $in: ['gone'] },
+      notificationActionTokens: { $in: ['gone'] },
+      liveActivityTokens: { device: { $in: ['gone'] } },
+      alarmDevices: { device: { $in: ['gone'] } },
+    });
+    expect(liveActivityStarts({ liveActivityTokens: [{ device: 'undefined', start: 'x' }] }).size).toBe(0);
   });
 
   it('HAS_DEVICE matches either field', () => {

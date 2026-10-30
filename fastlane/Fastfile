@@ -29,6 +29,14 @@ APP_IDENTIFIER  = 'com.routine.note'.freeze
 # directly beats guessing at the sigh_* environment variables match exports.
 IOS_PROFILE     = "match AppStore #{APP_IDENTIFIER}".freeze
 
+# The widget extension that draws routine Live Activities and alarm cards
+# (apps/ios/App/RoutineWidget). Its own App ID and profile; both targets name
+# their Release profile in the Xcode project, so nothing here forces one
+# target's profile onto the other.
+WIDGET_IDENTIFIER = "#{APP_IDENTIFIER}.RoutineWidget".freeze
+WIDGET_PROFILE    = "match AppStore #{WIDGET_IDENTIFIER}".freeze
+IOS_IDENTIFIERS   = [APP_IDENTIFIER, WIDGET_IDENTIFIER].freeze
+
 # Store listing text and screenshots are only synced when explicitly asked for.
 # The default is binary-only: an accidental push of an empty fastlane/metadata
 # tree would blank a live listing, which is far worse than doing nothing.
@@ -103,7 +111,7 @@ platform :ios do
   desc 'Archive for iPhone + iPad and submit to the App Store'
   lane :release do
     setup_ci
-    match(type: 'appstore', readonly: true)
+    match(type: 'appstore', readonly: true, app_identifier: IOS_IDENTIFIERS)
     stamp_build_number
 
     gym(
@@ -114,9 +122,9 @@ platform :ios do
       export_method: 'app-store',
       output_directory: File.join(BUILD_DIR, 'ios'),
       export_options: {
-        provisioningProfiles: { APP_IDENTIFIER => IOS_PROFILE }
+        provisioningProfiles: { APP_IDENTIFIER => IOS_PROFILE, WIDGET_IDENTIFIER => WIDGET_PROFILE }
       },
-      xcargs: "PROVISIONING_PROFILE_SPECIFIER='#{IOS_PROFILE}' CODE_SIGN_IDENTITY='Apple Distribution'"
+      xcargs: "CODE_SIGN_IDENTITY='Apple Distribution'"
     )
 
     upload_to_app_store(
@@ -150,7 +158,7 @@ platform :ios do
   # released — a used-but-unreleased one is fine, an approved one is not.
   lane :pr_testflight do
     setup_ci
-    match(type: 'appstore', readonly: true)
+    match(type: 'appstore', readonly: true, app_identifier: IOS_IDENTIFIERS)
     stamp_build_number
 
     gym(
@@ -161,9 +169,9 @@ platform :ios do
       export_method: 'app-store',
       output_directory: File.join(BUILD_DIR, 'ios'),
       export_options: {
-        provisioningProfiles: { APP_IDENTIFIER => IOS_PROFILE }
+        provisioningProfiles: { APP_IDENTIFIER => IOS_PROFILE, WIDGET_IDENTIFIER => WIDGET_PROFILE }
       },
-      xcargs: "PROVISIONING_PROFILE_SPECIFIER='#{IOS_PROFILE}' CODE_SIGN_IDENTITY='Apple Distribution'"
+      xcargs: "CODE_SIGN_IDENTITY='Apple Distribution'"
     )
 
     # No `groups:` here — that option selects *external* beta groups, and naming
@@ -177,6 +185,28 @@ platform :ios do
       skip_waiting_for_build_processing: true,
       changelog: "PR ##{ENV['PR_NUMBER']}: #{ENV['PR_TITLE']}"
     )
+  end
+
+  desc 'Once, from a Mac: App ID and App Store profile for the widget extension'
+  # CI's match key is read-only on purpose, so the widget's profile is made
+  # here, the way the app's was seeded (docs/store-deployment.md):
+  #
+  #   MATCH_GIT_URL=https://github.com/familywealth/certificates.git \
+  #   MATCH_PASSWORD=… ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_P8_B64=… \
+  #   bundle exec fastlane ios setup_widget_signing
+  #
+  # Only this identifier: match reuses the distribution certificate already in
+  # the repo, so no certificate is created. Running it again changes nothing.
+  lane :setup_widget_signing do
+    unless Spaceship::ConnectAPI::BundleId.find(WIDGET_IDENTIFIER)
+      Spaceship::ConnectAPI::BundleId.create(
+        name: 'Routine Notes Widget',
+        platform: Spaceship::ConnectAPI::BundleIdPlatform::IOS,
+        identifier: WIDGET_IDENTIFIER
+      )
+      UI.success("Registered #{WIDGET_IDENTIFIER}")
+    end
+    match(type: 'appstore', readonly: false, app_identifier: [WIDGET_IDENTIFIER])
   end
 
   # Two workflows upload iOS builds and github.run_number is scoped per workflow

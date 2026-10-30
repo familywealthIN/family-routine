@@ -28,6 +28,17 @@
 				<string>com.googleusercontent.apps.350952942983-48lis9mbeudskd9rovrnov5gm35h0vre</string>
 			</array>
 		</dict>
+		<!-- A tap on a routine Live Activity: routinenotes://routine?routineId=… (RoutineCuesPlugin). -->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLName</key>
+			<string>com.routine.note.routine</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>routinenotes</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
@@ -37,6 +48,12 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<!-- Routines set to Alarm ring with AlarmKit (iOS 26+). -->
+	<key>NSAlarmKitUsageDescription</key>
+	<string>Routines you set to Alarm ring at their time, even on silent, with a button to start them.</string>
+	<!-- Routine cues arrive as Live Activities with their buttons on the lock screen. -->
+	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIBackgroundModes</key>
 	<array>

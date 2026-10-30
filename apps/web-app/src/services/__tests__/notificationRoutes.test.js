@@ -32,6 +32,17 @@ describe('notification buttons per AI level', () => {
     });
   });
 
+  it('the iPhone Live Activity draws the same buttons (RoutineActivity.swift)', () => {
+    const swift = fs.readFileSync(path.resolve(__dirname,
+      '../../../../ios/App/Shared/RoutineActivity.swift'), 'utf8');
+    ACTION_TYPES.forEach(({ id, actions }) => {
+      const pairs = actions.map((a) => `(id: "${a.id}", title: "${a.title}")`).join(', ');
+      expect(swift).toContain(`return [${pairs}]`);
+      // The plain routine set is the fallback for an unknown category.
+      if (id !== 'ROUTINE_ACTIONS') expect(swift).toContain(`case "${id}": return [${pairs}]`);
+    });
+  });
+
   it('re-posts a foreground push with the category the server chose', () => {
     expect(actionTypeFor({ category: 'AGENT_START_ACTIONS' })).toBe('AGENT_START_ACTIONS');
     expect(actionTypeFor({ category: 'bogus' })).toBe('ROUTINE_ACTIONS');

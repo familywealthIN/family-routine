@@ -447,6 +447,24 @@ side — any build signed with it stops being uploadable) followed by a fresh
 seed. The account holds **1 of 20** distribution certificates today, so there is
 ample headroom, but `nuke` is the only way back from a lost passphrase.
 
+### The widget extension's profile (added 2026-10-30)
+
+The iOS app embeds `RoutineWidget` (`com.routine.note.RoutineWidget`), the
+extension that draws routine Live Activities and alarm cards. It needs its own
+App ID and App Store profile in match. CI's deploy key is read-only, so that
+profile is made once from a Mac, the same way the app's was seeded:
+
+```bash
+export MATCH_GIT_URL="https://github.com/familywealth/certificates.git"
+export MATCH_PASSWORD=…  ASC_KEY_ID=…  ASC_ISSUER_ID=…  ASC_KEY_P8_B64=…
+bundle exec fastlane ios setup_widget_signing
+```
+
+It registers the App ID if missing and runs match for that identifier only, so
+it reuses the existing distribution certificate. Until it has run, both
+`pr_testflight` and `release` stop at `match` with no profile for
+`com.routine.note.RoutineWidget`. The unsigned simulator build doesn't need it.
+
 
 ## Verifying before you trust it
 

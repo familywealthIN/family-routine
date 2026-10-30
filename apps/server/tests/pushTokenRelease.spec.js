@@ -155,6 +155,78 @@ describe('registerNotificationActions', () => {
   });
 });
 
+describe('registerLiveActivity', () => {
+  const START = 'ab'.repeat(32);
+  const registerLive = (notificationId, startToken) => mutation.registerLiveActivity
+    .resolve(null, { notificationId, startToken }, {});
+
+  it('replaces this device\'s start token, only on a device this user registered', async () => {
+    await expect(registerLive('fcm-phone', START.toUpperCase())).resolves.toBe(true);
+    expect(mockUpdateOne).toHaveBeenNthCalledWith(
+      1,
+      { email: 'me@example.invalid' },
+      { $pull: { liveActivityTokens: { device: 'fcm-phone' } } },
+    );
+    expect(mockUpdateOne).toHaveBeenNthCalledWith(
+      2,
+      { email: 'me@example.invalid', notificationIds: 'fcm-phone' },
+      { $push: { liveActivityTokens: { device: 'fcm-phone', start: START } } },
+    );
+  });
+
+  it('no token turns it off for this device', async () => {
+    await expect(registerLive('fcm-phone', null)).resolves.toBe(true);
+    expect(mockUpdateOne).toHaveBeenCalledTimes(1);
+    expect(mockUpdateOne.mock.calls[0][1]).toEqual({ $pull: { liveActivityTokens: { device: 'fcm-phone' } } });
+  });
+
+  it('rejects a malformed token or device, and requires a session', async () => {
+    await expect(registerLive('fcm-phone', 'not-hex')).resolves.toBe(false);
+    await expect(registerLive('undefined', START)).resolves.toBe(false);
+    expect(mockUpdateOne).not.toHaveBeenCalled();
+    getEmailfromSession.mockImplementationOnce(() => { throw new Error('401:Authentication required'); });
+    await expect(registerLive('fcm-phone', START)).rejects.toThrow('401');
+  });
+});
+
+describe('registerAlarmDevice', () => {
+  const registerAlarms = (notificationId, through, routines) => mutation.registerAlarmDevice
+    .resolve(null, { notificationId, through, routines }, {});
+
+  it('records up to when this device rings its alarms itself', async () => {
+    await expect(registerAlarms('fcm-phone', '2026-11-06T04:00:00.000Z', ['r1@07:00', 42])).resolves.toBe(true);
+    expect(mockUpdateOne).toHaveBeenNthCalledWith(
+      2,
+      { email: 'me@example.invalid', notificationIds: 'fcm-phone' },
+      {
+        $push: {
+          alarmDevices: { device: 'fcm-phone', through: new Date('2026-11-06T04:00:00.000Z'), routines: ['r1@07:00'] },
+        },
+      },
+    );
+  });
+
+  it('no date turns it off; a bad date changes nothing', async () => {
+    await expect(registerAlarms('fcm-phone', null)).resolves.toBe(true);
+    expect(mockUpdateOne).toHaveBeenCalledTimes(1);
+    mockUpdateOne.mockClear();
+    await expect(registerAlarms('fcm-phone', 'soon')).resolves.toBe(false);
+    expect(mockUpdateOne).not.toHaveBeenCalled();
+  });
+
+  it('a released or moved device loses both', async () => {
+    await release('fcm-a');
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      { 'liveActivityTokens.device': 'fcm-a' },
+      { $pull: { liveActivityTokens: { device: 'fcm-a' } } },
+    );
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      { 'alarmDevices.device': 'fcm-a' },
+      { $pull: { alarmDevices: { device: 'fcm-a' } } },
+    );
+  });
+});
+
 describe('deviceTokens', () => {
   it('lists every real device once, legacy field included', () => {
     expect(deviceTokens({ notificationIds: ['a', 'b', 'undefined'], notificationId: 'a' })).toEqual(['a', 'b']);

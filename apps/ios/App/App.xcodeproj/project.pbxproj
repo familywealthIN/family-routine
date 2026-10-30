@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		12A4830BB7B235883AC3F8F5 /* RoutineWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CC3CFE8F26BD07D9B443D6AE /* RoutineWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
@@ -14,12 +15,45 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		6BD8E367710E640E65290168 /* RoutineAlarms.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E7D9C0E0C439CD7C11FEF53 /* RoutineAlarms.swift */; };
+		8793E5370E308EE9FEBD4F36 /* RoutineWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39F460AA9E82B2DABED22E0 /* RoutineWidgetBundle.swift */; };
+		88C00D2F802F5168ED5C6AE0 /* RoutineLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D63F447A370103D6457451F /* RoutineLiveActivity.swift */; };
 		9FE7F85D2F67102D00229549 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 9FE7F85C2F67102D00229549 /* GoogleService-Info.plist */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
+		CC395745944A352B70F8BBCC /* RoutineActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC7C64B08F77252F5853B989 /* RoutineActivity.swift */; };
+		CD23A843AC35D1D66D77866B /* RoutineCuesPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E5398CAE1948DB421362C1 /* RoutineCuesPlugin.swift */; };
+		CFB41E32477957B583A172AF /* RoutineActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC7C64B08F77252F5853B989 /* RoutineActivity.swift */; };
+		F1DB2D835AAE0A3ED8F059E7 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2A427DF2309ABD345B0C52 /* MainViewController.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		BEE753B50BA323614F8F8715 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 48ADB24FBE217A121B95CEE9;
+			remoteInfo = RoutineWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		437D21079CB4B93BB16E2445 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				12A4830BB7B235883AC3F8F5 /* RoutineWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
+		48B558FA91EDDDEF28E2C744 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4E7D9C0E0C439CD7C11FEF53 /* RoutineAlarms.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RoutineAlarms.swift; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -28,10 +62,16 @@
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
+		5A2A427DF2309ABD345B0C52 /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
+		7D63F447A370103D6457451F /* RoutineLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RoutineLiveActivity.swift; sourceTree = "<group>"; };
 		9FE7F8572F5815AC00229549 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		9FE7F85C2F67102D00229549 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		AC7C64B08F77252F5853B989 /* RoutineActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RoutineActivity.swift; sourceTree = "<group>"; };
 		AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AF51FD2D460BCFE21FA515B2 /* Pods-App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.release.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig"; sourceTree = "<group>"; };
+		B39F460AA9E82B2DABED22E0 /* RoutineWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RoutineWidgetBundle.swift; sourceTree = "<group>"; };
+		CC3CFE8F26BD07D9B443D6AE /* RoutineWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RoutineWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E8E5398CAE1948DB421362C1 /* RoutineCuesPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RoutineCuesPlugin.swift; sourceTree = "<group>"; };
 		FC68EB0AF532CFC21C3344DD /* Pods-App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.debug.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -41,6 +81,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		64615449DABA3007D9E746BB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -62,6 +109,8 @@
 				504EC3051FED79650016851F /* Products */,
 				7F8756D8B27F46E3366F6CEA /* Pods */,
 				27E2DDA53C4D2A4D1A88CE4A /* Frameworks */,
+				758F143CD5A6751C9B36F5E2 /* Shared */,
+				50C19F827933537C88D753A8 /* RoutineWidget */,
 			);
 			sourceTree = "<group>";
 		};
@@ -69,6 +118,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				CC3CFE8F26BD07D9B443D6AE /* RoutineWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -86,8 +136,31 @@
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				9FE7F85C2F67102D00229549 /* GoogleService-Info.plist */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				5A2A427DF2309ABD345B0C52 /* MainViewController.swift */,
+				E8E5398CAE1948DB421362C1 /* RoutineCuesPlugin.swift */,
+				4E7D9C0E0C439CD7C11FEF53 /* RoutineAlarms.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		50C19F827933537C88D753A8 /* RoutineWidget */ = {
+			isa = PBXGroup;
+			children = (
+				B39F460AA9E82B2DABED22E0 /* RoutineWidgetBundle.swift */,
+				7D63F447A370103D6457451F /* RoutineLiveActivity.swift */,
+				48B558FA91EDDDEF28E2C744 /* Info.plist */,
+			);
+			name = RoutineWidget;
+			path = RoutineWidget;
+			sourceTree = "<group>";
+		};
+		758F143CD5A6751C9B36F5E2 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				AC7C64B08F77252F5853B989 /* RoutineActivity.swift */,
+			);
+			name = Shared;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		7F8756D8B27F46E3366F6CEA /* Pods */ = {
@@ -102,6 +175,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		48ADB24FBE217A121B95CEE9 /* RoutineWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00C785C0E5A973EEE4B05DB8 /* Build configuration list for PBXNativeTarget "RoutineWidget" */;
+			buildPhases = (
+				C9C0EF06BA041DDFA17CBA51 /* Sources */,
+				64615449DABA3007D9E746BB /* Frameworks */,
+				40262090464F0FBA9A66F2D7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RoutineWidget;
+			productName = RoutineWidget;
+			productReference = CC3CFE8F26BD07D9B443D6AE /* RoutineWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		504EC3031FED79650016851F /* App */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
@@ -110,11 +200,13 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				437D21079CB4B93BB16E2445 /* Embed Foundation Extensions */,
 				9592DBEFFC6D2A0C8D5DEB22 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A23CD20EA6C9CA996EA9A9E7 /* PBXTargetDependency */,
 			);
 			name = App;
 			productName = App;
@@ -146,18 +238,24 @@
 				Base,
 			);
 			mainGroup = 504EC2FB1FED79650016851F;
-			packageReferences = (
-			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				48ADB24FBE217A121B95CEE9 /* RoutineWidget */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		40262090464F0FBA9A66F2D7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3021FED79650016851F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -216,10 +314,33 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				F1DB2D835AAE0A3ED8F059E7 /* MainViewController.swift in Sources */,
+				CD23A843AC35D1D66D77866B /* RoutineCuesPlugin.swift in Sources */,
+				6BD8E367710E640E65290168 /* RoutineAlarms.swift in Sources */,
+				CC395745944A352B70F8BBCC /* RoutineActivity.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C9C0EF06BA041DDFA17CBA51 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8793E5370E308EE9FEBD4F36 /* RoutineWidgetBundle.swift in Sources */,
+				88C00D2F802F5168ED5C6AE0 /* RoutineLiveActivity.swift in Sources */,
+				CFB41E32477957B583A172AF /* RoutineActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A23CD20EA6C9CA996EA9A9E7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = RoutineWidget;
+			target = 48ADB24FBE217A121B95CEE9 /* RoutineWidget */;
+			targetProxy = BEE753B50BA323614F8F8715 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -241,6 +362,53 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		17CD246F635B0B379189A35B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = NJ3L9A8F3R;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RoutineWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MARKETING_VERSION = 1.2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.routine.note.RoutineWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3D7027B00B3CE461CB3BED81 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = NJ3L9A8F3R;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RoutineWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MARKETING_VERSION = 1.2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.routine.note.RoutineWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "match AppStore com.routine.note.RoutineWidget";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		504EC3141FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -359,6 +527,15 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.2.3;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+					"-weak_framework",
+					AppIntents,
+					"-weak_framework",
+					AlarmKit,
+				);
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.routine.note;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -385,8 +562,18 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.2.3;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+					"-weak_framework",
+					AppIntents,
+					"-weak_framework",
+					AlarmKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.routine.note;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "match AppStore com.routine.note";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
@@ -400,6 +587,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		00C785C0E5A973EEE4B05DB8 /* Build configuration list for PBXNativeTarget "RoutineWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3D7027B00B3CE461CB3BED81 /* Release */,
+				17CD246F635B0B379189A35B /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

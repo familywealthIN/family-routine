@@ -4,6 +4,7 @@ const {
   GraphQLList,
   GraphQLObjectType,
   GraphQLBoolean,
+  GraphQLInt,
 } = require('graphql');
 
 const uniqid = require('uniqid');
@@ -29,6 +30,10 @@ const { AgentModel } = require('../schema/AgentSchema');
 const { RoutineChatMessageModel } = require('../schema/RoutineChatSchema');
 const { XpTransactionModel } = require('../schema/XpTransactionSchema');
 const { grantWelcomePoints } = require('../utils/xpLedger');
+const { getLocalDate } = require('../utils/timezone');
+const {
+  DEFAULT_DAYS, MAX_ALARMS, aiLevel, addDays, planDeviceAlarms,
+} = require('../utils/deviceAlarms');
 
 /** `sendInvite` stores the session email as typed — match addresses case-insensitively. */
 const sameEmail = (a, b) => !!a && !!b && String(a).toLowerCase() === String(b).toLowerCase();
@@ -49,7 +54,86 @@ const inviteeView = (user) => ({
   picture: user.picture || '',
 });
 
+const DeviceAlarmType = new GraphQLObjectType({
+  name: 'DeviceAlarm',
+  fields: {
+    routineId: { type: GraphQLString },
+    time: { type: GraphQLString },
+    date: { type: GraphQLString },
+    fireAt: { type: GraphQLString },
+    title: { type: GraphQLString },
+    button: { type: GraphQLString },
+    buttonTitle: { type: GraphQLString },
+    repeat: { type: GraphQLBoolean },
+  },
+});
+
+const DeviceAlarmPlanType = new GraphQLObjectType({
+  name: 'DeviceAlarmPlan',
+  fields: {
+    through: { type: GraphQLString },
+    alarms: { type: new GraphQLList(DeviceAlarmType) },
+  },
+});
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const CONTEXT_DAYS = 30; // as apps/cron send-notification.js
+// An ActivityKit push-to-start token: hex, 32 bytes or so.
+const isStartToken = (token) => typeof token === 'string' && /^[0-9a-f]{32,256}$/i.test(token);
+
+/** Per routine, how much AI it has: what decides its notification button. */
+async function aiLevels(email, routineIds, now) {
+  if (!routineIds.length) return {};
+  const [agents, chats, goals] = await Promise.all([
+    AgentModel.find({ email, taskRef: { $in: routineIds } }, { taskRef: 1 }).lean().exec(),
+    RoutineChatMessageModel.find({
+      email, taskRef: { $in: routineIds }, from: 'me', createdAt: { $gte: new Date(now.getTime() - CONTEXT_DAYS * DAY_MS) },
+    }, { taskRef: 1 }).lean().exec(),
+    GoalModel.find({ email, 'goalItems.taskRef': { $in: routineIds } }, { 'goalItems.taskRef': 1 }).lean().exec(),
+  ]);
+  const withAgent = new Set(agents.map((a) => String(a.taskRef)));
+  const withContext = new Set([
+    ...chats.map((c) => String(c.taskRef)),
+    ...goals.flatMap((g) => (g.goalItems || []).map((i) => String(i.taskRef))),
+  ]);
+  return Object.fromEntries(routineIds.map((id) => [id, aiLevel({
+    hasAgent: withAgent.has(id), hasAiContext: withContext.has(id),
+  })]));
+}
+
 const query = {
+  /**
+   * The alarms this user's iPhone should ring itself over the next days
+   * (AlarmKit), for routines set to Alarm. See utils/deviceAlarms.js.
+   */
+  deviceAlarms: {
+    type: DeviceAlarmPlanType,
+    args: {
+      days: { type: GraphQLInt },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      if (!email) throw new ApiError(401, '401:Authentication required');
+      const days = Math.min(Math.max(args.days || DEFAULT_DAYS, 1), 14);
+      const now = new Date();
+      const user = await UserModel.findOne({ email }, { timezone: 1 }).lean().exec();
+      const timezone = user && user.timezone;
+      const today = getLocalDate(timezone, now);
+      const items = await RoutineItemModel.find({ email, notifyMode: 'alarm' }).exec();
+      const dates = Array.from({ length: days }, (_, n) => addDays(today, n));
+      const routines = items.length
+        ? await RoutineModel.find(
+          { email, date: { $in: dates } },
+          { date: 1, skip: 1, 'tasklist._id': 1, 'tasklist.ticked': 1 },
+        ).lean().exec()
+        : [];
+      const levels = await aiLevels(email, items.map((i) => String(i._id)), now);
+      const plan = planDeviceAlarms({
+        items, routines, levels, today, timezone, now, days,
+      });
+      return { through: plan.through.toISOString(), alarms: plan.alarms };
+    },
+  },
   notificationPrefs: {
     type: NotificationPrefsType,
     resolve: async (root, args, context) => {
@@ -475,6 +559,78 @@ const mutation = {
       await UserModel.updateOne(
         { email, notificationIds: args.notificationId },
         { $addToSet: { notificationActionTokens: args.notificationId } },
+      ).exec();
+      return true;
+    },
+  },
+  /**
+   * This iPhone shows routine cues as a Live Activity with tappable buttons
+   * (iOS 17.2+), started by the cron with this ActivityKit push-to-start token.
+   * No token (Live Activities turned off) takes it back, and the phone gets
+   * the plain notification again. Only for a device already registered here.
+   */
+  registerLiveActivity: {
+    type: GraphQLBoolean,
+    args: {
+      notificationId: { type: GraphQLNonNull(GraphQLString) },
+      startToken: { type: GraphQLString },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      if (!email) throw new ApiError(401, '401:Authentication required');
+      const device = args.notificationId;
+      if (!isRealPushToken(device)) return false;
+      if (args.startToken && !isStartToken(args.startToken)) return false;
+      // $pull then $push: one update cannot do both to the same array.
+      await UserModel.updateOne(
+        { email },
+        { $pull: { liveActivityTokens: { device } } },
+      ).exec();
+      if (!args.startToken) return true;
+      await UserModel.updateOne(
+        { email, notificationIds: device },
+        { $push: { liveActivityTokens: { device, start: args.startToken.toLowerCase() } } },
+      ).exec();
+      return true;
+    },
+  },
+  /**
+   * This iPhone has the alarms from deviceAlarms scheduled up to `through`
+   * (AlarmKit, iOS 26+) for `routines`, each "routineId@HH:mm" (alarmKey).
+   * Until then the cron sends it no alarm push for those. A routine set to
+   * Alarm or moved since is not on the list, so its push still comes. No
+   * `through` (alarms not allowed) takes it back.
+   */
+  registerAlarmDevice: {
+    type: GraphQLBoolean,
+    args: {
+      notificationId: { type: GraphQLNonNull(GraphQLString) },
+      through: { type: GraphQLString },
+      routines: { type: new GraphQLList(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      if (!email) throw new ApiError(401, '401:Authentication required');
+      const device = args.notificationId;
+      if (!isRealPushToken(device)) return false;
+      const through = args.through ? new Date(args.through) : null;
+      if (through && Number.isNaN(through.getTime())) return false;
+      await UserModel.updateOne(
+        { email },
+        { $pull: { alarmDevices: { device } } },
+      ).exec();
+      if (!through) return true;
+      await UserModel.updateOne(
+        { email, notificationIds: device },
+        {
+          $push: {
+            alarmDevices: {
+              device,
+              through,
+              routines: (args.routines || []).filter((r) => typeof r === 'string').slice(0, MAX_ALARMS),
+            },
+          },
+        },
       ).exec();
       return true;
     },

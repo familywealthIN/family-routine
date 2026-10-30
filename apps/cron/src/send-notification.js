@@ -170,7 +170,7 @@ db.once('open', async () => {
     const users = (await db.collection('users')
       .find(HAS_DEVICE, {
         projection: {
-          email: 1, notificationId: 1, notificationIds: 1, notificationActionTokens: 1, timezone: 1, motto: 1,
+          email: 1, notificationId: 1, notificationIds: 1, notificationActionTokens: 1, liveActivityTokens: 1, alarmDevices: 1, timezone: 1, motto: 1,
         },
       })
       .toArray())
@@ -310,6 +310,11 @@ db.once('open', async () => {
           category: actions.category,
           channel: alarm ? ALARM_CHANNEL : DEFAULT_CHANNEL,
           timeSensitive: !!alarm,
+          // An iPhone that scheduled this alarm rings it itself (AlarmKit).
+          alarm: alarm ? { routineId, time: item.time } : undefined,
+          // One routine's cue: on an iPhone that can, a Live Activity with the
+          // buttons on the lock screen. Alarms ring instead; a batch has no one routine.
+          liveActivity: alarm || kind === 'batch' ? undefined : { routineId, name: item.name, time: item.time },
         }));
       });
     });

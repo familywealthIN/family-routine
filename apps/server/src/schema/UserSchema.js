@@ -31,6 +31,18 @@ const UserSchema = new mongoose.Schema({
   // them data-only (apps/cron/src/utils/push.js). Set by
   // registerNotificationActions; cleared with the token.
   notificationActionTokens: [String],
+  // iPhones that show routine cues as a Live Activity with tappable buttons
+  // (iOS 17.2+): the device's push token and its ActivityKit push-to-start
+  // token. The cron starts the activity instead of sending the notification.
+  // Set by registerLiveActivity; cleared with the device token.
+  liveActivityTokens: [{ _id: false, device: String, start: String }],
+  // iPhones that ring alarm routines themselves with AlarmKit (iOS 26+): which
+  // routines, as "routineId@HH:mm", and up to when they are scheduled. Until
+  // then the cron sends that device no alarm push for those routines at those
+  // times. Set by registerAlarmDevice; cleared with the token.
+  alarmDevices: [{
+    _id: false, device: String, through: Date, routines: [String],
+  }],
   notificationPrefs: NotificationPrefsSchema,
   holidays: Number,
   apiKey: {

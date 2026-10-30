@@ -98,6 +98,14 @@ async function unbindPushToken(User, token, exceptId) {
     { ...others, notificationActionTokens: token },
     { $pull: { notificationActionTokens: token } },
   ).exec();
+  await User.updateMany(
+    { ...others, 'liveActivityTokens.device': token },
+    { $pull: { liveActivityTokens: { device: token } } },
+  ).exec();
+  await User.updateMany(
+    { ...others, 'alarmDevices.device': token },
+    { $pull: { alarmDevices: { device: token } } },
+  ).exec();
 }
 
 /**

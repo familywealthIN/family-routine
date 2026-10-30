@@ -11,7 +11,7 @@ git_url(ENV['MATCH_GIT_URL'])
 storage_mode('git')
 
 type('appstore')
-app_identifier(['com.routine.note'])
+app_identifier(['com.routine.note', 'com.routine.note.RoutineWidget'])
 team_id('NJ3L9A8F3R')
 
 readonly(true)
