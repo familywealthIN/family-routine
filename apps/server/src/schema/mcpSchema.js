@@ -112,6 +112,8 @@ type Mutation {
   releaseNotificationToken(notificationId: String!): Boolean
   # Register this signed-in device's push token (one of several devices per user)
   registerNotificationToken(notificationId: String!): Boolean
+  # This device's app draws routine cues with their buttons itself (Android)
+  registerNotificationActions(notificationId: String!): Boolean
   # Day-level notification preferences (morning, plan, evening, streak, reengage, insights, missedEmail)
   updateNotificationPrefs(prefs: NotificationPrefsInput!): NotificationPrefs
 

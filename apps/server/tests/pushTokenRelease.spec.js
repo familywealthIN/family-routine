@@ -60,6 +60,10 @@ describe('releaseNotificationToken', () => {
       { notificationId: 'fcm-a' },
       { $unset: { notificationId: 1 } },
     );
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      { notificationActionTokens: 'fcm-a' },
+      { $pull: { notificationActionTokens: 'fcm-a' } },
+    );
   });
 
   it.each(['', 'undefined', 'null'])('ignores the placeholder token %p', async (token) => {
@@ -120,6 +124,34 @@ describe('registerNotificationToken', () => {
     getEmailfromSession.mockImplementationOnce(() => { throw new Error('401:Authentication required'); });
     await expect(register('fcm-a')).rejects.toThrow('401');
     expect(mockUpdateOne).not.toHaveBeenCalled();
+  });
+});
+
+describe('registerNotificationActions', () => {
+  const registerActions = (notificationId) => mutation.registerNotificationActions
+    .resolve(null, { notificationId }, {});
+
+  it('flags only a token this user already registered', async () => {
+    await expect(registerActions('fcm-phone')).resolves.toBe(true);
+    expect(mockUpdateOne).toHaveBeenCalledWith(
+      { email: 'me@example.invalid', notificationIds: 'fcm-phone' },
+      { $addToSet: { notificationActionTokens: 'fcm-phone' } },
+    );
+  });
+
+  it('ignores a placeholder token and requires a session', async () => {
+    await expect(registerActions('undefined')).resolves.toBe(false);
+    getEmailfromSession.mockImplementationOnce(() => { throw new Error('401:Authentication required'); });
+    await expect(registerActions('fcm-phone')).rejects.toThrow('401');
+    expect(mockUpdateOne).not.toHaveBeenCalled();
+  });
+
+  it('a token moving to another account loses the flag there', async () => {
+    await registerPushToken(User, { _id: 'me' }, 'fcm-a');
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      { _id: { $ne: 'me' }, notificationActionTokens: 'fcm-a' },
+      { $pull: { notificationActionTokens: 'fcm-a' } },
+    );
   });
 });
 

@@ -170,7 +170,7 @@ db.once('open', async () => {
     const users = (await db.collection('users')
       .find(HAS_DEVICE, {
         projection: {
-          email: 1, notificationId: 1, notificationIds: 1, timezone: 1, motto: 1,
+          email: 1, notificationId: 1, notificationIds: 1, notificationActionTokens: 1, timezone: 1, motto: 1,
         },
       })
       .toArray())

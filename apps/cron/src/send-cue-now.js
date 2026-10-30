@@ -59,7 +59,7 @@ async function main(db) {
     { email },
     {
       projection: {
-        email: 1, notificationId: 1, notificationIds: 1, timezone: 1, motto: 1,
+        email: 1, notificationId: 1, notificationIds: 1, notificationActionTokens: 1, timezone: 1, motto: 1,
       },
     },
   );
@@ -135,6 +135,8 @@ async function main(db) {
     routine: item.name,
     time: item.time,
     devices: deviceTokens(user).length,
+    // Of those, Android devices that draw the cue with its buttons themselves.
+    appDrawn: deviceTokens(user).filter((t) => (user.notificationActionTokens || []).includes(t)).length,
     copy: ai.cue ? `ai (${ai.tier}: ${ai.model})` : `template (${ai.reason})`,
     title: copy.title,
     body: copy.body,
