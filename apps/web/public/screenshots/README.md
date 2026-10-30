@@ -1,27 +1,18 @@
 # Screenshots
 
-Real product screenshots from the Routine Notes web-app land here.
+`home-mobile.png` (the hero) and `guide/*.jpg` (the guide chapters) are rendered from the
+design frames in `packages/design/*.dc.html`, not captured from the running app:
 
-Capture flow (run from project root):
+- `home-mobile.png` is 786×1704, the Home phone frame (412×892) at 2×.
+- `guide/*.jpg` are 1920×1200, a 1440×900 desktop frame at 1.33×. `priority-counts.jpg` comes
+  from the iPad mini frame, so it does not repeat `priority-quadrants.jpg`.
+- States such as the Week tab, a past day, quick add, the move sheet, a selected agent and the
+  Edit agent dialog come from clicking through the prototype before the shot.
 
-1. Start the GraphQL backend on `:3000`
-2. Start the web-app: `yarn workspace web-app dev` → opens on `:8080`
-3. Log into your account in Chrome
-4. Run the seed script: `yarn workspace web seed` (writes 5 routines + goal cascade)
-5. From Claude Code, run the screenshot capture step
+To re-render after the designs change, open each `.dc.html` in headless Chromium (Playwright).
+Pin the device frame (`[id=<option>] .sc-host-x > *`) to its design size, then screenshot the frame.
 
-Expected files (referenced from `src/components/sections/*.astro`):
-
-- `home-mobile.png` — 393×852 mobile viewport of `/home` (hero phone frame; shows the points chip beside search)
-- `feat-routines.png` — 16:10 desktop crop of `/settings`
-- `feat-goals.png` — 16:10 desktop crop of `/goals`
-- `feat-ai.png` — 16:10 desktop crop of `/agenda/tree` or AI panel
-- `feat-points.png` — 16:10 desktop crop of `/home` PAST tab with a passed task showing the white diamond redeem button and a nonzero points chip (seed one task timed >1h30m ago so it auto-passes)
-- `feat-progress.png` — 16:10 desktop crop of `/progress`
-- `feat-groups.png` — 16:10 desktop crop of `/groups`
-
-Until real screenshots land, placeholder SVGs in this directory keep the
-layout from collapsing.
+The `feat-*` files are older captures from the app and nothing on the site references them.
 
 ## Feature videos (`public/videos/`)
 
