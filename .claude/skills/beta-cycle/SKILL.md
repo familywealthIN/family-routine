@@ -27,6 +27,21 @@ is no second screen to defer the journey to.
 carries the file map and the deliberate departures from the design handoff, which must not be
 filed as defects.
 
+**Engagement notifications are under test too** (since 26 Oct 2026). These are the routine
+cues and the lifecycle pushes: good morning, plan, evening, streak, insights and welcome
+back. The beta tester's "Engagement notifications" section is the procedure.
+- **Dry runs only.** Every day it previews what would have been sent, with
+  `send-cue-now.js --dry-run` and `preview-lifecycle.js`, and checks that against the app. A
+  real send reaches the owner's phone, so never run the cron jobs during a cycle, and never
+  run either script without its dry-run flag.
+- **Browser checks.** It also checks the notification preferences, the routine's reminder
+  mode, the deep links and device registration in the browser.
+- **Pass these to the agent.** Tell it the owner's morning and evening times if they are not
+  the 07:00 / 21:00 defaults.
+- **Owner decisions, not tickets.** Treat notification copy and tone as owner decisions, not
+  defects. A wrong fact in a notification (a count, a streak, a routine whose window has
+  closed) is a defect.
+
 ## 0. Preflight
 
 ```bash
@@ -46,6 +61,16 @@ There is no `apps/server/.env`; the monorepo keeps one at the root. `server.js` 
 from `__dirname`, so the cwd no longer matters and the old `DOTENV_CONFIG_PATH` workaround is
 obsolete. If you see env-dependent features fail (chat, auth), check the root `.env` itself
 rather than how the server was launched.
+
+If `:3000` is already up, check when its process started before you trust it. The dev server
+survives Claude restarts for weeks. On 25 Oct 2026 the API answering on :3000 dated from 11 Oct
+and lacked two weeks of resolvers (notification prefs, chat changes, the goal-threshold revert),
+so a whole run had to work around it on a second port. Restart it if it is older than the last
+server change (`git log -1 --format=%cd -- apps/server/src`):
+
+```bash
+powershell -NoProfile -Command "Get-NetTCPConnection -State Listen -LocalPort 3000 | % { (Get-Process -Id \$_.OwningProcess).StartTime }"
+```
 
 Then check the three things that silently invalidate a whole run:
 
@@ -91,6 +116,13 @@ If you want MCP next time, launch Chrome **before** starting the session:
   cannot be a goal title. "Keep the typed title" was shipped and reverted TWICE as D-15
   (6 and 11 Oct 2026). Drop any finding that asks for it at triage, and never send a fixer at
   it. The full list of decided behaviour lives in `.claude/agents/beta-tester.md`.
+- **Goal thresholds are the auto-tick rule.** A week / month / year goal ticks itself at 5 / 3 /
+  6 met milestones however many more were planned — a month goal at 3 of 5 week milestones is
+  Done. D-03 (Sep 2026) required every milestone, broke month goals, and was reverted by the
+  owner on 25 Oct 2026. Drop any finding that asks a goal to wait for all its milestones, and
+  reject any fix — yours or a fixer's — that changes `evaluateAutoComplete`'s
+  `met >= completionThreshold` or the client's matching gate. Retest it every cycle: a goal at
+  its threshold that is still Active after a reload is a defect.
 
 ### Known environment facts — exclude these from findings
 
@@ -246,6 +278,11 @@ concurrent fixers own the same files. Give each one ticket: its ref, gid, title 
 Keep a wave to about five agents. Two files draw almost every wave's fire —
 `RoutineFocus.vue` (2.3k lines) and `routineFocusModel.js` — so check that no two tickets in
 one wave both land there before dispatching them concurrently.
+
+A wave that changes CSS or layout must also pass `tools/visual` (see its README): the compiled
+CSS snapshot, the route screenshots and the **modal** screenshots. On 26 Oct 2026 the owner
+found modal buttons broken after a CSS change that page screenshots had passed, so modals are
+part of the check.
 
 After each wave, commit or merge its work one piece at a time and run the touched workspace's
 checks before starting the next — a wave that lands on a broken tree wastes the next wave.

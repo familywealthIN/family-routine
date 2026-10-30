@@ -113,6 +113,7 @@ describe('RoutineFocus agent stage', () => {
     resolvedFocusId: 'sw',
     endEventFiring: {},
     effectiveAgentStatus: () => '',
+    runStalled: () => false,
     ...over,
   });
 
@@ -123,6 +124,31 @@ describe('RoutineFocus agent stage', () => {
   it('reports the store status when nothing is firing', () => {
     expect(call('agentStage', ctx({ effectiveAgentStatus: () => 'listening' })))
       .toBe('listening');
+  });
+
+  // D-13. A run whose end event was due and never completed sat on 'listening'
+  // — breathing ring, `hearing` glyph — for four days with nothing to press.
+  it('reports stalled for a listening run the store has given up on', () => {
+    const vm = ctx({ effectiveAgentStatus: () => 'listening', runStalled: () => true });
+    expect(call('agentStage', vm)).toBe('stalled');
+  });
+
+  it('leaves every other stage alone when the store reports a stall', () => {
+    ['running', 'waiting', 'finished', 'failed'].forEach((status) => {
+      const vm = ctx({ effectiveAgentStatus: () => status, runStalled: () => true });
+      expect(call('agentStage', vm)).toBe(status);
+    });
+  });
+
+  // The page's end rule is the only thing that knows the counter is full, so it
+  // is the only thing that may start the stall clock.
+  it('is still firing while this page has the end event on the wire', () => {
+    const vm = ctx({
+      endEventFiring: { sw: true },
+      effectiveAgentStatus: () => 'listening',
+      runStalled: () => true,
+    });
+    expect(call('agentStage', vm)).toBe('firing');
   });
 
   // The store has no end-event status of its own — it shows 'running' for both
@@ -1496,13 +1522,17 @@ describe('RoutineFocus capture', () => {
  * the shell measuring something else. These tests hold the page to the design's
  * own figures (frame 6a, iPad mini 1133x744; frame 6b, desktop 1440x900).
  *
- * They read the SFC's `<style>` text, which is the only place these values live
- * — the page has no scoped styles and vue-jest does not hand the compiled CSS
- * back (the GoalsTime.vue / AppShell.vue suites read source the same way).
+ * They read the page's stylesheet text, which is the only place these values
+ * live — the page has no scoped styles and vue-jest does not hand the compiled
+ * CSS back (the GoalsTime.vue / AppShell.vue suites read source the same way).
+ * RoutineFocus.vue loads it with `<style src>` from packages/ui/styles/app.
  */
 describe('RoutineFocus shell geometry', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'RoutineFocus.vue'), 'utf8');
-  const css = source.slice(source.lastIndexOf('<style>'));
+  const css = fs.readFileSync(
+    path.join(__dirname, '..', '..', '..', '..', '..', 'packages', 'ui', 'styles', 'app', 'pages', 'RoutineFocus.css'),
+    'utf8',
+  );
 
   /** The declarations of the first rule whose selector list mentions `selector`. */
   const declarations = (selector) => {
@@ -1946,5 +1976,77 @@ describe('RoutineFocus goalSheetDateLocked', () => {
 
   it('never locks today', () => {
     expect(locked(false, { id: 'g', isComplete: true })).toBe(false);
+  });
+});
+
+/**
+ * One tick, one write. After closing the AI search modal a single tick ran
+ * toggleItem twice with the same stale item, so "<item> · all done" and "All
+ * tasks complete — end event firing" were each posted twice at once.
+ */
+describe('RoutineFocus — a tick is not doubled', () => {
+  const ITEM_SW = {
+    id: 'g9', body: 'Full body workout', taskRef: 'sw', isComplete: false,
+  };
+  const tickVm = () => {
+    let resolve;
+    const vm = {
+      date: '15-10-2026',
+      goals: [],
+      $apollo: { provider: { defaultClient: {} }, queries: {} },
+      $goals: { completeGoalItem: jest.fn(() => new Promise((r) => { resolve = r; })) },
+      onItemCompleted: jest.fn(),
+      notifyGeneric: jest.fn(),
+    };
+    return { vm, finish: () => resolve() };
+  };
+
+  it('drops a second identical tick while the first is still saving', async () => {
+    const { vm, finish } = tickVm();
+    const item = { ...ITEM_SW, taskRef: '' };
+    methods.toggleItem.call(vm, item);
+    methods.toggleItem.call(vm, item);
+    expect(vm.$goals.completeGoalItem).toHaveBeenCalledTimes(1);
+    finish();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(vm.onItemCompleted).toHaveBeenCalledTimes(1);
+  });
+
+  it('still lets the item be unticked straight back', () => {
+    const { vm } = tickVm();
+    const item = { ...ITEM_SW, taskRef: '' };
+    methods.toggleItem.call(vm, item);
+    methods.toggleItem.call(vm, { ...item, isComplete: true });
+    expect(vm.$goals.completeGoalItem).toHaveBeenCalledTimes(2);
+    expect(vm.$goals.completeGoalItem.mock.calls[1][0].isComplete).toBe(false);
+  });
+
+  it('accepts the same tick again once the first has settled', async () => {
+    const { vm, finish } = tickVm();
+    const item = { ...ITEM_SW, taskRef: '' };
+    methods.toggleItem.call(vm, item);
+    finish();
+    await Promise.resolve();
+    await Promise.resolve();
+    methods.toggleItem.call(vm, item);
+    expect(vm.$goals.completeGoalItem).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not post or fire a second end event while one is going out', () => {
+    const vm = {
+      endEventFiring: {},
+      postChatEvent: jest.fn(),
+      findFirstGoalIdForRoutine: () => 'g1',
+      // eslint-disable-next-line no-param-reassign
+      $set: (o, k, v) => { o[k] = v; },
+      // eslint-disable-next-line no-param-reassign
+      $delete: (o, k) => { delete o[k]; },
+      $agent: { fireEndEvent: jest.fn(() => new Promise(() => {})) },
+    };
+    methods.dispatchAgentEndEvent.call(vm, 'sw', 'g1');
+    methods.dispatchAgentEndEvent.call(vm, 'sw', 'g1');
+    expect(vm.postChatEvent).toHaveBeenCalledTimes(1);
+    expect(vm.$agent.fireEndEvent).toHaveBeenCalledTimes(1);
   });
 });

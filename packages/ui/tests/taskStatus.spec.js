@@ -15,6 +15,7 @@ const {
   TASK_STATUS,
   TASK_STATUS_CONFIG,
   resolveDisplayStatus,
+  isMissed,
 } = require('../utils/taskStatus');
 
 // The server's enum is the only authority on which statuses can be stored, so
@@ -67,13 +68,18 @@ describe('resolveDisplayStatus', () => {
 
   describe('ticked items', () => {
     it('does not let a stale status assert the item is outstanding', () => {
-      expect(resolve('missed', true)).toBe(TASK_STATUS.DONE);
       expect(resolve('todo', true)).toBe(TASK_STATUS.DONE);
       expect(resolve('ready', true)).toBe(TASK_STATUS.DONE);
     });
 
     it('falls back to the completion flag for a status it cannot label', () => {
       expect(resolve('archived', true)).toBe(TASK_STATUS.DONE);
+    });
+
+    // Status is one-to-one with timing: missed = not done in its window, and
+    // a late tick does not undo it.
+    it('keeps MISSED on a late tick', () => {
+      expect(resolve('missed', true)).toBe(TASK_STATUS.MISSED);
     });
 
     it('leaves DONE and RESCHEDULED alone', () => {
@@ -90,5 +96,22 @@ describe('resolveDisplayStatus', () => {
         expect(TASK_STATUS_CONFIG[resolve(status, isComplete)]).toBeDefined();
       });
     });
+  });
+});
+
+describe('isMissed', () => {
+  it('is true for an item marked missed and not ticked', () => {
+    expect(isMissed({ status: 'missed', isComplete: false })).toBe(true);
+  });
+
+  it('stays true once it is ticked late: status is one-to-one with timing', () => {
+    expect(isMissed({ status: 'missed', isComplete: true })).toBe(true);
+  });
+
+  it('is false for an open or done item that was never missed', () => {
+    expect(isMissed({ status: 'todo', isComplete: false })).toBe(false);
+    expect(isMissed({ isComplete: false })).toBe(false);
+    expect(isMissed({ status: 'done', isComplete: true })).toBe(false);
+    expect(isMissed(null)).toBe(false);
   });
 });

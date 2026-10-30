@@ -94,10 +94,6 @@ jobs:
       - name: Write secrets.json
         env:
           SERVER_SECRETS_JSON: ${{ secrets.SERVER_SECRETS_JSON }}
-          # The chat's free-model roster. A repo VARIABLE, not part of the secret
-          # blob: it is not sensitive and changes whenever OpenRouter retires a
-          # free model, so it can be edited without re-uploading every secret.
-          OPENROUTER_FREE_MODELS: ${{ vars.OPENROUTER_FREE_MODELS }}
         run: |
           printf '%s' "$SERVER_SECRETS_JSON" > secrets.json
           # serverless.yml interpolates ${self:custom.secrets.KEY} for each
@@ -120,11 +116,14 @@ jobs:
                 .matchAll(/self:custom\.secrets\.([A-Z_]+)(?![A-Z_]|\s*,)/g)]
                 .map((m) => m[1]),
             )];
-            // The variable fills the key when the secret blob does not carry it.
-            if (process.env.OPENROUTER_FREE_MODELS && !secrets.OPENROUTER_FREE_MODELS) {
-              secrets.OPENROUTER_FREE_MODELS = process.env.OPENROUTER_FREE_MODELS;
+            // No pinned free-model roster: the server discovers OpenRouter's
+            // live free catalogue (chatApi.js). A pinned list went stale within
+            // weeks (26 Oct 2026: every pinned model was gone or rate-limited)
+            // and a pin switches discovery off, so drop one if the blob has it.
+            if (secrets.OPENROUTER_FREE_MODELS !== undefined) {
+              delete secrets.OPENROUTER_FREE_MODELS;
               fs.writeFileSync('secrets.json', JSON.stringify(secrets));
-              console.log('OPENROUTER_FREE_MODELS taken from the repo variable');
+              console.log('OPENROUTER_FREE_MODELS dropped: the server discovers free models');
             }
             const missing = required.filter((k) => secrets[k] === undefined || secrets[k] === '');
             if (missing.length) {

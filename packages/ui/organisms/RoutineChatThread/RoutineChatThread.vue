@@ -39,6 +39,28 @@
         {{ message.text }}
       </div>
 
+      <!--
+        The post-tick coach card: the server stores it as three lines (title,
+        why it matters, and the "Right now:" / "Next time:" action), so it
+        reads as a card to look forward to rather than another grey paragraph.
+        Older single-paragraph insights fall through to the plain bubble.
+      -->
+      <div
+        v-else-if="insightCard(message)"
+        class="rn-chat__bubble rn-chat__insight"
+        data-testid="insight-card"
+      >
+        <div class="rn-chat__insight-title">
+          <i class="rn-mi rn-chat__insight-icon">tips_and_updates</i>
+          {{ insightCard(message).title }}
+        </div>
+        <div class="rn-chat__insight-spark">{{ insightCard(message).spark }}</div>
+        <div class="rn-chat__insight-action">
+          <span class="rn-chat__insight-label">{{ insightCard(message).label }}</span>
+          {{ insightCard(message).action }}
+        </div>
+      </div>
+
       <!-- Bubble -->
       <div v-else class="rn-chat__bubble" :style="bubbleStyle(message)">
         <div class="rn-chat__text">{{ message.text }}</div>
@@ -129,6 +151,9 @@
 <script>
 import RoutineBriefCard from '../RoutineBriefCard/RoutineBriefCard.vue';
 
+// The icon the server stamps on the post-tick insight (routineChat INSIGHT_ICON).
+const INSIGHT_ICON = 'tips_and_updates';
+
 const TONES = {
   green: { color: '#2e7d32', bg: 'rgba(76,175,80,.12)' },
   blue: { color: '#1f6fab', bg: 'rgba(40,139,213,.1)' },
@@ -205,6 +230,17 @@ export default {
       if (this.replaceAddedProposals && message.added && this.itemsOf(message).length) return false;
       return true;
     },
+    /** The three parts of a coach card, or null for any other message. */
+    insightCard(message) {
+      if (!message || message.from !== 'routine' || message.icon !== INSIGHT_ICON) return null;
+      const lines = String(message.text || '').split('\n');
+      if (lines.length !== 3) return null;
+      const match = /^(Right now|Next time):\s*(.*)$/.exec(lines[2]);
+      if (!match) return null;
+      return {
+        title: lines[0], spark: lines[1], label: match[1], action: match[2],
+      };
+    },
     bubbleStyle(message) {
       const me = message.from === 'me';
       return {
@@ -266,6 +302,44 @@ export default {
 .rn-chat__text {
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Same bubble shape as the routine's replies, lifted with the brand tint so
+   it reads as the moment's headline rather than another line of chat. */
+.rn-chat__insight {
+  background: rgba(40, 139, 213, .08);
+  border: 1px solid rgba(40, 139, 213, .18);
+  border-radius: 16px 16px 16px 4px;
+  color: rgba(0, 0, 0, .87);
+  padding: 10px 14px 12px;
+}
+
+.rn-chat__insight-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.rn-chat__insight-icon {
+  font-size: 18px;
+  color: #288bd5;
+}
+
+.rn-chat__insight-spark {
+  margin-bottom: 8px;
+}
+
+.rn-chat__insight-action {
+  padding-top: 8px;
+  border-top: 1px solid rgba(40, 139, 213, .18);
+}
+
+.rn-chat__insight-label {
+  font-weight: 700;
+  color: #288bd5;
 }
 
 .rn-chat__event {

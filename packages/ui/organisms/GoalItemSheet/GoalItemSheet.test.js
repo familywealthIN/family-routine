@@ -153,6 +153,32 @@ describe('GoalItemSheet — the three status labels', () => {
     q(el, 'goal-sheet-status').click();
     expect(events['toggle-status']).toEqual([ITEM]);
   });
+
+  // A skip (markGoalItemMissed) stores `missed` and leaves the item open.
+  it('Missed for an open item recorded as missed, and still the toggle', () => {
+    const missed = { ...ITEM, status: 'missed' };
+    const { el, events } = render({ item: missed });
+    const pill = q(el, 'goal-sheet-status');
+    expect(pill.textContent.trim()).toBe('Missed');
+    expect(pill.title).toBe('Mark complete');
+    pill.click();
+    expect(events['toggle-status']).toEqual([missed]);
+  });
+
+  it('Missed for an item ticked late: status is one-to-one with timing', () => {
+    const { el } = render({ item: { ...ITEM, status: 'missed', isComplete: true } });
+    expect(q(el, 'goal-sheet-status').textContent.trim()).toBe('Missed');
+  });
+
+  it('Complete for an item ticked on time', () => {
+    const { el } = render({ item: { ...ITEM, status: 'done', isComplete: true } });
+    expect(q(el, 'goal-sheet-status').textContent.trim()).toBe('Complete');
+  });
+
+  it('Open for an item whose stored status is anything but missed', () => {
+    const { el } = render({ item: { ...ITEM, status: 'todo' } });
+    expect(q(el, 'goal-sheet-status').textContent.trim()).toBe('Open');
+  });
 });
 
 describe('GoalItemSheet — header', () => {

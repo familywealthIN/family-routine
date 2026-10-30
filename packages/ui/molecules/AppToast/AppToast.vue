@@ -16,6 +16,7 @@
     :key="seq"
     class="rn-toast"
     :class="`rn-toast--${shellName}`"
+    :style="animationStyle"
     data-testid="app-toast"
     @animationend="$emit('done')"
   >
@@ -40,6 +41,8 @@ export default {
     sub: { type: String, default: '' },
     icon: { type: String, default: 'check_circle' },
     iconColor: { type: String, default: '#4CAF50' },
+    /** How long it stays, in ms. 0 keeps the stylesheet's 2.8s. */
+    duration: { type: Number, default: 0 },
     /** Bump to replay the animation for a repeat of the same message. */
     seq: { type: Number, default: 0 },
   },
@@ -50,6 +53,10 @@ export default {
     },
     visible() {
       return !!this.title;
+    },
+    /** A longer toast (an error worth reading) stretches the same keyframes. */
+    animationStyle() {
+      return this.duration > 0 ? { animationDuration: `${this.duration}ms` } : null;
     },
   },
 };

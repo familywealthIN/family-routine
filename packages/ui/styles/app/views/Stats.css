@@ -1,0 +1,5 @@
+/* Styles for apps/web-app/src/views/Stats.vue, loaded there with <style src> (scoped). */
+.container {
+  margin: 0 auto;
+  max-width: 800px;
+}

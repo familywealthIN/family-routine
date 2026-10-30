@@ -8,8 +8,9 @@
       max-width="100%"
     >
       <AtomCard
+        ref="mobileCard"
         class="ai-search-modal"
-        :style="dragStyle"
+        :style="mobileCardStyle"
       >
         <!-- Mobile Handle (drag to close) -->
         <div
@@ -53,7 +54,8 @@
           ref="scrollableContent"
           @scroll="handleScroll"
           class="scrollable-content"
-          style="max-height: 70vh; overflow-y: auto;"
+          :style="mobileScrollStyle"
+          @focusin.native="keepFocusedFieldVisible"
         >
           <!-- Prompt Box -->
           <div class="prompt-box">
@@ -674,6 +676,7 @@ export default {
     AtomCard,
     AtomCardActions,
     AtomCardText,
+    AtomCardTitle,
     AtomChip,
     AtomDialog,
     AtomIcon,
@@ -745,6 +748,13 @@ export default {
 
   data() {
     return {
+      /**
+       * Mobile keyboard fit, from `visualViewport` while the sheet is open:
+       * the sheet's scroll area may be no taller than what is left above the
+       * keyboard, and the sheet is lifted by the part of the keyboard that
+       * covers the layout viewport (iOS overlays it instead of resizing).
+       */
+      keyboardFit: { maxHeight: null, inset: 0 },
       searchQuery: '',
       error: '',
       loading: false,
@@ -806,6 +816,18 @@ export default {
       return this.goalFormComponent || 'AiGoalPlanForm';
     },
 
+    mobileCardStyle() {
+      const style = { ...this.dragStyle };
+      if (this.keyboardFit.inset > 0) style.marginBottom = `${this.keyboardFit.inset}px`;
+      return style;
+    },
+    mobileScrollStyle() {
+      const { maxHeight } = this.keyboardFit;
+      return {
+        maxHeight: maxHeight ? `${maxHeight}px` : '70vh',
+        overflowY: 'auto',
+      };
+    },
     dragStyle() {
       if (!this.isDragging || this.dragCurrentY <= 0) return {};
       return {
@@ -1026,6 +1048,7 @@ export default {
 
         // Listen for dashboard caching status
         eventBus.$on(EVENTS.DASHBOARD_CACHING_STATUS, this.handleDashboardCachingStatus);
+        this.watchKeyboard(true);
 
         // Initialize scroll shadows and focus the input after modal opens
         this.$nextTick(() => {
@@ -1041,6 +1064,7 @@ export default {
       } else {
         // Clean up event listener when dialog closes
         eventBus.$off(EVENTS.DASHBOARD_CACHING_STATUS, this.handleDashboardCachingStatus);
+        this.watchKeyboard(false);
       }
     },
 
@@ -1252,6 +1276,9 @@ export default {
     },
   },
 
+  beforeDestroy() {
+    this.watchKeyboard(false);
+  },
   methods: {
     initializeToolbar() {
       // Initialize with today's date
@@ -1733,6 +1760,54 @@ export default {
       });
     },
 
+    /**
+     * The related-goals timeline makes the form tall enough to hit the old
+     * fixed `70vh` cap, and `vh` does not shrink for the keyboard: focusing a
+     * field left the sheet taller than the visible area and pushed the form
+     * off screen. Track the visual viewport instead while the sheet is open.
+     */
+    watchKeyboard(on) {
+      const vv = typeof window !== 'undefined' && window.visualViewport;
+      if (!vv) return;
+      if (on) {
+        if (this.onViewportChange) return;
+        this.onViewportChange = () => this.fitToKeyboard();
+        vv.addEventListener('resize', this.onViewportChange);
+        vv.addEventListener('scroll', this.onViewportChange);
+        this.fitToKeyboard();
+      } else if (this.onViewportChange) {
+        vv.removeEventListener('resize', this.onViewportChange);
+        vv.removeEventListener('scroll', this.onViewportChange);
+        this.onViewportChange = null;
+        this.keyboardFit = { maxHeight: null, inset: 0 };
+      }
+    },
+    fitToKeyboard() {
+      const vv = window.visualViewport;
+      const isMobile = this.$vuetify && this.$vuetify.breakpoint.xsOnly;
+      if (!vv || !isMobile) return;
+      // The keyboard's share of the layout viewport (0 where the WebView resizes).
+      const inset = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+      const card = this.$refs.mobileCard && this.$refs.mobileCard.$el;
+      const scroller = this.$refs.scrollableContent && this.$refs.scrollableContent.$el;
+      // Handle, header and sticky footer: everything in the sheet but the scroll area.
+      const chrome = card && scroller ? card.offsetHeight - scroller.offsetHeight : 0;
+      const cap = Math.round(vv.height * 0.7);
+      const room = Math.round(vv.height - chrome - 8);
+      this.keyboardFit = {
+        maxHeight: Math.max(120, Math.min(cap, room)),
+        inset,
+      };
+    },
+    /** Once the keyboard has settled, bring the focused field back into the scroll area. */
+    keepFocusedFieldVisible(event) {
+      const field = event && event.target;
+      if (!field || typeof field.scrollIntoView !== 'function') return;
+      setTimeout(() => {
+        this.fitToKeyboard();
+        this.$nextTick(() => field.scrollIntoView({ block: 'nearest' }));
+      }, 300);
+    },
     closeModal() {
       this.dialog = false;
       this.resetForm();

@@ -74,9 +74,20 @@ beforeEach(() => {
 });
 
 describe('autoCheckTaskPeriod week auto-complete', () => {
-  it('leaves the goal open while one of its seven milestones is unfinished', async () => {
+  // Owner's rule, 25 Oct 2026: five met day milestones tick the week goal,
+  // however many more were planned.
+  it('ticks the goal at the threshold with one of its seven milestones unfinished', async () => {
     const complete = WEEK_DAYS.filter((d) => d !== '09-09-2026'); // six of seven
     primeFind([weekDoc()], dayDocs(complete));
+
+    const [weekGoal] = await runWeek();
+
+    expect(weekGoal.goalItems[0].isComplete).toBe(true);
+    expect(mockGoalFindOneAndUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the goal open below the threshold', async () => {
+    primeFind([weekDoc()], dayDocs(WEEK_DAYS.slice(0, 4)));
 
     const [weekGoal] = await runWeek();
 
@@ -273,13 +284,14 @@ describe('autoCheckTaskPeriod milestones sharing one child document', () => {
     expect(monthGoal.goalItems[0].progress).toBe(1);
   });
 
-  it('leaves the month goal open while one shared milestone is outstanding', async () => {
-    primeMonthFind([monthDoc()], sharedWeekDocs(4));
+  // The screenshot that reverted D-03: 3 of 5 week milestones met, month open.
+  it('ticks the month goal at 3 of 5 week milestones', async () => {
+    primeMonthFind([monthDoc()], sharedWeekDocs(3));
 
     const [monthGoal] = await runMonth();
 
-    expect(monthGoal.goalItems[0].isComplete).toBe(false);
-    expect(mockGoalFindOneAndUpdate).not.toHaveBeenCalled();
+    expect(monthGoal.goalItems[0].isComplete).toBe(true);
+    expect(mockGoalFindOneAndUpdate).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the threshold as a floor when fewer milestones were declared', async () => {

@@ -1,6 +1,6 @@
 # MoleculeDateSelector
 
-An advanced, Airbnb-style date selector component with integrated period toggle and smart date label display. Supports day, week, month, year, and lifetime periods with proper ISO 8601 week calculations.
+An advanced, Airbnb-style date selector component with integrated period toggle and smart date label display. Supports day, week, month, year, and lifetime periods, using the app's Sunday-to-Saturday weeks keyed by their Friday.
 
 ## Features
 
@@ -21,14 +21,14 @@ An advanced, Airbnb-style date selector component with integrated period toggle 
   + Locale-aware formatted date (e.g., "Feb 22" or "Feb 22, 2026")
 * Quick action: "Today" button
 
-#### Week Period (ISO 8601)
+#### Week Period (Sunday to Saturday)
 
 * List of all weeks in selected year
 * Smart labels:
   + "This Week" for current week
   + "Week N, YYYY" for other weeks
-* Date range display (e.g., "Mar 3 - Mar 9")
-* Proper ISO week calculation (Week 1 = week with first Thursday)
+* Date range display (e.g., "Mar 1 - Mar 7")
+* Same week as moment's `.week()` and `getDates.js` (Week 1 = week holding 1 January)
 * Handles 52/53 week years correctly
 * Quick action: "This Week" button
 
@@ -155,29 +155,28 @@ export default {
 | Year | Other | "2026" |
 | Lifetime | Always | "Lifetime" |
 
-## ISO 8601 Week Implementation
+## Week Implementation
 
-The component implements proper ISO 8601 week calculation:
+The week is the app's own, not ISO 8601: the one `getDates.js`
+(`periodGoalDates`), `goalDatePeriod` and the home cascade use. An ISO week
+filed a Sunday under the previous week, so a week goal created on a Sunday never
+showed on the routine's WEEK tab.
 
 ### Rules
 
-* Week starts on Monday
-* Week 1 is the week containing the first Thursday of the year
+* Week starts on Sunday and ends on Saturday
+* A week goal is keyed by the week's Friday
+* Week 1 is the week holding 1 January (moment's `.week()` / `.weekYear()`)
 * A year can have 52 or 53 weeks
-
-### 53-Week Years
-
-A year has 53 weeks when:
-* January 1 falls on a Thursday, OR
-* It's a leap year AND January 1 falls on a Wednesday
 
 ### Week Date Ranges
 
-Each week displays its date range (Monday to Sunday):
+Each week displays its date range (Sunday to Saturday):
 
 ```
-Week 1, 2026: Dec 29 - Jan 4  (spans year boundary)
-Week 8, 2026: Feb 16 - Feb 22
+Week 1, 2026: Dec 28 - Jan 3  (spans year boundary)
+Week 45, 2026: Nov 1 - Nov 7
+Week 1, 2027: Dec 27 - Jan 2  (keyed Friday 01-01-2027)
 ```
 
 ## Methods (Public)
@@ -190,7 +189,7 @@ Week 8, 2026: Feb 16 - Feb 22
 ### Quick Actions
 
 * `handleToday()` - Select today's date
-* `handleThisWeek()` - Select current ISO week
+* `handleThisWeek()` - Select current week
 * `handleThisMonth()` - Select current month
 * `handleThisYear()` - Select current year
 
@@ -242,7 +241,7 @@ The component includes built-in styles:
 <!-- Otherwise: displays formatted date -->
 ```
 
-### Week Selection with ISO Calculation
+### Week Selection
 
 ```vue
 <MoleculeDateSelector
@@ -250,9 +249,9 @@ The component includes built-in styles:
   :period.sync="period"
   label="Week"
 />
-<!-- Value: "2026-W08" -->
-<!-- Display: "This Week" or "Week 8, 2026" -->
-<!-- Range: "Feb 16 - Feb 22" -->
+<!-- Value: "06-11-2026" (Friday of the week) -->
+<!-- Display: "This Week" or "Week 45, 2026" -->
+<!-- Range: "Nov 1 - Nov 7" -->
 ```
 
 ### Lifetime Goal with Tree Icon
@@ -311,7 +310,7 @@ The component includes comprehensive unit tests covering:
 * Period toggle functionality
 * Icon display (tree for lifetime)
 * Smart label display for all periods
-* ISO 8601 week calculation
+* Sunday-to-Saturday week calculation
 * Month generation
 * Year navigation
 * Date selection handlers
@@ -378,7 +377,7 @@ npm run test:unit DateSelector.spec.js
 
 * ✅ Integrated period toggle into dropdown
 * ✅ Smart labels for all periods
-* ✅ ISO 8601 week calculation
+* ✅ Sunday-to-Saturday week calculation
 * ✅ Tree icon for lifetime
 * ✅ Proper month/year generation
 * ✅ Comprehensive unit tests

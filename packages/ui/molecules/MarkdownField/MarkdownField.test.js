@@ -262,3 +262,34 @@ describe('MarkdownField — stats', () => {
     expect(field.stats).toBe('2 lines · 3 words');
   });
 });
+
+describe('MoleculeMarkdownField — iframe embeds in the preview', () => {
+  const YT = '<iframe width="560" height="315" src="https://www.youtube.com/embed/abc123" title="Demo" onload="alert(1)" frameborder="0"></iframe>';
+
+  it('draws its own sandboxed iframe for an allowed embed, between the text', () => {
+    const { el } = render({ value: `Before\n\n${YT}\n\nAfter` });
+    const frames = el.querySelectorAll('[data-testid="markdown-embed"] iframe');
+    expect(frames).toHaveLength(1);
+    const frame = frames[0];
+    expect(frame.getAttribute('src')).toBe('https://www.youtube.com/embed/abc123');
+    expect(frame.getAttribute('sandbox')).toContain('allow-scripts');
+    expect(frame.getAttribute('sandbox')).not.toContain('allow-top-navigation');
+    expect(frame.getAttribute('onload')).toBeNull();
+    const texts = [...el.querySelectorAll('[data-testid="stub-rendered"]')].map((n) => n.textContent.trim());
+    expect(texts).toEqual(['Before', 'After']);
+    // 315 / 560 keeps the pasted shape.
+    expect(frame.parentNode.style.paddingTop).toBe('56.25%');
+  });
+
+  it('leaves a disallowed iframe as text, still rendered with HTML off', () => {
+    const { el } = render({ value: '<iframe src="https://evil.example/x"></iframe>' });
+    expect(el.querySelector('iframe')).toBeNull();
+    expect(el.querySelector('[data-testid="stub-rendered"]').textContent).toContain('evil.example');
+  });
+
+  it('does not open the editor when the embed is clicked', () => {
+    const { el, events } = render({ value: YT });
+    el.querySelector('[data-testid="markdown-embed"]').click();
+    expect(events.editing).toEqual([]);
+  });
+});

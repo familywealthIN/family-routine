@@ -1,0 +1,437 @@
+/* Styles for apps/web-app/src/pages/RoutineFocus.vue, loaded there with <style src> (global, root-class prefixed). */
+/* Root-class prefixed: this page is a full app shell rendered OUTSIDE
+   MobileLayout/DesktopLayout, and none of it may reach the legacy screens. */
+.rn-home {
+  /* Mirrors AppShell: the iPhone PWA home-indicator inset, zeroed inside the
+     native shell (Capacitor already insets the web view). */
+  --rn-safe-bottom: env(safe-area-inset-bottom, 0px);
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: #f4f4f4;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: rgba(0, 0, 0, .87);
+}
+
+/* There is deliberately no `.capacitor-native` override zeroing --rn-safe-bottom.
+   It used to be zeroed on the theory that "Capacitor already insets the web
+   view", but that does not hold for this shell: `.rn-home--phone` is
+   `position: fixed; inset: 0`, and a fixed element anchors to the whole window,
+   underneath WKWebView's contentInset. The nav therefore sits on the very bottom
+   of the screen on both platforms, and zeroing the inset drew its labels beneath
+   the home indicator / gesture pill. Verified on an iPhone 16 Pro Max simulator
+   and an API 36 emulator (inset 24px; the bar grew by exactly that). It also beat
+   android-safe-area.css's correct `.capacitor-native .v-bottom-nav` handling on
+   specificity, so Android lost its padding twice over. */
+
+/* Fixed to the window, not sized by vh: in an iPhone standalone PWA 100vh /
+   100dvh can be taller than the window (by the status bar), which pushed the
+   bottom of the column - and anything laid out against it - off-screen. The
+   pre-redesign MobileLayout survived only because its nav was position: fixed.
+   inset: 0 makes the whole column match the real window. */
+.rn-home--phone {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  /* The page's own pull-to-refresh replaces the browser's; don't run both. */
+  overscroll-behavior-y: contain;
+}
+
+.rn-home--tablet,
+.rn-home--desktop {
+  display: flex;
+}
+
+/* Inbox button in the tablet / desktop header. The phone's lives in
+   RoutineTopBar, where the design puts it at the leading edge. */
+.rn-home__inbox {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
+  color: rgba(0, 0, 0, .65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 10px;
+}
+
+.rn-home__inbox-badge {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: #FF9800;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px #f4f4f4;
+}
+
+/* ---- phone ---- */
+.rn-home__week {
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.rn-home__phone-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 16px calc(64px + var(--rn-safe-bottom));
+  overflow: hidden;
+}
+
+/* Typing: the tab bar is hidden, so the composer drops onto the keyboard. */
+.rn-home--typing .rn-home__phone-body {
+  padding-bottom: 8px;
+}
+
+/* The MobileLayout bottom nav: fixed to the viewport bottom, grown by the
+   home-indicator inset with the buttons padded above it. */
+/* 64px of tabs, matching AppShell's `.rn-shell__tabbar` and the phone chassis
+   ("64px header + 64px bottom bar", docs/redesign/chassis.md). Home used to be
+   56px, which made the bar visibly change height when moving between Home and
+   every other page. */
+.rn-home .rn-home__nav.v-bottom-nav {
+  height: calc(64px + var(--rn-safe-bottom)) !important;
+  padding-bottom: var(--rn-safe-bottom);
+  box-sizing: border-box;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, .08);
+  z-index: 5;
+}
+
+.rn-home .rn-home__nav .v-btn {
+  height: 64px;
+}
+
+/* ---- tablet / desktop ---- */
+/* The rail/sidebar is AppShell's (77px rail, 264px sidebar); Home supplies only
+   the main column, so the shell just has to fill the row .rn-home lays out. */
+.rn-home__shell {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The shell's sidebar slot insets its content 12px, but RoutineRail already
+   insets its own rows (6px margin + 12px padding) — cancel the slot's so the
+   rail sits where it did when Home drew its own sidebar. */
+.rn-home__rail {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -12px;
+}
+
+.rn-home__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The handoff caps Home's desktop content column at 980px and centres it beside
+   the 264px sidebar. Without this the checklist and chat panes stretch across the
+   whole 1440px viewport, which makes every measurement inside them read wider
+   than the design — the "desktop container size" defect. Tablet is unaffected:
+   its 1133px viewport minus the 76px rail already sits under the cap. */
+.rn-home--desktop .rn-home__main {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.rn-home__header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 28px 12px;
+  flex-shrink: 0;
+}
+
+/* 25px on top centres the date on the rail's logo (centred 41px down), the line
+   every other tablet page's title sits on too (AppShell's no-status head). */
+.rn-home--tablet .rn-home__header {
+  padding: 25px 20px 8px;
+}
+
+.rn-home__header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 20px on both large shells. chassis.md's "desktop titles run 26px" is a
+   generalisation; Home's own frames (6a and 6b) both draw the date at 20/700,
+   and the .dc.html is the source of truth. Desktop was the outlier at 26px. */
+.rn-home__date {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.rn-home__header-sub {
+  font-size: 13px;
+  color: rgba(0, 0, 0, .54);
+}
+
+/* No width: the strip is seven fixed 38px cells, so it sizes itself. Pinning it
+   at 360px (280 on tablet) stretched every cell to 50px. */
+.rn-home__header-week {
+  flex-shrink: 0;
+}
+
+.rn-home__content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+  padding: 4px 28px 28px;
+}
+
+.rn-home--tablet .rn-home__content {
+  padding: 0 20px 20px;
+}
+
+/*
+  A true 3:2 that scales, both shells. The chat pane used to be 420px fixed
+  (400 on tablet) against a checklist with a 1.15 grow factor, which read as
+  1.15:1 at the 980px column and drifted with every viewport: the pane kept its
+  420px while the checklist absorbed the whole difference. The design gives both
+  panes a flex basis of 0 so the ratio is the only thing deciding the split —
+  547.2/364.8 at desktop's 980px column, 602.4/401.6 at the iPad's uncapped 1133.
+
+  Which only works while the card is padding-FREE. A `box-sizing: border-box`
+  flex item cannot resolve `flex-basis: 0` below its own padding, so the card's
+  `16px 20px 0` floored its base size at 40px: it took 40 off the top and the
+  ratio then applied to the remaining 872, giving 563.2/348.8. `RoutineFocusCard`
+  now keeps only vertical padding and hands the horizontal inset to an inner
+  `.rn-focus-card__body` — the same nesting the design frames use.
+*/
+.rn-home__content > .rn-focus-card {
+  flex: 3 1 0;
+  min-width: 0;
+}
+
+.rn-home__chat-pane {
+  flex: 2 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+/*
+  One elevation for both panes. The phone's card shadow is deliberately heavier
+  (a 15px blur) because the card floats over a deck; side by side in a pane the
+  design flattens it, and the chat pane was carrying a third variant of its own
+  (alpha .1/.06). The phone card is NOT inside .rn-home__content, so it keeps
+  the deck shadow.
+
+  TODO this belongs on .rn-focus-card--tablet/--desktop in RoutineFocusCard.vue
+  (that organism owns the card's own chrome); it is an override here only
+  because this pass does not own that file.
+*/
+.rn-home__content > .rn-focus-card,
+.rn-home__chat-pane {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .08), 0 2px 4px -1px rgba(0, 0, 0, .05);
+}
+
+.rn-home__chat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, .06);
+  flex-shrink: 0;
+}
+
+.rn-home__chat-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rn-home__chat-head-text {
+  min-width: 0;
+}
+
+.rn-home__chat-name {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rn-home__chat-sub {
+  font-size: 12px;
+  color: rgba(0, 0, 0, .54);
+}
+
+.rn-home__chat-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px;
+}
+
+/* ---- empty / error ---- */
+.rn-home__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(0, 0, 0, .54);
+}
+
+.rn-home__empty--pane {
+  flex: 1;
+  border-radius: 20px;
+}
+
+.rn-home__empty-btn {
+  border: 1px solid rgba(40, 139, 213, .45);
+  background: #fff;
+  color: #1f6fab;
+  border-radius: 999px;
+  height: 36px;
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---- sheet body ---- */
+.rn-home__sheet-note {
+  font-size: 12px;
+  color: rgba(0, 0, 0, .54);
+  margin: 0 0 12px;
+}
+
+/* ---- goal sheet ---- */
+.rn-home__goal-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, .54);
+  margin-bottom: 8px;
+}
+
+.rn-home__goal-status {
+  font-weight: 700;
+}
+
+.rn-home__goal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.rn-home__goal-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f0f0f0;
+  color: rgba(0, 0, 0, .6);
+}
+
+.rn-home__goal-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: rgba(0, 0, 0, .45);
+  margin: 8px 0 4px;
+}
+
+.rn-home__goal-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  font-size: 14px;
+}
+
+.rn-home__goal-sub-box {
+  font-size: 20px;
+}
+
+.rn-home__goal-btn {
+  width: 100%;
+  height: 44px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: #288bd5;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---- tick flight ---- */
+.rn-home__fly-ring {
+  position: absolute;
+  z-index: 40;
+  border-radius: 50%;
+  background: #4CAF50;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(76, 175, 80, .45);
+  pointer-events: none;
+  transform-origin: center;
+  animation: rn-fly .8s cubic-bezier(.5, 0, .3, 1) forwards;
+}
+
+.rn-home__fly-glyph {
+  font-size: 34px;
+}
+
+.rn-home__fly-title {
+  position: absolute;
+  z-index: 41;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  color: rgba(0, 0, 0, .87);
+  transform-origin: left top;
+  animation: rn-fly .8s cubic-bezier(.5, 0, .3, 1) forwards;
+}

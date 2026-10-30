@@ -30,6 +30,8 @@ type Query {
   projectTags: [String]
   # Get all area: prefixed tags from routine items
   areaTags: [String]
+  # Standard steps for a routine name (step 1 is the cue that starts it)
+  suggestRoutineSteps(name: String!): [String]
 
   # ── Routines (daily snapshots) ─────────────────────────────────────────────
   # Get all non-skipped routines for the user
@@ -110,7 +112,9 @@ type Mutation {
   releaseNotificationToken(notificationId: String!): Boolean
   # Register this signed-in device's push token (one of several devices per user)
   registerNotificationToken(notificationId: String!): Boolean
-  # Day-level notification preferences (morning, plan, evening, streak, reengage, insights)
+  # This device's app draws routine cues with their buttons itself (Android)
+  registerNotificationActions(notificationId: String!): Boolean
+  # Day-level notification preferences (morning, plan, evening, streak, reengage, insights, missedEmail)
   updateNotificationPrefs(prefs: NotificationPrefsInput!): NotificationPrefs
 
   # ── User ──────────────────────────────────────────────────────────────────
@@ -147,6 +151,8 @@ type Mutation {
     endEvent: String
     tags: [String]
     notifyMode: String # off | notify | alarm
+    # With no steps sent, the routine gets the standard ones; false opts out
+    suggestSteps: Boolean
   ): RoutineItem
   updateRoutineItem(
     id: ID!
@@ -274,6 +280,7 @@ type NotificationPrefs {
   streak: Boolean
   reengage: Boolean
   insights: Boolean
+  missedEmail: Boolean
   morningTime: String # HH:mm local
   eveningTime: String # HH:mm local
 }
@@ -285,6 +292,7 @@ input NotificationPrefsInput {
   streak: Boolean
   reengage: Boolean
   insights: Boolean
+  missedEmail: Boolean
   morningTime: String
   eveningTime: String
 }

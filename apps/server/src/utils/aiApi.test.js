@@ -68,6 +68,22 @@ describe('generateMilestonePlan day grid', () => {
     expect(plan.entries[0].date).toBe('16-08-2026');
     expect(plan.entries[6].date).toBe('22-08-2026');
   });
+
+  // The server is on UTC: at 21:00 on Sat 31 Oct in New York it is already
+  // Sun 1 Nov there, and a plan dated from the server's clock was filed under
+  // the following week. The user's own today decides.
+  it("plans from the user's local today, not the server's date", async () => {
+    jest.setSystemTime(new Date(Date.UTC(2026, 10, 1, 1, 0, 0))); // Sun 1 Nov 01:00 UTC
+    const plan = await generateMilestonePlan('ship the beta this week', null, 'week', { today: '31-10-2026' });
+
+    expect(plan.entries[0]).toMatchObject({ date: '31-10-2026', periodName: 'Saturday' });
+  });
+
+  it("falls back to the server's date when the local day is unknown", async () => {
+    const plan = await generateMilestonePlan('ship the beta this week', null, 'week', { today: 'not-a-date' });
+
+    expect(plan.entries[0].date).toBe('15-08-2026');
+  });
 });
 
 // The chat's "Before you start" card appends a next step to the user's

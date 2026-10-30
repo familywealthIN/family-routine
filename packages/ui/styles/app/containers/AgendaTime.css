@@ -1,0 +1,54 @@
+/* Styles for apps/web-app/src/containers/AgendaTime.vue, loaded there with <style src> (scoped). */
+  >>> .v-timeline-item {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .period-separator {
+    border-bottom: 1px solid #ccc;
+  }
+  >>> .v-timeline--dense:before {
+    left: 34px !important;
+  }
+  >>> .v-timeline--dense .v-timeline-item__dot {
+    left: 16px !important;
+  }
+  >>> .v-timeline--dense .v-timeline-item__dot--small {
+    left: 23px !important;
+  }
+ .add-new >>> .v-btn {
+    margin-left: -15px;
+    padding-left: 0;
+    text-align: left;
+  }
+  .date-navigation {
+    padding: 32px 32px 0 32px;
+  }
+  .date-navigation .date-today {
+    height: 40px;
+    padding-top: 10px;
+    font-weight: bold;
+  }
+
+  .weekdays {
+    width: 100%;
+    display: flex;
+    justify-content:space-evenly;
+    align-items: center;
+    font-weight: 500;
+  }
+  .weekdays .day {
+    padding: 16px;
+    border-radius: 16px;
+    text-align: center;
+  }
+
+  .weekdays .day.active {
+    background-color: #288bd5;
+    color: #fff;
+  }
+
+  .overlay-icon {
+    position: absolute;
+    font-size: 14px;
+    padding: 2px 0 0 3px;
+  }

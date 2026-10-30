@@ -1,0 +1,200 @@
+/* Styles for apps/web-app/src/layouts/MobileLayout.vue, loaded there with <style src> (global, root-class prefixed). */
+#mobileLayout {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.fixed-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Android 14+ specific safe area handling */
+body.android14-plus .safe-area-top {
+  padding-top: max(env(safe-area-inset-top), 24px) !important;
+}
+
+body.android15 .safe-area-top {
+  padding-top: max(env(safe-area-inset-top, 0px), 8px);
+}
+
+.fixed-bottom-nav {
+  position: fixed !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  padding-bottom: 0 !important;
+  /* Remove padding-bottom from footer, let scrollable-content handle it */
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mobile web / installed PWA (iOS standalone): `.fixed-bottom-nav` zeroes the
+   padding with !important and Vuetify sizes the nav with an inline 56px, so the
+   buttons sat under the iPhone home indicator. Grow the bar by the inset and pad
+   the buttons above it. The native WebView keeps its own rules
+   (android-safe-area.css), hence :not(.capacitor-native). */
+body:not(.capacitor-native) #mobileLayout .fixed-bottom-nav.safe-area-bottom {
+  height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+}
+
+/* Android 14+ specific safe area handling */
+body.android14-plus .safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px) !important;
+}
+
+body.android15 .safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px);
+}
+
+.scrollable-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  /* padding-top: 20px; */
+  /* height of toolbar */
+  padding-bottom: 100px;
+  min-height: 0;
+}
+
+/* Android 14+ content padding */
+body.android14-plus .scrollable-content {
+  /* padding-top: calc(64px + max(env(safe-area-inset-top), 24px)) !important;
+  padding-bottom: calc(75px + max(env(safe-area-inset-bottom), 16px)) !important; */
+}
+
+body.android15 .scrollable-content {
+  /* padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important; */
+}
+
+.safe-area-content {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  background: #fff;
+  min-height: 100%;
+  box-sizing: border-box;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body.android15 .safe-area-content {
+  padding-left: max(env(safe-area-inset-left, 0px), 0px);
+  padding-right: max(env(safe-area-inset-right, 0px), 0px);
+}
+
+#mobileLayout .v-card {
+  border-radius: 16px;
+}
+
+.login footer {
+  bottom: calc(30px + env(safe-area-inset-bottom)) !important;
+}
+
+#mobileLayout .progress .v-card .headline {
+  color: rgba(0, 0, 0, 0.54);
+  font-size: 14px !important;
+  line-height: 16px !important;
+  font-weight: bold;
+}
+
+#mobileLayout .image-card {
+  border-radius: 0;
+}
+
+#mobileLayout .v-btn--bottom:not(.v-btn--absolute) {
+  bottom: 70px;
+}
+
+#mobileLayout .v-btn--bottom:not(.v-btn--absolute).second-right-btn {
+  right: 16px;
+}
+
+#mobileLayout .image-card .v-btn--bottom.v-btn--absolute {
+  bottom: -12px;
+}
+
+#mobileLayout .image-card-page {
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  position: relative;
+  top: -16px;
+  background-color: #fff;
+  padding-top: 16px !important;
+}
+
+#mobileLayout .v-chip .v-chip__content {
+  height: 38px;
+  padding: 0 16px;
+}
+
+#mobileLayout .v-chip .v-chip__content .v-icon {
+  font-size: 16px;
+}
+
+#mobileLayout .v-navigation-drawer--temporary:not(.v-navigation-drawer--close),
+#mobileLayout .v-navigation-drawer--is-mobile:not(.v-navigation-drawer--close) {
+  width: 100% !important;
+}
+
+.v-bottom-nav {
+  height: 80px;
+}
+
+.login-content-wrapper {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+body.android15 #mobileLayout .nav-header {
+  padding-top: max(env(safe-area-inset-top, 0px), 8px);
+}
+
+.stimulus-row {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  padding: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.stimulus-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.stimulus-item:last-child {
+  border-right: none;
+}
+
+.stimulus-label {
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.54);
+  font-weight: 500;
+  margin-top: 2px;
+}

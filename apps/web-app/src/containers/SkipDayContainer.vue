@@ -64,7 +64,7 @@ export default {
         return;
       }
 
-      guardFields('Routine', this.routineId, ['skip']);
+      guardFields('Routine', this.routineId, { skip });
       // Optimistic in the store so the week strip and the card react at once;
       // the mutation's own result confirms it.
       this.$routine.setSkipDay(skip);

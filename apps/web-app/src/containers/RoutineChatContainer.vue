@@ -105,6 +105,12 @@ export default {
      * of its chat.
      */
     sharedScroller: { type: Boolean, default: false },
+    /**
+     * The routines one swipe away (left and right). Their threads are read into
+     * the Apollo cache ahead of the swipe, so the card that slides in shows its
+     * chat at once instead of the previous routine's until the network answers.
+     */
+    neighbourRefs: { type: Array, default: () => [] },
   },
   data() {
     return {
@@ -168,6 +174,9 @@ export default {
     },
   },
   computed: {
+    neighbourKey() {
+      return `${this.date}|${this.neighbourRefs.join(',')}`;
+    },
     taskRef() {
       return (this.routine && this.routine.id) || '';
     },
@@ -239,6 +248,11 @@ export default {
       // until the routine is checked off (RoutineFocus.chatDisabled). Offering
       // them next to a disabled composer would just be a way around it.
       if (!(this.routine && this.routine.ticked)) return [];
+      // The last reply's own follow-ups come first: they are about what was
+      // just said ("Protect Thursdays", "Break down the pricing page"), which is
+      // what keeps a conversation going instead of resetting it every turn.
+      const offered = this.offeredFollowUps();
+      if (offered.length) return [...offered, ADD_TASK_CHIP];
       const chips = [];
       if (this.openItems.length) chips.push('Break it down');
       if (this.briefDataBlocks.length) {
@@ -246,6 +260,7 @@ export default {
         chips.push('Plan from next steps');
       }
       chips.push('How am I doing?');
+      chips.push('How was my week?');
       chips.push(ADD_TASK_CHIP);
       return chips;
     },
@@ -271,6 +286,9 @@ export default {
         scoreD: Math.round(this.scores.D || 0),
         scoreK: Math.round(this.scores.K || 0),
         scoreG: Math.round(this.scores.G || 0),
+        // The area/project description + next steps, so "what's next on the
+        // project?" is answered from the project, not guessed into new tasks.
+        brief: this.insightBrief(),
         items: this.goalItems.map((item) => ({
           id: String(item.id),
           body: item.body,
@@ -280,6 +298,12 @@ export default {
     },
   },
   watch: {
+    neighbourKey: {
+      handler() {
+        this.prefetchNeighbourThreads();
+      },
+      immediate: true,
+    },
     // A new message must land in view. On the phone the thread shares the focus
     // card's scroller (the card handles it); in the tablet/desktop chat pane the
     // scroller is this container's own ancestor, so find it and pin it down.
@@ -319,6 +343,43 @@ export default {
     },
   },
   methods: {
+    /**
+     * Warm the cache with the swipe neighbours' threads, once per routine per
+     * day. `cache-first`: a thread already read is not fetched again here — the
+     * focused query's own `cache-and-network` refreshes it when it arrives.
+     */
+    prefetchNeighbourThreads() {
+      if (!this.$root || !this.$root.$data.email || !this.$apollo) return;
+      if (!this.prefetchedThreads) this.prefetchedThreads = new Set();
+      this.neighbourRefs.forEach((ref) => {
+        if (!ref || ref === this.taskRef) return;
+        const key = `${this.date}|${ref}`;
+        if (this.prefetchedThreads.has(key)) return;
+        this.prefetchedThreads.add(key);
+        this.$apollo.query({
+          query: ROUTINE_CHAT_QUERY,
+          variables: { date: this.date, taskRef: ref },
+          fetchPolicy: 'cache-first',
+        }).catch(() => {
+          // A failed warm-up just means the swipe loads it the normal way.
+          this.prefetchedThreads.delete(key);
+        });
+      });
+    },
+    /**
+     * The follow-ups the latest reply offered, when it is still the latest
+     * thing in the thread. A client-only turn (a brief answer) after it means
+     * the conversation has moved on, so its chips would be stale.
+     */
+    offeredFollowUps() {
+      if ((this.localMessages || []).length) return [];
+      const stored = Array.isArray(this.chatMessages) ? this.chatMessages : [];
+      const last = stored[stored.length - 1];
+      if (!last || last.from !== 'routine' || last.kind !== 'text') return [];
+      return (Array.isArray(last.suggestions) ? last.suggestions : [])
+        .filter((chip) => typeof chip === 'string' && chip.trim() && chip !== ADD_TASK_CHIP)
+        .slice(0, 3);
+    },
     /** The area/project context the brief already caches, as plain text. */
     insightBrief() {
       return this.contextTags.map((tag) => {
@@ -971,8 +1032,4 @@ export default {
 };
 </script>
 
-<style>
-.routine-chat-container {
-  min-width: 0;
-}
-</style>
+<style src="@routine-notes/ui/styles/app/containers/RoutineChatContainer.css"></style>

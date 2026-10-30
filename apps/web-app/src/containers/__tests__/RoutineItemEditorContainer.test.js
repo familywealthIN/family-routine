@@ -29,11 +29,12 @@ jest.mock(
 const { print } = require('graphql/language/printer');
 
 const Container = require('../RoutineItemEditorContainer.vue').default;
-const { describeWriteError } = require('../RoutineItemEditorContainer.vue');
+const { describeWriteError, SUGGEST_DEBOUNCE_MS } = require('../RoutineItemEditorContainer.vue');
 const {
   ADD_ROUTINE_ITEM_MUTATION,
   DELETE_ROUTINE_ITEM_MUTATION,
   ROUTINE_SETTINGS_ITEMS_QUERY,
+  SUGGEST_ROUTINE_STEPS_QUERY,
   UPDATE_ROUTINE_ITEM_MUTATION,
 } = require('../../composables/graphql/routineSettingsQueries');
 
@@ -58,6 +59,12 @@ const ctx = (over = {}) => ({
   },
   // `save` delegates to it, so the context has to carry it like a real vm.
   variablesFor: methods.variablesFor,
+  // Every open forgets the last routine's suggested steps.
+  resetSuggestion: methods.resetSuggestion,
+  suggestedSteps: null,
+  stepsEdited: false,
+  suggestTimer: null,
+  suggestSeq: 0,
   ...over,
 });
 
@@ -319,5 +326,132 @@ describe('the field set the writes carry', () => {
     const read = fields(ROUTINE_SETTINGS_ITEMS_QUERY);
     expect(fields(ADD_ROUTINE_ITEM_MUTATION).filter((f) => read.includes(f))).toEqual(read);
     expect(fields(UPDATE_ROUTINE_ITEM_MUTATION).filter((f) => read.includes(f))).toEqual(read);
+  });
+});
+
+/**
+ * Standard steps: a NEW routine pre-fills its steps from its name. The sheet
+ * emits the name; this asks once the typing pauses, hands `{ name, steps }`
+ * down, and stops for good once the user has edited the steps.
+ */
+describe('suggested steps for a new routine', () => {
+  const JOGGING = ['Put on your running shoes', 'Step out the door', 'Run an easy 10 minutes'];
+
+  /** A container context that behaves like the live vm for these methods. */
+  const live = (over = {}) => {
+    const c = ctx({
+      suggestedSteps: null,
+      stepsEdited: false,
+      suggestTimer: null,
+      suggestSeq: 0,
+      ...over,
+    });
+    c.$apollo.query = over.query || jest.fn(() => Promise.resolve({ data: { suggestRoutineSteps: JOGGING } }));
+    ['canSuggest', 'fetchSuggestion', 'resetSuggestion', 'onNameInput', 'onStepsEdited', 'openNew', 'openEdit', 'save']
+      .forEach((name) => { c[name] = methods[name].bind(c); });
+    return c;
+  };
+
+  // Let the awaited query and the method's own continuation settle.
+  const flush = async () => {
+    for (let i = 0; i < 5; i += 1) await Promise.resolve(); // eslint-disable-line no-await-in-loop
+  };
+
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('asks once the name sits still, and hands the steps to the sheet', async () => {
+    const c = live();
+    c.onNameInput('Jog');
+    jest.advanceTimersByTime(SUGGEST_DEBOUNCE_MS - 100);
+    c.onNameInput('Jogging');
+    jest.advanceTimersByTime(SUGGEST_DEBOUNCE_MS);
+    await flush();
+    expect(c.$apollo.query).toHaveBeenCalledTimes(1);
+    const [options] = c.$apollo.query.mock.calls[0];
+    expect(options.query).toBe(SUGGEST_ROUTINE_STEPS_QUERY);
+    expect(options.variables).toEqual({ name: 'Jogging' });
+    // The app default (cache-and-network) makes a one-shot query throw.
+    expect(options.fetchPolicy).toBe('cache-first');
+    expect(c.suggestedSteps).toEqual({ name: 'Jogging', steps: JOGGING });
+  });
+
+  it('does not ask about a name still too short to mean anything', () => {
+    const c = live();
+    c.onNameInput('Jo');
+    c.onNameInput('');
+    jest.advanceTimersByTime(SUGGEST_DEBOUNCE_MS * 2);
+    expect(c.$apollo.query).not.toHaveBeenCalled();
+  });
+
+  it('never asks for an existing routine', () => {
+    const c = live({ routine: saved() });
+    c.onNameInput('Jogging');
+    jest.advanceTimersByTime(SUGGEST_DEBOUNCE_MS);
+    expect(c.$apollo.query).not.toHaveBeenCalled();
+  });
+
+  it('stops once the user edits the steps — even an answer already on its way', async () => {
+    let answer;
+    const c = live({ query: jest.fn(() => new Promise((resolve) => { answer = resolve; })) });
+    c.onNameInput('Jogging');
+    jest.advanceTimersByTime(SUGGEST_DEBOUNCE_MS);
+    c.onStepsEdited();
+    answer({ data: { suggestRoutineSteps: JOGGING } });
+    await flush();
+    expect(c.suggestedSteps).toBe(null);
+
+    c.onNameInput('Running');
+    jest.advanceTimersByTime(SUGGEST_DEBOUNCE_MS);
+    expect(c.$apollo.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops a slower answer for a name the user has since changed', async () => {
+    const answers = [];
+    const c = live({ query: jest.fn(() => new Promise((resolve) => { answers.push(resolve); })) });
+    c.onNameInput('Jogging');
+    jest.advanceTimersByTime(SUGGEST_DEBOUNCE_MS);
+    c.onNameInput('Meditation');
+    jest.advanceTimersByTime(SUGGEST_DEBOUNCE_MS);
+    answers[1]({ data: { suggestRoutineSteps: ['Sit on your cushion', 'Set a 2-minute timer'] } });
+    answers[0]({ data: { suggestRoutineSteps: JOGGING } });
+    await flush();
+    expect(c.suggestedSteps.name).toBe('Meditation');
+  });
+
+  it('stays quiet when the suggestion fails — the steps field is still there', async () => {
+    const c = live({ query: jest.fn(() => Promise.reject(new Error('offline'))) });
+    c.onNameInput('Jogging');
+    jest.advanceTimersByTime(SUGGEST_DEBOUNCE_MS);
+    await flush();
+    expect(c.suggestedSteps).toBe(null);
+    expect(c.errorMessage).toBe('');
+  });
+
+  it('forgets the last routine\'s suggestion on every open', async () => {
+    const c = live();
+    c.onNameInput('Jogging');
+    jest.advanceTimersByTime(SUGGEST_DEBOUNCE_MS);
+    await flush();
+    c.onStepsEdited();
+    c.openNew();
+    expect(c.suggestedSteps).toBe(null);
+    expect(c.stepsEdited).toBe(false);
+  });
+
+  it('lets the server fill an untouched, empty new routine — but not one the user emptied', async () => {
+    const c = live();
+    await c.save(payload({ id: '', steps: [] }));
+    expect(c.$apollo.mutate.mock.calls[0][0].variables.suggestSteps).toBe(true);
+
+    const emptied = live({ stepsEdited: true });
+    await emptied.save(payload({ id: '', steps: [] }));
+    expect(emptied.$apollo.mutate.mock.calls[0][0].variables.suggestSteps).toBe(false);
+  });
+
+  it('never sends the flag on an update', async () => {
+    const c = live();
+    await c.save(payload());
+    expect(c.$apollo.mutate.mock.calls[0][0].variables).not.toHaveProperty('suggestSteps');
   });
 });

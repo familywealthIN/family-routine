@@ -30,6 +30,10 @@ jest.mock('../schema/RoutineItemSchema', () => {
   return { ...actual, RoutineItemModel };
 });
 
+// Standard steps are covered in routineItemSteps.test.js; here they must not
+// reach for a model.
+jest.mock('../utils/routineSteps', () => ({ suggestRoutineSteps: jest.fn(() => Promise.resolve([])) }));
+
 jest.mock('../utils/aiApi', () => ({
   enhanceRoutineItemWithAI: jest.fn(() => Promise.resolve({ description: 'd', steps: [] })),
 }));

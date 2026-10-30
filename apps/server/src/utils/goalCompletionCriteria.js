@@ -2,22 +2,19 @@
  * goalCompletionCriteria — decide whether a period goal item has actually earned
  * its auto-complete, and say what it was earned on.
  *
- * The old rule was the streak threshold on its own (`progress === completionThreshold`),
- * so a week goal closed itself at five day-wins however many day milestones the
- * user had hung off it. A seven-milestone week goal therefore reported COMPLETE
- * with a mid-week milestone still open — and, because `autoCheckTaskPeriod` runs
- * from read queries, it did so without the user ticking anything and without
- * saying why.
+ * The rule is the threshold (owner's rule, 25 Oct 2026): a period goal ticks
+ * itself once `completionThreshold` of its milestones are met — five day
+ * milestones for a week, three week milestones for a month, six month
+ * milestones for a year — however many more the user hung off it. Planning five
+ * week milestones under a month goal is ambition, not a raised bar. D-03
+ * (bdeed5a, 10 Sep) made every milestone a criterion with the threshold only as
+ * a floor, which left a month goal with 3 of 5 week milestones met open; that
+ * was reverted here.
  *
- * The threshold stays as a floor, so the streak economy is unchanged, but every
- * milestone the user declared inside the period is now a criterion as well and
- * all of them must be met. `progress` is deliberately untouched: it is the
- * N-of-5 streak count the dashboard renders, not a completion signal.
- *
- * The floor is therefore counted in the same unit as the criteria — met
- * milestones — rather than taken from `progress`, which counts one win per child
+ * The threshold is counted in met milestones rather than taken from
+ * `progress`, which counts one win per child
  * DOCUMENT. A month goal whose five week milestones all sit in the same week
- * document scores one there, so it could never clear a floor of three however
+ * document scores one there, so it could never clear a threshold of three however
  * many of its milestones were met, while the dashboard truthfully read 5/5.
  * Deriving the count here instead of taking it from the caller is what stops the
  * two disagreeing again.
@@ -101,7 +98,7 @@ function buildMilestoneDays(childDates, criteria, referenceDate) {
 /**
  * @param {Object} p
  * @param {Array}  p.criteria            from collectPeriodCriteria
- * @param {number} p.completionThreshold streak floor (threshold.weekDays etc.),
+ * @param {number} p.completionThreshold the threshold (threshold.weekDays etc.),
  *                                       counted in met milestones
  * @param {string} p.stepDownPeriod      'day' | 'week' | 'month', for the note
  * @param {string} p.date                the period goal's own date, for the note
@@ -112,7 +109,9 @@ function evaluateAutoComplete({
 }) {
   const met = criteria.filter((criterion) => criterion.isComplete);
   const outstanding = criteria.filter((criterion) => !criterion.isComplete);
-  const isComplete = met.length >= completionThreshold && !outstanding.length;
+  // Reaching the threshold is enough; milestones still open beyond it do not
+  // hold the goal back.
+  const isComplete = met.length >= completionThreshold;
 
   // An auto-complete has to state what it was awarded for; being told you
   // achieved something with no way to check it is worse than not closing.

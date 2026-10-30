@@ -13,4 +13,7 @@ ext {
     androidxJunitVersion = '1.2.1'
     androidxEspressoCoreVersion = '3.6.1'
     cordovaAndroidVersion = '10.1.1'
+    // The push plugin's own default; the app compiles against it too
+    // (RoutineMessagingService).
+    firebaseMessagingVersion = '24.1.0'
 }

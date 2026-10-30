@@ -13,7 +13,7 @@ const vm = (mutate) => ({
 
 describe('notification settings page', () => {
   it('lists every lifecycle notification, with times for morning and evening', () => {
-    expect(PREF_ROWS.map((r) => r.key)).toEqual(['morning', 'plan', 'evening', 'streak', 'insights', 'reengage']);
+    expect(PREF_ROWS.map((r) => r.key)).toEqual(['morning', 'plan', 'evening', 'streak', 'insights', 'reengage', 'missedEmail']);
     expect(PREF_ROWS.filter((r) => r.timeKey).map((r) => r.timeKey)).toEqual(['morningTime', 'eveningTime']);
   });
 

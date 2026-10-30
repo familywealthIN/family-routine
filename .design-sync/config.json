@@ -1,0 +1,8 @@
+{
+  "projectId": "4ce4417f-33df-4629-9fa3-d9e33f40b143",
+  "shape": "reference",
+  "storybookConfigDir": "apps/storybook/.storybook",
+  "source": "packages/design",
+  "stageCmd": "node .design-sync/stage.mjs",
+  "readmeHeader": ".design-sync/conventions.md"
+}

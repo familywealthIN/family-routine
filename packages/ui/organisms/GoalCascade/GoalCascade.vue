@@ -146,9 +146,25 @@ const GoalGroups = {
     renderCheckRow(h, row) {
       const text = [
         h('div', {
-          class: ['rn-gcas__row-body', row.done && row.strike ? 'rn-gcas__row-body--done' : ''],
+          class: [
+            'rn-gcas__row-body',
+            row.done && row.strike ? 'rn-gcas__row-body--done' : '',
+            row.missed ? 'rn-gcas__row-body--missed' : '',
+          ],
         }, row.body),
       ];
+
+      // A day item recorded as not done: the Missed pill under its title. The
+      // box stays a tick — a late tick counts.
+      if (row.kind !== 'bar' && row.missed && row.status) {
+        text.push(h('div', { class: 'rn-gcas__bar-row' }, [
+          h('div', {
+            class: 'rn-gcas__chip',
+            style: { background: row.status.bg, color: row.status.color },
+            attrs: { 'data-testid': `goal-status-${row.id}` },
+          }, row.status.label),
+        ]));
+      }
 
       if (row.kind === 'bar') {
         text.push(h('div', { class: 'rn-gcas__bar-row' }, [
@@ -529,6 +545,10 @@ export default {
 
 .rn-gcas__row-body--done {
   text-decoration: line-through;
+  color: rgba(0, 0, 0, .45);
+}
+
+.rn-gcas__row-body--missed {
   color: rgba(0, 0, 0, .45);
 }
 

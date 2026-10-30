@@ -239,8 +239,8 @@ container would couple unrelated domains, the exact opposite of "less
 bug-prone". So the rule is applied like this:
 
 - A container owns its **organism** + its **single-domain** read/write (e.g.
-  `GoalItemListContainer` owns the goal-item write CRUD via the entity-cache
-  path; `WeekGoalStreakContainer` owns the week-goal read).
+  `AgentFormContainer` owns the agent write CRUD; `GoalsCascadeContainer` owns
+  the goal-item writes on the Goals page).
 - When an action crosses domains, the container emits it and the **page**
   coordinates the affected domains. `DashBoard.completeGoalItem` is a legitimate
   page-level orchestrator, not a container concern.
@@ -265,8 +265,7 @@ that root and risk divergence. So the read is organised as a **data provider**:
   `filterTaskGoalsPeriod`, `getTaskStatus`). It is the single source of truth
   shared by the containers (the provider wires it with page state like
   `isTodaySelected`) AND the page's tick/redeem orchestration, and it's
-  unit-tested in isolation. `enrichTasksForUpcomingPast` / `filterUpcomingPastTask`
-  now live inside `UpcomingPastTasksContainer` (its sole consumer).
+  unit-tested in isolation.
 - Each container `inject: ['routineData']` and **derives its own slice** — its
   read — in its own computeds. The page no longer computes `upcomingTasksMeta`,
   `pastTasksMeta`, `weekGoalsForCurrentTask`, `currentAgentStatus`,
@@ -286,26 +285,16 @@ this provider approach deliberately avoids.)
 ## 7. Container catalog (dashboard)
 
 > **Historical.** This catalog was written for `DashBoard.vue`, which was removed on
-> 4 Oct 2026 when Routine Focus became the only home screen. As of 9 Oct only
-> `AgentEditModalContainer` (Priority) is still imported; every row marked
-> *unused* has no importer left and is a candidate for deletion. Routine Focus
-> composes its own containers (see `docs/routine-focus-home.md`).
+> 4 Oct 2026 when Routine Focus became the only home screen. On 29 Oct 2026 every
+> container left without an importer was deleted along with the organisms only
+> it rendered (`GoalItemList`, `CurrentTaskCard`, `UpcomingPastTasks`,
+> `WeekGoalStreak`, `AgendaTaskList`, `StimulusSummary`, `NextSteps`,
+> `SummaryCards`, and the modal, paywall, step, XP and goal-period containers).
+> Routine Focus composes its own containers (see `docs/routine-focus-home.md`).
 
 | Container | Organism | Owns | Status |
 |-----------|----------|------|--------|
-| `GoalItemListContainer` | `GoalItemList` | goal-item write CRUD (entity-cache) | unused (Goals now uses `GoalsCascadeContainer`) |
-| `CurrentTaskContainer` | `CurrentTaskCard` | **derives** current-task read via inject | unused (DashBoard removed) |
-| `UpcomingPastTasksContainer` | `UpcomingPastTasks` | **derives** upcoming/past meta via inject | unused (DashBoard removed) |
-| `WeekGoalStreakContainer` | `WeekGoalStreak` | **derives** week-goal read + show/hide via inject | unused (DashBoard removed) |
-| `AgendaTaskListContainer` | `AgendaTaskList` | **derives** grouped goals via inject (`mode`); **owns** agenda-mode goal writes (emits `changed`), forwards today-mode writes | unused (DashBoard removed) |
-| `StimulusSummaryContainer` | `StimulusSummary` (new organism) | **derives** D/K/G totals via inject (utils/stimulusTotals) | unused (DashBoard removed) |
-| `MissedDayRecoveryContainer` | `MissedDayRecovery` | week-strip read (`weekStimuli`, same variables as `WeekdaySelectorContainer` → one cache entry) + missed-day derivation (utils/missedDay) | unused (DashBoard removed) |
 | `AgentEditModalContainer` | `AgentEditModal` | **agent domain** (routine options + save refetch); imperative `open(taskRef)` | built + wired (PriorityTime) |
-| `PaywallDrawerContainer` | `PaywallDrawer` | drawer open/cost state; imperative `open(cost)` | unused |
-| `StepModalContainer` | (routine-steps dialog) | modal home (no GraphQL); `open(task)` | unused |
-| `GoalDetailsModalContainer` | `GoalListContainer` | "Add Goal" dialog chrome (v-model) | unused |
-| `GoalDisplayModalContainer` | `GoalCreationContainer` | goal-editor dialog chrome (v-model) | unused |
-| `QuickTaskModalContainer` | `QuickGoalCreationContainer` | quick-task dialog chrome (v-model) | unused |
 
 **Modal container convention:** an isolated-domain modal (agent) uses an
 imperative `open()/close()` API so the page holds *no* modal state. A modal

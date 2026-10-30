@@ -1,4 +1,5 @@
 /* eslint-disable quote-props */
+require('./utils/suppressMongooseWarnings')();
 require('dotenv').config();
 
 const mongoose = require('mongoose');
@@ -8,12 +9,13 @@ const crypto = require('crypto');
 
 const { getLocalTime, getLocalDate, groupUsersByTimezone } = require('./utils/timezone');
 const {
-  minuteOfDay, historyDates, candidateSetTimes, dueCues, batchCues,
+  minuteOfDay, historyDates, candidateSetTimes, dueCues, batchCues, nextTarget,
 } = require('./cue/cueEngine');
 const {
   HAS_DEVICE, ALARM_CHANNEL, DEFAULT_CHANNEL, deviceTokens, sendToUser,
 } = require('./utils/push');
 const { routineActions, routineRoute } = require('./cue/routineActions');
+const { buildCueContext, generateAiCue } = require('./cue/aiCue');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CONTEXT_DAYS = 30; // chat this recent counts as the routine having AI context
@@ -108,6 +110,57 @@ const firstMotto = (user) => {
   return motto && motto.length <= 40 ? motto : null;
 };
 
+const MAX_AI_CUES_PER_RUN = 40; // cost and the 59 s run limit
+const aiEnabled = () => process.env.CUE_AI !== 'off' && !!process.env.OPENROUTER_API_KEY;
+
+/**
+ * Replace template copy with the AI-written 7-day-context cue (a free model
+ * first, a paid Qwen fallback) where it validates.
+ * Alarms (a fixed promise) and batches keep their template. Mutates `due`.
+ */
+async function writeAiCues(db, due, emails, dueIds, now) {
+  if (!aiEnabled()) return;
+  const eligible = due.filter((c) => !c.alarm && c.kind !== 'batch' && c.history).slice(0, MAX_AI_CUES_PER_RUN);
+  if (!eligible.length) return;
+  const insights = await db.collection('routinechatmessages')
+    .find({
+      email: { $in: emails },
+      taskRef: { $in: dueIds },
+      from: 'routine',
+      icon: 'tips_and_updates',
+      createdAt: { $gte: new Date(now.getTime() - 7 * DAY_MS) },
+    }, {
+      projection: {
+        email: 1, taskRef: 1, text: 1, createdAt: 1,
+      },
+    })
+    .sort({ createdAt: -1 })
+    .toArray();
+  const latestInsight = new Map();
+  insights.forEach((m) => {
+    const key = `${m.email}:${m.taskRef}`;
+    if (!latestInsight.has(key)) latestInsight.set(key, decrypt(m.text));
+  });
+
+  await Promise.all(eligible.map(async (cue) => {
+    const ctx = buildCueContext({
+      item: cue.item,
+      history: cue.history,
+      kind: cue.kind,
+      anchor: cue.anchor,
+      identity: firstMotto(cue.user),
+      insight: latestInsight.get(`${cue.user.email}:${cue.item._id}`),
+      nextTarget: nextTarget(cue.history.streak),
+    });
+    const { cue: written, reason } = await generateAiCue(ctx);
+    if (written) {
+      Object.assign(cue, written, { source: 'ai' });
+    } else {
+      console.log(`AI cue fell back to template (${reason}) for ${cue.item._id}`);
+    }
+  }));
+}
+
 mongoose.connect(MONGDO_DB, { useNewUrlParser: true });
 const db = mongoose.connection;
 db.once('open', async () => {
@@ -117,7 +170,7 @@ db.once('open', async () => {
     const users = (await db.collection('users')
       .find(HAS_DEVICE, {
         projection: {
-          email: 1, notificationId: 1, notificationIds: 1, timezone: 1, motto: 1,
+          email: 1, notificationId: 1, notificationIds: 1, notificationActionTokens: 1, timezone: 1, motto: 1,
         },
       })
       .toArray())
@@ -162,7 +215,7 @@ db.once('open', async () => {
             { email: { $in: emails }, date: { $in: historyDates(today) } },
             {
               projection: {
-                date: 1, email: 1, skip: 1, 'tasklist._id': 1, 'tasklist.ticked': 1, 'tasklist.tickedAt': 1,
+                date: 1, email: 1, skip: 1, 'tasklist._id': 1, 'tasklist.ticked': 1, 'tasklist.tickedAt': 1, 'tasklist.redeemed': 1,
               },
             },
           )
@@ -218,6 +271,7 @@ db.once('open', async () => {
           .toArray(),
       ]);
       const agentByKey = new Map(agents.map((a) => [`${a.email}:${a.taskRef}`, a]));
+      await writeAiCues(db, due, emails, dueIds, now);
       const contextKeys = new Set([
         ...chats.map((c) => `${c.email}:${c.taskRef}`),
         ...linkedGoals.flatMap((g) => (g.goalItems || [])
@@ -225,7 +279,7 @@ db.once('open', async () => {
       ]);
 
       due.forEach(({
-        user, item, title, body, kind, mode, alarm,
+        user, item, title, body, kind, mode, alarm, source = 'template',
       }) => {
         const routineId = String(item._id);
         const key = `${user.email}:${routineId}`;
@@ -242,9 +296,10 @@ db.once('open', async () => {
           // what the buttons are for.
           route: kind === 'batch' ? '/home' : routineRoute(routineId, 'focus'),
           cue: kind,
+          copy: source,
           agentId: agent ? String(agent._id) : undefined,
         };
-        console.log(`Cue ${kind}/${mode}/${actions.level} to ${user.email} (${routineId})`);
+        console.log(`Cue ${kind}/${mode}/${actions.level}/${source} to ${user.email} (${routineId})`);
         notificationList.push(sendToUser({
           messaging: admin.messaging(),
           db,

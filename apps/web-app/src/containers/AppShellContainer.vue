@@ -69,8 +69,8 @@
  * Navigation and sign-out are forwarded untouched (`v-on="$listeners"`) - the
  * page owns the router, a container never does.
  *
- * NOTE: `XpBalanceContainer` is the renderless scoped-slot form of this same
- * read, for a page that renders `AppShell` itself. Both run the one
+ * NOTE: a renderless scoped-slot container (ARCHITECTURE § 2) can carry this same
+ * read for a page that renders `AppShell` itself. Both would run the one
  * `XP_BALANCE_QUERY` with no variables, so they observe a single normalized cache
  * entry and cannot disagree - but there should be one owner. This is the
  * container home for the AppShell organism (ARCHITECTURE.md § 6), so the

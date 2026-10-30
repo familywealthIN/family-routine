@@ -120,7 +120,7 @@ describe('GoalItemSheetContainer — writeItem sends the whole field set', () =>
   it('guards only the fields it is changing', () => {
     const vm = ctx();
     call('onUpdateTitle', vm, { item: ITEM, body: 'x' });
-    expect(guardFields).toHaveBeenCalledWith('GoalItem', 'g1', ['body']);
+    expect(guardFields).toHaveBeenCalledWith('GoalItem', 'g1', { body: 'x' });
   });
 
   it('its optimistic response is a COMPLETE GoalItem with the right typenames', () => {
@@ -175,7 +175,7 @@ describe('GoalItemSheetContainer — writeItem sends the whole field set', () =>
       body: 'Ship dashboard PR',
       tags: ['project:dashboard'],
     });
-    expect(guardFields).toHaveBeenCalledWith('GoalItem', 'g1', ['contribution']);
+    expect(guardFields).toHaveBeenCalledWith('GoalItem', 'g1', { contribution: edited });
   });
 
   it('an emptied contribution is written as an empty string, not dropped', () => {
@@ -288,7 +288,7 @@ describe('GoalItemSheetContainer — subtasks', () => {
     expect(varsOf(vm)).toEqual({
       id: 's2', taskId: 'g1', period: 'day', date: '12-09-2026', body: 'Add tests',
     });
-    expect(guardFields).toHaveBeenCalledWith('SubTaskItem', 's2', ['body']);
+    expect(guardFields).toHaveBeenCalledWith('SubTaskItem', 's2', { body: 'Add tests' });
     expect(patchSubTaskItem)
       .toHaveBeenCalledWith(expect.anything(), 's2', { body: 'Add tests' });
     await Promise.resolve();
@@ -308,7 +308,8 @@ describe('GoalItemSheetContainer — subtasks', () => {
     expect(varsOf(vm)).toEqual({
       taskId: 'g1', period: 'day', date: '12-09-2026', ids: ['s2', 's1'],
     });
-    expect(guardFields).toHaveBeenCalledWith('GoalItem', 'g1', ['subTasks']);
+    // A list is never guarded (cacheGuard § SCOPE); the result carries the order.
+    expect(guardFields).not.toHaveBeenCalled();
   });
 
   it('move up on the first row never reaches the server', () => {

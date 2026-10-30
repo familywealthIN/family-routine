@@ -18,9 +18,11 @@ const {
   TONES,
 } = require('../schema/RoutineChatSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
-const { chatWithRoutine } = require('../utils/chatApi');
+const { chatWithRoutine, PROPOSAL_INTENTS } = require('../utils/chatApi');
+const { chatWeekDates, weekDigest } = require('../utils/chatWeek');
 const { RoutineModel } = require('../schema/RoutineSchema');
 const { GoalModel } = require('../schema/GoalSchema');
+const { periodChildDates } = require('./goal');
 const {
   previousDates,
   periodDates,
@@ -72,8 +74,40 @@ const ChatContextInput = new GraphQLInputObjectType({
     scoreK: { type: GraphQLInt },
     scoreG: { type: GraphQLInt },
     items: { type: new GraphQLList(ChatChecklistItemInput) },
+    // The area/project description + next steps the client already caches for
+    // the "Before you start" brief — the same text the post-tick card reads.
+    brief: { type: GraphQLString },
   },
 });
+
+/**
+ * This routine's last seven days, as text for the chat. Optional context: a
+ * failed read leaves the chat answering from today alone, never failing it.
+ */
+async function loadWeek({ email, date, taskRef }) {
+  try {
+    const dates = chatWeekDates(date);
+    const { week, month } = periodDates(date);
+    // The week goal's milestones sit on its own Sunday..Saturday, which can
+    // run past today, so its tally reads those day docs too.
+    const weekDates = periodChildDates('week', date);
+    const goalDates = [...new Set([...dates, ...weekDates])];
+    const [routines, goals, periodGoals] = await Promise.all([
+      RoutineModel.find({ email, date: { $in: dates } }).lean().exec(),
+      GoalModel.find({ email, period: 'day', date: { $in: goalDates } }).exec(),
+      GoalModel.find({
+        email,
+        $or: [{ period: 'week', date: week }, { period: 'month', date: month }],
+      }).exec(),
+    ]);
+    return weekDigest({
+      routines, goals, periodGoals, weekDates, taskRef, today: date,
+    });
+  } catch (error) {
+    console.warn('[routineChat] week context unavailable:', error.message);
+    return '';
+  }
+}
 
 const query = {
   routineChat: {
@@ -118,17 +152,20 @@ const mutation = {
         email, date, taskRef, from: 'me', kind: 'text', text: body,
       }).save());
 
-      const history = await RoutineChatMessageModel
-        .find({ email, date, taskRef, kind: 'text' })
-        .sort({ createdAt: -1 })
-        .limit(HISTORY_WINDOW)
-        .exec();
+      const [history, week] = await Promise.all([
+        RoutineChatMessageModel
+          .find({ email, date, taskRef, kind: 'text' })
+          .sort({ createdAt: -1 })
+          .limit(HISTORY_WINDOW)
+          .exec(),
+        loadWeek({ email, date, taskRef }),
+      ]);
 
       const turns = history
         .reverse()
         // The message just saved is the prompt, not history.
         .filter((m) => String(m._id) !== String(userMessage._id))
-        .map((m) => ({ from: m.from, text: m.text }));
+        .map((m) => ({ from: m.from, text: m.text, proposals: m.proposals }));
 
       const snap = snapshot || {};
       const result = await chatWithRoutine({
@@ -147,14 +184,16 @@ const mutation = {
           totalCount: snap.totalCount,
           items: snap.items || [],
           scores: { D: snap.scoreD, K: snap.scoreK, G: snap.scoreG },
+          week,
+          brief: cap(String(snap.brief || ''), BRIEF_MAX),
         },
       });
 
-      // A break-down turn's tasks are PROPOSALS — they render with an "Add all
-      // to checklist" button and only become goal items when pressed. Every
-      // other intent's tasks are created by the client straight away, so the
-      // reply bubble carries no proposals.
-      const proposals = result.intent === 'break_down' ? result.tasks : [];
+      // A break-down or suggestion turn's tasks are PROPOSALS — they render
+      // with an "Add all to checklist" button and only become goal items when
+      // pressed. An explicit add's tasks are created by the client straight
+      // away, so its bubble carries no proposals.
+      const proposals = PROPOSAL_INTENTS.includes(result.intent) ? result.tasks : [];
 
       const replyMessage = decryptSaved(await new RoutineChatMessageModel({
         email,
@@ -164,6 +203,7 @@ const mutation = {
         kind: 'text',
         text: cap(result.reply, TEXT_MAX),
         proposals,
+        suggestions: result.suggestions || [],
         model: result.model || null,
       }).save());
 
@@ -181,13 +221,13 @@ const mutation = {
   },
 
   /**
-   * The first message after a routine is ticked — once per routine per day, in
-   * three sentences that celebrate a real win, offer one fresh idea for the next
-   * session and end on a target within reach. Grounded in the last month: the
-   * run of check-ins, this week against last, K/D/G earned, the activities done
-   * most, and the area/project description + next steps the client already
-   * caches (`brief`). Idempotent: a thread that already holds today's paragraph
-   * gets it back.
+   * The first message after a routine is ticked — once per routine per day, as
+   * a coach card: a title, why this tick matters, and one concrete action
+   * ("Right now:" / "Next time:"). The reasoning is deterministic
+   * (utils/insightStrategy: diagnose the last month, pick one hook and one
+   * lever); the model only writes it, and is validated against the facts. The
+   * area/project description + next steps the client caches (`brief`) feed
+   * both. Idempotent: a thread that already holds today's card gets it back.
    */
   routineInsight: {
     type: RoutineChatMessageType,

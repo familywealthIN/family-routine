@@ -94,6 +94,10 @@ async function unbindPushToken(User, token, exceptId) {
     { ...others, notificationId: token },
     { $unset: { notificationId: 1 } },
   ).exec();
+  await User.updateMany(
+    { ...others, notificationActionTokens: token },
+    { $pull: { notificationActionTokens: token } },
+  ).exec();
 }
 
 /**

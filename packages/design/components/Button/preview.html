@@ -1,0 +1,53 @@
+<!-- @dsCard group="Actions" height=312 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Button</title>
+<link rel="stylesheet" href="../../tokens.css">
+<style>
+  body { margin: 0; padding: 20px 16px; background: var(--bg-app); font-family: var(--family-sans); color: var(--text); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .label { font: var(--font-overline); letter-spacing: .5px; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 18px;
+    border-radius: var(--radius-card); border: 0; font: 600 14px/1 var(--family-sans); cursor: pointer; }
+  .btn .mi { font-size: 20px; }
+  .btn--primary { background: var(--primary); color: var(--on-primary); box-shadow: 0 2px 6px rgba(40,139,213,.3); }
+  .btn--primary:hover { background: var(--primary-dark); }
+  .btn--outline { background: var(--surface); color: var(--primary-dark); box-shadow: inset 0 0 0 1px rgba(40,139,213,.45); }
+  .btn--text { background: transparent; color: var(--primary); padding: 0 10px; }
+  .btn--danger { background: var(--danger); color: var(--on-primary); }
+  .btn--pill { height: 30px; padding: 0 12px; border-radius: var(--radius-pill); font-size: 12px; }
+  .btn:disabled { background: rgba(0,0,0,.12); color: var(--text-disabled); box-shadow: none; cursor: default; }
+  .circle { width: 36px; height: 36px; border-radius: 50%; border: 0; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--surface); color: var(--text); box-shadow: var(--shadow-card); cursor: pointer; }
+  .circle .mi { font-size: 22px; }
+  .circle--primary { background: var(--primary); color: var(--on-primary); }
+  .hint { font: var(--font-caption); color: var(--now-dark); display: flex; align-items: center; gap: 4px; }
+  .hint .mi { font-size: 16px; }
+</style>
+</head>
+<body>
+  <div class="label">Labelled, radius 16</div>
+  <div class="row">
+    <button class="btn btn--primary"><span class="mi">play_arrow</span>Start task</button>
+    <button class="btn btn--outline"><span class="mi">smart_toy</span>Start agent</button>
+    <button class="btn btn--text">Undo</button>
+    <button class="btn btn--danger">Delete goal</button>
+    <button class="btn btn--primary" disabled>Start task</button>
+  </div>
+  <div class="label">Pill actions in chat and chips</div>
+  <div class="row">
+    <button class="btn btn--primary btn--pill"><span class="mi" style="font-size:16px">playlist_add</span>Add all to checklist</button>
+    <button class="btn btn--outline btn--pill">Plan from next steps</button>
+  </div>
+  <div class="label">Header actions: glyph only on phone</div>
+  <div class="row">
+    <button class="circle" aria-label="New goal"><span class="mi">add</span></button>
+    <button class="circle" aria-label="Invite"><span class="mi">person_add</span></button>
+    <button class="circle circle--primary" aria-label="New goal"><span class="mi">add</span></button>
+    <span class="hint"><span class="mi">info</span>Add a goal item to start this routine</span>
+  </div>
+</body>
+</html>

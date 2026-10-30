@@ -305,42 +305,4 @@ export default {
 <!-- Unscoped but root-class prefixed: this page renders its own shell, and the
      card chrome has to reach the organisms it wraps (see MEMORY: web-app CSS
      lives inline in organisms, prefixed so nothing leaks). -->
-<style>
-.rn-profile {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-}
-
-.rn-profile__main,
-.rn-profile__side {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-
-/* The card chrome every block on this page shares, declared once here rather
-   than copied into six organisms. */
-.rn-profile__card {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .1), 0 2px 4px -1px rgba(0, 0, 0, .06);
-}
-
-/* --- tablet + desktop: the 3fr / 2fr split ------------------------------ */
-
-.rn-profile--tablet,
-.rn-profile--desktop {
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  align-items: start;
-}
-
-.rn-profile--tablet .rn-profile__card,
-.rn-profile--desktop .rn-profile__card {
-  border-radius: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .08), 0 2px 4px -1px rgba(0, 0, 0, .05);
-}
-</style>
+<style src="@routine-notes/ui/styles/app/pages/ProfileTime.css"></style>

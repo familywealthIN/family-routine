@@ -126,7 +126,9 @@ export function endOperation(s) {
 }
 
 function upsert(typename, id, fields, confirmedAt) {
-  if (!typename || id == null || !fields || typeof fields !== 'object') return null;
+  // `fields` maps names to values. An array of names would guard '0', '1', …
+  // — fields no payload has — and silently protect nothing.
+  if (!typename || id == null || !fields || typeof fields !== 'object' || Array.isArray(fields)) return null;
   const key = keyOf(typename, id);
   let guard = guards.get(key);
   if (!guard) {
