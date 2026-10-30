@@ -28,8 +28,8 @@
  * CRUD behind it (create · update · delete).
  *
  * All three write the SAME entity through the same field set, so the blast radius
- * is still one slice (the `AgentFormContainer` / `GoalItemListContainer`
- * precedent for "one container owns one entity's write CRUD").
+ * is still one slice (the `AgentFormContainer` precedent for "one container
+ * owns one entity's write CRUD").
  *
  * Imperative `openNew(minutes)` / `openEdit(routine)` so the page carries no
  * sheet state (the `AgentEditModalContainer` convention).

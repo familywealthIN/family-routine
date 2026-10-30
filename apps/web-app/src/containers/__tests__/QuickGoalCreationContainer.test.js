@@ -213,7 +213,7 @@ describe('QuickGoalCreationContainer presentation', () => {
     expect(organism.description).toBe('Deep work block.');
   });
 
-  // The classic dashboard and QuickTaskModalContainer own their own v-dialog.
+  // A host that owns its own v-dialog must keep getting the inline form.
   it('defaults to the inline presentation, so the dialog hosts are untouched', () => {
     expect(Container.props.sheet.default).toBe(false);
     expect(mount().organism.sheet).toBe(false);

@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-29T23:30:08.617Z",
+ "generatedAt": "2026-10-30T00:29:06.734Z",
  "levels": {
   "Atoms": [
    {
@@ -9,14 +9,10 @@
     "legacy": false,
     "users": [
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/GoalDetailsModalContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
      "packages/ui/organisms/AiGoalPlanForm/AiGoalPlanForm.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/AiTaskCreationForm/AiTaskCreationForm.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/GoalStatusChips/GoalStatusChips.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue"
+     "packages/ui/organisms/AiTaskCreationForm/AiTaskCreationForm.vue"
     ],
     "pages": [],
     "summary": "",
@@ -39,46 +35,6 @@
       "file": "shots/atoms-alert--success.jpg",
       "width": 408,
       "height": 84,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "Avatar",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/molecules/StatusRing/StatusRing.vue",
-     "packages/ui/molecules/StreakChecks/StreakChecks.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/GoalStatusChips/GoalStatusChips.vue",
-     "packages/ui/organisms/GroupMemberRow/GroupMemberRow.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/organisms/UserDrawer/UserDrawer.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-avatar--sizes",
-      "title": "Atoms/Avatar",
-      "name": "Sizes",
-      "ok": true,
-      "file": "shots/atoms-avatar--sizes.jpg",
-      "width": 352,
-      "height": 120,
-      "problems": []
-     },
-     {
-      "id": "atoms-avatar--colors",
-      "title": "Atoms/Avatar",
-      "name": "Colors",
-      "ok": true,
-      "file": "shots/atoms-avatar--colors.jpg",
-      "width": 392,
-      "height": 72,
       "problems": []
      }
     ]
@@ -120,41 +76,6 @@
     ]
    },
    {
-    "name": "BtnToggle",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/molecules/ButtonToggle/ButtonToggle.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-btntoggle--default",
-      "title": "Atoms/BtnToggle",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-btntoggle--default.jpg",
-      "width": 266,
-      "height": 60,
-      "problems": []
-     },
-     {
-      "id": "atoms-btntoggle--mandatory",
-      "title": "Atoms/BtnToggle",
-      "name": "Mandatory",
-      "ok": true,
-      "file": "shots/atoms-btntoggle--mandatory.jpg",
-      "width": 266,
-      "height": 60,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "Button",
     "dir": "atoms",
     "story": true,
@@ -162,28 +83,15 @@
     "users": [
      "apps/web-app/src/components/TimezoneSync.vue",
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/GoalDetailsModalContainer.vue",
-     "apps/web-app/src/containers/StepModalContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
      "apps/web-app/src/utils/routineTaskDisplay.js",
-     "packages/ui/molecules/ButtonToggle/ButtonToggle.vue",
-     "packages/ui/molecules/DialogHeader/DialogHeader.vue",
      "packages/ui/molecules/LoadErrorState/LoadErrorState.vue",
-     "packages/ui/molecules/MenuButton/MenuButton.vue",
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
      "packages/ui/molecules/TimelineItemList/TimelineItemList.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
      "packages/ui/organisms/GoalCreation/GoalCreation.vue",
-     "packages/ui/organisms/GoalItemList/GoalItemList.vue",
      "packages/ui/organisms/GoalList/GoalList.vue",
-     "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/SimpleDialog/SimpleDialog.vue",
-     "packages/ui/organisms/SummaryCards/SummaryCards.vue",
-     "packages/ui/organisms/TaskTile/TaskTile.vue",
-     "packages/ui/organisms/TitleOptions/TitleOptions.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
+     "packages/ui/organisms/PendingList/PendingList.vue"
     ],
     "pages": [],
     "summary": "",
@@ -211,40 +119,6 @@
     ]
    },
    {
-    "name": "Calendar",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/molecules/DateSelector/DateSelector.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
-    ],
-    "pages": [],
-    "summary": "AtomCalendar - Atomic wrapper for Vuetify v-calendar A component for displaying a calendar with various views (month, week, day) and event support. Passes all attributes, events, and scoped slots to the underlying v-calendar. @example <atom-calendar v-model=\"selectedDate\" type=\"month\" color=\"primary\" @click:date=\"handleDateClick\" > <template v-slot:day=\"{ date }\"> {{ date }} </template> </atom-calendar>",
-    "shots": [
-     {
-      "id": "atoms-calendar--month",
-      "title": "Atoms/Calendar",
-      "name": "Month",
-      "ok": true,
-      "file": "shots/atoms-calendar--month.jpg",
-      "width": 408,
-      "height": 924,
-      "problems": []
-     },
-     {
-      "id": "atoms-calendar--week",
-      "title": "Atoms/Calendar",
-      "name": "Week",
-      "ok": true,
-      "file": "shots/atoms-calendar--week.jpg",
-      "width": 408,
-      "height": 1058,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "Card",
     "dir": "atoms",
     "story": true,
@@ -252,30 +126,14 @@
     "users": [
      "apps/web-app/src/components/TimezoneSync.vue",
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/GoalDetailsModalContainer.vue",
-     "apps/web-app/src/containers/QuickTaskModalContainer.vue",
-     "apps/web-app/src/containers/StepModalContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
-     "packages/ui/molecules/CardHeader/CardHeader.vue",
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
      "packages/ui/molecules/SubtaskEditor/SubtaskEditor.vue",
-     "packages/ui/molecules/TableCard/TableCard.vue",
-     "packages/ui/organisms/AgendaTaskList/AgendaTaskList.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
      "packages/ui/organisms/AiTaskCreationForm/AiTaskCreationForm.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue",
-     "packages/ui/organisms/FullscreenDialog/FullscreenDialog.vue",
      "packages/ui/organisms/GoalCreation/GoalCreation.vue",
      "packages/ui/organisms/GoalTaskToolbar/GoalTaskToolbar.vue",
      "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/PriorityMatrix/PriorityMatrix.vue",
-     "packages/ui/organisms/SimpleDialog/SimpleDialog.vue",
-     "packages/ui/organisms/StimulusSummary/StimulusSummary.vue",
-     "packages/ui/organisms/SummaryCards/SummaryCards.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue",
-     "packages/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue",
      "packages/ui/templates/ContainerBox/ContainerBox.vue"
     ],
     "pages": [],
@@ -310,11 +168,7 @@
     "legacy": false,
     "users": [
      "apps/web-app/src/components/TimezoneSync.vue",
-     "apps/web-app/src/containers/StepModalContainer.vue",
-     "packages/ui/molecules/CardHeader/CardHeader.vue",
-     "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/FullscreenDialog/FullscreenDialog.vue",
-     "packages/ui/organisms/SimpleDialog/SimpleDialog.vue"
+     "packages/ui/organisms/AiSearchModal/AiSearchModal.vue"
     ],
     "pages": [],
     "summary": "",
@@ -349,22 +203,11 @@
     "users": [
      "apps/web-app/src/components/TimezoneSync.vue",
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/QuickTaskModalContainer.vue",
-     "apps/web-app/src/containers/StepModalContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
      "apps/web-app/src/views/Guide.vue",
-     "packages/ui/molecules/CardHeader/CardHeader.vue",
-     "packages/ui/organisms/AgendaTaskList/AgendaTaskList.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/FullscreenDialog/FullscreenDialog.vue",
      "packages/ui/organisms/GoalCreation/GoalCreation.vue",
-     "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/PriorityMatrix/PriorityMatrix.vue",
-     "packages/ui/organisms/SimpleDialog/SimpleDialog.vue",
-     "packages/ui/organisms/SummaryCards/SummaryCards.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/skeletons/CurrentTaskSkeleton/CurrentTaskSkeleton.vue"
+     "packages/ui/organisms/PendingList/PendingList.vue"
     ],
     "pages": [],
     "summary": "",
@@ -399,16 +242,9 @@
     "users": [
      "apps/web-app/src/components/TimezoneSync.vue",
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/QuickTaskModalContainer.vue",
-     "apps/web-app/src/containers/StepModalContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
-     "packages/ui/molecules/CardHeader/CardHeader.vue",
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
-     "packages/ui/molecules/TableCard/TableCard.vue",
-     "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/SimpleDialog/SimpleDialog.vue",
-     "packages/ui/organisms/SummaryCards/SummaryCards.vue",
-     "packages/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue"
+     "packages/ui/organisms/AiSearchModal/AiSearchModal.vue"
     ],
     "pages": [],
     "summary": "",
@@ -442,7 +278,6 @@
     "legacy": false,
     "users": [
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
-     "packages/ui/organisms/GoalItemList/GoalItemList.vue",
      "packages/ui/organisms/GoalList/GoalList.vue"
     ],
     "pages": [],
@@ -477,10 +312,7 @@
     "legacy": false,
     "users": [
      "packages/ui/molecules/PointsChip/PointsChip.vue",
-     "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/GoalStatusChips/GoalStatusChips.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue"
+     "packages/ui/organisms/AiSearchModal/AiSearchModal.vue"
     ],
     "pages": [],
     "summary": "",
@@ -508,51 +340,15 @@
     ]
    },
    {
-    "name": "ChipGroup",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "AtomChipGroup - Vuetify chip group wrapper atom This atom wraps v-chip-group providing a consistent atomic design interface while maintaining full Vuetify functionality.",
-    "shots": [
-     {
-      "id": "atoms-chipgroup--default",
-      "title": "Atoms/ChipGroup",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-chipgroup--default.jpg",
-      "width": 276,
-      "height": 56,
-      "problems": []
-     },
-     {
-      "id": "atoms-chipgroup--multiple",
-      "title": "Atoms/ChipGroup",
-      "name": "Multiple",
-      "ok": true,
-      "file": "shots/atoms-chipgroup--multiple.jpg",
-      "width": 276,
-      "height": 56,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "Container",
     "dir": "atoms",
     "story": true,
     "legacy": false,
     "users": [
-     "apps/web-app/src/containers/AgendaTaskListContainer.vue",
      "apps/web-app/src/containers/AppShellContainer.vue",
-     "apps/web-app/src/containers/CurrentTaskContainer.vue",
      "apps/web-app/src/containers/GoalCalendarContainer.vue",
      "apps/web-app/src/containers/GoalsCascadeContainer.vue",
      "apps/web-app/src/containers/ProgressReportContainer.vue",
-     "apps/web-app/src/containers/StimulusSummaryContainer.vue",
-     "apps/web-app/src/containers/UpcomingPastTasksContainer.vue",
-     "apps/web-app/src/containers/WeekGoalStreakContainer.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
      "packages/ui/organisms/GoalCreation/GoalCreation.vue",
      "packages/ui/organisms/PendingList/PendingList.vue"
@@ -578,39 +374,6 @@
       "file": "shots/atoms-container--fluid.jpg",
       "width": 376,
       "height": 85,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "DataTable",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/molecules/TableCard/TableCard.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-datatable--default",
-      "title": "Atoms/DataTable",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-datatable--default.jpg",
-      "width": 408,
-      "height": 188,
-      "problems": []
-     },
-     {
-      "id": "atoms-datatable--hide-actions",
-      "title": "Atoms/DataTable",
-      "name": "Hide Actions",
-      "ok": true,
-      "file": "shots/atoms-datatable--hide-actions.jpg",
-      "width": 408,
-      "height": 81,
       "problems": []
      }
     ]
@@ -656,17 +419,11 @@
     "users": [
      "apps/web-app/src/components/TimezoneSync.vue",
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/GoalDetailsModalContainer.vue",
-     "apps/web-app/src/containers/QuickTaskModalContainer.vue",
-     "apps/web-app/src/containers/StepModalContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
      "packages/ui/molecules/ResponsiveSheet/ResponsiveSheet.vue",
      "packages/ui/organisms/AgentResultModal/AgentResultModal.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/FullscreenDialog/FullscreenDialog.vue",
      "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/SimpleDialog/SimpleDialog.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue",
      "packages/ui/styles/app/global/android-safe-area.css"
     ],
     "pages": [],
@@ -700,13 +457,8 @@
     "story": true,
     "legacy": false,
     "users": [
-     "apps/web-app/src/containers/StepModalContainer.vue",
-     "packages/ui/molecules/MenuButton/MenuButton.vue",
-     "packages/ui/molecules/StreakChecks/StreakChecks.vue",
      "packages/ui/organisms/AiGoalPlanForm/AiGoalPlanForm.vue",
-     "packages/ui/organisms/AiTaskCreationForm/AiTaskCreationForm.vue",
-     "packages/ui/organisms/SimpleDialog/SimpleDialog.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue"
+     "packages/ui/organisms/AiTaskCreationForm/AiTaskCreationForm.vue"
     ],
     "pages": [],
     "summary": "",
@@ -734,150 +486,19 @@
     ]
    },
    {
-    "name": "ExpandTransition",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-expandtransition--default",
-      "title": "Atoms/ExpandTransition",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-expandtransition--default.jpg",
-      "width": 408,
-      "height": 273,
-      "problems": []
-     },
-     {
-      "id": "atoms-expandtransition--with-list",
-      "title": "Atoms/ExpandTransition",
-      "name": "With List",
-      "ok": true,
-      "file": "shots/atoms-expandtransition--with-list.jpg",
-      "width": 408,
-      "height": 88,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "ExpansionPanel",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-expansionpanel--default",
-      "title": "Atoms/ExpansionPanel",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-expansionpanel--default.jpg",
-      "width": 408,
-      "height": 171,
-      "problems": []
-     },
-     {
-      "id": "atoms-expansionpanel--multiple",
-      "title": "Atoms/ExpansionPanel",
-      "name": "Multiple",
-      "ok": true,
-      "file": "shots/atoms-expansionpanel--multiple.jpg",
-      "width": 408,
-      "height": 171,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "ExpansionPanelContent",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-expansionpanelcontent--default",
-      "title": "Atoms/ExpansionPanelContent",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-expansionpanelcontent--default.jpg",
-      "width": 408,
-      "height": 73,
-      "problems": []
-     },
-     {
-      "id": "atoms-expansionpanelcontent--disabled",
-      "title": "Atoms/ExpansionPanelContent",
-      "name": "Disabled",
-      "ok": true,
-      "file": "shots/atoms-expansionpanelcontent--disabled.jpg",
-      "width": 408,
-      "height": 73,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "FabTransition",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "AtomFabTransition - Vuetify fab transition wrapper atom This atom wraps v-fab-transition providing a consistent atomic design interface while maintaining full Vuetify functionality.",
-    "shots": [
-     {
-      "id": "atoms-fabtransition--default",
-      "title": "Atoms/FabTransition",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-fabtransition--default.jpg",
-      "width": 80,
-      "height": 80,
-      "problems": []
-     },
-     {
-      "id": "atoms-fabtransition--with-toggle",
-      "title": "Atoms/FabTransition",
-      "name": "With Toggle",
-      "ok": true,
-      "file": "shots/atoms-fabtransition--with-toggle.jpg",
-      "width": 218,
-      "height": 80,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "Flex",
     "dir": "atoms",
     "story": true,
     "legacy": false,
     "users": [
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/StimulusSummaryContainer.vue",
-     "apps/web-app/src/containers/WeekGoalStreakContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
      "packages/ui/molecules/TimelineEntryEditor/TimelineEntryEditor.vue",
      "packages/ui/molecules/TimelineItemList/TimelineItemList.vue",
      "packages/ui/organisms/AiTaskCreationForm/AiTaskCreationForm.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
      "packages/ui/organisms/GoalCreation/GoalCreation.vue",
      "packages/ui/organisms/GoalList/GoalList.vue",
-     "packages/ui/organisms/GoalStatusChips/GoalStatusChips.vue",
      "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/PriorityMatrix/PriorityMatrix.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue",
      "packages/ui/templates/ContainerBox/ContainerBox.vue"
     ],
     "pages": [],
@@ -946,35 +567,20 @@
     "legacy": false,
     "users": [
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/GoalDetailsModalContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
-     "packages/ui/molecules/ButtonToggle/ButtonToggle.vue",
      "packages/ui/molecules/DateSelector/DateSelector.spec.js",
-     "packages/ui/molecules/DialogHeader/DialogHeader.vue",
      "packages/ui/molecules/GoalRefSelector/GoalRefSelector.vue",
      "packages/ui/molecules/GoalTaskSelector/GoalTaskSelector.vue",
-     "packages/ui/molecules/ListItem/ListItem.vue",
      "packages/ui/molecules/LoadErrorState/LoadErrorState.vue",
-     "packages/ui/molecules/MenuButton/MenuButton.vue",
-     "packages/ui/molecules/StreakChecks/StreakChecks.vue",
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
      "packages/ui/molecules/TimelineItemList/TimelineItemList.vue",
      "packages/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue",
      "packages/ui/organisms/AiGoalPlanForm/AiGoalPlanForm.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
      "packages/ui/organisms/AppShell/AppShell.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue",
      "packages/ui/organisms/GoalCreation/GoalCreation.vue",
-     "packages/ui/organisms/GoalItemList/GoalItemList.vue",
      "packages/ui/organisms/GoalList/GoalList.vue",
-     "packages/ui/organisms/GoalStatusChips/GoalStatusChips.vue",
-     "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/SummaryCards/SummaryCards.vue",
-     "packages/ui/organisms/TaskTile/TaskTile.vue",
-     "packages/ui/organisms/TitleOptions/TitleOptions.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
+     "packages/ui/organisms/PendingList/PendingList.vue"
     ],
     "pages": [],
     "summary": "",
@@ -1002,37 +608,6 @@
     ]
    },
    {
-    "name": "Img",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "AtomImg - Atomic wrapper for Vuetify v-img A component for displaying images with lazy loading, gradients, and aspect ratio control built in. Passes all attributes and events to the underlying v-img. @example <atom-img src=\"path/to/image.jpg\" aspect-ratio=\"1.7\" /> @example with gradient <atom-img src=\"path/to/image.jpg\" gradient=\"to top, rgba(0,0,0,.44), rgba(0,0,0,.44)\" > <div>Overlay Content</div> </atom-img>",
-    "shots": [
-     {
-      "id": "atoms-img--default",
-      "title": "Atoms/Img",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-img--default.jpg",
-      "width": 408,
-      "height": 250,
-      "problems": []
-     },
-     {
-      "id": "atoms-img--with-gradient",
-      "title": "Atoms/Img",
-      "name": "With Gradient",
-      "ok": true,
-      "file": "shots/atoms-img--with-gradient.jpg",
-      "width": 408,
-      "height": 224,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "Layout",
     "dir": "atoms",
     "story": true,
@@ -1048,15 +623,10 @@
      "packages/ui/molecules/TimelineEntryEditor/TimelineEntryEditor.vue",
      "packages/ui/molecules/TimelineItemList/TimelineItemList.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
      "packages/ui/organisms/GoalCreation/GoalCreation.vue",
      "packages/ui/organisms/GoalList/GoalList.vue",
-     "packages/ui/organisms/GoalStatusChips/GoalStatusChips.vue",
      "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/PriorityMatrix/PriorityMatrix.vue",
      "packages/ui/organisms/ProgressReport/ProgressReport.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue",
      "packages/ui/templates/ContainerBox/ContainerBox.vue"
     ],
     "pages": [],
@@ -1092,17 +662,10 @@
     "users": [
      "packages/ui/atoms/ListGroup/ListGroup.vue",
      "packages/ui/molecules/DateSelector/DateSelector.vue",
-     "packages/ui/molecules/MenuButton/MenuButton.vue",
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
      "packages/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue",
-     "packages/ui/organisms/GoalItemList/GoalItemList.vue",
-     "packages/ui/organisms/GoalsFilterTime/GoalsFilterTime.vue",
      "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue",
      "packages/ui/utils/taskStatus.js"
     ],
     "pages": [],
@@ -1136,9 +699,7 @@
     "story": true,
     "legacy": false,
     "users": [
-     "packages/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue",
-     "packages/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue",
-     "packages/ui/organisms/GoalsFilterTime/GoalsFilterTime.vue"
+     "packages/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue"
     ],
     "pages": [],
     "summary": "AtomListGroup - Atomic wrapper for Vuetify v-list-group A component for creating expandable groups within a list. Supports activator slot and nested content. Passes all attributes, events, and slots to the underlying v-list-group. @example <atom-list-group v-model=\"active\"> <template v-slot:activator> <atom-list-tile> <atom-list-tile-title>Group Title</atom-list-tile-title> </atom-list-tile> </template> <atom-list…",
@@ -1161,20 +722,11 @@
     "story": true,
     "legacy": false,
     "users": [
-     "packages/ui/molecules/ListItem/ListItem.vue",
-     "packages/ui/molecules/MenuButton/MenuButton.vue",
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
      "packages/ui/molecules/SubtaskEditor/SubtaskEditor.vue",
      "packages/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue",
-     "packages/ui/organisms/GoalItemList/GoalItemList.vue",
-     "packages/ui/organisms/GoalsFilterTime/GoalsFilterTime.vue",
-     "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/TaskTile/TaskTile.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
+     "packages/ui/organisms/PendingList/PendingList.vue"
     ],
     "pages": [],
     "summary": "",
@@ -1207,16 +759,10 @@
     "story": true,
     "legacy": false,
     "users": [
-     "packages/ui/molecules/ListItem/ListItem.vue",
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
      "packages/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue",
-     "packages/ui/organisms/GoalItemList/GoalItemList.vue",
-     "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/TaskTile/TaskTile.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
+     "packages/ui/organisms/PendingList/PendingList.vue"
     ],
     "pages": [],
     "summary": "",
@@ -1244,95 +790,15 @@
     ]
    },
    {
-    "name": "ListTileActionText",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/organisms/TaskTile/TaskTile.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue"
-    ],
-    "pages": [],
-    "summary": "AtomListTileActionText - Vuetify list tile action text wrapper atom This atom wraps v-list-tile-action-text providing a consistent atomic design interface while maintaining full Vuetify functionality.",
-    "shots": [
-     {
-      "id": "atoms-listtileactiontext--default",
-      "title": "Atoms/ListTileActionText",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-listtileactiontext--default.jpg",
-      "width": 408,
-      "height": 88,
-      "problems": []
-     },
-     {
-      "id": "atoms-listtileactiontext--multiple",
-      "title": "Atoms/ListTileActionText",
-      "name": "Multiple",
-      "ok": true,
-      "file": "shots/atoms-listtileactiontext--multiple.jpg",
-      "width": 408,
-      "height": 88,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "ListTileAvatar",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/molecules/ListItem/ListItem.vue",
-     "packages/ui/molecules/MenuButton/MenuButton.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/TaskTile/TaskTile.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-listtileavatar--default",
-      "title": "Atoms/ListTileAvatar",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-listtileavatar--default.jpg",
-      "width": 408,
-      "height": 88,
-      "problems": []
-     },
-     {
-      "id": "atoms-listtileavatar--with-image",
-      "title": "Atoms/ListTileAvatar",
-      "name": "With Image",
-      "ok": true,
-      "file": "shots/atoms-listtileavatar--with-image.jpg",
-      "width": 408,
-      "height": 88,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "ListTileContent",
     "dir": "atoms",
     "story": true,
     "legacy": false,
     "users": [
-     "packages/ui/molecules/ListItem/ListItem.vue",
-     "packages/ui/molecules/MenuButton/MenuButton.vue",
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
      "packages/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue",
-     "packages/ui/organisms/GoalItemList/GoalItemList.vue",
-     "packages/ui/organisms/GoalsFilterTime/GoalsFilterTime.vue",
-     "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/TaskTile/TaskTile.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
+     "packages/ui/organisms/PendingList/PendingList.vue"
     ],
     "pages": [],
     "summary": "",
@@ -1360,61 +826,15 @@
     ]
    },
    {
-    "name": "ListTileSubTitle",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/molecules/ListItem/ListItem.vue",
-     "packages/ui/molecules/MenuButton/MenuButton.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/TaskTile/TaskTile.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-listtilesubtitle--default",
-      "title": "Atoms/ListTileSubTitle",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-listtilesubtitle--default.jpg",
-      "width": 408,
-      "height": 88,
-      "problems": []
-     },
-     {
-      "id": "atoms-listtilesubtitle--time-info",
-      "title": "Atoms/ListTileSubTitle",
-      "name": "Time Info",
-      "ok": true,
-      "file": "shots/atoms-listtilesubtitle--time-info.jpg",
-      "width": 408,
-      "height": 112,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "ListTileTitle",
     "dir": "atoms",
     "story": true,
     "legacy": false,
     "users": [
-     "packages/ui/molecules/ListItem/ListItem.vue",
-     "packages/ui/molecules/MenuButton/MenuButton.vue",
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
      "packages/ui/molecules/YearGoalSidebar/YearGoalSidebar.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue",
-     "packages/ui/organisms/GoalItemList/GoalItemList.vue",
-     "packages/ui/organisms/GoalsFilterTime/GoalsFilterTime.vue",
-     "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/TaskTile/TaskTile.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
+     "packages/ui/organisms/PendingList/PendingList.vue"
     ],
     "pages": [],
     "summary": "",
@@ -1442,46 +862,12 @@
     ]
    },
    {
-    "name": "LoadingIndicator",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/tests/LoadingIndicator.spec.js"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-loadingindicator--loading",
-      "title": "Atoms/LoadingIndicator",
-      "name": "Loading",
-      "ok": true,
-      "file": "shots/atoms-loadingindicator--loading.jpg",
-      "width": 76,
-      "height": 76,
-      "problems": []
-     },
-     {
-      "id": "atoms-loadingindicator--loading-with-message",
-      "title": "Atoms/LoadingIndicator",
-      "name": "Loading With Message",
-      "ok": true,
-      "file": "shots/atoms-loadingindicator--loading-with-message.jpg",
-      "width": 156,
-      "height": 108,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "Menu",
     "dir": "atoms",
     "story": true,
     "legacy": false,
     "users": [
      "packages/ui/molecules/DateSelector/DateSelector.vue",
-     "packages/ui/molecules/MenuButton/MenuButton.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue"
     ],
     "pages": [],
@@ -1510,83 +896,12 @@
     ]
    },
    {
-    "name": "ModeIndicator",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/tests/ModeIndicator.spec.js"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-modeindicator--task-mode",
-      "title": "Atoms/ModeIndicator",
-      "name": "Task Mode",
-      "ok": true,
-      "file": "shots/atoms-modeindicator--task-mode.jpg",
-      "width": 48,
-      "height": 48,
-      "problems": []
-     },
-     {
-      "id": "atoms-modeindicator--task-mode-with-label",
-      "title": "Atoms/ModeIndicator",
-      "name": "Task Mode With Label",
-      "ok": true,
-      "file": "shots/atoms-modeindicator--task-mode-with-label.jpg",
-      "width": 128,
-      "height": 48,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "NumericCard",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-numericcard--default",
-      "title": "Atoms/NumericCard",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-numericcard--default.jpg",
-      "width": 408,
-      "height": 93,
-      "problems": []
-     },
-     {
-      "id": "atoms-numericcard--with-icon",
-      "title": "Atoms/NumericCard",
-      "name": "With Icon",
-      "ok": true,
-      "file": "shots/atoms-numericcard--with-icon.jpg",
-      "width": 408,
-      "height": 93,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "ProgressCircular",
     "dir": "atoms",
     "story": true,
     "legacy": false,
     "users": [
-     "packages/ui/organisms/AgendaTaskList/AgendaTaskList.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/FamilyUserHistory/FamilyUserHistory.vue",
      "packages/ui/organisms/GoalCreation/GoalCreation.vue",
-     "packages/ui/organisms/StimulusSummary/StimulusSummary.vue",
-     "packages/ui/organisms/SummaryCards/SummaryCards.vue",
-     "packages/ui/organisms/TaskTile/TaskTile.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
      "packages/ui/organisms/UserDrawer/UserDrawer.vue",
      "packages/ui/templates/ContainerBox/ContainerBox.vue"
     ],
@@ -1609,8 +924,8 @@
       "name": "Sizes",
       "ok": true,
       "file": "shots/atoms-progresscircular--sizes.jpg",
-      "width": 395,
-      "height": 135,
+      "width": 402,
+      "height": 142,
       "problems": []
      }
     ]
@@ -1644,68 +959,6 @@
       "file": "shots/atoms-progresslinear--empty.jpg",
       "width": 344,
       "height": 30,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "RadarCard",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-radarcard--default",
-      "title": "Atoms/RadarCard",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-radarcard--default.jpg",
-      "width": 408,
-      "height": 420,
-      "problems": []
-     },
-     {
-      "id": "atoms-radarcard--goal-progress",
-      "title": "Atoms/RadarCard",
-      "name": "Goal Progress",
-      "ok": true,
-      "file": "shots/atoms-radarcard--goal-progress.jpg",
-      "width": 408,
-      "height": 420,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "ScrollShadowIndicator",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-scrollshadowindicator--no-shadows",
-      "title": "Atoms/ScrollShadowIndicator",
-      "name": "No Shadows",
-      "ok": true,
-      "file": "shots/atoms-scrollshadowindicator--no-shadows.jpg",
-      "width": 396,
-      "height": 832,
-      "problems": []
-     },
-     {
-      "id": "atoms-scrollshadowindicator--top-shadow",
-      "title": "Atoms/ScrollShadowIndicator",
-      "name": "Top Shadow",
-      "ok": true,
-      "file": "shots/atoms-scrollshadowindicator--top-shadow.jpg",
-      "width": 412,
-      "height": 848,
       "problems": []
      }
     ]
@@ -1752,7 +1005,6 @@
      "apps/web-app/src/pages/ProfileTime.vue",
      "packages/ui/molecules/DateSelector/DateSelector.vue",
      "packages/ui/molecules/MobileSubDrawer/MobileSubDrawer.vue",
-     "packages/ui/molecules/PlanConfigSelector/PlanConfigSelector.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
      "packages/ui/organisms/GoalItemSheet/GoalItemSheet.vue",
      "packages/ui/organisms/GoalTaskToolbar/GoalTaskToolbar.vue"
@@ -1783,46 +1035,6 @@
     ]
    },
    {
-    "name": "Sheet",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "apps/web-app/src/pages/YearGoalsTime.vue",
-     "packages/ui/molecules/PriorityMoveSheet/PriorityMoveSheet.vue",
-     "packages/ui/molecules/ResponsiveSheet/ResponsiveSheet.vue",
-     "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/NewGoalSheet/NewGoalSheet.vue",
-     "packages/ui/organisms/QuickGoalCreation/QuickGoalCreation.vue",
-     "packages/ui/organisms/RoutineEditorSheet/RoutineEditorSheet.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
-    ],
-    "pages": [],
-    "summary": "AtomSheet - Atomic wrapper for Vuetify v-sheet A simple component that provides a surface for content. It's used as a container for other components. Passes all attributes and events to the underlying v-sheet. @example <atom-sheet elevation=\"2\"> Content here </atom-sheet> @example colored <atom-sheet color=\"grey lighten-3\" class=\"pa-3\"> Colored sheet </atom-sheet>",
-    "shots": [
-     {
-      "id": "atoms-sheet--default",
-      "title": "Atoms/Sheet",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-sheet--default.jpg",
-      "width": 408,
-      "height": 77,
-      "problems": []
-     },
-     {
-      "id": "atoms-sheet--elevated",
-      "title": "Atoms/Sheet",
-      "name": "Elevated",
-      "ok": true,
-      "file": "shots/atoms-sheet--elevated.jpg",
-      "width": 408,
-      "height": 77,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "Spacer",
     "dir": "atoms",
     "story": true,
@@ -1830,16 +1042,9 @@
     "users": [
      "apps/web-app/src/components/TimezoneSync.vue",
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/GoalDetailsModalContainer.vue",
-     "apps/web-app/src/containers/StepModalContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
-     "packages/ui/molecules/CardHeader/CardHeader.vue",
-     "packages/ui/molecules/DialogHeader/DialogHeader.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/SimpleDialog/SimpleDialog.vue",
-     "packages/ui/organisms/SummaryCards/SummaryCards.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
+     "packages/ui/organisms/PendingList/PendingList.vue"
     ],
     "pages": [],
     "summary": "",
@@ -1867,193 +1072,13 @@
     ]
    },
    {
-    "name": "Sparkline",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/molecules/MiniSparkline/MiniSparkline.vue"
-    ],
-    "pages": [],
-    "summary": "AtomSparkline - Atomic wrapper for Vuetify v-sparkline A component for displaying sparkline charts (miniature line graphs). Passes all attributes and events to the underlying v-sparkline. @example <atom-sparkline :value=\"[0, 2, 5, 9, 5, 10, 3, 5, 0, 0, 1, 8, 2, 9, 0]\" smooth color=\"primary\" line-width=\"2\" auto-draw />",
-    "shots": [
-     {
-      "id": "atoms-sparkline--default",
-      "title": "Atoms/Sparkline",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-sparkline--default.jpg",
-      "width": 408,
-      "height": 249,
-      "problems": []
-     },
-     {
-      "id": "atoms-sparkline--flat",
-      "title": "Atoms/Sparkline",
-      "name": "Flat",
-      "ok": true,
-      "file": "shots/atoms-sparkline--flat.jpg",
-      "width": 408,
-      "height": 249,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "Stepper",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "AtomStepper - Vuetify stepper wrapper atom This atom wraps v-stepper providing a consistent atomic design interface while maintaining full Vuetify functionality.",
-    "shots": [
-     {
-      "id": "atoms-stepper--default",
-      "title": "Atoms/Stepper",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-stepper--default.jpg",
-      "width": 408,
-      "height": 253,
-      "problems": []
-     },
-     {
-      "id": "atoms-stepper--vertical",
-      "title": "Atoms/Stepper",
-      "name": "Vertical",
-      "ok": true,
-      "file": "shots/atoms-stepper--vertical.jpg",
-      "width": 408,
-      "height": 364,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "StepperContent",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "AtomStepperContent - Vuetify stepper content wrapper atom This atom wraps v-stepper-content providing a consistent atomic design interface while maintaining full Vuetify functionality.",
-    "shots": [
-     {
-      "id": "atoms-steppercontent--default",
-      "title": "Atoms/StepperContent",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-steppercontent--default.jpg",
-      "width": 408,
-      "height": 302,
-      "problems": []
-     },
-     {
-      "id": "atoms-steppercontent--with-form",
-      "title": "Atoms/StepperContent",
-      "name": "With Form",
-      "ok": true,
-      "file": "shots/atoms-steppercontent--with-form.jpg",
-      "width": 408,
-      "height": 248,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "StepperHeader",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "AtomStepperHeader - Vuetify stepper header wrapper atom This atom wraps v-stepper-header providing a consistent atomic design interface while maintaining full Vuetify functionality.",
-    "shots": [
-     {
-      "id": "atoms-stepperheader--default",
-      "title": "Atoms/StepperHeader",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-stepperheader--default.jpg",
-      "width": 408,
-      "height": 96,
-      "problems": []
-     },
-     {
-      "id": "atoms-stepperheader--four-steps",
-      "title": "Atoms/StepperHeader",
-      "name": "Four Steps",
-      "ok": true,
-      "file": "shots/atoms-stepperheader--four-steps.jpg",
-      "width": 408,
-      "height": 96,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "StepperItems",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "AtomStepperItems - Vuetify stepper items wrapper atom This atom wraps v-stepper-items providing a consistent atomic design interface while maintaining full Vuetify functionality.",
-    "shots": [
-     {
-      "id": "atoms-stepperitems--default",
-      "title": "Atoms/StepperItems",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-stepperitems--default.jpg",
-      "width": 408,
-      "height": 308,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "StepperStep",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "AtomStepperStep - Vuetify stepper step wrapper atom This atom wraps v-stepper-step providing a consistent atomic design interface while maintaining full Vuetify functionality.",
-    "shots": [
-     {
-      "id": "atoms-stepperstep--default",
-      "title": "Atoms/StepperStep",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-stepperstep--default.jpg",
-      "width": 408,
-      "height": 96,
-      "problems": []
-     },
-     {
-      "id": "atoms-stepperstep--all-states",
-      "title": "Atoms/StepperStep",
-      "name": "All States",
-      "ok": true,
-      "file": "shots/atoms-stepperstep--all-states.jpg",
-      "width": 408,
-      "height": 96,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "Subheader",
     "dir": "atoms",
     "story": true,
     "legacy": false,
     "users": [
-     "packages/ui/molecules/MenuButton/MenuButton.vue",
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
-     "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
+     "packages/ui/organisms/PendingList/PendingList.vue"
     ],
     "pages": [],
     "summary": "",
@@ -2087,8 +1112,7 @@
     "legacy": false,
     "users": [
      "apps/web-app/src/containers/RoutineChatContainer.vue",
-     "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
-     "packages/ui/organisms/TitleOptions/TitleOptions.vue"
+     "packages/ui/organisms/AiSearchModal/AiSearchModal.vue"
     ],
     "pages": [],
     "summary": "",
@@ -2109,8 +1133,8 @@
       "name": "States",
       "ok": true,
       "file": "shots/atoms-switch--states.jpg",
-      "width": 175,
-      "height": 349,
+      "width": 176,
+      "height": 350,
       "problems": []
      }
     ]
@@ -2124,7 +1148,6 @@
      "packages/ui/molecules/HierarchicalTagInput/HierarchicalTagInput.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue",
      "packages/ui/organisms/RoutineEditorSheet/RoutineEditorSheet.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
      "packages/ui/tests/tagKeydown.spec.js",
      "packages/ui/utils/tagKeydown.js"
     ],
@@ -2149,101 +1172,6 @@
       "file": "shots/atoms-tab--disabled.jpg",
       "width": 408,
       "height": 72,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "TabItem",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-tabitem--default",
-      "title": "Atoms/TabItem",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-tabitem--default.jpg",
-      "width": 408,
-      "height": 125,
-      "problems": []
-     },
-     {
-      "id": "atoms-tabitem--with-content",
-      "title": "Atoms/TabItem",
-      "name": "With Content",
-      "ok": true,
-      "file": "shots/atoms-tabitem--with-content.jpg",
-      "width": 408,
-      "height": 347,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "Tabs",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-tabs--default",
-      "title": "Atoms/Tabs",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-tabs--default.jpg",
-      "width": 408,
-      "height": 125,
-      "problems": []
-     },
-     {
-      "id": "atoms-tabs--centered",
-      "title": "Atoms/Tabs",
-      "name": "Centered",
-      "ok": true,
-      "file": "shots/atoms-tabs--centered.jpg",
-      "width": 408,
-      "height": 125,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "TabsItems",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-tabsitems--default",
-      "title": "Atoms/TabsItems",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-tabsitems--default.jpg",
-      "width": 408,
-      "height": 166,
-      "problems": []
-     },
-     {
-      "id": "atoms-tabsitems--continuous",
-      "title": "Atoms/TabsItems",
-      "name": "Continuous",
-      "ok": true,
-      "file": "shots/atoms-tabsitems--continuous.jpg",
-      "width": 408,
-      "height": 166,
       "problems": []
      }
     ]
@@ -2318,46 +1246,12 @@
     ]
    },
    {
-    "name": "TasksCompletedCard",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/molecules/ProgressBarGroup/ProgressBarGroup.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-taskscompletedcard--default",
-      "title": "Atoms/TasksCompletedCard",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-taskscompletedcard--default.jpg",
-      "width": 408,
-      "height": 245,
-      "problems": []
-     },
-     {
-      "id": "atoms-taskscompletedcard--all-completed",
-      "title": "Atoms/TasksCompletedCard",
-      "name": "All Completed",
-      "ok": true,
-      "file": "shots/atoms-taskscompletedcard--all-completed.jpg",
-      "width": 408,
-      "height": 245,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "TextField",
     "dir": "atoms",
     "story": true,
     "legacy": false,
     "users": [
      "packages/ui/molecules/DateSelector/DateSelector.vue",
-     "packages/ui/molecules/FormField/FormField.vue",
      "packages/ui/molecules/SubTaskItemList/SubTaskItemList.vue",
      "packages/ui/molecules/TimelineEntryEditor/TimelineEntryEditor.vue",
      "packages/ui/organisms/AiGoalPlanForm/AiGoalPlanForm.vue",
@@ -2397,7 +1291,6 @@
     "story": true,
     "legacy": false,
     "users": [
-     "packages/ui/molecules/FormField/FormField.vue",
      "packages/ui/organisms/AiSearchModal/AiSearchModal.vue"
     ],
     "pages": [],
@@ -2421,37 +1314,6 @@
       "file": "shots/atoms-textarea--variants.jpg",
       "width": 408,
       "height": 789,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "TimePicker",
-    "dir": "atoms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "AtomTimePicker - Vuetify time picker wrapper atom This atom wraps v-time-picker providing a consistent atomic design interface while maintaining full Vuetify functionality.",
-    "shots": [
-     {
-      "id": "atoms-timepicker--default",
-      "title": "Atoms/TimePicker",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-timepicker--default.jpg",
-      "width": 314,
-      "height": 416,
-      "problems": []
-     },
-     {
-      "id": "atoms-timepicker--format-24-hour",
-      "title": "Atoms/TimePicker",
-      "name": "Format 24 Hour",
-      "ok": true,
-      "file": "shots/atoms-timepicker--format-24-hour.jpg",
-      "width": 314,
-      "height": 416,
       "problems": []
      }
     ]
@@ -2536,12 +1398,9 @@
     "legacy": false,
     "users": [
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/GoalDetailsModalContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
-     "packages/ui/molecules/DialogHeader/DialogHeader.vue",
      "packages/ui/organisms/GoalTaskToolbar/GoalTaskToolbar.vue",
      "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue",
      "packages/ui/styles/app/App.css",
      "packages/ui/styles/app/global/android-safe-area.css"
     ],
@@ -2577,11 +1436,8 @@
     "legacy": false,
     "users": [
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/GoalDetailsModalContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
-     "packages/ui/molecules/DialogHeader/DialogHeader.vue",
-     "packages/ui/organisms/PendingList/PendingList.vue",
-     "packages/ui/organisms/UserHistory/UserHistory.vue"
+     "packages/ui/organisms/PendingList/PendingList.vue"
     ],
     "pages": [],
     "summary": "AtomToolbarTitle - Atomic wrapper for Vuetify v-toolbar-title A component for displaying the title text within a toolbar. Passes all attributes and events to the underlying v-toolbar-title. @example <atom-toolbar-title>My Page Title</atom-toolbar-title>",
@@ -2604,39 +1460,6 @@
       "file": "shots/atoms-toolbartitle--long-title.jpg",
       "width": 408,
       "height": 80,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "WakeCheck",
-    "dir": "atoms",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/organisms/TitleOptions/TitleOptions.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "atoms-wakecheck--default",
-      "title": "Atoms/WakeCheck",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/atoms-wakecheck--default.jpg",
-      "width": 114,
-      "height": 44,
-      "problems": []
-     },
-     {
-      "id": "atoms-wakecheck--with-description",
-      "title": "Atoms/WakeCheck",
-      "name": "With Description",
-      "ok": true,
-      "file": "shots/atoms-wakecheck--with-description.jpg",
-      "width": 408,
-      "height": 144,
       "problems": []
      }
     ]
@@ -2682,47 +1505,6 @@
       "file": "shots/molecules-aboutherocard--custom-belief.jpg",
       "width": 372,
       "height": 233,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "AiSearchInput",
-    "dir": "molecules",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "molecules-aisearchinput--task-mode",
-      "title": "Molecules/AiSearchInput",
-      "name": "Task Mode",
-      "ok": true,
-      "file": "shots/molecules-aisearchinput--task-mode.jpg",
-      "width": 400,
-      "height": 93,
-      "problems": []
-     },
-     {
-      "id": "molecules-aisearchinput--goals-mode",
-      "title": "Molecules/AiSearchInput",
-      "name": "Goals Mode",
-      "ok": true,
-      "file": "shots/molecules-aisearchinput--goals-mode.jpg",
-      "width": 400,
-      "height": 93,
-      "problems": []
-     },
-     {
-      "id": "molecules-aisearchinput--with-value",
-      "title": "Molecules/AiSearchInput",
-      "name": "With Value",
-      "ok": true,
-      "file": "shots/molecules-aisearchinput--with-value.jpg",
-      "width": 400,
-      "height": 68,
       "problems": []
      }
     ]
@@ -2774,90 +1556,6 @@
       "file": "shots/molecules-apptoast--tablet.jpg",
       "width": 384,
       "height": 87,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "ButtonToggle",
-    "dir": "molecules",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/organisms/PeriodToggle/PeriodToggle.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "molecules-buttontoggle--text-only",
-      "title": "Molecules/ButtonToggle",
-      "name": "Text Only",
-      "ok": true,
-      "file": "shots/molecules-buttontoggle--text-only.jpg",
-      "width": 194,
-      "height": 60,
-      "problems": []
-     },
-     {
-      "id": "molecules-buttontoggle--icon-only",
-      "title": "Molecules/ButtonToggle",
-      "name": "Icon Only",
-      "ok": true,
-      "file": "shots/molecules-buttontoggle--icon-only.jpg",
-      "width": 187,
-      "height": 60,
-      "problems": []
-     },
-     {
-      "id": "molecules-buttontoggle--icon-and-text",
-      "title": "Molecules/ButtonToggle",
-      "name": "Icon And Text",
-      "ok": true,
-      "file": "shots/molecules-buttontoggle--icon-and-text.jpg",
-      "width": 333,
-      "height": 60,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "CardHeader",
-    "dir": "molecules",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "molecules-cardheader--default",
-      "title": "Molecules/CardHeader",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/molecules-cardheader--default.jpg",
-      "width": 408,
-      "height": 178,
-      "problems": []
-     },
-     {
-      "id": "molecules-cardheader--with-actions",
-      "title": "Molecules/CardHeader",
-      "name": "With Actions",
-      "ok": true,
-      "file": "shots/molecules-cardheader--with-actions.jpg",
-      "width": 408,
-      "height": 165,
-      "problems": []
-     },
-     {
-      "id": "molecules-cardheader--with-footer",
-      "title": "Molecules/CardHeader",
-      "name": "With Footer",
-      "ok": true,
-      "file": "shots/molecules-cardheader--with-footer.jpg",
-      "width": 408,
-      "height": 209,
       "problems": []
      }
     ]
@@ -2952,49 +1650,6 @@
     ]
    },
    {
-    "name": "DialogHeader",
-    "dir": "molecules",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/organisms/FullscreenDialog/FullscreenDialog.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "molecules-dialogheader--default",
-      "title": "Molecules/DialogHeader",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/molecules-dialogheader--default.jpg",
-      "width": 412,
-      "height": 68,
-      "problems": []
-     },
-     {
-      "id": "molecules-dialogheader--with-save-button",
-      "title": "Molecules/DialogHeader",
-      "name": "With Save Button",
-      "ok": true,
-      "file": "shots/molecules-dialogheader--with-save-button.jpg",
-      "width": 412,
-      "height": 68,
-      "problems": []
-     },
-     {
-      "id": "molecules-dialogheader--with-back-button",
-      "title": "Molecules/DialogHeader",
-      "name": "With Back Button",
-      "ok": true,
-      "file": "shots/molecules-dialogheader--with-back-button.jpg",
-      "width": 412,
-      "height": 68,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "DkgRingTrio",
     "dir": "molecules",
     "story": true,
@@ -3080,47 +1735,6 @@
       "file": "shots/molecules-focuspointschip--empty.jpg",
       "width": 72,
       "height": 48,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "FormField",
-    "dir": "molecules",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "molecules-formfield--variants",
-      "title": "Molecules/FormField",
-      "name": "Variants",
-      "ok": true,
-      "file": "shots/molecules-formfield--variants.jpg",
-      "width": 408,
-      "height": 418,
-      "problems": []
-     },
-     {
-      "id": "molecules-formfield--text",
-      "title": "Molecules/FormField",
-      "name": "Text",
-      "ok": true,
-      "file": "shots/molecules-formfield--text.jpg",
-      "width": 408,
-      "height": 68,
-      "problems": []
-     },
-     {
-      "id": "molecules-formfield--email",
-      "title": "Molecules/FormField",
-      "name": "Email",
-      "ok": true,
-      "file": "shots/molecules-formfield--email.jpg",
-      "width": 408,
-      "height": 68,
       "problems": []
      }
     ]
@@ -3323,47 +1937,6 @@
     ]
    },
    {
-    "name": "GoalPeriodForm",
-    "dir": "molecules",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "The body of the create / edit sheet. One line of text, two chips and a CTA.",
-    "shots": [
-     {
-      "id": "molecules-goalperiodform--default",
-      "title": "Molecules/GoalPeriodForm",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/molecules-goalperiodform--default.jpg",
-      "width": 408,
-      "height": 196,
-      "problems": []
-     },
-     {
-      "id": "molecules-goalperiodform--typed",
-      "title": "Molecules/GoalPeriodForm",
-      "name": "Typed",
-      "ok": true,
-      "file": "shots/molecules-goalperiodform--typed.jpg",
-      "width": 408,
-      "height": 196,
-      "problems": []
-     },
-     {
-      "id": "molecules-goalperiodform--editing",
-      "title": "Molecules/GoalPeriodForm",
-      "name": "Editing",
-      "ok": true,
-      "file": "shots/molecules-goalperiodform--editing.jpg",
-      "width": 408,
-      "height": 196,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "GoalRefSelector",
     "dir": "molecules",
     "story": true,
@@ -3467,7 +2040,6 @@
     "legacy": false,
     "users": [
      "apps/web-app/src/containers/AiSearchModalContainer.vue",
-     "packages/ui/molecules/PlanConfigSelector/PlanConfigSelector.vue",
      "packages/ui/organisms/GoalItemSheet/GoalItemSheet.vue",
      "packages/ui/organisms/GoalList/GoalList.vue",
      "packages/ui/organisms/GoalTaskToolbar/GoalTaskToolbar.vue"
@@ -3553,47 +2125,6 @@
     ]
    },
    {
-    "name": "ListItem",
-    "dir": "molecules",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "molecules-listitem--default",
-      "title": "Molecules/ListItem",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/molecules-listitem--default.jpg",
-      "width": 408,
-      "height": 88,
-      "problems": []
-     },
-     {
-      "id": "molecules-listitem--title-only",
-      "title": "Molecules/ListItem",
-      "name": "Title Only",
-      "ok": true,
-      "file": "shots/molecules-listitem--title-only.jpg",
-      "width": 408,
-      "height": 88,
-      "problems": []
-     },
-     {
-      "id": "molecules-listitem--with-avatar-image",
-      "title": "Molecules/ListItem",
-      "name": "With Avatar Image",
-      "ok": true,
-      "file": "shots/molecules-listitem--with-avatar-image.jpg",
-      "width": 408,
-      "height": 96,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "LoadErrorState",
     "dir": "molecules",
     "story": true,
@@ -3605,12 +2136,9 @@
      "apps/web-app/src/pages/FamilyRoutine.vue",
      "apps/web-app/src/pages/MilestonesTime.vue",
      "apps/web-app/src/utils/goalCascade.js",
-     "packages/ui/organisms/AgendaTaskList/AgendaTaskList.vue",
      "packages/ui/organisms/AgentList/AgentList.vue",
      "packages/ui/organisms/GoalCascade/GoalCascade.vue",
-     "packages/ui/organisms/GoalsFilterTime/GoalsFilterTime.vue",
-     "packages/ui/organisms/ProgressReport/ProgressReport.vue",
-     "packages/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue"
+     "packages/ui/organisms/ProgressReport/ProgressReport.vue"
     ],
     "pages": [],
     "summary": "",
@@ -3642,7 +2170,7 @@
       "ok": true,
       "file": "shots/molecules-loaderrorstate--retrying.jpg",
       "width": 376,
-      "height": 149,
+      "height": 151,
       "problems": []
      }
     ]
@@ -3686,47 +2214,6 @@
       "file": "shots/molecules-markdownfield--editing.jpg",
       "width": 410,
       "height": 577,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "MenuButton",
-    "dir": "molecules",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "molecules-menubutton--default",
-      "title": "Molecules/MenuButton",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/molecules-menubutton--default.jpg",
-      "width": 60,
-      "height": 60,
-      "problems": []
-     },
-     {
-      "id": "molecules-menubutton--with-text",
-      "title": "Molecules/MenuButton",
-      "name": "With Text",
-      "ok": true,
-      "file": "shots/molecules-menubutton--with-text.jpg",
-      "width": 159,
-      "height": 60,
-      "problems": []
-     },
-     {
-      "id": "molecules-menubutton--dense",
-      "title": "Molecules/MenuButton",
-      "name": "Dense",
-      "ok": true,
-      "file": "shots/molecules-menubutton--dense.jpg",
-      "width": 60,
-      "height": 60,
       "problems": []
      }
     ]
@@ -3855,47 +2342,6 @@
     ]
    },
    {
-    "name": "PlanConfigSelector",
-    "dir": "molecules",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "molecules-planconfigselector--default",
-      "title": "Molecules/PlanConfigSelector",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/molecules-planconfigselector--default.jpg",
-      "width": 368,
-      "height": 251,
-      "problems": []
-     },
-     {
-      "id": "molecules-planconfigselector--with-selection",
-      "title": "Molecules/PlanConfigSelector",
-      "name": "With Selection",
-      "ok": true,
-      "file": "shots/molecules-planconfigselector--with-selection.jpg",
-      "width": 368,
-      "height": 251,
-      "problems": []
-     },
-     {
-      "id": "molecules-planconfigselector--disabled",
-      "title": "Molecules/PlanConfigSelector",
-      "name": "Disabled",
-      "ok": true,
-      "file": "shots/molecules-planconfigselector--disabled.jpg",
-      "width": 368,
-      "height": 251,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "PointsChip",
     "dir": "molecules",
     "story": true,
@@ -3941,50 +2387,6 @@
     ]
    },
    {
-    "name": "PriorityGoalList",
-    "dir": "molecules",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/molecules/PriorityQuadrant/PriorityQuadrant.vue",
-     "packages/ui/molecules/PriorityTaskList/PriorityTaskList.vue"
-    ],
-    "pages": [],
-    "summary": "A compact goal-item checklist: checkbox + title (strike-through when done) + an optional subtitle (linked parent-goal name • routine task name), plus optional sub-tasks, an agent-transcript button, and edit/delete actions. Extracted from PriorityQuadrant so the same list can be reused (e.g. the Goals-page day drawer). Item shape: { id, body, isComplete, taskRef, parentGoalBody, reward, subTasks: [{ id, body, isCom…",
-    "shots": [
-     {
-      "id": "molecules-prioritygoallist--default",
-      "title": "Molecules/PriorityGoalList",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/molecules-prioritygoallist--default.jpg",
-      "width": 408,
-      "height": 154,
-      "problems": []
-     },
-     {
-      "id": "molecules-prioritygoallist--with-subtasks-and-delete",
-      "title": "Molecules/PriorityGoalList",
-      "name": "With Subtasks And Delete",
-      "ok": true,
-      "file": "shots/molecules-prioritygoallist--with-subtasks-and-delete.jpg",
-      "width": 408,
-      "height": 234,
-      "problems": []
-     },
-     {
-      "id": "molecules-prioritygoallist--empty",
-      "title": "Molecules/PriorityGoalList",
-      "name": "Empty",
-      "ok": true,
-      "file": "shots/molecules-prioritygoallist--empty.jpg",
-      "width": 408,
-      "height": 72,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "PriorityMoveSheet",
     "dir": "molecules",
     "story": true,
@@ -4023,50 +2425,6 @@
       "file": "shots/molecules-prioritymovesheet--desktop.jpg",
       "width": 505,
       "height": 260,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "PriorityQuadrant",
-    "dir": "molecules",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/molecules/PriorityGoalList/PriorityGoalList.vue",
-     "packages/ui/organisms/PriorityMatrix/PriorityMatrix.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "molecules-priorityquadrant--default",
-      "title": "Molecules/PriorityQuadrant",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/molecules-priorityquadrant--default.jpg",
-      "width": 392,
-      "height": 374,
-      "problems": []
-     },
-     {
-      "id": "molecules-priorityquadrant--plan",
-      "title": "Molecules/PriorityQuadrant",
-      "name": "Plan",
-      "ok": true,
-      "file": "shots/molecules-priorityquadrant--plan.jpg",
-      "width": 392,
-      "height": 374,
-      "problems": []
-     },
-     {
-      "id": "molecules-priorityquadrant--empty",
-      "title": "Molecules/PriorityQuadrant",
-      "name": "Empty",
-      "ok": true,
-      "file": "shots/molecules-priorityquadrant--empty.jpg",
-      "width": 392,
-      "height": 374,
       "problems": []
      }
     ]
@@ -4502,49 +2860,6 @@
     ]
    },
    {
-    "name": "RadarChart",
-    "dir": "molecules",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/atoms/RadarCard/RadarCard.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "molecules-radarchart--default",
-      "title": "Molecules/RadarChart",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/molecules-radarchart--default.jpg",
-      "width": 324,
-      "height": 324,
-      "problems": []
-     },
-     {
-      "id": "molecules-radarchart--small",
-      "title": "Molecules/RadarChart",
-      "name": "Small",
-      "ok": true,
-      "file": "shots/molecules-radarchart--small.jpg",
-      "width": 224,
-      "height": 224,
-      "problems": []
-     },
-     {
-      "id": "molecules-radarchart--large",
-      "title": "Molecules/RadarChart",
-      "name": "Large",
-      "ok": true,
-      "file": "shots/molecules-radarchart--large.jpg",
-      "width": 524,
-      "height": 524,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "RelatedTasksTimeline",
     "dir": "molecules",
     "story": true,
@@ -4610,7 +2925,6 @@
      "packages/ui/organisms/GroupLeaveSheet/GroupLeaveSheet.vue",
      "packages/ui/organisms/GroupMemberWeek/GroupMemberWeek.vue",
      "packages/ui/organisms/InboxSheet/InboxSheet.vue",
-     "packages/ui/organisms/NewGoalSheet/NewGoalSheet.vue",
      "packages/ui/organisms/QuickGoalCreation/QuickGoalCreation.vue",
      "packages/ui/organisms/RoutineDayPlan/RoutineDayPlan.vue",
      "packages/ui/organisms/RoutineEditorSheet/RoutineEditorSheet.vue",
@@ -4811,7 +3125,7 @@
       "ok": true,
       "file": "shots/molecules-statusring--all-stages.jpg",
       "width": 382,
-      "height": 138,
+      "height": 139,
       "problems": []
      },
      {
@@ -4830,51 +3144,8 @@
       "name": "Running",
       "ok": true,
       "file": "shots/molecules-statusring--running.jpg",
-      "width": 74,
-      "height": 74,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "StreakChecks",
-    "dir": "molecules",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue"
-    ],
-    "pages": [],
-    "summary": "One entry per calendar day of the period, in calendar order, as published by the server's `milestoneDays`: { date: 'DD-MM-YYYY', status }. A count cannot be used here — it packs the wins to the left and makes a broken week look unbroken.",
-    "shots": [
-     {
-      "id": "molecules-streakchecks--no-progress",
-      "title": "Molecules/StreakChecks",
-      "name": "No Progress",
-      "ok": true,
-      "file": "shots/molecules-streakchecks--no-progress.jpg",
-      "width": 408,
-      "height": 63,
-      "problems": []
-     },
-     {
-      "id": "molecules-streakchecks--three-complete",
-      "title": "Molecules/StreakChecks",
-      "name": "Three Complete",
-      "ok": true,
-      "file": "shots/molecules-streakchecks--three-complete.jpg",
-      "width": 408,
-      "height": 63,
-      "problems": []
-     },
-     {
-      "id": "molecules-streakchecks--broken-streak",
-      "title": "Molecules/StreakChecks",
-      "name": "Broken Streak",
-      "ok": true,
-      "file": "shots/molecules-streakchecks--broken-streak.jpg",
-      "width": 408,
-      "height": 63,
+      "width": 76,
+      "height": 76,
       "problems": []
      }
     ]
@@ -4963,39 +3234,6 @@
       "file": "shots/molecules-subtaskeditor--empty.jpg",
       "width": 384,
       "height": 133,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "TableCard",
-    "dir": "molecules",
-    "story": true,
-    "legacy": false,
-    "users": [
-     "packages/ui/molecules/RoutineRankCard/RoutineRankCard.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "molecules-tablecard--default",
-      "title": "Molecules/TableCard",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/molecules-tablecard--default.jpg",
-      "width": 408,
-      "height": 320,
-      "problems": []
-     },
-     {
-      "id": "molecules-tablecard--group-members",
-      "title": "Molecules/TableCard",
-      "name": "Group Members",
-      "ok": true,
-      "file": "shots/molecules-tablecard--group-members.jpg",
-      "width": 408,
-      "height": 320,
       "problems": []
      }
     ]
@@ -5340,50 +3578,6 @@
     ]
    },
    {
-    "name": "AgendaTaskList",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [
-     "apps/web-app/src/containers/AgendaTaskListContainer.vue",
-     "packages/ui/organisms/WeekGoalStreak/WeekGoalStreak.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-agendatasklist--default",
-      "title": "Organisms/AgendaTaskList",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-agendatasklist--default.jpg",
-      "width": 384,
-      "height": 250,
-      "problems": []
-     },
-     {
-      "id": "organisms-agendatasklist--read-only-checkboxes",
-      "title": "Organisms/AgendaTaskList",
-      "name": "Read Only Checkboxes",
-      "ok": true,
-      "file": "shots/organisms-agendatasklist--read-only-checkboxes.jpg",
-      "width": 384,
-      "height": 250,
-      "problems": []
-     },
-     {
-      "id": "organisms-agendatasklist--empty",
-      "title": "Organisms/AgendaTaskList",
-      "name": "Empty",
-      "ok": true,
-      "file": "shots/organisms-agendatasklist--empty.jpg",
-      "width": 384,
-      "height": 93,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "AgentDetail",
     "dir": "organisms",
     "story": true,
@@ -5423,7 +3617,7 @@
       "ok": true,
       "file": "shots/organisms-agentdetail--running.jpg",
       "width": 410,
-      "height": 740,
+      "height": 741,
       "problems": []
      }
     ]
@@ -5804,7 +3998,6 @@
     "users": [
      "apps/web-app/src/App.vue",
      "apps/web-app/src/containers/AppShellContainer.vue",
-     "apps/web-app/src/containers/XpBalanceContainer.vue",
      "apps/web-app/src/pages/GoalsTime.vue",
      "apps/web-app/src/pages/PriorityTime.vue",
      "apps/web-app/src/pages/RoutineFocus.vue",
@@ -5849,47 +4042,6 @@
       "file": "shots/organisms-appshell--desktop.jpg",
       "width": 1117,
       "height": 900,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "CircadianCycle",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-circadiancycle--default",
-      "title": "Organisms/CircadianCycle",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-circadiancycle--default.jpg",
-      "width": 1224,
-      "height": 424,
-      "problems": []
-     },
-     {
-      "id": "organisms-circadiancycle--small",
-      "title": "Organisms/CircadianCycle",
-      "name": "Small",
-      "ok": true,
-      "file": "shots/organisms-circadiancycle--small.jpg",
-      "width": 774,
-      "height": 274,
-      "problems": []
-     },
-     {
-      "id": "organisms-circadiancycle--large",
-      "title": "Organisms/CircadianCycle",
-      "name": "Large",
-      "ok": true,
-      "file": "shots/organisms-circadiancycle--large.jpg",
-      "width": 1824,
-      "height": 624,
       "problems": []
      }
     ]
@@ -5941,52 +4093,6 @@
     ]
    },
    {
-    "name": "CurrentTaskCard",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [
-     "apps/web-app/src/containers/CurrentTaskContainer.vue",
-     "packages/ui/constants/routineFocus.js",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue",
-     "packages/ui/styles/theme.css"
-    ],
-    "pages": [],
-    "summary": "Forward GoalItemList's two-argument toggle-goal-display-dialog event up to the dashboard. Method binding (vs. an inline arrow) is required because Vue 2 templates lose `this` inside arrow function expressions, leading to `Cannot read properties of undefined (reading '_events')` on $emit.",
-    "shots": [
-     {
-      "id": "organisms-currenttaskcard--with-all-goals",
-      "title": "Organisms/CurrentTaskCard",
-      "name": "With All Goals",
-      "ok": true,
-      "file": "shots/organisms-currenttaskcard--with-all-goals.jpg",
-      "width": 408,
-      "height": 360,
-      "problems": []
-     },
-     {
-      "id": "organisms-currenttaskcard--missing-week-and-month",
-      "title": "Organisms/CurrentTaskCard",
-      "name": "Missing Week And Month",
-      "ok": true,
-      "file": "shots/organisms-currenttaskcard--missing-week-and-month.jpg",
-      "width": 408,
-      "height": 360,
-      "problems": []
-     },
-     {
-      "id": "organisms-currenttaskcard--event-execution",
-      "title": "Organisms/CurrentTaskCard",
-      "name": "Event Execution",
-      "ok": true,
-      "file": "shots/organisms-currenttaskcard--event-execution.jpg",
-      "width": 408,
-      "height": 360,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "DeleteAccountPanel",
     "dir": "organisms",
     "story": true,
@@ -6028,88 +4134,6 @@
       "file": "shots/organisms-deleteaccountpanel--confirm-dialog-desktop.jpg",
       "width": 837,
       "height": 594,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "FamilyUserHistory",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-familyuserhistory--default",
-      "title": "Organisms/FamilyUserHistory",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-familyuserhistory--default.jpg",
-      "width": 412,
-      "height": 212,
-      "problems": []
-     },
-     {
-      "id": "organisms-familyuserhistory--empty-history",
-      "title": "Organisms/FamilyUserHistory",
-      "name": "Empty History",
-      "ok": true,
-      "file": "shots/organisms-familyuserhistory--empty-history.jpg",
-      "width": 412,
-      "height": 65,
-      "problems": []
-     },
-     {
-      "id": "organisms-familyuserhistory--single-day",
-      "title": "Organisms/FamilyUserHistory",
-      "name": "Single Day",
-      "ok": true,
-      "file": "shots/organisms-familyuserhistory--single-day.jpg",
-      "width": 412,
-      "height": 116,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "FullscreenDialog",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-fullscreendialog--default",
-      "title": "Organisms/FullscreenDialog",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-fullscreendialog--default.jpg",
-      "width": 412,
-      "height": 105,
-      "problems": []
-     },
-     {
-      "id": "organisms-fullscreendialog--with-save",
-      "title": "Organisms/FullscreenDialog",
-      "name": "With Save",
-      "ok": true,
-      "file": "shots/organisms-fullscreendialog--with-save.jpg",
-      "width": 412,
-      "height": 105,
-      "problems": []
-     },
-     {
-      "id": "organisms-fullscreendialog--save-disabled",
-      "title": "Organisms/FullscreenDialog",
-      "name": "Save Disabled",
-      "ok": true,
-      "file": "shots/organisms-fullscreendialog--save-disabled.jpg",
-      "width": 412,
-      "height": 105,
       "problems": []
      }
     ]
@@ -6253,53 +4277,6 @@
     ]
    },
    {
-    "name": "GoalItemList",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [
-     "apps/web-app/src/containers/GoalItemListContainer.vue",
-     "packages/ui/molecules/SubtaskEditor/SubtaskEditor.vue",
-     "packages/ui/organisms/CurrentTaskCard/CurrentTaskCard.vue",
-     "packages/ui/organisms/GoalsFilterTime/GoalsFilterTime.vue",
-     "packages/ui/organisms/UpcomingPastTasks/UpcomingPastTasks.vue"
-    ],
-    "pages": [],
-    "summary": "Ask the parent to toggle a sub-task. Emits intent only. `subTasks` is passed so the container can build an optimistic response for the whole list — the checkbox still flips instantly, but the write goes through Apollo instead of `$set`-ing the cached SubTaskItem, which is what used to desynchronise the store from the rendered result.",
-    "shots": [
-     {
-      "id": "organisms-goalitemlist--default",
-      "title": "Organisms/GoalItemList",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-goalitemlist--default.jpg",
-      "width": 374,
-      "height": 204,
-      "problems": []
-     },
-     {
-      "id": "organisms-goalitemlist--editable",
-      "title": "Organisms/GoalItemList",
-      "name": "Editable",
-      "ok": true,
-      "file": "shots/organisms-goalitemlist--editable.jpg",
-      "width": 374,
-      "height": 204,
-      "problems": []
-     },
-     {
-      "id": "organisms-goalitemlist--weekly-goal-items",
-      "title": "Organisms/GoalItemList",
-      "name": "Weekly Goal Items",
-      "ok": true,
-      "file": "shots/organisms-goalitemlist--weekly-goal-items.jpg",
-      "width": 408,
-      "height": 365,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "GoalItemSheet",
     "dir": "organisms",
     "story": true,
@@ -6354,7 +4331,6 @@
     "legacy": false,
     "users": [
      "apps/web-app/src/containers/AgendaTime.vue",
-     "apps/web-app/src/containers/GoalDetailsModalContainer.vue",
      "apps/web-app/src/containers/GoalListContainer.vue",
      "apps/web-app/src/pages/AgendaTime.vue",
      "apps/web-app/src/pages/AgendaTreeTime.vue",
@@ -6393,47 +4369,6 @@
       "file": "shots/organisms-goallist--weekly-goals.jpg",
       "width": 376,
       "height": 262,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "GoalStatusChips",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-goalstatuschips--all-goals-set",
-      "title": "Organisms/GoalStatusChips",
-      "name": "All Goals Set",
-      "ok": true,
-      "file": "shots/organisms-goalstatuschips--all-goals-set.jpg",
-      "width": 408,
-      "height": 100,
-      "problems": []
-     },
-     {
-      "id": "organisms-goalstatuschips--no-goals-set",
-      "title": "Organisms/GoalStatusChips",
-      "name": "No Goals Set",
-      "ok": true,
-      "file": "shots/organisms-goalstatuschips--no-goals-set.jpg",
-      "width": 361,
-      "height": 56,
-      "problems": []
-     },
-     {
-      "id": "organisms-goalstatuschips--week-goal-only",
-      "title": "Organisms/GoalStatusChips",
-      "name": "Week Goal Only",
-      "ok": true,
-      "file": "shots/organisms-goalstatuschips--week-goal-only.jpg",
-      "width": 361,
-      "height": 56,
       "problems": []
      }
     ]
@@ -6484,49 +4419,6 @@
       "file": "shots/organisms-goaltasktoolbar--nothing-picked-yet.jpg",
       "width": 404,
       "height": 148,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "GoalsFilterTime",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [
-     "packages/ui/organisms/GoalCreation/GoalCreation.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-goalsfiltertime--day-view",
-      "title": "Organisms/GoalsFilterTime",
-      "name": "Day View",
-      "ok": true,
-      "file": "shots/organisms-goalsfiltertime--day-view.jpg",
-      "width": 408,
-      "height": 176,
-      "problems": []
-     },
-     {
-      "id": "organisms-goalsfiltertime--week-view",
-      "title": "Organisms/GoalsFilterTime",
-      "name": "Week View",
-      "ok": true,
-      "file": "shots/organisms-goalsfiltertime--week-view.jpg",
-      "width": 408,
-      "height": 176,
-      "problems": []
-     },
-     {
-      "id": "organisms-goalsfiltertime--empty-state",
-      "title": "Organisms/GoalsFilterTime",
-      "name": "Empty State",
-      "ok": true,
-      "file": "shots/organisms-goalsfiltertime--empty-state.jpg",
-      "width": 408,
-      "height": 101,
       "problems": []
      }
     ]
@@ -6887,96 +4779,11 @@
     ]
    },
    {
-    "name": "NewGoalSheet",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "The new-goal sheet (Goals.dc.html § sheetOpen) — a phone bottom sheet and a 500px centred dialog, which is `ResponsiveSheet` with the per-page width override chassis.md records for Goals.",
-    "shots": [
-     {
-      "id": "organisms-newgoalsheet--phone",
-      "title": "Organisms/NewGoalSheet",
-      "name": "Phone",
-      "ok": true,
-      "file": "shots/organisms-newgoalsheet--phone.jpg",
-      "width": 412,
-      "height": 316,
-      "problems": []
-     },
-     {
-      "id": "organisms-newgoalsheet--phone-week",
-      "title": "Organisms/NewGoalSheet",
-      "name": "Phone Week",
-      "ok": true,
-      "file": "shots/organisms-newgoalsheet--phone-week.jpg",
-      "width": 412,
-      "height": 316,
-      "problems": []
-     },
-     {
-      "id": "organisms-newgoalsheet--desktop",
-      "title": "Organisms/NewGoalSheet",
-      "name": "Desktop",
-      "ok": true,
-      "file": "shots/organisms-newgoalsheet--desktop.jpg",
-      "width": 570,
-      "height": 300,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "NextSteps",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [
-     "apps/web-app/src/containers/NextStepsContainer.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-nextsteps--default",
-      "title": "Organisms/NextSteps",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-nextsteps--default.jpg",
-      "width": 408,
-      "height": 108,
-      "problems": []
-     },
-     {
-      "id": "organisms-nextsteps--with-title",
-      "title": "Organisms/NextSteps",
-      "name": "With Title",
-      "ok": true,
-      "file": "shots/organisms-nextsteps--with-title.jpg",
-      "width": 408,
-      "height": 108,
-      "problems": []
-     },
-     {
-      "id": "organisms-nextsteps--with-ai-suggestion",
-      "title": "Organisms/NextSteps",
-      "name": "With Ai Suggestion",
-      "ok": true,
-      "file": "shots/organisms-nextsteps--with-ai-suggestion.jpg",
-      "width": 408,
-      "height": 108,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "PaywallDrawer",
     "dir": "organisms",
     "story": true,
     "legacy": false,
     "users": [
-     "apps/web-app/src/containers/PaywallDrawerContainer.vue",
      "apps/web-app/src/pages/RoutineFocus.vue"
     ],
     "pages": [
@@ -7055,47 +4862,6 @@
     ]
    },
    {
-    "name": "PeriodToggle",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-periodtoggle--default",
-      "title": "Organisms/PeriodToggle",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-periodtoggle--default.jpg",
-      "width": 408,
-      "height": 97,
-      "problems": []
-     },
-     {
-      "id": "organisms-periodtoggle--all-periods",
-      "title": "Organisms/PeriodToggle",
-      "name": "All Periods",
-      "ok": true,
-      "file": "shots/organisms-periodtoggle--all-periods.jpg",
-      "width": 408,
-      "height": 97,
-      "problems": []
-     },
-     {
-      "id": "organisms-periodtoggle--with-mandatory",
-      "title": "Organisms/PeriodToggle",
-      "name": "With Mandatory",
-      "ok": true,
-      "file": "shots/organisms-periodtoggle--with-mandatory.jpg",
-      "width": 408,
-      "height": 97,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "PriorityBoard",
     "dir": "organisms",
     "story": true,
@@ -7137,47 +4903,6 @@
       "file": "shots/organisms-priorityboard--tablet.jpg",
       "width": 1133,
       "height": 650,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "PriorityMatrix",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-prioritymatrix--default",
-      "title": "Organisms/PriorityMatrix",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-prioritymatrix--default.jpg",
-      "width": 408,
-      "height": 1504,
-      "problems": []
-     },
-     {
-      "id": "organisms-prioritymatrix--editable",
-      "title": "Organisms/PriorityMatrix",
-      "name": "Editable",
-      "ok": true,
-      "file": "shots/organisms-prioritymatrix--editable.jpg",
-      "width": 408,
-      "height": 1504,
-      "problems": []
-     },
-     {
-      "id": "organisms-prioritymatrix--with-labels",
-      "title": "Organisms/PriorityMatrix",
-      "name": "With Labels",
-      "ok": true,
-      "file": "shots/organisms-prioritymatrix--with-labels.jpg",
-      "width": 408,
-      "height": 1504,
       "problems": []
      }
     ]
@@ -7270,7 +4995,6 @@
     "legacy": false,
     "users": [
      "apps/web-app/src/containers/QuickGoalCreationContainer.vue",
-     "apps/web-app/src/containers/QuickTaskModalContainer.vue",
      "apps/web-app/src/pages/RoutineFocus.vue",
      "packages/ui/molecules/GoalTagsInput/GoalTagsInput.vue"
     ],
@@ -7684,51 +5408,6 @@
     ]
    },
    {
-    "name": "RoutineSheet",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [
-     "apps/web-app/src/pages/RoutineFocus.vue",
-     "packages/ui/molecules/ResponsiveSheet/ResponsiveSheet.vue",
-     "packages/ui/utils/swipeDismiss.js"
-    ],
-    "pages": [],
-    "summary": "One overlay, two shapes. Phone/tablet get a bottom sheet (radius 16 top, `0 -8px 24px rgba(0,0,0,.18)`); desktop gets a centred 480px dialog with radius 20. Both over a `rgba(0,0,0,.32)` scrim.",
-    "shots": [
-     {
-      "id": "organisms-routinesheet--phone",
-      "title": "Organisms/RoutineSheet",
-      "name": "Phone",
-      "ok": true,
-      "file": "shots/organisms-routinesheet--phone.jpg",
-      "width": 412,
-      "height": 256,
-      "problems": []
-     },
-     {
-      "id": "organisms-routinesheet--tablet",
-      "title": "Organisms/RoutineSheet",
-      "name": "Tablet",
-      "ok": true,
-      "file": "shots/organisms-routinesheet--tablet.jpg",
-      "width": 1133,
-      "height": 256,
-      "problems": []
-     },
-     {
-      "id": "organisms-routinesheet--desktop",
-      "title": "Organisms/RoutineSheet",
-      "name": "Desktop",
-      "ok": true,
-      "file": "shots/organisms-routinesheet--desktop.jpg",
-      "width": 505,
-      "height": 268,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "RoutineTopBar",
     "dir": "organisms",
     "story": true,
@@ -7822,49 +5501,6 @@
     ]
    },
    {
-    "name": "SimpleDialog",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [
-     "packages/ui/organisms/GoalDeleteSheet/GoalDeleteSheet.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-simpledialog--default",
-      "title": "Organisms/SimpleDialog",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-simpledialog--default.jpg",
-      "width": 390,
-      "height": 550,
-      "problems": []
-     },
-     {
-      "id": "organisms-simpledialog--steps-dialog",
-      "title": "Organisms/SimpleDialog",
-      "name": "Steps Dialog",
-      "ok": true,
-      "file": "shots/organisms-simpledialog--steps-dialog.jpg",
-      "width": 390,
-      "height": 513,
-      "problems": []
-     },
-     {
-      "id": "organisms-simpledialog--delete-confirmation",
-      "title": "Organisms/SimpleDialog",
-      "name": "Delete Confirmation",
-      "ok": true,
-      "file": "shots/organisms-simpledialog--delete-confirmation.jpg",
-      "width": 390,
-      "height": 550,
-      "problems": []
-     }
-    ]
-   },
-   {
     "name": "SkipDaySheet",
     "dir": "organisms",
     "story": true,
@@ -7905,219 +5541,6 @@
       "file": "shots/organisms-skipdaysheet--already-skipped.jpg",
       "width": 412,
       "height": 188,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "StimulusSummary",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [
-     "apps/web-app/src/containers/StimulusSummaryContainer.vue",
-     "packages/ui/molecules/DkgRingTrio/DkgRingTrio.vue"
-    ],
-    "pages": [],
-    "summary": "Presentational D/K/G stimulus summary — three stacked progress circles. Pure: values in, nothing else. The container derives D/K/G and feeds them.",
-    "shots": [
-     {
-      "id": "organisms-stimulussummary--default",
-      "title": "Organisms/StimulusSummary",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-stimulussummary--default.jpg",
-      "width": 152,
-      "height": 302,
-      "problems": []
-     },
-     {
-      "id": "organisms-stimulussummary--balanced",
-      "title": "Organisms/StimulusSummary",
-      "name": "Balanced",
-      "ok": true,
-      "file": "shots/organisms-stimulussummary--balanced.jpg",
-      "width": 152,
-      "height": 302,
-      "problems": []
-     },
-     {
-      "id": "organisms-stimulussummary--empty",
-      "title": "Organisms/StimulusSummary",
-      "name": "Empty",
-      "ok": true,
-      "file": "shots/organisms-stimulussummary--empty.jpg",
-      "width": 152,
-      "height": 302,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "SummaryCards",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [
-     "apps/web-app/src/containers/SummaryCardsContainer.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-summarycards--default",
-      "title": "Organisms/SummaryCards",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-summarycards--default.jpg",
-      "width": 408,
-      "height": 176,
-      "problems": []
-     },
-     {
-      "id": "organisms-summarycards--loading",
-      "title": "Organisms/SummaryCards",
-      "name": "Loading",
-      "ok": true,
-      "file": "shots/organisms-summarycards--loading.jpg",
-      "width": 408,
-      "height": 140,
-      "problems": []
-     },
-     {
-      "id": "organisms-summarycards--with-error",
-      "title": "Organisms/SummaryCards",
-      "name": "With Error",
-      "ok": true,
-      "file": "shots/organisms-summarycards--with-error.jpg",
-      "width": 408,
-      "height": 150,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "TaskTile",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-tasktile--default",
-      "title": "Organisms/TaskTile",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-tasktile--default.jpg",
-      "width": 408,
-      "height": 96,
-      "problems": []
-     },
-     {
-      "id": "organisms-tasktile--active",
-      "title": "Organisms/TaskTile",
-      "name": "Active",
-      "ok": true,
-      "file": "shots/organisms-tasktile--active.jpg",
-      "width": 408,
-      "height": 96,
-      "problems": []
-     },
-     {
-      "id": "organisms-tasktile--not-started",
-      "title": "Organisms/TaskTile",
-      "name": "Not Started",
-      "ok": true,
-      "file": "shots/organisms-tasktile--not-started.jpg",
-      "width": 408,
-      "height": 96,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "TitleOptions",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "Presentational day-header row for the dashboard: the date title plus its action cluster. On \"today\" it shows the wake toggle + skip-day switch + refresh; on any other date it shows just refresh. Props in, events out — no store / Apollo (the page owns skipDay state + the skipRoutine mutation and the refresh side-effect).",
-    "shots": [
-     {
-      "id": "organisms-titleoptions--today",
-      "title": "Organisms/TitleOptions",
-      "name": "Today",
-      "ok": true,
-      "file": "shots/organisms-titleoptions--today.jpg",
-      "width": 408,
-      "height": 99,
-      "problems": []
-     },
-     {
-      "id": "organisms-titleoptions--today-skipped",
-      "title": "Organisms/TitleOptions",
-      "name": "Today Skipped",
-      "ok": true,
-      "file": "shots/organisms-titleoptions--today-skipped.jpg",
-      "width": 408,
-      "height": 99,
-      "problems": []
-     },
-     {
-      "id": "organisms-titleoptions--other-day",
-      "title": "Organisms/TitleOptions",
-      "name": "Other Day",
-      "ok": true,
-      "file": "shots/organisms-titleoptions--other-day.jpg",
-      "width": 408,
-      "height": 76,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "UpcomingPastTasks",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [
-     "apps/web-app/src/containers/UpcomingPastTasksContainer.vue",
-     "packages/ui/styles/theme.css"
-    ],
-    "pages": [],
-    "summary": "Forward GoalItemList's two-argument toggle-goal-display-dialog event up to the dashboard. Method binding (vs. an inline arrow) is required because Vue 2 templates lose `this` inside arrow function expressions, leading to `Cannot read properties of undefined (reading '_events')` on $emit.",
-    "shots": [
-     {
-      "id": "organisms-upcomingpasttasks--upcoming-default",
-      "title": "Organisms/UpcomingPastTasks",
-      "name": "Upcoming Default",
-      "ok": true,
-      "file": "shots/organisms-upcomingpasttasks--upcoming-default.jpg",
-      "width": 408,
-      "height": 193,
-      "problems": []
-     },
-     {
-      "id": "organisms-upcomingpasttasks--past-with-selection",
-      "title": "Organisms/UpcomingPastTasks",
-      "name": "Past With Selection",
-      "ok": true,
-      "file": "shots/organisms-upcomingpasttasks--past-with-selection.jpg",
-      "width": 408,
-      "height": 329,
-      "problems": []
-     },
-     {
-      "id": "organisms-upcomingpasttasks--empty-state",
-      "title": "Organisms/UpcomingPastTasks",
-      "name": "Empty State",
-      "ok": true,
-      "file": "shots/organisms-upcomingpasttasks--empty-state.jpg",
-      "width": 408,
-      "height": 141,
       "problems": []
      }
     ]
@@ -8164,80 +5587,6 @@
       "file": "shots/organisms-userdrawer--over-achieved.jpg",
       "width": 312,
       "height": 912,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "UserHistory",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-userhistory--default",
-      "title": "Organisms/UserHistory",
-      "name": "Default",
-      "ok": true,
-      "file": "shots/organisms-userhistory--default.jpg",
-      "width": 412,
-      "height": 376,
-      "problems": []
-     },
-     {
-      "id": "organisms-userhistory--empty-state",
-      "title": "Organisms/UserHistory",
-      "name": "Empty State",
-      "ok": true,
-      "file": "shots/organisms-userhistory--empty-state.jpg",
-      "width": 412,
-      "height": 65,
-      "problems": []
-     }
-    ]
-   },
-   {
-    "name": "WeekGoalStreak",
-    "dir": "organisms",
-    "story": true,
-    "legacy": true,
-    "users": [
-     "apps/web-app/src/containers/WeekGoalStreakContainer.vue"
-    ],
-    "pages": [],
-    "summary": "",
-    "shots": [
-     {
-      "id": "organisms-weekgoalstreak--with-goals",
-      "title": "Organisms/WeekGoalStreak",
-      "name": "With Goals",
-      "ok": true,
-      "file": "shots/organisms-weekgoalstreak--with-goals.jpg",
-      "width": 408,
-      "height": 223,
-      "problems": []
-     },
-     {
-      "id": "organisms-weekgoalstreak--single-goal-item",
-      "title": "Organisms/WeekGoalStreak",
-      "name": "Single Goal Item",
-      "ok": true,
-      "file": "shots/organisms-weekgoalstreak--single-goal-item.jpg",
-      "width": 408,
-      "height": 140,
-      "problems": []
-     },
-     {
-      "id": "organisms-weekgoalstreak--empty-goal-items",
-      "title": "Organisms/WeekGoalStreak",
-      "name": "Empty Goal Items",
-      "ok": true,
-      "file": "shots/organisms-weekgoalstreak--empty-goal-items.jpg",
-      "width": 408,
-      "height": 122,
       "problems": []
      }
     ]
@@ -8442,10 +5791,6 @@
   {
    "title": "Organisms · Other screens",
    "file": "Organisms-Other-screens.html"
-  },
-  {
-   "title": "Organisms · Legacy",
-   "file": "Organisms-Legacy.html"
   }
  ]
 }

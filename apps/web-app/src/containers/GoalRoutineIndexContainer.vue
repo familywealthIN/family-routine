@@ -6,7 +6,7 @@
  * Today tab badges the routine whose window contains now — none of which a Goal
  * document knows. `routineItems` is the one field that does.
  *
- * Renderless with a scoped slot (the `XpBalanceContainer` form, ARCHITECTURE § 2)
+ * Renderless with a scoped slot (ARCHITECTURE § 2)
  * because this read has no organism of its own: it feeds the cascade list, the
  * calendar's sibling and the new-goal sheet's routine chips at once, and the page
  * is what composes those.

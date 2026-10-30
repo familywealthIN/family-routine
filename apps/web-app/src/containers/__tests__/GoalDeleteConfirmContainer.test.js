@@ -8,8 +8,7 @@
  * it is confirmed, and its wording has to match what the server actually does
  * (cascade), so both are asserted here.
  *
- * Methods/computeds are exercised against a minimal vm-like context (no mount),
- * matching the GoalItemListContainer.test.js convention.
+ * Methods/computeds are exercised against a minimal vm-like context (no mount).
  */
 jest.mock('vue-radar', () => ({ __esModule: true, default: {} }));
 jest.mock('vue-easymde', () => ({ __esModule: true, default: {} }));

@@ -507,6 +507,15 @@ async function main() {
     });
   }
 
+  // A component deleted from packages/ui leaves its generated card behind: remove
+  // every Atom-/Molecule-/Organism- card whose component no longer exists.
+  if (!process.env.CANVAS_SAMPLE) {
+    const live = new Set(LEVELS.flatMap((level) => manifest.levels[level.title].map((c) => `${level.prefix}-${c.name}`)));
+    fs.readdirSync(path.join(DESIGN, 'components'))
+      .filter((d) => /^(Atom|Molecule|Organism)-/.test(d) && !live.has(d))
+      .forEach((d) => { fs.rmSync(path.join(DESIGN, 'components', d), { recursive: true, force: true }); console.log(`removed stale card ${d}`); });
+  }
+
   // The canvases: Atoms and Molecules whole, Organisms one per page.
   const [atoms, molecules] = LEVELS.slice(0, 2);
   const organisms = manifest.levels.Organisms;

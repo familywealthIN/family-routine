@@ -2,8 +2,7 @@
 /**
  * ProgressReportContainer — the one read behind every figure on /progress.
  *
- * Computeds are exercised against a minimal vm-like context (no mount), matching
- * the MissedDayRecoveryContainer convention.
+ * Computeds are exercised against a minimal vm-like context (no mount).
  *
  * The decisions worth pinning: that the container reads the server's efficiency
  * card instead of working the metric out a third time (D-13), that each period
