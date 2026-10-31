@@ -50,6 +50,23 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://routinenote
     <meta name="theme-color" content="#288bd5" />
 
     <ClientRouter />
+
+    <!-- Hide the [data-reveal] sections before first paint, so they fade in once
+         instead of showing, vanishing and fading in. A view-transition swap brings
+         a fresh <html> without the class, so it is re-added after each swap. If
+         motion.ts never runs, the sections are shown again. -->
+    <script is:inline>
+      (function () {
+        var root = document.documentElement;
+        root.classList.add('js-ready');
+        document.addEventListener('astro:after-swap', function () {
+          document.documentElement.classList.add('js-ready');
+        });
+        setTimeout(function () {
+          if (!window.__revealReady) document.documentElement.classList.remove('js-ready');
+        }, 3000);
+      })();
+    </script>
   </head>
   <body class="bg-[color:var(--color-surface)] text-[color:var(--color-ink-900)]">
     <a
