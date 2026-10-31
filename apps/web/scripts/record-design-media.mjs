@@ -2,7 +2,7 @@
  * Renders the marketing site's product media from the design prototypes in
  * packages/design/*.dc.html: no backend, no login, no seeded data.
  *
- *   - public/screenshots/home-mobile.png       hero phone (412×892 frame at 2×)
+ *   - public/screenshots/home-mobile.png       hero phone (412×826 frame at 1.9×)
  *   - public/screenshots/guide/*.jpg            guide chapters (1440×900 frames at 1.33×)
  *   - public/videos/{scene}-{desktop,mobile}.webm + -poster.jpg   FeatureScenes and guide videos
  *
@@ -35,8 +35,10 @@ const DRY = !!args.dry;
 const DRY_DIR = join(tmpdir(), 'design-media-dry');
 
 // Design frame sizes. `scale` is the capture's deviceScaleFactor.
+// The phone is cut to the screen of the site's PhoneFrame (320×642 under its
+// own status bar), so the frame's object-fit: cover crops nothing off the tab bar.
 const FRAMES = {
-  phone: { w: 412, h: 893 },
+  phone: { w: 412, h: 826 },
   desktop: { w: 1440, h: 900 },
 };
 
