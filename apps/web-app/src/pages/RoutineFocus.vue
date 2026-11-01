@@ -2400,8 +2400,17 @@ export default {
       if (this.endEventFiring[taskRef]) return;
       const gid = goalId || this.findFirstGoalIdForRoutine(taskRef);
       this.$set(this.endEventFiring, taskRef, true);
+      // What filled is the SLOT counter, which can be shorter than the
+      // checklist (D-20), so "All tasks complete" was written against a header
+      // still reading "2 of 3 done" (D-12). A pill names only what actually
+      // happened: claim the checklist only when nothing on it is left open,
+      // and otherwise name the counter and the items still outstanding.
+      const left = (this.dayGoalItems || [])
+        .filter((item) => item && item.taskRef === taskRef && !item.isComplete).length;
       this.postChatEvent({
-        text: 'All tasks complete — end event firing',
+        text: left
+          ? `Routine slots filled · ${left} left — end event firing`
+          : 'All tasks complete — end event firing',
         tone: 'blue',
         icon: 'bolt',
         taskRef,
