@@ -14,6 +14,7 @@ export const LINKS = {
   appStarted: APP_LOGIN_URL,
   appStore: 'https://apps.apple.com/app/routine-notes/id6744820484',
   playStore: 'https://play.google.com/store/apps/details?id=com.routine.note',
+  why: '/why',
   guide: '/guide',
   pricing: '/pricing',
   about: '/about',

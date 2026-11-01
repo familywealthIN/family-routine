@@ -1,0 +1,549 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import FinalCta from '~/components/sections/FinalCta.astro';
+import StoreButtons from '~/components/StoreButtons.astro';
+import { Icon } from 'astro-icon/components';
+import { LINKS } from '~/lib/links';
+
+// The three apps people juggle, and what Routine Notes does in their place.
+const apps = [
+  { icon: 'ph:check-square-offset', name: 'A to-do app', job: 'what you do' },
+  { icon: 'ph:note-pencil', name: 'A notes app', job: 'what you know' },
+  { icon: 'ph:chats-circle', name: 'An AI chat', job: 'what gets done for you' },
+];
+
+const pillars = [
+  {
+    n: '01',
+    id: 'todo',
+    icon: 'ph:check-square-offset',
+    eyebrow: 'Your to-do app, upgraded',
+    instead: 'TickTick · Todoist',
+    title: 'A to-do list that',
+    accent: 'plans with you.',
+    lead: 'A normal to-do list is a pile you sort by hand. Routine Notes uses AI to put each task where it belongs: the right day, the right time, the right part of your routine.',
+    usual: [
+      'You type a task, then pick the date, time, priority and list yourself.',
+      'Tasks pile up with no idea of when you’ll actually do them.',
+      'A long list feels busy but says nothing about progress.',
+    ],
+    ours: [
+      'Type it the way you’d say it: “Call dentist tomorrow at 10am”. The date and time fill themselves in.',
+      'Tasks live inside your routines, so they show up when you’re already in that mode.',
+      'Big goals break into today’s steps, and finishing today moves your week, month and year forward.',
+    ],
+    image: '/screenshots/guide/dashboard-quicktask.jpg',
+    alt: 'Adding “Call dentist tomorrow at 10am” as a task, with the day and routine picked automatically',
+    url: 'routine notes — add task',
+  },
+  {
+    n: '02',
+    id: 'notes',
+    icon: 'ph:note-pencil',
+    eyebrow: 'Your notes app, with a memory',
+    instead: 'Notion · OneNote · Apple Notes',
+    title: 'Notes that',
+    accent: 'remember for you.',
+    lead: 'Notes apps are good at storing pages and bad at handing them back when you need them. In Routine Notes, every note is kept with the day and the routine it came from, so it becomes context the next time you sit down to work.',
+    usual: [
+      'Notes live in folders you rarely open again.',
+      'A page doesn’t know what you were doing when you wrote it.',
+      'Starting work means hunting for where you left off.',
+    ],
+    ours: [
+      'Notes, checklists and chats are saved on the day and routine they belong to.',
+      '“Before you start” shows what you did last time and your next steps, the moment a routine begins.',
+      'Ask “What did I do last time?” and get the answer from your own history.',
+    ],
+    image: '/screenshots/guide/dashboard-day.jpg',
+    alt: 'The Start Work routine with its checklist, and a “Before you start” panel showing past activity and next steps',
+    url: 'routine notes — today',
+  },
+  {
+    n: '03',
+    id: 'agents',
+    icon: 'ph:robot',
+    eyebrow: 'Your AI chat, put on a schedule',
+    instead: 'Muse · Duet',
+    title: 'AI that works',
+    accent: 'on your schedule.',
+    lead: 'Most AI apps wait in a chat box for you to come and ask, and every visit is a chance to drift off. Routine Notes ties each AI agent to a routine: it starts when you start, works while you work, and reports back when you’re done.',
+    usual: [
+      'You remember to open the chat, explain the job again, then copy the answer somewhere.',
+      'Every conversation starts from zero.',
+      'One more tab pulling you away from what you planned.',
+    ],
+    ours: [
+      'Attach an agent to a routine once. It runs every time that routine starts.',
+      'It starts with the routine and goal it belongs to, so you don’t explain the job each time.',
+      'Results land back on the task, so your whole day stays in one place.',
+    ],
+    image: '/screenshots/guide/agents-lifecycle.jpg',
+    alt: 'The Ticket Triage agent attached to the 15:00 Deep Work routine, showing its run from start to finish and the result',
+    url: 'routine notes — agents',
+  },
+];
+
+const growth = [
+  { when: 'Day 1', icon: 'ph:sun-horizon', body: 'Your routines and today’s tasks, in the order you’ll do them.' },
+  { when: 'Week 1', icon: 'ph:bookmark-simple', body: 'Each routine opens where you left off, with your next steps ready.' },
+  { when: 'Month 1', icon: 'ph:trend-up', body: 'Your goals move forward on their own as good days add up.' },
+  { when: 'Year 1', icon: 'ph:user-focus', body: 'A record of how you work: an AI mirror that helps the way you would.' },
+];
+
+const living = [
+  { icon: 'ph:app-window', title: 'One app, not three', body: 'Plan, write and hand off work in the same place. No copying between tabs.' },
+  { icon: 'ph:alarm', title: 'Help that arrives on time', body: 'Your notes and agents show up when the routine starts, not when you go looking.' },
+  { icon: 'ph:lightning', title: 'Free when you show up', body: 'Doing your routines earns the points that run your AI.', link: { href: LINKS.pricing, label: 'How pricing works' } },
+];
+---
+
+<BaseLayout
+  title="Why Routine Notes — your to-dos, notes and AI in one second brain"
+  description="Routine Notes replaces your to-do app, notes app and AI chat with one app built around your daily routine, and grows into a second brain that knows how you work."
+>
+  <!-- Hero -->
+  <section class="relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-24">
+    <div class="absolute inset-0 -z-10 pointer-events-none">
+      <div class="absolute -top-40 left-1/2 -translate-x-1/2 h-[560px] w-[760px] rounded-full blur-3xl opacity-50"
+        style="background:radial-gradient(circle, rgba(40,139,213,0.22), rgba(40,139,213,0) 70%)"></div>
+    </div>
+
+    <div class="container-page">
+      <div class="max-w-3xl mx-auto text-center" data-reveal>
+        <span class="pill">
+          <Icon name="ph:sparkle-fill" width={14} height={14} />
+          Why this app?
+        </span>
+        <h1 class="mt-6 text-[2.5rem] sm:text-6xl lg:text-[4.2rem] font-semibold leading-[1.04]">
+          Three apps you juggle. <br />
+          <span class="bg-clip-text text-transparent bg-gradient-to-r from-[#288bd5] via-[#5aa3d3] to-[#288bd5]">One brain that grows.</span>
+        </h1>
+        <p class="mt-6 text-lg text-[color:var(--color-ink-600)] max-w-2xl mx-auto leading-relaxed">
+          Most of us run our day across a to-do app, a notes app and an AI chat. They don’t talk to
+          each other, so none of them really knows you. Routine Notes brings all three together
+          around your daily routine, and every day you use it, it learns a little more about how you work.
+        </p>
+        <StoreButtons class="mt-8 justify-center" />
+      </div>
+
+      <!-- Three apps flow into one -->
+      <div class="merge mt-16 max-w-4xl mx-auto" data-reveal>
+        <ul class="merge__apps">
+          {apps.map((a) => (
+            <li class="merge__app card-soft">
+              <span class="merge__icon"><Icon name={a.icon} width={20} height={20} /></span>
+              <span>
+                <b>{a.name}</b>
+                <small>{a.job}</small>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <svg class="merge__lines" viewBox="0 0 600 70" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M100 0 C100 40, 300 30, 300 70" />
+          <path d="M300 0 L300 70" />
+          <path d="M500 0 C500 40, 300 30, 300 70" />
+        </svg>
+        <div class="merge__one">
+          <span class="merge__one-icon"><Icon name="ph:brain" width={26} height={26} /></span>
+          <span>
+            <b>Routine Notes</b>
+            <small>your second brain, built from your day</small>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The three replacements -->
+  {pillars.map((p, i) => (
+    <section
+      id={p.id}
+      class:list={[
+        'py-20 md:py-24',
+        i % 2 === 0 && 'bg-[color:var(--color-surface-soft)] border-y border-[color:var(--color-ink-100)]',
+      ]}
+    >
+      <div class="container-page grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div class:list={[i % 2 === 1 && 'lg:order-2']} data-reveal>
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="font-display text-[1.5rem] font-semibold text-[color:var(--color-brand-500)] tracking-tight">{p.n}</span>
+            <span class="pill">
+              <Icon name={p.icon} width={14} height={14} />
+              {p.eyebrow}
+            </span>
+          </div>
+          <h2 class="mt-5 text-4xl sm:text-5xl font-semibold leading-[1.08]">
+            {p.title} <span class="italic font-display text-[color:var(--color-brand-600)]">{p.accent}</span>
+          </h2>
+          <p class="mt-5 text-lg text-[color:var(--color-ink-600)] leading-relaxed">{p.lead}</p>
+
+          <div class="mt-8 grid sm:grid-cols-2 gap-4">
+            <div class="compare compare--usual">
+              <p class="compare__label">The usual way <span>{p.instead}</span></p>
+              <ul>
+                {p.usual.map((t) => (
+                  <li><Icon name="ph:minus-circle" width={18} height={18} class="compare__mark" />{t}</li>
+                ))}
+              </ul>
+            </div>
+            <div class="compare compare--ours">
+              <p class="compare__label">With Routine Notes</p>
+              <ul>
+                {p.ours.map((t) => (
+                  <li><Icon name="ph:check-circle-fill" width={18} height={18} class="compare__mark" />{t}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <figure class:list={['shot', i % 2 === 1 && 'lg:order-1']} data-reveal>
+          <div class="shot__bar" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <em>{p.url}</em>
+          </div>
+          <img src={p.image} alt={p.alt} loading="lazy" decoding="async" width="1920" height="1200" />
+        </figure>
+      </div>
+    </section>
+  ))}
+
+  <!-- All in one: the second brain -->
+  <section class="py-24">
+    <div class="container-page">
+      <div class="max-w-2xl mx-auto text-center" data-reveal>
+        <span class="pill">
+          <Icon name="ph:brain" width={14} height={14} />
+          All in one
+        </span>
+        <h2 class="mt-5 text-4xl sm:text-5xl font-semibold">
+          Together, they build your <span class="italic font-display text-[color:var(--color-brand-600)]">second brain.</span>
+        </h2>
+        <p class="mt-4 text-lg text-[color:var(--color-ink-600)] leading-relaxed">
+          A second brain is a place outside your head that remembers for you. You don’t have to
+          build this one: just live your day. Your to-dos, notes and agents all feed the same
+          picture of you, and over time it becomes an <b class="text-[color:var(--color-ink-900)]">AI mirror</b>:
+          it knows your routines, your goals and what you’ve done, so its help sounds more like you.
+        </p>
+      </div>
+
+      <!-- to-dos + notes + agents = AI mirror -->
+      <div class="equation mt-14" data-reveal-group>
+        {apps.map((a, i) => (
+          <>
+            <div data-reveal-item class="equation__term card-soft">
+              <Icon name={a.icon} width={22} height={22} class="text-[color:var(--color-brand-500)]" />
+              <b>{['To-dos', 'Notes', 'Agents'][i]}</b>
+              <small>{a.job}</small>
+            </div>
+            <span class="equation__op" aria-hidden="true">{i < 2 ? '+' : '='}</span>
+          </>
+        ))}
+        <div data-reveal-item class="equation__result">
+          <Icon name="ph:user-focus" width={24} height={24} />
+          <b>Your AI mirror</b>
+          <small>help that knows you</small>
+        </div>
+      </div>
+
+      <!-- How it grows -->
+      <ol data-reveal-group class="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 relative">
+        <div class="hidden lg:block absolute top-11 left-[12.5%] right-[12.5%] h-px bg-gradient-to-r from-transparent via-[color:var(--color-brand-200)] to-transparent" aria-hidden="true"></div>
+        {growth.map((g) => (
+          <li data-reveal-item class="card-soft relative p-6 bg-white">
+            <div class="flex items-center justify-between">
+              <span class="font-display text-[1.25rem] font-semibold text-[color:var(--color-brand-500)] tracking-tight">{g.when}</span>
+              <span class="h-10 w-10 rounded-full bg-[color:var(--color-brand-50)] grid place-items-center text-[color:var(--color-brand-600)] ring-1 ring-[color:var(--color-brand-100)]">
+                <Icon name={g.icon} width={18} height={18} />
+              </span>
+            </div>
+            <p class="mt-4 text-[15px] leading-relaxed text-[color:var(--color-ink-600)]">{g.body}</p>
+          </li>
+        ))}
+      </ol>
+      <p class="mt-6 text-center text-sm text-[color:var(--color-ink-500)]" data-reveal>
+        The longer you use it, the more it knows. Privacy-first: your second brain is yours.
+      </p>
+    </div>
+  </section>
+
+  <!-- Efficient living -->
+  <section class="py-24 bg-[color:var(--color-surface-soft)] border-y border-[color:var(--color-ink-100)]">
+    <div class="container-page">
+      <div class="max-w-2xl mx-auto text-center" data-reveal>
+        <span class="pill">
+          <Icon name="ph:leaf" width={14} height={14} />
+          Efficient living
+        </span>
+        <h2 class="mt-5 text-4xl sm:text-5xl font-semibold">
+          Less switching. <span class="italic font-display text-[color:var(--color-brand-600)]">More living.</span>
+        </h2>
+        <p class="mt-4 text-lg text-[color:var(--color-ink-600)]">
+          AI shouldn’t be another thing that grabs your attention. Here it follows your routine, so the
+          time you save goes back to your life.
+        </p>
+      </div>
+
+      <div data-reveal-group class="mt-14 grid gap-6 md:grid-cols-3">
+        {living.map((l) => (
+          <article data-reveal-item class="card-soft p-7 bg-white">
+            <span class="h-11 w-11 rounded-full bg-[color:var(--color-brand-50)] grid place-items-center text-[color:var(--color-brand-600)] ring-1 ring-[color:var(--color-brand-100)]">
+              <Icon name={l.icon} width={20} height={20} />
+            </span>
+            <h3 class="mt-5 text-xl font-semibold">{l.title}</h3>
+            <p class="mt-2 text-[15px] leading-relaxed text-[color:var(--color-ink-600)]">{l.body}</p>
+            {l.link && (
+              <a href={l.link.href} class="btn-ghost mt-4 text-sm text-[color:var(--color-brand-600)]">
+                {l.link.label}
+                <Icon name="ph:arrow-right" width={14} height={14} />
+              </a>
+            )}
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <div class="pt-16 pb-4">
+    <FinalCta />
+  </div>
+</BaseLayout>
+
+<style>
+  /* Three apps → one */
+  .merge__apps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .merge__app {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    text-align: left;
+  }
+  .merge__app b,
+  .merge__one b {
+    display: block;
+    font-weight: 600;
+    color: var(--color-ink-900);
+    font-size: 0.95rem;
+  }
+  .merge__app small,
+  .merge__one small {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--color-ink-500);
+  }
+  .merge__icon {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    height: 2.5rem;
+    width: 2.5rem;
+    border-radius: 999px;
+    background: var(--color-ink-50, #f3f6fa);
+    color: var(--color-ink-500);
+  }
+  .merge__lines {
+    display: block;
+    width: 100%;
+    height: 56px;
+    fill: none;
+    stroke: var(--color-brand-300);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 5;
+    vector-effect: non-scaling-stroke;
+  }
+  .merge__lines path {
+    vector-effect: non-scaling-stroke;
+  }
+  .merge__one {
+    margin-inline: auto;
+    width: fit-content;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1rem 1.4rem;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #1a5a8f 0%, #288bd5 55%, #5aa3d3 100%);
+    box-shadow: var(--shadow-lift);
+    text-align: left;
+  }
+  .merge__one b {
+    color: #fff;
+    font-size: 1.05rem;
+  }
+  .merge__one small {
+    color: rgb(255 255 255 / 0.8);
+  }
+  .merge__one-icon {
+    display: grid;
+    place-items: center;
+    height: 2.75rem;
+    width: 2.75rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.16);
+    color: #fff;
+  }
+  @media (max-width: 639px) {
+    .merge__apps {
+      grid-template-columns: 1fr;
+      gap: 0.6rem;
+    }
+    .merge__lines {
+      display: none;
+    }
+    .merge__one {
+      margin-top: 1.25rem;
+    }
+  }
+
+  /* The usual way vs Routine Notes */
+  .compare {
+    border-radius: var(--radius-card);
+    padding: 1.1rem 1.15rem 1.2rem;
+  }
+  .compare--usual {
+    background: var(--color-surface);
+    border: 1px dashed var(--color-ink-200);
+  }
+  .compare--ours {
+    background: var(--color-brand-50);
+    border: 1px solid var(--color-brand-100);
+  }
+  .compare__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+  }
+  .compare__label span {
+    display: block;
+    margin-top: 0.2rem;
+    letter-spacing: 0;
+    text-transform: none;
+    font-weight: 500;
+    color: var(--color-ink-400);
+  }
+  .compare--ours .compare__label {
+    color: var(--color-brand-700);
+  }
+  .compare ul {
+    margin-top: 0.85rem;
+    display: grid;
+    gap: 0.7rem;
+  }
+  .compare li {
+    display: flex;
+    gap: 0.55rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-ink-600);
+  }
+  .compare--ours li {
+    color: var(--color-ink-800, var(--color-ink-900));
+  }
+  .compare :global(.compare__mark) {
+    flex-shrink: 0;
+    margin-top: 0.12rem;
+    color: var(--color-ink-300);
+  }
+  .compare--ours :global(.compare__mark) {
+    color: var(--color-brand-500);
+  }
+
+  /* Product screenshot in a browser window */
+  .shot {
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--color-ink-100);
+    box-shadow: var(--shadow-lift);
+  }
+  .shot__bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    background: var(--color-surface-soft);
+    border-bottom: 1px solid var(--color-ink-100);
+  }
+  .shot__bar span {
+    height: 10px;
+    width: 10px;
+    border-radius: 999px;
+    background: var(--color-ink-200);
+  }
+  .shot__bar em {
+    margin-left: auto;
+    margin-right: auto;
+    font-style: normal;
+    font-size: 0.75rem;
+    color: var(--color-ink-500);
+    transform: translateX(-24px);
+  }
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* to-dos + notes + agents = AI mirror */
+  .equation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.9rem;
+  }
+  .equation__term,
+  .equation__result {
+    display: grid;
+    justify-items: center;
+    gap: 0.3rem;
+    min-width: 9.5rem;
+    padding: 1.1rem 1.2rem;
+    text-align: center;
+  }
+  .equation__term b,
+  .equation__result b {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .equation__term small,
+  .equation__result small {
+    font-size: 0.8rem;
+    color: var(--color-ink-500);
+  }
+  .equation__result {
+    border-radius: var(--radius-card);
+    background: linear-gradient(135deg, #1a5a8f 0%, #288bd5 55%, #5aa3d3 100%);
+    color: #fff;
+    box-shadow: var(--shadow-lift);
+  }
+  .equation__result small {
+    color: rgb(255 255 255 / 0.8);
+  }
+  .equation__op {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--color-brand-400);
+  }
+  @media (max-width: 639px) {
+    .equation__term,
+    .equation__result {
+      min-width: 0;
+      width: 100%;
+    }
+    .equation__op {
+      line-height: 1;
+    }
+  }
+</style>
