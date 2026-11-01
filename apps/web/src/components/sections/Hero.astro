@@ -57,7 +57,9 @@ const heroShot = '/screenshots/home-mobile.png';
     <div class="relative flex justify-center lg:justify-end" data-reveal>
       <div class="relative" style="transform:translateY(0)">
         <PhoneFrame src={heroShot} alt="Routine Notes today view showing Routine points, streak and agents" />
-        <div class="hidden sm:block absolute -left-12 top-1/3">
+        <!-- Sits just left of the frame with its pointer on the week selector (Sun–Sat rings).
+             md+ only: below that there isn't room beside the centred phone. -->
+        <div class="hidden md:block absolute right-[calc(100%-10px)] top-[96px] z-10">
           <KdgBadge />
         </div>
       </div>
