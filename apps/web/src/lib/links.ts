@@ -3,7 +3,7 @@ export const APP_LOGIN_URL = APP_URL + '/';
 
 export const SITE = {
   name: 'Routine Notes',
-  domain: 'routinenotes.ai',
+  domain: 'routinenotes.app',
   tagline: 'The evolution App for ambitious people.',
   description:
     'Routine Notes turns your daily actions into Kinetics, Discipline, and Geniuses points — your personal evolution score. Free as long as you keep moving.',
@@ -12,6 +12,8 @@ export const SITE = {
 export const LINKS = {
   appLogin: APP_LOGIN_URL,
   appStarted: APP_LOGIN_URL,
+  appStore: 'https://apps.apple.com/app/routine-notes/id6744820484',
+  playStore: 'https://play.google.com/store/apps/details?id=com.routine.note',
   guide: '/guide',
   pricing: '/pricing',
   about: '/about',

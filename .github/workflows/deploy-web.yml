@@ -1,0 +1,58 @@
+name: Deploy Web (GitHub Pages)
+
+# Builds the Astro marketing site (apps/web) and publishes it to GitHub Pages
+# at https://routinenotes.app. The custom domain lives in apps/web/public/CNAME,
+# so every deploy carries it. The apex and www A records point at the Pages IPs.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'apps/web/**'
+      - 'yarn.lock'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. A newer push queues behind the running one and is not cancelled.
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Install workspace dependencies
+        run: yarn install --frozen-lockfile --ignore-engines
+
+      - name: Build apps/web
+        run: yarn workspace web build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

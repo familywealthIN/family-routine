@@ -1,12 +1,10 @@
 ---
 import PhoneFrame from '~/components/PhoneFrame.astro';
 import KdgBadge from '~/components/KdgBadge.astro';
+import StoreButtons from '~/components/StoreButtons.astro';
 import { Icon } from 'astro-icon/components';
-import { LINKS } from '~/lib/links';
 
-// Real screenshot will land at /screenshots/home-mobile.png after capture.
-// Until then we render a placeholder image with the brand gradient so the
-// frame still looks intentional during development.
+// The Home phone frame from packages/design (see public/screenshots/README.md).
 const heroShot = '/screenshots/home-mobile.png';
 ---
 
@@ -37,16 +35,7 @@ const heroShot = '/screenshots/home-mobile.png';
         your personal evolution score. The app is free as long as you keep moving.
       </p>
 
-      <div class="mt-8 flex flex-wrap items-center gap-3">
-        <a href={LINKS.appStarted} class="btn-primary text-base">
-          Start free — earn your way
-          <Icon name="ph:arrow-right" width={16} height={16} />
-        </a>
-        <a href={LINKS.pricing} class="btn-ghost text-base px-3 py-2">
-          See pricing
-          <Icon name="ph:caret-right" width={14} height={14} />
-        </a>
-      </div>
+      <StoreButtons class="mt-8" />
 
       <ul class="mt-10 flex flex-wrap gap-x-7 gap-y-3 text-sm text-[color:var(--color-ink-500)]">
         <li class="inline-flex items-center gap-2">

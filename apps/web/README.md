@@ -1,6 +1,6 @@
 # Routine Notes — marketing site (`apps/web`)
 
-Astro 5 static site for **routinenotes.ai**. Lives alongside the web-app
+Astro 5 static site for **routinenotes.app**. Lives alongside the web-app
 (`apps/web-app`) and shares the type system + brand color from
 `packages/ui`, but is otherwise an independent build.
 
@@ -68,10 +68,11 @@ the web-app stay visually aligned.
 
 ## Deploy
 
-Netlify auto-deploys on push to `master`. Config in `netlify.toml`:
-- Build command: `yarn build`
-- Publish: `dist/`
-- Node: 20
+GitHub Pages serves the site at https://routinenotes.app.
+`.github/workflows/deploy-web.yml` builds `apps/web` and publishes `dist/` on every
+push to `master` that touches `apps/web/**`. You can also run it by hand from the Actions tab.
 
-DNS for `routinenotes.ai` should point at this Netlify site once the
-domain is live.
+- `public/CNAME` holds the custom domain. Every deploy carries it, so Pages keeps the domain.
+- The DNS A records for the apex and `www` point at GitHub Pages
+  (185.199.108–111.153).
+- `netlify.toml` is left over from the earlier Netlify setup. Pages does not read it.
