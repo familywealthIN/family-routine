@@ -1935,6 +1935,37 @@ describe('RoutineFocus end-event dispatch', () => {
     expect(vm.$agent.fireEndEvent).toHaveBeenCalledWith({ taskRef: 'sw', goalId: 'g1' });
   });
 
+  // The end rule counts SLOTS, which can be shorter than the checklist (D-20),
+  // so a routine with more items than slots closed its run while the header
+  // still read "2 of 3 done" — and the pill claimed otherwise.
+  it('does not claim the checklist is complete while an item is open', () => {
+    const vm = vmFor(true);
+    vm.dayGoalItems = [
+      { id: 'i1', taskRef: 'sw', isComplete: true },
+      { id: 'i2', taskRef: 'sw', isComplete: true },
+      { id: 'i3', taskRef: 'sw', isComplete: false },
+    ];
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    expect(vm.$agent.fireEndEvent).toHaveBeenCalledWith({ taskRef: 'sw', goalId: 'g1' });
+    expect(vm.postChatEvent).toHaveBeenCalledWith(expect.objectContaining({
+      text: 'Routine slots filled · 1 left — end event firing',
+      icon: 'bolt',
+    }));
+  });
+
+  // Another routine's open items are not this pill's business.
+  it('still claims a complete checklist when the open item belongs elsewhere', () => {
+    const vm = vmFor(true);
+    vm.dayGoalItems = [
+      ...vm.dayGoalItems,
+      { id: 'i3', taskRef: 'lunch', isComplete: false },
+    ];
+    methods.maybeFireAgentEndEvent.call(vm, 'sw');
+    expect(vm.postChatEvent).toHaveBeenCalledWith(expect.objectContaining({
+      text: 'All tasks complete — end event firing',
+    }));
+  });
+
   it('re-checks only listening routines, and only today', () => {
     const vm = {
       isToday: true,
