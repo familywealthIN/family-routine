@@ -1,4 +1,5 @@
 /* eslint-disable no-underscore-dangle */
+const mongoose = require('mongoose');
 const {
   GraphQLID,
   GraphQLString,
@@ -13,6 +14,49 @@ const {
   SubTaskItemType,
 } = require('../schema/GoalSchema');
 const getEmailfromSession = require('../utils/getEmailfromSession');
+const { encryption, ENCRYPTION_FIELDS } = require('../utils/encryption');
+
+/*
+ * Every single-sub-task write here is ONE atomic update on the one field it
+ * changes ($push / $pull / an arrayFilters $set), never a read of the whole
+ * `subTasks` array followed by a $set of the whole array.
+ *
+ * The read-then-rewrite shape lost writes: tick two sub-tasks in quick
+ * succession and both requests read the same starting array, so the second
+ * write put the first sub-task back the way it was — and its response, the
+ * parent GoalItem, carried that reverted state into the client cache, so the
+ * box the user had just ticked unticked itself (26 Oct 2026).
+ *
+ * It also stored every sub-task title in plaintext: the find hook decrypts, the
+ * rewrite wrote the decrypted copy back, and the encrypt hook only runs on
+ * `save`. Values written here are encrypted by hand for that reason.
+ */
+
+const toObjectId = (id) => (id != null && mongoose.Types.ObjectId.isValid(String(id))
+  ? mongoose.Types.ObjectId(String(id))
+  : null);
+
+const sameId = (a, b) => a != null && b != null && a.toString() === b.toString();
+
+const findGoalItem = (goal, taskId) => (goal && goal.goalItems
+  && goal.goalItems.find((goalItem) => sameId(goalItem._id, taskId))) || null;
+
+const findSubTask = (goalItem, id) => (goalItem && goalItem.subTasks
+  && goalItem.subTasks.find((subTask) => sameId(subTask._id, id))) || null;
+
+const encryptBody = (body) => (body ? encryption.encrypt(body) : body);
+
+/**
+ * The decrypt hook hands back values without a guaranteed `id` virtual, so
+ * spell it out or `SubTaskItemType.id` resolves to null and the client cannot
+ * normalize the result.
+ */
+const subTaskResult = (subTask) => ({
+  id: subTask._id.toString(),
+  _id: subTask._id,
+  body: subTask.body,
+  isComplete: subTask.isComplete,
+});
 
 const query = {};
 
@@ -26,6 +70,11 @@ const mutation = {
       body: { type: GraphQLString },
       isComplete: { type: GraphQLBoolean },
     },
+    /**
+     * Append one sub-task with `$push`. The id is minted here so the answer is
+     * the sub-task this request added — "the last element of the array" is
+     * someone else's when two adds land together.
+     */
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
@@ -36,66 +85,30 @@ const mutation = {
         body,
       } = args;
 
-      const subTaskToAdd = { body };
+      const taskObjectId = toObjectId(taskId);
+      if (!taskObjectId) return null;
 
-      const goalEntry = await GoalModel.findOne({
-        date,
-        period,
-        email,
-        'goalItems._id': taskId,
-      }).exec();
+      const subTaskId = new mongoose.Types.ObjectId();
+      const isComplete = !!args.isComplete;
 
-      const previousGoalItem = goalEntry
-        && goalEntry.goalItems
-        && goalEntry.goalItems
-          .find((goalItem) => goalItem._id.toString() === taskId.toString());
-
-      if (previousGoalItem
-        && previousGoalItem.subTasks
-        && previousGoalItem.subTasks.length) {
-        await GoalModel.findOneAndUpdate(
-          {
-            date,
-            period,
-            email,
-            'goalItems._id': taskId,
-          },
-          { $set: { 'goalItems.$.subTasks': [...previousGoalItem.subTasks, subTaskToAdd] } },
-          { new: true },
-        ).exec();
-      } else {
-        await GoalModel.findOneAndUpdate(
-          {
-            date,
-            period,
-            email,
-            'goalItems._id': args.taskId,
-          },
-          {
-            $set: {
-              'goalItems.$.subTasks': [subTaskToAdd],
-            },
-          },
-          { new: true },
-        ).exec();
-      }
-
-      const goal = await GoalModel.findOne(
+      const updatedGoal = await GoalModel.findOneAndUpdate(
         {
-          date: args.date,
-          period: args.period,
+          date,
+          period,
           email,
+          'goalItems._id': taskObjectId,
         },
         {
-          goalItems: {
-            $elemMatch: {
-              _id: args.taskId,
-            },
+          $push: {
+            'goalItems.$.subTasks': { _id: subTaskId, body: encryptBody(body), isComplete },
           },
         },
+        { new: true },
       ).exec();
 
-      return goal.goalItems[0].subTasks[goal.goalItems[0].subTasks.length - 1];
+      if (!updatedGoal) return null;
+
+      return subTaskResult({ _id: subTaskId, body, isComplete });
     },
   },
   updateSubTaskItem: {
@@ -108,14 +121,10 @@ const mutation = {
       body: { type: GraphQLString },
     },
     /**
-     * Rename one sub-task.
-     *
-     * Previously this wrote `goalItems.$.subTasks.0.body` — a hardcoded index —
-     * so renaming the third sub-task renamed the first, and it returned `null`
-     * for a `SubTaskItem!`-shaped field. It had no callers, which is why nobody
-     * had seen it. Now it rewrites the array through the same read-map-$set
-     * shape `completeSubTaskItem` uses, and returns the renamed sub-task so
-     * Apollo normalizes `SubTaskItem:<id>` and every query holding it updates.
+     * Rename one sub-task, addressed by id through arrayFilters (an earlier
+     * version wrote `subTasks.0.body` and renamed the first one). Returns the
+     * renamed sub-task so Apollo normalizes `SubTaskItem:<id>` and every query
+     * holding it updates.
      */
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
@@ -128,50 +137,26 @@ const mutation = {
         taskId,
       } = args;
 
-      const goalEntry = await GoalModel.findOne(
-        { date, period, email },
-        { goalItems: { $elemMatch: { _id: taskId } } },
-      ).exec();
+      const taskObjectId = toObjectId(taskId);
+      const subTaskObjectId = toObjectId(id);
+      if (!taskObjectId || !subTaskObjectId) return null;
 
-      const previousGoalItem = goalEntry
-        && goalEntry.goalItems
-        && goalEntry.goalItems
-          .find((goalItem) => goalItem._id.toString() === taskId.toString());
-
-      if (!previousGoalItem
-        || !previousGoalItem.subTasks
-        || !previousGoalItem.subTasks.length) {
-        return null;
-      }
-
-      const target = previousGoalItem.subTasks
-        .find((subTask) => subTask._id.toString() === id.toString());
-
-      if (!target) return null;
-
-      const updatedSubTasks = previousGoalItem.subTasks.map((subTask) => (
-        subTask._id.toString() === id.toString()
-          ? { _id: subTask._id, body, isComplete: subTask.isComplete }
-          : subTask
-      ));
-
-      await GoalModel.findOneAndUpdate(
+      const updatedGoal = await GoalModel.findOneAndUpdate(
         {
           date,
           period,
           email,
-          'goalItems._id': taskId,
+          'goalItems._id': taskObjectId,
         },
-        { $set: { 'goalItems.$.subTasks': updatedSubTasks } },
-        { new: true },
+        { $set: { 'goalItems.$[item].subTasks.$[sub].body': encryptBody(body) } },
+        {
+          new: true,
+          arrayFilters: [{ 'item._id': taskObjectId }, { 'sub._id': subTaskObjectId }],
+        },
       ).exec();
 
-      // The decrypt hook hands back plain objects, not mongoose subdocuments, so
-      // there is no `id` virtual to lean on — spell it out or `SubTaskItemType.id`
-      // resolves to null and the client cannot normalize the result.
-      return {
-        id: target._id.toString(), _id: target._id, body, isComplete: target.isComplete,
-      };
+      const target = findSubTask(findGoalItem(updatedGoal, taskId), id);
+      return target ? subTaskResult(target) : null;
     },
   },
   /**
@@ -189,6 +174,9 @@ const mutation = {
    * sub-tasks the caller did not mention keep their relative order at the end,
    * so a stale client list reorders what it knows about instead of deleting the
    * rest.
+   *
+   * The one whole-array write left in this file, because order cannot be set
+   * any other way. The bodies are re-encrypted before it goes back.
    */
   reorderSubTaskItems: {
     type: GoalItemType,
@@ -210,10 +198,7 @@ const mutation = {
         { goalItems: { $elemMatch: { _id: taskId } } },
       ).exec();
 
-      const previousGoalItem = goalEntry
-        && goalEntry.goalItems
-        && goalEntry.goalItems
-          .find((goalItem) => goalItem._id.toString() === taskId.toString());
+      const previousGoalItem = findGoalItem(goalEntry, taskId);
 
       if (!previousGoalItem
         || !previousGoalItem.subTasks
@@ -232,6 +217,12 @@ const mutation = {
       const remainder = previousGoalItem.subTasks
         .filter((subTask) => !orderedIds.has(subTask._id.toString()));
 
+      const stored = [...ordered, ...remainder].map((subTask) => ({
+        _id: subTask._id,
+        body: encryptBody(subTask.body),
+        isComplete: subTask.isComplete,
+      }));
+
       const updatedGoal = await GoalModel.findOneAndUpdate(
         {
           date,
@@ -239,15 +230,11 @@ const mutation = {
           email,
           'goalItems._id': taskId,
         },
-        { $set: { 'goalItems.$.subTasks': [...ordered, ...remainder] } },
+        { $set: { 'goalItems.$.subTasks': stored } },
         { new: true },
       ).exec();
 
-      return (updatedGoal
-        && updatedGoal.goalItems
-        && updatedGoal.goalItems.find(
-          (goalItem) => goalItem._id.toString() === taskId.toString(),
-        )) || null;
+      return findGoalItem(updatedGoal, taskId);
     },
   },
   deleteSubTaskItem: {
@@ -258,6 +245,10 @@ const mutation = {
       date: { type: GraphQLNonNull(GraphQLString) },
       period: { type: GraphQLNonNull(GraphQLString) },
     },
+    /**
+     * `$pull` the one sub-task. The pre-update document (`new: false`) is what
+     * still holds it, so the deleted sub-task can be returned.
+     */
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
@@ -268,48 +259,23 @@ const mutation = {
         period,
       } = args;
 
-      const goalEntry = await GoalModel.findOne({
-        date,
-        period,
-        email,
-      },
+      const taskObjectId = toObjectId(taskId);
+      const subTaskObjectId = toObjectId(id);
+      if (!taskObjectId || !subTaskObjectId) return args;
+
+      const previousGoal = await GoalModel.findOneAndUpdate(
         {
-          goalItems: {
-            $elemMatch: {
-              _id: args.taskId,
-            },
-          },
-        }).exec();
+          date,
+          period,
+          email,
+          'goalItems._id': taskObjectId,
+        },
+        { $pull: { 'goalItems.$.subTasks': { _id: subTaskObjectId } } },
+        { new: false },
+      ).exec();
 
-      const previousGoalItem = goalEntry
-        && goalEntry.goalItems
-        && goalEntry.goalItems
-          .find((goalItem) => goalItem._id.toString() === taskId.toString());
-
-      if (previousGoalItem
-        && previousGoalItem.subTasks
-        && previousGoalItem.subTasks.length) {
-        const returnSubTasks = previousGoalItem.subTasks
-          .find((subTask) => subTask._id.toString() === id.toString());
-
-        const filteredSubTasks = previousGoalItem.subTasks
-          .filter((subTask) => subTask._id.toString() !== id.toString());
-
-        await GoalModel.findOneAndUpdate(
-          {
-            date: args.date,
-            period: args.period,
-            email,
-            'goalItems._id': args.taskId,
-          },
-          { $set: { 'goalItems.$.subTasks': filteredSubTasks } },
-          { new: true },
-        ).exec();
-
-        return returnSubTasks;
-      }
-
-      return args;
+      const removed = findSubTask(findGoalItem(previousGoal, taskId), id);
+      return removed ? subTaskResult(removed) : args;
     },
   },
   completeSubTaskItem: {
@@ -321,6 +287,18 @@ const mutation = {
       period: { type: GraphQLNonNull(GraphQLString) },
       isComplete: { type: GraphQLNonNull(GraphQLBoolean) },
     },
+    /**
+     * Tick or untick one sub-task: a `$set` of that sub-task's `isComplete` and
+     * nothing else, so concurrent ticks on the same item cannot undo each
+     * other (see the note at the top of this file).
+     *
+     * Returns the COMPLETE parent goal item, read from the post-update
+     * document. The field is typed `GoalItemType`; returning the parent lets
+     * Apollo normalize `GoalItem:<taskId>` plus every `SubTaskItem:<id>` in one
+     * write (containers/ARCHITECTURE.md §3 principle #2). A sub-task that is no
+     * longer on the item matches no array filter, changes nothing, and the
+     * parent comes back as it stands. Null means the goal item itself is gone.
+     */
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
 
@@ -332,74 +310,25 @@ const mutation = {
         isComplete,
       } = args;
 
-      const goalEntry = await GoalModel.findOne({
-        date,
-        period,
-        email,
-      },
+      const taskObjectId = toObjectId(taskId);
+      const subTaskObjectId = toObjectId(id);
+      if (!taskObjectId || !subTaskObjectId) return null;
+
+      const updatedGoal = await GoalModel.findOneAndUpdate(
         {
-          goalItems: {
-            $elemMatch: {
-              _id: args.taskId,
-            },
-          },
-        }).exec();
+          date,
+          period,
+          email,
+          'goalItems._id': taskObjectId,
+        },
+        { $set: { 'goalItems.$[item].subTasks.$[sub].isComplete': isComplete } },
+        {
+          new: true,
+          arrayFilters: [{ 'item._id': taskObjectId }, { 'sub._id': subTaskObjectId }],
+        },
+      ).exec();
 
-      const previousGoalItem = goalEntry
-        && goalEntry.goalItems
-        && goalEntry.goalItems
-          .find((goalItem) => goalItem._id.toString() === taskId.toString());
-
-      if (previousGoalItem
-        && previousGoalItem.subTasks
-        && previousGoalItem.subTasks.length) {
-        const updatedSubTasks = previousGoalItem.subTasks
-          .map((subTask) => {
-            if (subTask._id.toString() === id.toString()) {
-              return { _id: subTask._id, body: subTask.body, isComplete };
-            }
-            return subTask;
-          });
-
-        const updatedGoal = await GoalModel.findOneAndUpdate(
-          {
-            date: args.date,
-            period: args.period,
-            email,
-            'goalItems._id': args.taskId,
-          },
-          { $set: { 'goalItems.$.subTasks': updatedSubTasks } },
-          { new: true },
-        ).exec();
-
-        // Return the COMPLETE parent goal item.
-        //
-        // This field is typed `GoalItemType`, but it used to return the
-        // sub-task shape `{ _id, body, isComplete }`. Against a GoalItem that
-        // resolves to `id: null`, `subTasks: null`, and an `isComplete` that is
-        // the SUB-task's — so Apollo could not normalize the response at all
-        // and the client had to patch the cache by hand (and, reading
-        // `result.isComplete`, wrote the parent's completion onto the
-        // sub-task). Returning the real parent lets Apollo normalize
-        // `GoalItem:<taskId>` plus every `SubTaskItem:<id>` in one write, and
-        // every query holding them updates for free.
-        // See containers/ARCHITECTURE.md §3 principle #2.
-        //
-        // Falls back to null, never to `previousGoalItem`: that copy predates
-        // the update, so returning it would hand the client the OLD sub-task
-        // states and visibly revert the toggle it just made. A null here means
-        // the goal item vanished mid-request, and the client's next
-        // cache-and-network read is the right way to resolve that.
-        return (updatedGoal
-          && updatedGoal.goalItems
-          && updatedGoal.goalItems.find(
-            (goalItem) => goalItem._id.toString() === taskId.toString(),
-          )) || null;
-      }
-
-      // No sub-tasks to update — still return the parent goal item (or null),
-      // never the raw args, so the response is always a valid GoalItem.
-      return previousGoalItem || null;
+      return findGoalItem(updatedGoal, taskId);
     },
   },
 };

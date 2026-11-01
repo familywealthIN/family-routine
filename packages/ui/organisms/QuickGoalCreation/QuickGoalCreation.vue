@@ -19,9 +19,9 @@
     11 Oct 2026 at the owner's ask: it popped in after Start Agent created the
     item and shifted the sheet. `lockedItem` now only switches the placeholder.
 
-    `sheet` is the switch, and it is off by default: the classic dashboard's
-    quick-task dialog and `QuickTaskModalContainer` already supply their own
-    `v-dialog`, and nesting a second overlay inside one would stack two scrims.
+    `sheet` is the switch, and it is off by default: a host that already
+    supplies its own `v-dialog` keeps working, and nesting a second overlay
+    inside one would stack two scrims.
     Off, the identical body renders inline for them; on, it owns the overlay.
 
     There is no close button. The design dismisses this sheet by backdrop (and
@@ -348,8 +348,7 @@ export default {
     /**
      * Present the form as the chassis sheet rather than as a bare body.
      *
-     * Off by default so the hosts that already own a dialog — the classic
-     * dashboard's quick-task `v-dialog` and `QuickTaskModalContainer` — keep
+     * Off by default so a host that already owns a dialog can keep
      * working untouched; nesting this sheet inside theirs would stack two
      * scrims and two radii.
      */
@@ -1077,10 +1076,18 @@ export default {
   margin-top: 8px;
 }
 
-/* Below the narrow phone breakpoint two priced buttons cannot share a row. */
+/* Below the narrow phone breakpoint two priced buttons cannot share a row.
+   Stacked, `flex: 1` would grow them along the column instead of across it,
+   and its zero basis beats `height`: on a 390px iPhone 13 both buttons
+   collapsed to their 21px text line. Full width at their own 44px instead. */
 @media (max-width: 400px) {
   .rn-qg__foot {
     flex-direction: column;
+  }
+
+  .rn-qg__btn {
+    flex: none;
+    width: 100%;
   }
 }
 </style>

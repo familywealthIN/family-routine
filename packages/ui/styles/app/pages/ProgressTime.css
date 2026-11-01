@@ -1,0 +1,8 @@
+/* Styles for apps/web-app/src/pages/ProgressTime.vue, loaded there with <style src> (global, root-class prefixed). */
+/* Root-class prefixed: this page renders its own shell, so nothing here may
+   leak into the legacy toolbar layouts (see MEMORY: web-app CSS lives inline in
+   organisms). */
+.progress-page__switch {
+  width: 340px;
+  flex-shrink: 0;
+}

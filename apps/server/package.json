@@ -9,6 +9,7 @@
         "mcp:server": "cross-env NODE_OPTIONS=--openssl-legacy-provider node src/mcp-http-server.js",
         "test": "jest",
         "test:watch": "jest --watch",
+        "qa:chat": "node qa/chat/run.js",
         "deploy": "serverless deploy",
         "package": "serverless package"
     },

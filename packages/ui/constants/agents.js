@@ -17,6 +17,12 @@
  *   AGENT_STAGES     waiting · running · listening · firing · finished · failed
  *                                                            (day-scoped badge)
  *
+ * `stalled` is a sixth status here that the server never stores: it is the
+ * run-level verdict `agentStore.isStalled` reaches — an end event that was due
+ * and never completed — attached to the document as `stalled` by the container
+ * that reads the store (D-13). Everything downstream then treats it as a
+ * status, so the list pill, the lifecycle strip and LIVE NOW agree.
+ *
  * `idle` has no badge stage (a badge only exists once something has happened),
  * and `waiting`/`firing` never reach the server. Where the two vocabularies
  * overlap the Agents page deliberately paints a different colour: the badge
@@ -63,6 +69,13 @@ export const AGENT_STATUS = {
     tint: 'rgba(229,57,53,.1)',
     desc: 'An event returned a non-200 response. The routine tick still counts.',
   },
+  stalled: {
+    label: 'Stalled',
+    icon: 'warning',
+    color: '#ef6c00',
+    tint: 'rgba(239,108,0,.1)',
+    desc: 'The end event was due but never completed. Retry it, or cancel the run.',
+  },
 };
 
 /** A timestamp as GraphQL hands it over: ms-epoch string, ISO string or Date. */
@@ -89,15 +102,32 @@ export function ranToday(agent, now = undefined) {
 }
 
 /**
+ * How long an end event that is DUE may take before its run counts as stalled.
+ *
+ * It is NOT "how long a run may listen": a run legitimately listens from its
+ * start trigger until the routine's slot counter fills, which is hours. The
+ * clock starts the moment the end rule is first due (`markEndEventDue`), so
+ * nothing healthy is ever judged by it. The slowest end dispatch in the beta
+ * run was 10.4s; three minutes is an order of magnitude of headroom and still
+ * inside the session that produced it.
+ */
+export const AGENT_STALL_MS = 3 * 60 * 1000;
+
+/**
  * An agent that has never run has no `executionStatus`, and the server is free
  * to grow the enum — both resolve to `idle` rather than rendering a blank ring.
  * So does any status whose run was not TODAY: a new day starts every agent idle
  * (the persisted `executionStatus` is never reset server-side at midnight).
+ *
+ * A `listening` run the store has judged stalled reads `stalled` instead, so it
+ * stops counting as live (D-13). Only `listening` can stall: every other status
+ * is either in flight or terminal.
  */
 export function agentStatusKey(agent, now = undefined) {
   const raw = agent && agent.executionStatus;
   if (!AGENT_STATUS[raw]) return 'idle';
   if (raw !== 'idle' && !ranToday(agent, now)) return 'idle';
+  if (raw === 'listening' && agent.stalled) return 'stalled';
   return raw;
 }
 
@@ -124,6 +154,7 @@ export const AGENT_STEP_OF = {
   listening: 2,
   finished: 4,
   failed: 1,
+  stalled: 2,
 };
 
 const STEP = {
@@ -138,13 +169,28 @@ const STEP = {
 };
 
 /**
+ * Which step a status broke on, and how that step is drawn. `failed` broke on
+ * *Running*; a stalled run got as far as *Listening* and stopped there, which
+ * is amber rather than red — nothing returned an error, the end event simply
+ * never completed.
+ */
+const BAD_STEP = {
+  failed: {
+    index: 1, bg: STEP.bad, labelColor: STEP.badLabel, icon: 'close',
+  },
+  stalled: {
+    index: 2, bg: AGENT_STATUS.stalled.color, labelColor: AGENT_STATUS.stalled.color, icon: 'priority_high',
+  },
+};
+
+/**
  * The lifecycle strip for one status.
  *
  * The failure override is the part that is easy to get wrong: on `failed` the
  * *Running* step is the step that broke, so it renders a red circle with a
  * `close` glyph — never a blue "in progress" spinner. It is also the current
  * step, so `bad` has to win over `current` for the colour, the glyph AND the
- * breathing (a failed agent is not still working).
+ * breathing (a failed agent is not still working, and neither is a stalled one).
  *
  * @param {string} status an `AGENT_STATUS` key
  * @returns {Array<{key,label,icon,bg,fg,labelColor,breathing}>}
@@ -152,21 +198,21 @@ const STEP = {
 export function agentLifecycle(status) {
   const key = AGENT_STATUS[status] ? status : 'idle';
   const step = AGENT_STEP_OF[key];
-  const failed = key === 'failed';
+  const badStep = BAD_STEP[key];
   return AGENT_LIFECYCLE_STEPS.map((def, index) => {
     const done = step > index;
     const current = step === index;
-    const bad = failed && index === 1;
+    const bad = !!badStep && badStep.index === index;
     let bg = STEP.idleBg;
-    if (bad) bg = STEP.bad;
+    if (bad) bg = badStep.bg;
     else if (done) bg = STEP.done;
     else if (current) bg = STEP.current;
     let labelColor = STEP.idleLabel;
-    if (bad) labelColor = STEP.badLabel;
+    if (bad) labelColor = badStep.labelColor;
     else if (current) labelColor = STEP.current;
     else if (done) labelColor = STEP.doneLabel;
     let { icon } = def;
-    if (bad) icon = 'close';
+    if (bad) icon = badStep.icon;
     else if (done) icon = 'check';
     return {
       key: def.key,
@@ -220,6 +266,7 @@ export default {
   AGENT_STATUS,
   AGENT_LIFECYCLE_STEPS,
   AGENT_STEP_OF,
+  AGENT_STALL_MS,
   AGENT_EVENT_KINDS,
   GOAL_ID_PLACEHOLDER,
   NO_END_EVENT_COPY,

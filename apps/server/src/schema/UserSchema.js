@@ -26,6 +26,11 @@ const UserSchema = new mongoose.Schema({
   notificationId: String,
   // One push token per signed-in device (passport.js registerPushToken).
   notificationIds: [String],
+  // Those of notificationIds whose app draws routine cues with their buttons
+  // itself (the Android build with RoutineNotification.java): the cron sends
+  // them data-only (apps/cron/src/utils/push.js). Set by
+  // registerNotificationActions; cleared with the token.
+  notificationActionTokens: [String],
   notificationPrefs: NotificationPrefsSchema,
   holidays: Number,
   apiKey: {

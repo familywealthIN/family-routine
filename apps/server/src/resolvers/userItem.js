@@ -456,6 +456,29 @@ const mutation = {
       return true;
     },
   },
+  /**
+   * This device's app draws routine cues with their buttons itself (the
+   * Android build with RoutineNotification.java), so the cron may send it
+   * cues data-only. Its own mutation so an app calling it on an older server
+   * only loses this, never the device registration. Only for a token already
+   * registered to this user.
+   */
+  registerNotificationActions: {
+    type: GraphQLBoolean,
+    args: {
+      notificationId: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      if (!email) throw new ApiError(401, '401:Authentication required');
+      if (!isRealPushToken(args.notificationId)) return false;
+      await UserModel.updateOne(
+        { email, notificationIds: args.notificationId },
+        { $addToSet: { notificationActionTokens: args.notificationId } },
+      ).exec();
+      return true;
+    },
+  },
   updateNotificationPrefs: {
     type: NotificationPrefsType,
     args: {

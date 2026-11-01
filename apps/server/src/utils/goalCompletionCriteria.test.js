@@ -145,13 +145,22 @@ describe('buildMilestoneDays', () => {
 describe('evaluateAutoComplete', () => {
   const base = { completionThreshold: 5, stepDownPeriod: 'day', date: '11-09-2026' };
 
-  it('does not complete while a declared milestone is outstanding', () => {
+  // Owner's rule, 25 Oct 2026: the threshold ticks the goal. Milestones planned
+  // beyond it do not hold it open (D-03 had required every one).
+  it('completes at the threshold with a declared milestone still open', () => {
     const criteria = collectPeriodCriteria(dayGoals(weekDays.filter((d) => d !== '09-09-2026')), 'W1');
     const result = evaluateAutoComplete({ ...base, criteria, progress: 6 });
 
-    expect(result.isComplete).toBe(false);
+    expect(result.isComplete).toBe(true);
     expect(result.outstanding).toEqual([{ date: '09-09-2026', isComplete: false, late: false }]);
-    expect(result.note).toBeNull();
+    expect(result.note).toContain('6 of 7 day milestones met');
+  });
+
+  it('stays open one milestone short of the threshold', () => {
+    const met = weekDays.slice(0, 4);
+    const criteria = collectPeriodCriteria(dayGoals(met), 'W1'); // 4 of 7 met
+
+    expect(evaluateAutoComplete({ ...base, criteria, progress: 4 }).isComplete).toBe(false);
   });
 
   it('completes once every declared milestone is met', () => {

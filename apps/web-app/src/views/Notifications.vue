@@ -51,7 +51,7 @@
 <script>
 /**
  * /settings/notifications — the day-level notifications sent by
- * apps/cron/src/lifecycle-notifications.js, each on/off, plus the person's own
+ * apps/cron/src/lifecycle-notifications.js and the missed-days email, each on/off, plus the person's own
  * morning and evening times. Every change saves at once.
  */
 import gql from 'graphql-tag';
@@ -60,7 +60,7 @@ import { signOut } from '../utils/signOut';
 
 const LOGOUT_KEY = 'logout';
 
-const PREF_FIELDS = 'morning plan evening streak reengage insights morningTime eveningTime';
+const PREF_FIELDS = 'morning plan evening streak reengage insights missedEmail morningTime eveningTime';
 
 export const NOTIFICATION_PREFS_QUERY = gql`
   query notificationPrefs {
@@ -85,6 +85,7 @@ export const PREF_ROWS = [
   { key: 'streak', title: 'Streak celebrations', desc: 'When a routine reaches 3, 7, 14, 21, 30… days in a row.' },
   { key: 'insights', title: 'Insights for you', desc: 'When your routines have insights you have not opened yet.' },
   { key: 'reengage', title: 'Welcome back', desc: 'A gentle nudge after a couple of days away — three at most.' },
+  { key: 'missedEmail', title: 'Missed days email', desc: 'One email if you miss your routines three days in a row.' },
 ];
 
 const DEFAULTS = {
@@ -94,6 +95,7 @@ const DEFAULTS = {
   streak: true,
   reengage: true,
   insights: true,
+  missedEmail: true,
   morningTime: '07:00',
   eveningTime: '21:00',
 };
@@ -162,107 +164,4 @@ export default {
 };
 </script>
 
-<style>
-.rn-notifications {
-  padding: 16px;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-}
-
-.rn-notifications .rn-notifications__intro {
-  margin: 0 0 12px;
-  font-size: 13px;
-  color: #5f6368;
-}
-
-.rn-notifications .rn-notifications__error {
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: #c5221f;
-}
-
-.rn-notifications .rn-notifications__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 1px solid rgba(0, 0, 0, .08);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.rn-notifications .rn-notifications__row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 12px;
-}
-
-.rn-notifications .rn-notifications__row + .rn-notifications__row {
-  border-top: 1px solid rgba(0, 0, 0, .06);
-}
-
-.rn-notifications .rn-notifications__text {
-  flex: 1;
-  min-width: 0;
-}
-
-.rn-notifications .rn-notifications__name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.rn-notifications .rn-notifications__desc {
-  margin-top: 2px;
-  font-size: 12px;
-  color: #5f6368;
-}
-
-.rn-notifications .rn-notifications__time {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  font-size: 12px;
-  color: #5f6368;
-}
-
-.rn-notifications .rn-notifications__time input {
-  min-height: 32px;
-  padding: 0 8px;
-  border: 1px solid rgba(0, 0, 0, .12);
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 13px;
-}
-
-.rn-notifications .rn-notifications__switch {
-  position: relative;
-  flex-shrink: 0;
-  width: 44px;
-  height: 26px;
-  border: 0;
-  border-radius: 13px;
-  background: rgba(0, 0, 0, .2);
-  cursor: pointer;
-  transition: background .15s;
-}
-
-.rn-notifications .rn-notifications__switch--on {
-  background: #288bd5;
-}
-
-.rn-notifications .rn-notifications__knob {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #fff;
-  transition: transform .15s;
-}
-
-.rn-notifications .rn-notifications__switch--on .rn-notifications__knob {
-  transform: translateX(18px);
-}
-</style>
+<style src="@routine-notes/ui/styles/app/views/Notifications.css"></style>

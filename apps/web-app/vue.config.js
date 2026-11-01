@@ -17,6 +17,28 @@ module.exports = {
     config.module.rule('js').exclude.add(/\.stories\.js$/);
 
     config.plugins.delete('prefetch');
+
+    // The app's own stylesheets live in packages/ui/styles/app and resolve
+    // through node_modules, which would sweep them into chunk-vendors. Keep
+    // them in the app chunk, after the vendor CSS, where they sat when they
+    // lived in src/, so their place in the cascade is unchanged.
+    if (config.optimization.get('splitChunks')) {
+      const appStyles = /[\\/]@routine-notes[\\/]ui[\\/]styles[\\/]app[\\/]/;
+      config.optimization.splitChunks({
+        cacheGroups: {
+          ...config.optimization.get('splitChunks').cacheGroups,
+          vendors: {
+            name: 'chunk-vendors',
+            test: (module) => {
+              const name = module.nameForCondition && module.nameForCondition();
+              return !!name && /[\\/]node_modules[\\/]/.test(name) && !appStyles.test(name);
+            },
+            priority: -10,
+            chunks: 'initial',
+          },
+        },
+      });
+    }
     const oneOfsMap = config.module.rule('stylus').oneOfs.store;
     oneOfsMap.forEach((item) => {
       item

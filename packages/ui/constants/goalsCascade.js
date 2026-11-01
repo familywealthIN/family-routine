@@ -79,10 +79,16 @@ export const PERIOD_PLACEHOLDER = {
   [LIFETIME]: 'e.g. Run a marathon',
 };
 
-/** `Done` / `Active`. `Inactive` is Year Goals' only — chassis.md § cascade. */
+/**
+ * `Done` / `Active`. `Inactive` is Year Goals' only — chassis.md § cascade.
+ * `Missed` is the design's StatusPill for a day item not done within its
+ * window (utils/taskStatus `isMissed`): recorded as missed, or ticked late —
+ * a late tick is ticked and counts, and its status stays Missed.
+ */
 export const GOAL_STATUS = {
   done: { label: 'Done', color: '#4CAF50', bg: 'rgba(76,175,80,.12)' },
   active: { label: 'Active', color: '#FF9800', bg: 'rgba(255,152,0,.14)' },
+  missed: { label: 'Missed', color: '#c62828', bg: 'rgba(229,57,53,.12)' },
 };
 
 export function statusChip(done) {
@@ -117,10 +123,11 @@ export const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
  */
 export const CASCADE_RULES = {
   [DAY]: `Day goals count toward this week’s goal for the same routine (${CASCADE_TH[WEEK]} days auto-tick it).`,
-  // The server's gate, so the line and the rows under it state one rule: every
-  // milestone met, with the threshold as a floor (D-04, `evaluateAutoComplete`).
-  [WEEK]: `{window}. A week goal auto-ticks once every day milestone on it is met (min ${CASCADE_TH[WEEK]}).`,
-  [MONTH]: `{window}. A month goal auto-ticks once every week milestone on it is met (min ${CASCADE_TH[MONTH]}).`,
+  // The server's gate, so the line and the rows under it state one rule: the
+  // threshold in met milestones, however many more were planned (owner's
+  // rule, 25 Oct 2026; `evaluateAutoComplete`).
+  [WEEK]: `{window}. A week goal auto-ticks once ${CASCADE_TH[WEEK]} of its day milestones are met.`,
+  [MONTH]: `{window}. A month goal auto-ticks once ${CASCADE_TH[MONTH]} of its week milestones are met.`,
   [YEAR]: `{window}. A year goal auto-ticks after ${CASCADE_TH[YEAR]} month goals. Tap one to open it.`,
   [LIFETIME]: 'Lifetime goals have no date. Year goals link up into them; tick them by hand.',
 };

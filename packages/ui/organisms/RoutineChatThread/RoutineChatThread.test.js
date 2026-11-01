@@ -291,3 +291,34 @@ describe('OrganismRoutineChatThread — an accepted proposal bubble', () => {
     expect(el.querySelectorAll('.rn-chat__proposal')).toHaveLength(3);
   });
 });
+
+describe('OrganismRoutineChatThread — the post-tick coach card', () => {
+  const card = (text, over = {}) => ({
+    id: 'i1', from: 'routine', kind: 'text', icon: 'tips_and_updates', text, ...over,
+  });
+
+  it('shows title, spark and the labelled action as a card', () => {
+    const { el } = render({
+      messages: [card('A stronger week\nSix sessions this week shape a habit.\nRight now: Use the 46 minutes for a short circuit.')],
+    });
+    const node = el.querySelector('[data-testid="insight-card"]');
+    expect(node).not.toBeNull();
+    expect(node.querySelector('.rn-chat__insight-title').textContent).toContain('A stronger week');
+    expect(node.querySelector('.rn-chat__insight-spark').textContent.trim()).toBe('Six sessions this week shape a habit.');
+    expect(node.querySelector('.rn-chat__insight-label').textContent).toBe('Right now');
+    expect(node.querySelector('.rn-chat__insight-action').textContent).toContain('Use the 46 minutes for a short circuit.');
+  });
+
+  it('keeps an older one-paragraph insight as a plain bubble', () => {
+    const { el } = render({ messages: [card('Six check-ins this week. Try a ladder. See you.')] });
+    expect(el.querySelector('[data-testid="insight-card"]')).toBeNull();
+    expect(el.textContent).toContain('Six check-ins this week.');
+  });
+
+  it('never turns a user message into a card', () => {
+    const { el } = render({
+      messages: [card('a\nb\nNext time: c', { from: 'me', icon: '' })],
+    });
+    expect(el.querySelector('[data-testid="insight-card"]')).toBeNull();
+  });
+});

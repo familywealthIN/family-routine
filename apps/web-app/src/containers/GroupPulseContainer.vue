@@ -1,9 +1,8 @@
 <template>
   <!--
     The pulse card's container home. It owns no GraphQL: every number it shows is
-    a *derivation* of the per-member reads the row containers already own — the
-    same shape as `StimulusSummaryContainer`, which derives D/K/G totals rather
-    than querying them (ARCHITECTURE.md §7).
+    a *derivation* of the per-member reads the row containers already own,
+    derived rather than queried (ARCHITECTURE.md §6b).
   -->
   <group-pulse-card
     :average="pulse.average"

@@ -6,7 +6,7 @@
  * LINKED year-goal row inside the editor — so it is one read with one owner
  * rather than two components asking.
  *
- * Renderless with a scoped slot (the `XpBalanceContainer` pattern): the thing it
+ * Renderless with a scoped slot (ARCHITECTURE § 2): the thing it
  * feeds is not one organism but a map two organisms consume, and the page is
  * where a cross-organism value belongs.
  *

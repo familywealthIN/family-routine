@@ -1,7 +1,8 @@
 /**
  * Which lifecycle notifications a user gets, and when. Routine cues are set
  * per routine (RoutineItem.notifyMode); these are the day-level ones sent by
- * apps/cron/src/lifecycle-notifications.js. A missing value means the default
+ * apps/cron/src/lifecycle-notifications.js, plus the missed-days email
+ * (apps/server/src/jobs/missedDays.js). A missing value means the default
  * below, so existing users are opted in without a migration.
  */
 const {
@@ -16,6 +17,7 @@ const NOTIFICATION_PREF_DEFAULTS = {
   streak: true, // streak milestone celebrations
   reengage: true, // coming back after days away
   insights: true, // insights the user has not looked at
+  missedEmail: true, // one email after 3 missed days (src/jobs/missedDays.js)
   morningTime: '07:00',
   eveningTime: '21:00',
 };
@@ -29,6 +31,7 @@ const NotificationPrefsSchema = new mongoose.Schema({
   streak: Boolean,
   reengage: Boolean,
   insights: Boolean,
+  missedEmail: Boolean,
   morningTime: String,
   eveningTime: String,
 }, { _id: false });
@@ -40,6 +43,7 @@ const fields = (type) => ({
   streak: { type: GraphQLBoolean },
   reengage: { type: GraphQLBoolean },
   insights: { type: GraphQLBoolean },
+  missedEmail: { type: GraphQLBoolean },
   morningTime: { type },
   eveningTime: { type },
 });

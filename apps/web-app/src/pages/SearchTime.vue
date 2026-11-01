@@ -309,44 +309,4 @@ export default {
 };
 </script>
 
-<style scoped>
-.search-page {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.search-input-wrapper {
-  max-width: 720px;
-  margin: 0 auto 8px;
-}
-
-.search-input {
-  border-radius: 12px;
-}
-
-.search-filters {
-  max-width: 720px;
-  margin: 0 auto 16px;
-  display: flex;
-  gap: 12px;
-}
-
-.filter-field {
-  flex: 1;
-  border-radius: 8px;
-}
-
-.no-shadow {
-  box-shadow: none !important;
-}
-
-@media (max-width: 600px) {
-  .search-page {
-    padding: 8px !important;
-  }
-  .search-filters {
-    flex-direction: column;
-    gap: 8px;
-  }
-}
-</style>
+<style scoped src="@routine-notes/ui/styles/app/pages/SearchTime.css"></style>

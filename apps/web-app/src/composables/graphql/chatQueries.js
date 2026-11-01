@@ -19,6 +19,7 @@ export const CHAT_MESSAGE_FIELDS = `
   items
   proposals
   added
+  suggestions
   tone
   icon
   model

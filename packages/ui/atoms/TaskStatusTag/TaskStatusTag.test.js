@@ -31,8 +31,12 @@ describe('TaskStatusTag', () => {
   });
 
   it('shows a ticked item as done however stale its stored status', () => {
-    expect(config({ status: 'missed', isComplete: true }).label).toBe('Done');
     expect(config({ status: 'todo', isComplete: true }).label).toBe('Done');
+  });
+
+  // Status is one-to-one with timing: a late tick stays Missed.
+  it('shows a late-ticked item as missed', () => {
+    expect(config({ status: 'missed', isComplete: true }).label).toBe('Missed');
   });
 
   it('still shows an outstanding miss as missed', () => {
