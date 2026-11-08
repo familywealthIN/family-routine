@@ -19,14 +19,14 @@ const { completeChat } = require('./chatApi');
 const { diagnose, fallbackMessage, wordsOf } = require('./insightStrategy');
 const { encryption } = require('./encryption');
 
-// Once per routine per day, so it is worth the best writer available. The free
-// roster is the safety net, then the measured fallback. Override (comma-separated
-// OpenRouter ids) with ROUTINE_INSIGHT_MODEL without a deploy.
-const DEFAULT_INSIGHT_MODEL = 'anthropic/claude-fable-5.1';
-const insightModels = () => (process.env.ROUTINE_INSIGHT_MODEL || DEFAULT_INSIGHT_MODEL)
+// The free roster writes the card, then the measured fallback: no model on the
+// backend spends credits (owner rule, 8 Nov 2026). ROUTINE_INSIGHT_MODEL
+// (comma-separated OpenRouter ids) puts chosen free models first without a
+// deploy; a paid id there is dropped, so it cannot start charging.
+const insightModels = () => (process.env.ROUTINE_INSIGHT_MODEL || '')
   .split(',')
   .map((m) => m.trim())
-  .filter(Boolean);
+  .filter((m) => m.endsWith(':free'));
 const MAX_PREVIOUS = 5;
 
 const LOOKBACK_DAYS = 30;
@@ -424,17 +424,11 @@ async function generateRoutineInsight({
     },
   ];
 
-  // The chosen model first, then the free roster. Each gets one correction
-  // round: the validator's problems go back as the next turn.
+  // Any chosen free models first, then the free roster. Each gets one
+  // correction round: the validator's problems go back as the next turn.
+  const chosen = insightModels();
   const attempts = [
-    {
-      models: insightModels(),
-      maxTokens: 2000,
-      temperature: 1,
-      reasoning: { effort: 'low', exclude: true },
-      // It reasons before it writes, so it gets longer than a chat turn's 20s.
-      timeoutMs: 45000,
-    },
+    ...(chosen.length ? [{ models: chosen, maxTokens: 500, temperature: 1 }] : []),
     { maxTokens: 500 },
   ];
   for (let i = 0; i < attempts.length; i += 1) {
@@ -466,7 +460,7 @@ async function generateRoutineInsight({
 
 module.exports = {
   LOOKBACK_DAYS,
-  DEFAULT_INSIGHT_MODEL,
+  insightModels,
   previousDates,
   periodDates,
   dayStates,

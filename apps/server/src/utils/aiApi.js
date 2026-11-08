@@ -1,6 +1,11 @@
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODEL = 'google/gemini-2.5-flash';
+// Planning (milestone plans, task extraction, the goal cards) runs on
+// OpenRouter's FREE roster, the same failover chain as the chat (chatApi.js):
+// no model on the backend spends credits (owner rule, 8 Nov 2026).
+const { completeChat } = require('./chatApi');
+
+// A plan is the longest answer the app asks for (a month of entries); the
+// cards pass their own, much smaller cap.
+const PLAN_MAX_TOKENS = 4000;
 
 function cleanJsonResponse(text) {
   let cleaned = text.trim();
@@ -31,87 +36,23 @@ function cleanJsonResponse(text) {
  * @param {boolean} [isJsonMode]
  * @param {{maxTokens?: ?number}} [options] `maxTokens` caps the answer. Pass it
  *   wherever the caller's UI has a fixed shape to fill: unbounded, a model
- *   answers a one-sentence ask with a page of prose, and this path is the paid
- *   one, so it pays for every token of that page.
+ *   answers a one-sentence ask with a page of prose.
  */
 async function fetchFromAi(prompt, isJsonMode = false, { maxTokens = null } = {}) {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  const openRouterApiKey = process.env.OPENROUTER_API_KEY;
-
   const fullPrompt = isJsonMode
     ? `${prompt}\n\nRespond ONLY with a valid JSON object.`
     : prompt;
 
-  const generationConfig = {
-    ...(isJsonMode && { response_mime_type: 'application/json' }),
-    ...(maxTokens && { maxOutputTokens: maxTokens }),
-  };
-
-  if (geminiApiKey) {
-    try {
-      const response = await fetch(GEMINI_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': geminiApiKey,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: fullPrompt }] }],
-          ...(Object.keys(generationConfig).length && { generationConfig }),
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gemini API Error: ${response.status} ${errorText}`);
-      }
-
-      const data = await response.json();
-      if (!data.candidates || !data.candidates[0].content.parts[0].text) {
-        throw new Error('Invalid response structure from Gemini');
-      }
-      const result = data.candidates[0].content.parts[0].text.trim();
-      return isJsonMode ? cleanJsonResponse(result) : result;
-    } catch (error) {
-      console.warn(`Gemini API request failed: ${error.message}. Falling back to OpenRouter.`);
-    }
+  try {
+    const { content } = await completeChat([{ role: 'user', content: fullPrompt }], {
+      jsonMode: isJsonMode,
+      maxTokens: maxTokens || PLAN_MAX_TOKENS,
+    });
+    return isJsonMode ? cleanJsonResponse(content) : content;
+  } catch (error) {
+    console.error(`AI request failed: ${error.message}`);
+    throw new Error('The free AI models are unavailable or misconfigured.');
   }
-
-  if (openRouterApiKey) {
-    try {
-      const response = await fetch(OPENROUTER_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${openRouterApiKey}`,
-          'HTTP-Referer': process.env.WEB_APP_URL,
-          'X-Title': 'Routine Notes AI',
-        },
-        body: JSON.stringify({
-          model: OPENROUTER_MODEL,
-          messages: [{ role: 'user', content: fullPrompt }],
-          ...(maxTokens && { max_tokens: maxTokens }),
-          ...(isJsonMode && { response_format: { type: 'json_object' } }),
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenRouter API Error: ${response.status} ${errorText}`);
-      }
-
-      const data = await response.json();
-      if (!data.choices || !data.choices[0].message.content) {
-        throw new Error('Invalid response structure from OpenRouter');
-      }
-      const result = data.choices[0].message.content.trim();
-      return isJsonMode ? cleanJsonResponse(result) : result;
-    } catch (error) {
-      console.error(`OpenRouter API request failed: ${error.message}`);
-    }
-  }
-
-  throw new Error('Both AI services are unavailable or misconfigured.');
 }
 
 async function enhanceRoutineItemWithAI(routineItem) {

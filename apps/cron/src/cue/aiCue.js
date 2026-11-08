@@ -9,11 +9,10 @@
  * starts it, like shoes on for a run (Atomic Habits) — or two minutes of it
  * when it has no steps, and frames it as an identity vote.
  *
- * Models: OpenRouter's FREE tier first, a cheap paid Qwen only when no free
- * model produced a cue that passes the guardrails. Cues are high-volume (one
- * per routine per person per day), so the free tier carries them; the paid
- * fallback keeps the copy AI-written when the free catalogue is rate-limited
- * or answers badly. Never an OpenAI model for the paid tier.
+ * Models: OpenRouter's FREE tier only — no model on the backend spends
+ * credits (owner rule, 8 Nov 2026). Cues are high-volume (one per routine per
+ * person per day); when the free catalogue is rate-limited or answers badly,
+ * the template goes out instead.
  *
  * Guardrails, because this lands on someone's lock screen:
  * - The model only sees the facts below — no email, no other people's data.
@@ -28,11 +27,6 @@
 
 const list = (text) => String(text || '').split(',').map((m) => m.trim()).filter(Boolean);
 
-// Paid fallback: cheap Qwen instruct models with structured output, cheapest
-// capable first. OpenRouter's `models` list answers with the second when the
-// first errors. An OpenAI id is dropped even if configured (owner's rule).
-const PAID_MODELS = list(process.env.CUE_PAID_MODELS || 'qwen/qwen3-235b-a22b-2507,qwen/qwen3.5-flash-02-23')
-  .filter((m) => !m.endsWith(':free') && !m.startsWith('openai/'));
 // Used when OpenRouter's model list cannot be read and nothing is configured.
 const FALLBACK_FREE_MODELS = [
   'qwen/qwen3.8-27b:free',
@@ -42,13 +36,12 @@ const FALLBACK_FREE_MODELS = [
 const OPENROUTER_MODELS_URL = 'https://openrouter.ai/api/v1/models';
 // The minute job writes up to 40 cues in parallel inside a 59 s run, so one
 // cue's whole chain must finish well inside that: a few free tries in a
-// shared budget, then the paid call.
+// shared budget, then the template.
 const FREE_ATTEMPTS = 3; // free models that actually answered (a gone model does not count)
 const FREE_TRIES = 8; // every free request, gone models included
 const FREE_TIMEOUT_MS = 10000; // one free model; a rate-limited one answers 429 at once
 const FREE_BUDGET_MS = 22000; // every free attempt together
-const PAID_TIMEOUT_MS = 12000; // whole request, body included
-const PAID_BUDGET_MS = 20000; // the paid call and its one repair together
+const REQUEST_TIMEOUT_MS = 12000; // one request when the caller names none, body included
 // The free catalogue churns: a retired, misconfigured or harness-only id
 // answers 404, 400 or 403 at once. Skipping it must not use up a real attempt.
 const GONE = new Set(['error:404', 'error:400', 'error:403']);
@@ -293,7 +286,7 @@ const clearFreeModels = () => { freeRoster = null; };
  * server's chatApi.js. `models` is OpenRouter's fallback list: if the first
  * model errors or declines, the next one answers.
  */
-async function openRouterChat(body, { apiKey, timeoutMs = PAID_TIMEOUT_MS }) {
+async function openRouterChat(body, { apiKey, timeoutMs = REQUEST_TIMEOUT_MS }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -413,9 +406,8 @@ async function askFor(ctx, models, {
 /**
  * The cue for this context, validated, or null (caller uses the template).
  * Free models first, one at a time so a 429 or a bad answer moves straight
- * on (a gone model is skipped without using up an attempt); then the paid
- * Qwen chain. `reason` is the last failure; `tier` says
- * which tier wrote the cue. Never throws. `chat`, `freeModels` and `now` are
+ * on (a gone model is skipped without using up an attempt). `reason` is the
+ * last failure; `tier` is always 'free'. Never throws. `chat`, `freeModels` and `now` are
  * injectable for tests.
  */
 async function generateAiCue(ctx, {
@@ -440,19 +432,10 @@ async function generateAiCue(ctx, {
     reason = result.reason;
     if (!GONE.has(reason)) answered += 1;
   }
-
-  if (PAID_MODELS.length) {
-    const result = await askFor(ctx, PAID_MODELS, {
-      apiKey, chat, timeoutMs: PAID_TIMEOUT_MS, deadline: now() + PAID_BUDGET_MS, now,
-    });
-    if (result.cue) return { cue: result.cue, reason: null, model: result.model, tier: 'paid' };
-    reason = result.reason;
-  }
   return { cue: null, reason };
 }
 
 module.exports = {
-  PAID_MODELS,
   FALLBACK_FREE_MODELS,
   resolveFreeModels,
   clearFreeModels,

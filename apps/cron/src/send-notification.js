@@ -114,8 +114,8 @@ const MAX_AI_CUES_PER_RUN = 40; // cost and the 59 s run limit
 const aiEnabled = () => process.env.CUE_AI !== 'off' && !!process.env.OPENROUTER_API_KEY;
 
 /**
- * Replace template copy with the AI-written 7-day-context cue (a free model
- * first, a paid Qwen fallback) where it validates.
+ * Replace template copy with the AI-written 7-day-context cue (free models
+ * only) where it validates.
  * Alarms (a fixed promise) and batches keep their template. Mutates `due`.
  */
 async function writeAiCues(db, due, emails, dueIds, now) {

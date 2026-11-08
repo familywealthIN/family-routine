@@ -1,19 +1,15 @@
 /**
  * Routine chat — conversational layer for the focus-card redesign.
  *
- * Deliberately separate from `aiApi.js`:
- *   - `aiApi` is the *planning* path (milestone plans, task extraction). It
- *     prefers Gemini and falls back to a paid OpenRouter model.
- *   - this module is the *chat* path, which runs on OpenRouter's FREE tier
- *     only. Chat is high-volume (every message a user types), interactive and
- *     low-stakes, so it must never spend credits. Free models rate-limit and
- *     go away without notice, so the whole design here is a failover list.
+ * The transport for every model call on the backend: the chat, and through
+ * `completeChat` the planning path (`aiApi.js`), the routine steps and the
+ * post-tick insight. All of it runs on OpenRouter's FREE tier only — no model
+ * on the backend spends credits (owner rule, 8 Nov 2026). Free models
+ * rate-limit and go away without notice, so the whole design here is a
+ * failover list.
  *
  * Configure with `OPENROUTER_FREE_MODELS` (comma-separated) to change the
  * roster without a deploy.
- *
- * The one exception is a caller that names its own `models`: the post-tick
- * routine insight runs once per routine per day and is worth a paid model.
  */
 const moment = require('moment');
 
@@ -151,7 +147,8 @@ function cleanJson(text) {
  * @param {Array<{role: string, content: string}>} messages
  * @param {{jsonMode?: boolean, maxTokens?: number, temperature?: number, models?: string[],
  *   reasoning?: Object}} options
- *   `models` replaces the free roster with the caller's own chain (paid models allowed);
+ *   `models` replaces the free roster with the caller's own chain (`:free` ids only;
+ *   a paid id is dropped, so no caller can start charging);
  *   `reasoning` overrides the default "off" for a model that refuses to run without it.
  * @returns {Promise<{content: string, model: string}>}
  */
@@ -164,7 +161,8 @@ async function completeChat(messages, {
     throw new Error('OPENROUTER_API_KEY is not configured');
   }
 
-  const roster = (models && models.length ? models : await resolveFreeModels())
+  const own = (models || []).filter((m) => typeof m === 'string' && m.endsWith(':free'));
+  const roster = (own.length ? own : await resolveFreeModels())
     .slice(0, MAX_ATTEMPTS);
   if (!roster.length) {
     throw new Error('No free OpenRouter models available');
