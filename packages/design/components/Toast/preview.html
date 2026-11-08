@@ -1,0 +1,30 @@
+<!-- @dsCard group="Feedback" height=346 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toast</title>
+<link rel="stylesheet" href="../../tokens.css">
+<style>
+  body { margin: 0; padding: 20px 16px; background: var(--bg-app); font-family: var(--family-sans); color: var(--text); }
+  .label { font: var(--font-overline); letter-spacing: .5px; text-transform: uppercase; color: var(--text-tertiary); margin: 0 0 10px; }
+  .stack { display: flex; flex-direction: column; gap: 10px; max-width: 360px; margin-bottom: 20px; }
+  .toast { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--radius-toast);
+    background: var(--toast-bg); color: var(--on-primary); box-shadow: var(--shadow-toast); }
+  .toast .mi { font-size: 22px; flex-shrink: 0; }
+  .title { font: var(--font-toast-title); }
+  .sub { font: var(--font-toast-sub); opacity: .75; }
+  .text { min-width: 0; flex: 1; }
+</style>
+</head>
+<body>
+  <div class="label">Title + consequence, one style everywhere</div>
+  <div class="stack">
+    <div class="toast"><span class="mi" style="color:var(--toast-success)">check_circle</span><div class="text"><div class="title">Routine ticked</div><div class="sub">D +10 · streak kept</div></div></div>
+    <div class="toast"><span class="mi" style="color:var(--toast-info)">info</span><div class="text"><div class="title">Ticked automatically</div><div class="sub">3 of 5 week milestones are met</div></div></div>
+    <div class="toast"><span class="mi" style="color:var(--toast-warning)">warning</span><div class="text"><div class="title">Not enough points</div><div class="sub">Tick today's routines to earn more</div></div></div>
+    <div class="toast"><span class="mi" style="color:var(--toast-error)">error_outline</span><div class="text"><div class="title">Couldn't save the goal</div><div class="sub">Check your connection and try again</div></div></div>
+  </div>
+</body>
+</html>

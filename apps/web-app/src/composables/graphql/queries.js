@@ -284,6 +284,7 @@ export const GOALS_BY_GOAL_REF_QUERY = gql`
         taskRef
         tags
         isMilestone
+        status
       }
     }
   }

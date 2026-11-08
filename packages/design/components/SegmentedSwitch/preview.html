@@ -1,0 +1,44 @@
+<!-- @dsCard group="Inputs" height=230 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segmented switch</title>
+<link rel="stylesheet" href="../../tokens.css">
+<style>
+  body { margin: 0; padding: 20px 16px; background: var(--bg-app); font-family: var(--family-sans); color: var(--text); }
+  .label { font: var(--font-overline); letter-spacing: .5px; text-transform: uppercase; color: var(--text-tertiary); margin: 0 0 10px; }
+  .block { max-width: 380px; margin-bottom: 22px; }
+  .thumb { position: relative; display: flex; padding: 3px; border-radius: 12px; background: rgba(0,0,0,.06); height: 36px; box-sizing: border-box; }
+  .indicator { position: absolute; top: 3px; bottom: 3px; border-radius: 9px; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.12); transition: left .28s cubic-bezier(.4,0,.2,1); }
+  .seg { position: relative; flex: 1 1 0; display: flex; align-items: center; justify-content: center; font: 600 13px/1 var(--family-sans); color: var(--text-secondary); }
+  .seg--on { color: var(--text); }
+  .under { position: relative; display: flex; border-bottom: 1px solid var(--divider-strong); }
+  .under .seg { flex-direction: column; gap: 3px; height: 52px; }
+  .under .seg .mi { font-size: 20px; }
+  .under .seg--on { color: var(--primary); }
+  .bar { position: absolute; bottom: 0; height: 2px; background: var(--primary); }
+</style>
+</head>
+<body>
+  <div class="block">
+    <div class="label">Thumb · Progress period</div>
+    <div class="thumb">
+      <div class="indicator" style="left:calc(3px + 1 * (100% - 6px) / 4);width:calc((100% - 6px) / 4)"></div>
+      <div class="seg">Day</div><div class="seg seg--on">Week</div><div class="seg">Month</div><div class="seg">Year</div>
+    </div>
+  </div>
+  <div class="block">
+    <div class="label">Underline · About features</div>
+    <div class="under">
+      <div class="bar" style="left:0;width:20%"></div>
+      <div class="seg seg--on"><span class="mi">schedule</span>Routines</div>
+      <div class="seg"><span class="mi">assignment</span>Goals</div>
+      <div class="seg"><span class="mi">view_module</span>Priority</div>
+      <div class="seg"><span class="mi">smart_toy</span>Agents</div>
+      <div class="seg"><span class="mi">military_tech</span>Evolution</div>
+    </div>
+  </div>
+</body>
+</html>

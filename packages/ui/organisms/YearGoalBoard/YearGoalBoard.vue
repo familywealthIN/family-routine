@@ -204,6 +204,15 @@ export default {
   flex-direction: column;
 }
 
+/* The month card clips its corners with `overflow: hidden`, which drops its
+   automatic minimum height to 0 — so in this column it shrank to the column's
+   height and clipped its own weeks instead of overflowing, and the column had
+   nothing to scroll. On the iPad, where the hero and strip leave the column
+   short, the lower weeks were unreachable. Children keep their content height. */
+.rn-ygb__left > * {
+  flex-shrink: 0;
+}
+
 .rn-ygb__panel {
   flex-grow: 0;
   flex-shrink: 0;

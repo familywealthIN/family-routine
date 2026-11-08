@@ -15,12 +15,12 @@ import 'firebase/messaging';
 import { Capacitor } from '@capacitor/core';
 import { graphQLUrl } from './blob/config';
 import './plugins/vuetify';
-import './theme-override.css';
+import '@routine-notes/ui/styles/app/global/theme-override.css';
 import './plugins/notifications';
 import './plugins/curl-executor';
-import './styles/ios-input-zoom-fix.css';
+import '@routine-notes/ui/styles/app/global/ios-input-zoom-fix.css';
 import VueApollo from './plugins/apollo';
-import './styles/android-safe-area.css';
+import '@routine-notes/ui/styles/app/global/android-safe-area.css';
 import './utils/androidSafeArea'; // Initialize Android safe area manager (native only)
 import currentTaskPlugin from './plugins/currentTask';
 import routinePlugin from './plugins/routine';

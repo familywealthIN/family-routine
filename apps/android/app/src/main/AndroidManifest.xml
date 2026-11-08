@@ -28,6 +28,19 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+        <!-- Routine cues arrive data-only and are drawn with their buttons by
+             RoutineMessagingService, which replaces the push plugin's service
+             (it still hands every message on to the plugin). -->
+        <service
+            android:name=".RoutineMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <service
+            android:name="com.capacitorjs.plugins.pushnotifications.MessagingService"
+            tools:node="remove" />
         <!-- Firebase Analytics: usage only. No advertising ID is read, so Play's
              advertising-ID declaration stays "no" and no consent prompt is needed. -->
         <meta-data

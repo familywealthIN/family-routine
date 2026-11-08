@@ -12,6 +12,40 @@ The system supports 5 status types:
 4. **MISSED (red)** - Task checked after the current task (in past tab list)
 5. **RESCHEDULED (purple)** - Task date was changed
 
+## The rule: status is one-to-one with timing (owner, 26 Oct 2026)
+
+Read this before you touch anything that shows or derives a goal item's status.
+
+A goal item carries two separate facts. Never derive one from the other.
+
+| Field | Means | Drives |
+|---|---|---|
+| `isComplete` | Ticked or not: the checkbox. A late tick still counts. | The checkbox, "x of y done", milestones, the goal threshold auto-tick |
+| `status` | **When** it was done, relative to its window | The status pill / chip / label |
+
+| Situation | `isComplete` | `status` | Shows |
+|---|---|---|---|
+| Ticked within its window | true | `done` | Complete / Done |
+| Ticked after its window (late) | true | `missed` | **Missed**, with the box ticked; it counts |
+| Marked missed and never ticked (`markGoalItemMissed`, chat "skip") | false | `missed` | **Missed**, with the box open |
+| Not ticked yet | false | `todo` / `progress` / `ready` | Open / To Do |
+
+- **`missed` always reads Missed.** A late tick never turns it into Done or Complete.
+  `resolveDisplayStatus` and `isMissed` in `packages/ui/utils/taskStatus.js` are the one
+  place this is decided; every surface goes through them: the checklist row, the goal sheet,
+  `/goals`, LINKED DAY GOALS, `TaskStatusTag` and `GoalCreation`.
+- **"Complete" means completed on time.** Never label a late tick Complete.
+- **Late ticks are allowed and count.** You cannot create a goal item on a past day, but one
+  created on its day and forgotten can be ticked later. The server never refuses a late tick,
+  and must not get a window check (see `packages/design/README.md`, product rules).
+- Wording for a late tick: "missed, ticked late", not "done late". The chat's week digest
+  (`apps/server/src/utils/chatWeek.js`) uses exactly these words.
+- The routine-level timing ribbon (`onTime` / `late` / `missed` for when a **routine** was
+  ticked) is a different concept and is not a goal item status.
+
+The sections below are the original design notes. Where they disagree with this rule, this
+rule wins.
+
 ## Auto Status Assignment
 
 Status is automatically assigned based on these rules:

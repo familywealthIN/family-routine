@@ -95,4 +95,9 @@ describe('MoleculeAppToast', () => {
     expect(el.querySelector('.rn-toast__icon').textContent.trim()).toBe('bolt');
     expect(el.querySelector('.rn-toast__icon').style.color).toBe('rgb(255, 152, 0)');
   });
+
+  it('stretches its animation to a requested duration, and keeps 2.8s otherwise', () => {
+    expect(render({ duration: 5000 }).el.style.animationDuration).toBe('5000ms');
+    expect(render().el.style.animationDuration).toBe('');
+  });
 });

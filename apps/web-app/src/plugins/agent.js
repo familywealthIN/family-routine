@@ -16,6 +16,7 @@ export default {
       get agentsByTaskRef() { return agentStore.agentsByTaskRef; },
       get statusByRoutineId() { return agentStore.statusByRoutineId; },
       get statusDay() { return agentStore.statusDay; },
+      get endDueByRoutineId() { return agentStore.endDueByRoutineId; },
       get lastResultByRoutineId() { return agentStore.lastResultByRoutineId; },
       get loading() { return agentStore.loading; },
       get error() { return agentStore.error; },
@@ -24,6 +25,8 @@ export default {
       setLocalStatus: agentStore.setLocalStatus,
       clearLocalStatus: agentStore.clearLocalStatus,
       statusFor: agentStore.statusFor,
+      markEndEventDue: agentStore.markEndEventDue,
+      isStalled: agentStore.isStalled,
       clearDayStatuses: agentStore.clearDayStatuses,
       clearResult: agentStore.clearResult,
       openResultModal: agentStore.openResultModal,
@@ -56,6 +59,15 @@ export default {
           apollo: apolloFromVm(vm), vm, taskRef, goalId,
         });
       },
+
+      /** D-13 — the stalled run's two escape hatches. */
+      retryStalledRun({ taskRef, goalId }) {
+        return agentStore.retryStalledRun({
+          apollo: apolloFromVm(vm), vm, taskRef, goalId,
+        });
+      },
+
+      cancelRun(taskRef) { return agentStore.cancelRun(apolloFromVm(vm), taskRef); },
     });
 
     Object.defineProperty(Vue.prototype, '$agent', {

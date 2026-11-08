@@ -1,4 +1,6 @@
-jest.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: jest.fn(() => false) } }));
+jest.mock('@capacitor/core', () => ({
+  Capacitor: { isNativePlatform: jest.fn(() => false), getPlatform: jest.fn(() => 'web') },
+}));
 jest.mock('@capacitor/local-notifications', () => ({
   LocalNotifications: {
     getPending: jest.fn(() => Promise.resolve({ notifications: [{ id: 7 }] })),
@@ -84,5 +86,26 @@ describe('pushSession', () => {
     await expect(registerDevicePush(c, 'fcm-tablet')).resolves.toBe(true);
     expect(c.mutate.mock.calls[0][0].variables).toEqual({ notificationId: 'fcm-tablet' });
     await expect(registerDevicePush(client(false), 'fcm-tablet')).resolves.toBe(false);
+  });
+
+  it('on Android also says this device draws its own buttons', async () => {
+    localStorage.setItem(GC_AUTH_TOKEN, 'jwt');
+    const web = client();
+    await registerDevicePush(web, 'fcm-web');
+    expect(web.mutate).toHaveBeenCalledTimes(1);
+
+    Capacitor.getPlatform.mockReturnValue('android');
+    const c = client();
+    await expect(registerDevicePush(c, 'fcm-phone')).resolves.toBe(true);
+    expect(c.mutate.mock.calls.map(([call]) => call.mutation.definitions[0].name.value))
+      .toEqual(['registerNotificationToken', 'registerNotificationActions']);
+    expect(c.mutate.mock.calls[1][0].variables).toEqual({ notificationId: 'fcm-phone' });
+  });
+
+  it('a server without the buttons call still registers the device', async () => {
+    localStorage.setItem(GC_AUTH_TOKEN, 'jwt');
+    Capacitor.getPlatform.mockReturnValue('android');
+    const c = { mutate: jest.fn().mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Unknown field')) };
+    await expect(registerDevicePush(c, 'fcm-phone')).resolves.toBe(true);
   });
 });

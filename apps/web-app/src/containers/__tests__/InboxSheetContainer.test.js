@@ -123,7 +123,7 @@ describe('InboxSheetContainer — Do now', () => {
   it('guards the two fields it changes, and reports the move', async () => {
     const vm = ctx();
     call('onDoNow', vm, ITEM);
-    expect(guardFields).toHaveBeenCalledWith('GoalItem', 'i1', ['taskRef', 'goalRef']);
+    expect(guardFields).toHaveBeenCalledWith('GoalItem', 'i1', { taskRef: 'sw', goalRef: 'wg_sw' });
     await Promise.resolve();
     await Promise.resolve();
     expect(vm.$emit).toHaveBeenCalledWith('changed', {

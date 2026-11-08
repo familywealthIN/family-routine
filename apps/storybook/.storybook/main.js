@@ -4,6 +4,8 @@ module.exports = {
     stories: [
         '../../../packages/ui/**/*.stories.@(js|jsx|ts|tsx)',
         '../../../packages/markdown-editor/**/*.stories.@(js|jsx|ts|tsx)',
+        // The tokens page, drawn from packages/design/tokens.json.
+        '../foundations/**/*.stories.@(js|jsx|ts|tsx)',
     ],
     addons: [
         '@storybook/addon-links',

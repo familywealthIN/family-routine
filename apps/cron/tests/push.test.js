@@ -66,7 +66,9 @@ describe('sendToUser', () => {
     await expect(sendToUser({
       messaging, db, user, title: 'T', body: 'B',
     })).resolves.toEqual({ sent: 1, pruned: 1 });
-    expect(updateOne).toHaveBeenCalledWith({ _id: 'u' }, { $pull: { notificationIds: { $in: ['old'] } } });
+    expect(updateOne).toHaveBeenCalledWith({ _id: 'u' }, {
+      $pull: { notificationIds: { $in: ['old'] }, notificationActionTokens: { $in: ['old'] } },
+    });
     expect(updateOne).toHaveBeenCalledWith({ _id: 'u' }, { $unset: { notificationId: 1 } });
   });
 
@@ -80,6 +82,62 @@ describe('sendToUser', () => {
     await expect(sendToUser({
       messaging, db, user: { notificationIds: ['a'] }, title: 'T', body: 'B',
     })).resolves.toEqual({ sent: 0, pruned: 0 });
+  });
+
+  describe('Android devices that draw the cue themselves', () => {
+    const ok = (n) => ({ successCount: n, responses: Array.from({ length: n }, () => ({ success: true })) });
+    const user = {
+      _id: 'u', email: 'x@y', notificationIds: ['iphone', 'old-android', 'new-android'], notificationActionTokens: ['new-android'],
+    };
+
+    it('get a cue with buttons data-only; every other device the usual message', async () => {
+      const messaging = { sendEachForMulticast: jest.fn((m) => Promise.resolve(ok(m.tokens.length))) };
+      const { db } = makeDb();
+      await expect(sendToUser({
+        messaging, db, user, title: 'T', body: 'B', data: { routineId: 'r1' }, category: 'AGENT_START_ACTIONS', channel: 'routine-alarms',
+      })).resolves.toEqual({ sent: 3, pruned: 0 });
+      const messages = messaging.sendEachForMulticast.mock.calls.map(([m]) => m);
+      const usual = messages.find((m) => m.notification);
+      const drawn = messages.find((m) => !m.notification);
+      expect(usual.tokens).toEqual(['iphone', 'old-android']);
+      expect(usual.apns.payload.aps.category).toBe('AGENT_START_ACTIONS');
+      expect(drawn.tokens).toEqual(['new-android']);
+      expect(drawn.data).toEqual({
+        routineId: 'r1', title: 'T', body: 'B', category: 'AGENT_START_ACTIONS', channel: 'routine-alarms', display: 'app',
+      });
+      expect(drawn.android.priority).toBe('high');
+      expect(drawn.apns).toBeUndefined();
+    });
+
+    it('get the usual message when there are no buttons (lifecycle notifications)', async () => {
+      const messaging = { sendEachForMulticast: jest.fn((m) => Promise.resolve(ok(m.tokens.length))) };
+      const { db } = makeDb();
+      await sendToUser({
+        messaging, db, user, title: 'Good morning', body: 'B',
+      });
+      expect(messaging.sendEachForMulticast).toHaveBeenCalledTimes(1);
+      expect(messaging.sendEachForMulticast.mock.calls[0][0].tokens).toEqual(['iphone', 'old-android', 'new-android']);
+    });
+
+    it('a failed batch does not stop the other', async () => {
+      const messaging = {
+        sendEachForMulticast: jest.fn((m) => (m.notification ? Promise.reject(new Error('down')) : Promise.resolve(ok(1)))),
+      };
+      const { db } = makeDb();
+      await expect(sendToUser({
+        messaging, db, user, title: 'T', body: 'B', category: 'ROUTINE_ACTIONS',
+      })).resolves.toEqual({ sent: 1, pruned: 0 });
+    });
+
+    it('a flag for a token the user no longer has sends nothing extra', async () => {
+      const messaging = { sendEachForMulticast: jest.fn((m) => Promise.resolve(ok(m.tokens.length))) };
+      const { db } = makeDb();
+      await sendToUser({
+        messaging, db, user: { ...user, notificationIds: ['iphone'] }, title: 'T', body: 'B', category: 'ROUTINE_ACTIONS',
+      });
+      expect(messaging.sendEachForMulticast).toHaveBeenCalledTimes(1);
+      expect(messaging.sendEachForMulticast.mock.calls[0][0].notification).toBeDefined();
+    });
   });
 
   it('HAS_DEVICE matches either field', () => {

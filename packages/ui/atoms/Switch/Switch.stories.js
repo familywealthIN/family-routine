@@ -1,5 +1,8 @@
 import Switch from './Switch.vue';
 
+// Registered as AtomSwitch, the name the app uses: a bare <Switch> is the SVG
+// <switch> element, so Vue renders that instead of the component.
+
 export default {
   title: 'Atoms/Switch',
   component: Switch,
@@ -17,11 +20,11 @@ export default {
 
 const Template = (args, { argTypes }) => ({
   props: Object.keys(argTypes),
-  components: { Switch },
+  components: { AtomSwitch: Switch },
   data() {
     return { isOn: false };
   },
-  template: '<Switch v-model="isOn" v-bind="$props" />',
+  template: '<AtomSwitch v-model="isOn" v-bind="$props" />',
 });
 
 export const Default = Template.bind({});
@@ -55,7 +58,7 @@ Inset.args = {
 };
 
 export const CustomColors = () => ({
-  components: { Switch },
+  components: { AtomSwitch: Switch },
   data() {
     return {
       switches: {
@@ -70,18 +73,18 @@ export const CustomColors = () => ({
   },
   template: `
     <div style="display: flex; flex-direction: column; gap: 8px;">
-      <Switch v-model="switches.primary" label="Primary" color="primary" />
-      <Switch v-model="switches.secondary" label="Secondary" color="secondary" />
-      <Switch v-model="switches.success" label="Success" color="success" />
-      <Switch v-model="switches.error" label="Error" color="error" />
-      <Switch v-model="switches.warning" label="Warning" color="warning" />
-      <Switch v-model="switches.info" label="Info" color="info" />
+      <AtomSwitch v-model="switches.primary" label="Primary" color="primary" />
+      <AtomSwitch v-model="switches.secondary" label="Secondary" color="secondary" />
+      <AtomSwitch v-model="switches.success" label="Success" color="success" />
+      <AtomSwitch v-model="switches.error" label="Error" color="error" />
+      <AtomSwitch v-model="switches.warning" label="Warning" color="warning" />
+      <AtomSwitch v-model="switches.info" label="Info" color="info" />
     </div>
   `,
 });
 
 export const InsetVariants = () => ({
-  components: { Switch },
+  components: { AtomSwitch: Switch },
   data() {
     return {
       regular: false,
@@ -90,8 +93,8 @@ export const InsetVariants = () => ({
   },
   template: `
     <div style="display: flex; flex-direction: column; gap: 16px;">
-      <Switch v-model="regular" label="Regular switch" />
-      <Switch v-model="inset" label="Inset switch" inset />
+      <AtomSwitch v-model="regular" label="Regular switch" />
+      <AtomSwitch v-model="inset" label="Inset switch" inset />
     </div>
   `,
 });
@@ -103,7 +106,7 @@ WithIcons.args = {
 };
 
 export const States = () => ({
-  components: { Switch },
+  components: { AtomSwitch: Switch },
   data() {
     return {
       normal: false,
@@ -114,11 +117,11 @@ export const States = () => ({
   },
   template: `
     <div style="display: flex; flex-direction: column; gap: 8px;">
-      <Switch v-model="normal" label="Normal" />
-      <Switch v-model="disabled" label="Disabled (on)" disabled />
-      <Switch :value="false" label="Disabled (off)" disabled />
-      <Switch v-model="readonly" label="Readonly" readonly />
-      <Switch v-model="loading" label="Loading" loading />
+      <AtomSwitch v-model="normal" label="Normal" />
+      <AtomSwitch v-model="disabled" label="Disabled (on)" disabled />
+      <AtomSwitch :value="false" label="Disabled (off)" disabled />
+      <AtomSwitch v-model="readonly" label="Readonly" readonly />
+      <AtomSwitch v-model="loading" label="Loading" loading />
     </div>
   `,
 });

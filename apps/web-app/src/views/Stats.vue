@@ -54,9 +54,4 @@ export default {
   },
 };
 </script>
-<style scoped>
-.container {
-  margin: 0 auto;
-  max-width: 800px;
-}
-</style>
+<style scoped src="@routine-notes/ui/styles/app/views/Stats.css"></style>

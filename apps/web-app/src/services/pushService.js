@@ -2,7 +2,9 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { isSignedIn } from './pushSession';
-import { ACTION_TYPES, actionTypeFor, routeFor } from './notificationRoutes';
+import {
+  ACTION_TYPES, actionTypeFor, buttonOf, isDrawnByApp, routeFor,
+} from './notificationRoutes';
 
 // LocalNotifications ids must fit a 32-bit int on Android; Date.now() does not.
 const localId = () => Math.floor(Date.now() % 2147483647);
@@ -53,9 +55,10 @@ class PushService {
   }
 
   setupListeners() {
-    // Foreground: the OS does not show it, so re-post it with its buttons.
+    // Foreground: the OS does not show it, so re-post it with its buttons —
+    // unless the Android app already drew it (RoutineNotification.java).
     PushNotifications.addListener('pushNotificationReceived', async (notification) => {
-      if (!isSignedIn()) return;
+      if (!isSignedIn() || isDrawnByApp(notification.data)) return;
       await this.showLocalNotificationWithActions(notification);
     });
 
@@ -97,67 +100,15 @@ class PushService {
 
     try {
       if (!isSignedIn()) return;
-      if (actionId === 'SNOOZE' || actionId === 'REMIND_LATER') {
-        await this.handleSnooze(data);
-        return;
-      }
-      if (actionId === 'SKIP') {
-        await this.handleSkip(data);
-        return;
-      }
-      const route = routeFor(actionId, data);
+      // Android's own notification reports every tap as 'tap' and names the
+      // button in the data; route it as the iOS button of the same id.
+      const route = routeFor(buttonOf(actionId, data), data);
       const router = window.app && window.app.$router;
       if (route && router) router.push(route).catch(() => {});
-      this.trackAction(actionId, data);
+      this.trackAction(buttonOf(actionId, data), data);
     } catch (error) {
       console.error(`❌ Error handling action ${actionId}:`, error);
     }
-  }
-
-  async handleSnooze(data) {
-    console.log('😴 Snooze action triggered', data);
-
-    // Schedule another notification in 10 minutes
-    const snoozeTime = new Date(Date.now() + 10 * 60 * 1000);
-
-    await LocalNotifications.schedule({
-      notifications: [{
-        title: `⏰ ${data.originalTitle || 'Routine Reminder'} (Snoozed)`,
-        body: data.originalBody || 'Time for your routine!',
-        id: localId(),
-        schedule: { at: snoozeTime },
-        actionTypeId: actionTypeFor(data),
-        extra: data,
-      }],
-    });
-
-    await this.showFeedbackNotification('Snoozed for 10 minutes ⏰', 'info');
-    this.trackAction('snooze', data);
-  }
-
-  async handleSkip(data) {
-    console.log('⏭️ Skip action triggered', data);
-    await this.showFeedbackNotification('Task skipped', 'info');
-    this.trackAction('skip', data);
-  }
-
-  async showFeedbackNotification(message, type = 'info') {
-    const icons = {
-      success: '✅',
-      error: '❌',
-      info: 'ℹ️',
-      warning: '⚠️',
-    };
-
-    await LocalNotifications.schedule({
-      notifications: [{
-        title: `${icons[type]} ${type.charAt(0).toUpperCase() + type.slice(1)}`,
-        body: message,
-        id: localId(),
-        schedule: { at: new Date(Date.now() + 100) },
-        sound: type === 'error' ? 'default' : null,
-      }],
-    });
   }
 
   trackAction(action, data) {

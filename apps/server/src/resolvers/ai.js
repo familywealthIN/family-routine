@@ -10,6 +10,8 @@ const {
 const { GoalItemType } = require('../schema/GoalSchema');
 const { mutation: goalMutations } = require('./goal');
 const getEmailfromSession = require('../utils/getEmailfromSession');
+const { UserModel } = require('../schema/UserSchema');
+const { getLocalDate } = require('../utils/timezone');
 const {
   getSummaryFromGoalItems,
   getNextStepsFromGoalItems,
@@ -80,10 +82,15 @@ const mutation = {
     },
     resolve: async (root, { query: userQuery, systemPrompt, period }, context) => {
       // Require authentication even for AI operations
-      getEmailfromSession(context);
+      const email = getEmailfromSession(context);
 
       try {
-        const plan = await generateMilestonePlan(userQuery, systemPrompt, period);
+        // Plan from the user's own today, not the UTC server's: a week plan
+        // made on a Saturday evening west of UTC otherwise starts on Sunday
+        // and is filed under the next week.
+        const user = await UserModel.findOne({ email }, { timezone: 1 }).lean().exec();
+        const today = getLocalDate(user && user.timezone);
+        const plan = await generateMilestonePlan(userQuery, systemPrompt, period, { today });
         return plan;
       } catch (error) {
         console.error('Error generating milestone plan:', error);

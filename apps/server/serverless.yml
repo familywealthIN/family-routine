@@ -51,8 +51,30 @@ provider:
     OPENROUTER_FREE_MODELS: ${self:custom.secrets.OPENROUTER_FREE_MODELS, ''}
     WEB_APP_URL: ${self:custom.secrets.WEB_APP_URL, ''}
     MCP_BASE_URL: ${self:custom.secrets.MCP_BASE_URL}
+    # Sender of the missed-days email. SES in ap-south-1 has production access
+    # and this address verified; a new sender must be verified there first.
+    EMAIL_FROM: ${self:custom.secrets.EMAIL_FROM, 'Routine Notes <noreply@familywealth.in>'}
+  iam:
+    role:
+      statements:
+        # Only the missed-days email sends mail, and only as the verified sender.
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+          Resource: arn:aws:ses:${aws:region}:${aws:accountId}:identity/*
+          Condition:
+            StringEquals:
+              ses:FromAddress: noreply@familywealth.in
 
 functions:
+  # Hourly: one email to people who missed 3 days of routines
+  # (src/jobs/missedDays.js). Dry run: node scripts/preview-missed-email.js
+  missedDaysEmail:
+    handler: missed-days-email.handler
+    timeout: 300
+    events:
+      - schedule: rate(1 hour)
+
   query:
     handler: handler.handler
     events:

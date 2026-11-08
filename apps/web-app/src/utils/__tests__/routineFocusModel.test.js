@@ -426,17 +426,17 @@ describe('buildCascade', () => {
     }],
   });
 
-  // The gate is evaluateAutoComplete: every declared milestone met, and never
-  // fewer than the threshold. So the counter is the server's milestone tally
-  // over all the milestones the goal holds, floored at the threshold.
+  // The gate is evaluateAutoComplete: the threshold in met milestones (owner's
+  // rule, 25 Oct 2026). The counter is the server's milestone tally over every
+  // milestone the goal holds, floored at the threshold; the bar runs to the gate.
   it('counts the server’s met milestones against every milestone it holds', () => {
     expect(cascade.done).toBe(4);
     expect(cascade.threshold).toBe(6);
     expect(cascade.unitName).toBe('milestones');
     expect(cascade.complete).toBe(false);
     expect(cascade.statusLabel).toBe('Active');
-    expect(cascade.pct).toBe(67);
-    expect(cascade.rule).toBe('Needs all 6 day milestones met (min 5)');
+    expect(cascade.pct).toBe(80);
+    expect(cascade.rule).toBe('Needs 5 of 6 day milestones met');
   });
 
   it('keeps the threshold as the floor when fewer milestones were declared', () => {
@@ -614,6 +614,33 @@ describe('buildCascade', () => {
     expect(sorted.linked.map((row) => row.body)).toEqual(['Mon', 'Wed', 'Fri', 'Sat']);
     expect(sorted.linked.map((row) => row.detail.status)).toEqual(['Done', 'Missed', 'Missed', 'Open']);
     expect(sorted.linked[2].detail.tags).toEqual(['deep']);
+  });
+
+  it('reads a missed item as Missed whether or not it was ticked late (status is one-to-one with timing)', () => {
+    const { linked } = buildCascade({
+      period: 'week',
+      goals: weekGoals,
+      focusRow: { id: 'sw', items: [] },
+      date: '12-09-2026',
+      children: [{
+        id: 'd4',
+        period: 'day',
+        date: '12-09-2026',
+        goalItems: [
+          {
+            id: 'skip', body: 'Skipped', status: 'missed', isComplete: false,
+          },
+          {
+            id: 'late', body: 'Ticked late', status: 'missed', isComplete: true,
+          },
+          {
+            id: 'open', body: 'Still open', status: 'todo', isComplete: false,
+          },
+        ],
+      }],
+    });
+    expect(linked.map((row) => row.detail.status)).toEqual(['Missed', 'Missed', 'Open']);
+    expect(linked[1].isComplete).toBe(true);
   });
 
   it('numbers a month goal’s linked weeks by their place in the grid', () => {

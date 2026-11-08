@@ -382,9 +382,22 @@ function monthWeekAnchors(monthDate, from) {
   return upcoming.length ? upcoming : anchors.slice(-1);
 }
 
-function generateEntriesTemplate(timeframe, userQuery = '') {
+/**
+ * The user's today as a local Date (noon, clear of DST edges), from their
+ * DD-MM-YYYY. The server runs on UTC, so its own `new Date()` is tomorrow for
+ * a user west of UTC in their evening: a Saturday-night week plan then started
+ * on Sunday and was filed under the next week. Falls back to the server's
+ * date when no local day is known.
+ */
+function planToday(localToday) {
+  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(String(localToday || ''));
+  if (!match) return new Date();
+  return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), 12, 0, 0);
+}
+
+function generateEntriesTemplate(timeframe, userQuery = '', localToday = null) {
   const entriesTemplate = [];
-  const today = new Date();
+  const today = planToday(localToday);
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   // The frontend (modifyQueryPeriod in AiGoalPlanFormContainer) rewrites
@@ -517,8 +530,8 @@ function alignEntriesToTemplate(entries, entriesTemplate) {
   });
 }
 
-function generateFallbackPlan(userQuery, timeframe) {
-  const entriesTemplate = generateEntriesTemplate(timeframe, userQuery);
+function generateFallbackPlan(userQuery, timeframe, localToday = null) {
+  const entriesTemplate = generateEntriesTemplate(timeframe, userQuery, localToday);
   const mappedEntries = entriesTemplate.map(fallbackEntry);
   return {
     period: timeframe,
@@ -528,7 +541,13 @@ function generateFallbackPlan(userQuery, timeframe) {
   };
 }
 
-async function generateMilestonePlan(userQuery, systemPrompt = null, period = null) {
+/**
+ * @param {string} userQuery
+ * @param {string|null} systemPrompt
+ * @param {string|null} period the toolbar's period, authoritative when given
+ * @param {{ today?: string }} [options] the user's local today, DD-MM-YYYY
+ */
+async function generateMilestonePlan(userQuery, systemPrompt = null, period = null, { today = null } = {}) {
   let timeframe = 'week';
 
   if (PLAN_TIMEFRAMES.includes(period)) {
@@ -545,11 +564,11 @@ async function generateMilestonePlan(userQuery, systemPrompt = null, period = nu
     timeframe = 'year';
   }
 
-  const useFallback = () => generateFallbackPlan(userQuery, timeframe);
+  const useFallback = () => generateFallbackPlan(userQuery, timeframe, today);
 
   try {
-    const entriesTemplate = generateEntriesTemplate(timeframe, userQuery);
-    const baseDate = new Date();
+    const entriesTemplate = generateEntriesTemplate(timeframe, userQuery, today);
+    const baseDate = planToday(today);
     const contextPrefix = systemPrompt
       ? `Context from parent goal:\n${systemPrompt}\n\nUsing the above parent goal as context, generate a plan that aligns with and supports it.\n\n`
       : '';
@@ -562,7 +581,7 @@ async function generateMilestonePlan(userQuery, systemPrompt = null, period = nu
         "description": "overall description / rationale for the plan — 2-4 markdown lines summarising WHAT the top-level goal means, WHY it matters, and HOW the milestones roll up into it. Use bullet points with newline characters where useful. This text is stored on the PARENT goal itself, so keep it self-contained (do not repeat the milestone list).",
         "entries": ${JSON.stringify(entriesTemplate, null, 2)}
     }
-    Current date: ${baseDate.toISOString().split('T')[0]}
+    Current date: ${[baseDate.getFullYear(), String(baseDate.getMonth() + 1).padStart(2, '0'), String(baseDate.getDate()).padStart(2, '0')].join('-')}
     Follow these rules strictly:
     1. Use ONLY the period type specified in the template.
     2. Keep all periodName and date values exactly as provided.

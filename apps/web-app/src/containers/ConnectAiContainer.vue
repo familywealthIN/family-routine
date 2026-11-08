@@ -16,8 +16,8 @@
  * read, and nothing on this card writes to the server. What it does own is the
  * two things an organism in `packages/ui` may not touch — the clipboard
  * (`navigator.clipboard`, guarded in utils/clipboard.js) and the build-dependent
- * MCP endpoint. The same arrangement `StepModalContainer` has: a container home
- * for an organism whose domain happens to involve no query.
+ * MCP endpoint: a container home for an organism whose domain happens to
+ * involve no query.
  *
  * ## The client secret is NOT issued through the app (known gap)
  *

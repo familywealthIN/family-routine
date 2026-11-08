@@ -218,14 +218,4 @@ export default {
 };
 </script>
 
-<style>
-/* Root-class prefixed: the loading / error placeholder in the board's slot. */
-.rn-pboard-state {
-  flex: 1;
-  padding: 32px 16px;
-  text-align: center;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  color: rgba(0, 0, 0, .54);
-  font-size: 14px;
-}
-</style>
+<style src="@routine-notes/ui/styles/app/containers/PriorityBoardContainer.css"></style>

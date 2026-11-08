@@ -6,7 +6,8 @@
  * `updateSubTaskItem` shipped broken and unused: it `$set` a hardcoded
  * `goalItems.$.subTasks.0.body`, so renaming the third sub-task renamed the
  * first, and it returned `null` for a field typed `SubTaskItem`. The goal-item
- * page is its first caller, so it had to work before being wired.
+ * page is its first caller, so it had to work before being wired. It now
+ * addresses the sub-task by id through arrayFilters.
  *
  * `reorderSubTaskItems` is new. Sub-task order has no field of its own —
  * `SubTaskItemSchema` is `{ body, isComplete }` and the order IS the array order
@@ -63,76 +64,83 @@ beforeEach(() => {
 });
 
 describe('updateSubTaskItem — renames the sub-task it was asked about', () => {
+  // Since 26 Oct 2026 a rename is one arrayFilters `$set` on that sub-task's
+  // body (subTaskItemAtomic.spec.js has why), so real ObjectIds are needed here.
+  const mongoose = require('mongoose');
+  const { encryption } = require('../utils/encryption');
+  const taskId = new mongoose.Types.ObjectId();
+  const [s1, s2, s3] = [1, 2, 3].map(() => new mongoose.Types.ObjectId());
+  const realSubs = (renamed) => ([
+    { _id: s1, body: 'Fix offsets', isComplete: true },
+    { _id: s2, body: 'Add tests', isComplete: false },
+    { _id: s3, body: renamed || 'Request review', isComplete: false },
+  ]);
+  const saved = (renamed) => exec({
+    goalItems: [{ _id: taskId, body: 'Ship dashboard PR', subTasks: realSubs(renamed) }],
+  });
+  const rename = (id, body) => mutation.updateSubTaskItem.resolve(null, {
+    id: String(id), taskId: String(taskId), date: DATE, period: 'day', body,
+  }, CONTEXT);
+
   it('renames the THIRD sub-task, not the first', async () => {
-    mockFindOne.mockReturnValue(exec({ goalItems: [goalItem(SUBS())] }));
+    mockFindOneAndUpdate.mockReturnValue(saved('Request review from Ana'));
 
-    const result = await mutation.updateSubTaskItem.resolve(null, {
-      id: 's3', taskId: TASK_ID, date: DATE, period: 'day', body: 'Request review from Ana',
-    }, CONTEXT);
+    const result = await rename(s3, 'Request review from Ana');
 
-    expect(writtenSubTasks().map((s) => s.body)).toEqual([
-      'Fix offsets', 'Add tests', 'Request review from Ana',
-    ]);
-    expect(result.id).toBe('s3');
+    const [, change, options] = mockFindOneAndUpdate.mock.calls[0];
+    expect(encryption.decrypt(change.$set['goalItems.$[item].subTasks.$[sub].body']))
+      .toBe('Request review from Ana');
+    expect(options.arrayFilters).toEqual([{ 'item._id': taskId }, { 'sub._id': s3 }]);
+    expect(result.id).toBe(String(s3));
     expect(result.body).toBe('Request review from Ana');
   });
 
   it('keeps the renamed sub-task’s completion', async () => {
-    mockFindOne.mockReturnValue(exec({ goalItems: [goalItem(SUBS())] }));
+    mockFindOneAndUpdate.mockReturnValue(saved());
 
-    const result = await mutation.updateSubTaskItem.resolve(null, {
-      id: 's1', taskId: TASK_ID, date: DATE, period: 'day', body: 'Fix the ring offsets',
-    }, CONTEXT);
+    const result = await rename(s1, 'Fix the ring offsets');
 
     expect(result.isComplete).toBe(true);
-    expect(writtenSubTasks()[0].isComplete).toBe(true);
+    const [, change] = mockFindOneAndUpdate.mock.calls[0];
+    expect(Object.keys(change.$set)).toEqual(['goalItems.$[item].subTasks.$[sub].body']);
   });
 
   // `SubTaskItemType.id` has no resolver, and the decrypt hook hands back plain
   // objects with no `id` virtual — so it has to be spelled out or the client
   // cannot normalize the result.
   it('returns an id the client can normalize against', async () => {
-    mockFindOne.mockReturnValue(exec({ goalItems: [goalItem(SUBS())] }));
+    mockFindOneAndUpdate.mockReturnValue(saved());
 
-    const result = await mutation.updateSubTaskItem.resolve(null, {
-      id: 's2', taskId: TASK_ID, date: DATE, period: 'day', body: 'Add tests',
-    }, CONTEXT);
+    const result = await rename(s2, 'Add tests');
 
     expect(typeof result.id).toBe('string');
-    expect(result.id).toBe('s2');
+    expect(result.id).toBe(String(s2));
   });
 
-  it('writes nothing for an id that is not on the item', async () => {
-    mockFindOne.mockReturnValue(exec({ goalItems: [goalItem(SUBS())] }));
+  it('answers null for an id that is not on the item', async () => {
+    mockFindOneAndUpdate.mockReturnValue(saved());
 
-    const result = await mutation.updateSubTaskItem.resolve(null, {
-      id: 'nope', taskId: TASK_ID, date: DATE, period: 'day', body: 'x',
-    }, CONTEXT);
+    const result = await rename(new mongoose.Types.ObjectId(), 'x');
+
+    expect(result).toBeNull();
+  });
+
+  it('writes nothing for an id that is not an ObjectId', async () => {
+    const result = await rename('nope', 'x');
 
     expect(result).toBeNull();
     expect(mockFindOneAndUpdate).not.toHaveBeenCalled();
   });
 
-  it('writes nothing when the goal item has no sub-tasks at all', async () => {
-    mockFindOne.mockReturnValue(exec({ goalItems: [goalItem([])] }));
+  it('scopes the write to the signed-in user', async () => {
+    mockFindOneAndUpdate.mockReturnValue(saved());
 
-    const result = await mutation.updateSubTaskItem.resolve(null, {
-      id: 's1', taskId: TASK_ID, date: DATE, period: 'day', body: 'x',
-    }, CONTEXT);
+    await rename(s1, 'x');
 
-    expect(result).toBeNull();
-    expect(mockFindOneAndUpdate).not.toHaveBeenCalled();
-  });
-
-  it('scopes every query to the signed-in user', async () => {
-    mockFindOne.mockReturnValue(exec({ goalItems: [goalItem(SUBS())] }));
-
-    await mutation.updateSubTaskItem.resolve(null, {
-      id: 's1', taskId: TASK_ID, date: DATE, period: 'day', body: 'x',
-    }, CONTEXT);
-
-    expect(mockFindOne.mock.calls[0][0]).toEqual({ date: DATE, period: 'day', email: EMAIL });
-    expect(mockFindOneAndUpdate.mock.calls[0][0].email).toBe(EMAIL);
+    expect(mockFindOne).not.toHaveBeenCalled();
+    expect(mockFindOneAndUpdate.mock.calls[0][0]).toEqual({
+      date: DATE, period: 'day', email: EMAIL, 'goalItems._id': taskId,
+    });
   });
 });
 

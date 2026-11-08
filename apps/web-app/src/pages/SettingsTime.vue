@@ -383,23 +383,4 @@ export default {
      scoped block cannot reach. Every selector carries the page's root class, so
      nothing leaks into the legacy toolbar layouts (see the web-app CSS
      convention in MEMORY). -->
-<style>
-.rn-routines {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-}
-
-.rn-routines--tablet,
-.rn-routines--desktop {
-  flex: 1;
-  height: 100%;
-}
-
-.rn-routines--tablet > *,
-.rn-routines--desktop > * {
-  flex: 1;
-  min-height: 0;
-}
-</style>
+<style src="@routine-notes/ui/styles/app/pages/SettingsTime.css"></style>

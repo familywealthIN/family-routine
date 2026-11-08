@@ -54,7 +54,7 @@ describe('SkipDayContainer — skipping', () => {
     const vm = ctx();
     call('onConfirm', vm, { skip: true, reason: '' });
     expect(vm.$routine.setSkipDay).toHaveBeenCalledWith(true);
-    expect(guardFields).toHaveBeenCalledWith('Routine', 'rd1', ['skip']);
+    expect(guardFields).toHaveBeenCalledWith('Routine', 'rd1', { skip: true });
   });
 
   it('its optimistic response is a complete Routine entity', () => {

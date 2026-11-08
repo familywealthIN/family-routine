@@ -260,11 +260,17 @@ describe('chatWithRoutine', () => {
       "I've skipped that one for today.",
       'Moved it to tomorrow for you.',
       "I've pushed the PR to Friday.",
-      'I deleted that item.',
     ])('replaces the false claim: %s', async (claim) => {
       await expect(replyFor(claim)).resolves
         .toBe("I can't move or skip items from here. Tap the item in the "
           + 'checklist to open it, then use its date chips to change the day.');
+    });
+
+    // A delete claim gets the delete refusal: "I can't move or skip items"
+    // answered "delete this routine" with a sentence about something else.
+    it('answers a false delete claim with the delete refusal', async () => {
+      await expect(replyFor('I deleted that item.')).resolves
+        .toMatch(/^I can't delete, rename or remove anything from here, so nothing changed/);
     });
 
     // The guard is narrow on purpose: advice and questions are true and useful,

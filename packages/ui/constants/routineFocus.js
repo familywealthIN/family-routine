@@ -72,6 +72,12 @@ export const AGENT_STAGES = {
   failed: {
     glyph: '', color: '#e53935', ringMs: 0, breathe: false,
   },
+  // D-13: a run whose end event was due and never completed. Deliberately NOT
+  // a live stage — it must stop breathing and stop reading `hearing`, which is
+  // what hid the stall for four days.
+  stalled: {
+    glyph: 'warning', color: '#ef6c00', ringMs: 0, breathe: false,
+  },
 };
 
 /** Stages where the agent is still doing something — the ring must not be tapped. */

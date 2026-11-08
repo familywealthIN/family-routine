@@ -133,6 +133,11 @@ describe('cacheGuard', () => {
       expect(guardStats().guards).toBe(0);
     });
 
+    it('refuses an array of field names — it would guard "0", "1", … and protect nothing', () => {
+      expect(guardFields('GoalItem', 'g1', ['body', 'tags'])).toBe(false);
+      expect(guardStats().guards).toBe(0);
+    });
+
     it('re-arms an already-confirmed guard on a new local write', () => {
       confirmFields('GoalItem', 'g1', { isComplete: true });
       expect(guardStats().entries[0].confirmed).toBe(true);

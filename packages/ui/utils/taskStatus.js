@@ -61,8 +61,8 @@ export const TASK_STATUS_CONFIG = {
     color: 'red',
     icon: 'cancel',
     label: 'Missed',
-    // Both a late completion (graded server-side) and a miss the user recorded
-    // on an item they never ticked land here.
+    // Not done within its window: a late tick (graded server-side) and a miss
+    // the user recorded both land here, and a late tick never undoes it.
     description: 'Task was not done within its scheduled time window',
   },
   [TASK_STATUS.RESCHEDULED]: {
@@ -85,23 +85,40 @@ const COMPLETION_SAFE_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.RESCHEDULED];
 /**
  * Resolve the status a badge should show for a goal item.
  *
- * A stored status can outlive the truth — an item marked `missed` and ticked
- * afterwards keeps `missed` — and it can be one this build has no label for.
- * `isComplete` is the authoritative fact, so in both cases the badge is derived
- * from the flag rather than asserting the opposite of it. An item that is
- * genuinely still open keeps its stored status, so a real miss still reads as
- * missed.
+ * Status is one-to-one with timing (owner, 26 Oct 2026): `done` means ticked
+ * within its window, `missed` means not done within it. A late tick leaves the
+ * item `missed` — it is ticked (`isComplete`, and it counts toward its goals)
+ * but its status is Missed, so `missed` always reads as Missed, ticked or not.
+ * Otherwise a ticked item reads Done, and a stored status this build has no
+ * label for falls back to To Do.
  * @param {Object} options - Configuration object
  * @param {string} options.status - Stored status of the goal item
  * @param {boolean} options.isComplete - Whether the item is ticked
  * @returns {string} A status that always has a TASK_STATUS_CONFIG entry
  */
 export function resolveDisplayStatus({ status, isComplete = false }) {
+  if (status === TASK_STATUS.MISSED) return TASK_STATUS.MISSED;
   if (isComplete) {
     return COMPLETION_SAFE_STATUSES.includes(status) ? status : TASK_STATUS.DONE;
   }
 
   return LABELLED_STATUSES.includes(status) ? status : TASK_STATUS.TODO;
+}
+
+/**
+ * Whether a goal item's status is Missed: not done within its window, whether
+ * the user recorded the miss (`markGoalItemMissed`) or ticked it late. The
+ * tick is separate — a late-ticked item is ticked and counts, and still reads
+ * Missed.
+ * @param {Object} item - A goal item ({ status, isComplete })
+ * @returns {boolean}
+ */
+export function isMissed(item) {
+  if (!item) return false;
+  return resolveDisplayStatus({
+    status: item.status,
+    isComplete: !!item.isComplete,
+  }) === TASK_STATUS.MISSED;
 }
 
 /**
