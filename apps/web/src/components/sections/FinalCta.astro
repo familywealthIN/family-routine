@@ -3,7 +3,8 @@ import StoreButtons from '~/components/StoreButtons.astro';
 ---
 
 <section class="relative overflow-hidden">
-  <div class="container-page py-4">
+  <!-- pb leaves room for the card's shadow-2xl, which the section's overflow-hidden would clip. -->
+  <div class="container-page pt-4 pb-14">
     <div class="rounded-[28px] overflow-hidden relative shadow-2xl"
       style="background:linear-gradient(135deg,#1a5a8f 0%,#288bd5 45%,#5aa3d3 100%)">
 

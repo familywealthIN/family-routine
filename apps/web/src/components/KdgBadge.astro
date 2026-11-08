@@ -1,64 +1,154 @@
 ---
-// Tiny floating Routine points pill — used to overlay the phone frame in the hero
-// when no screenshot is present yet.
+// Floating Routine points card over the hero phone, pointing at the week
+// selector: each day's ring there fills with the same D/K/G points. Colours are
+// the app's stimulus tokens (packages/design/tokens.json: stimulus-d/k/g).
+const MAX = 100; // points per pillar per day; 300 in total
+const pillars = [
+  { letter: 'D', name: 'Discipline', hint: 'routines ticked on time', value: 78, color: '#4CAF50' },
+  { letter: 'K', name: 'Kinetics', hint: 'checklist tasks done', value: 62, color: '#E53935' },
+  { letter: 'G', name: 'Geniuses', hint: 'goals moved forward', value: 41, color: '#2196F3' },
+];
+const total = pillars.reduce((sum, p) => sum + p.value, 0);
+const totalMax = MAX * pillars.length;
 ---
-<div class="kdg-badge">
+
+<div class="kdg-badge" role="img" aria-label={`Today’s evolution score: ${total} of ${totalMax} points`}>
   <div class="kdg-badge__row">
-    <span class="kdg-badge__label">Today</span>
-    <span class="kdg-badge__total"><b>181</b><i>/300</i></span>
+    <span class="kdg-badge__label">Today’s evolution score</span>
   </div>
-  <div class="kdg-badge__bars">
-    <div class="kdg-badge__bar"><span style="--p:78%;background:#288bd5"></span><em>D</em></div>
-    <div class="kdg-badge__bar"><span style="--p:62%;background:#5aa3d3"></span><em>K</em></div>
-    <div class="kdg-badge__bar"><span style="--p:41%;background:#b8d9ee"></span><em>G</em></div>
+  <div class="kdg-badge__total">
+    <b>{total}</b><i>/{totalMax}</i>
   </div>
+  <div class="kdg-badge__meter">
+    {pillars.map((p) => (
+      <span style={`flex:${p.value};background:${p.color}`}></span>
+    ))}
+    <span style={`flex:${totalMax - total}`}></span>
+  </div>
+
+  <ul class="kdg-badge__bars">
+    {pillars.map((p) => (
+      <li class="kdg-badge__bar">
+        <em style={`color:${p.color}`}>{p.letter}</em>
+        <div>
+          <p><b>{p.name}</b><span>{p.value}</span></p>
+          <small>{p.hint}</small>
+          <div class="kdg-badge__track"><span style={`width:${(p.value / MAX) * 100}%;background:${p.color}`}></span></div>
+        </div>
+      </li>
+    ))}
+  </ul>
+
+  <p class="kdg-badge__foot">Each day’s ring fills with these points.</p>
+  <span class="kdg-badge__pointer" aria-hidden="true"></span>
 </div>
 
 <style>
   .kdg-badge {
-    position: absolute;
+    position: relative;
     border-radius: 16px;
     background: #fff;
-    padding: 14px 16px;
+    padding: 14px 16px 12px;
     box-shadow: 0 24px 48px -16px rgba(13, 27, 42, 0.25),
       0 0 0 1px rgba(13, 27, 42, 0.04);
     font-family: var(--font-sans);
-    width: 220px;
+    width: 236px;
+    text-align: left;
   }
-  .kdg-badge__row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
-  .kdg-badge__label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5b6e8e; }
-  .kdg-badge__total { font-family: var(--font-display); }
-  .kdg-badge__total b { font-size: 22px; font-weight: 600; color: #0d1b2a; }
-  .kdg-badge__total i { font-style: normal; color: #8696b0; font-size: 13px; }
-  .kdg-badge__bars { display: grid; gap: 6px; }
+  .kdg-badge__label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #5b6e8e;
+  }
+  .kdg-badge__total {
+    margin-top: 2px;
+    font-family: var(--font-display);
+  }
+  .kdg-badge__total b { font-size: 26px; font-weight: 600; color: #0d1b2a; }
+  .kdg-badge__total i { font-style: normal; color: #8696b0; font-size: 13px; margin-left: 2px; }
+
+  /* 181 of 300: D, K and G segments sized by their points, then the empty rest. */
+  .kdg-badge__meter {
+    margin-top: 6px;
+    height: 8px;
+    border-radius: 999px;
+    background: #e9edf2;
+    overflow: hidden;
+    display: flex;
+    gap: 2px;
+  }
+  .kdg-badge__meter span { display: block; height: 100%; flex-basis: 0; }
+
+  .kdg-badge__bars {
+    margin-top: 12px;
+    display: grid;
+    gap: 9px;
+  }
   .kdg-badge__bar {
     display: grid;
-    grid-template-columns: 14px 1fr;
-    align-items: center;
+    grid-template-columns: 16px 1fr;
     gap: 8px;
+    align-items: start;
   }
   .kdg-badge__bar em {
     font-style: normal;
     font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 11px;
-    color: #5b6e8e;
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1.1;
     text-align: center;
   }
-  .kdg-badge__bar span {
-    height: 6px;
+  .kdg-badge__bar p {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12.5px;
+    line-height: 1.2;
+    color: #0d1b2a;
+  }
+  .kdg-badge__bar p b { font-weight: 600; }
+  .kdg-badge__bar p span {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: #2a3a55;
+  }
+  .kdg-badge__bar small {
+    display: block;
+    font-size: 11px;
+    line-height: 1.3;
+    color: #8696b0;
+  }
+  .kdg-badge__track {
+    margin-top: 4px;
+    height: 5px;
     border-radius: 999px;
     background: #e9edf2;
-    position: relative;
     overflow: hidden;
-    display:block;
   }
-  .kdg-badge__bar span::before {
-    content:'';
-    position:absolute;
-    inset:0;
-    width: var(--p);
-    background: inherit;
+  .kdg-badge__track span {
+    display: block;
+    height: 100%;
     border-radius: 999px;
+  }
+  .kdg-badge__foot {
+    margin-top: 11px;
+    padding-top: 9px;
+    border-top: 1px dashed #e9edf2;
+    font-size: 11px;
+    color: #5b6e8e;
+  }
+
+  /* Arrow on the right edge, pointing at the week selector. */
+  .kdg-badge__pointer {
+    position: absolute;
+    top: 30px;
+    right: -7px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    transform: rotate(45deg);
+    box-shadow: 1px -1px 0 rgba(13, 27, 42, 0.04);
   }
 </style>
