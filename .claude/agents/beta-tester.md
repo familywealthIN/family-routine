@@ -305,10 +305,10 @@ the cue for one routine you used, plus the lifecycle notifications at the mornin
 - **Copy rules.** The routine is named, the body is at most 160 characters, there are no
   shame words and no links. After a miss, the cue uses never-miss-twice recovery copy, not
   guilt. A habit that has become automatic gets only an at-risk nudge.
-- **Which model wrote it.** The cue's `copy` says `ai (free: <model>)`, `ai (paid: <model>)`
-  or `template (<reason>)`. The chain is free models first, then a cheap paid Qwen, then the
-  template. The free tier being rate-limited is an environment fact, not a defect. A
-  template fallback, though, means the paid tier failed too, so record its reason.
+- **Which model wrote it.** The cue's `copy` says `ai (free: <model>)` or
+  `template (<reason>)`. The chain is free models only, then the template (no model on the
+  backend is paid). The free tier being rate-limited is an environment fact, not a defect;
+  record a template fallback's reason.
 - **Buttons.** The cue's `buttons` must match the routine: `AGENT_START_ACTIONS` when it has
   an agent, `AGENT_BUILD_ACTIONS` when it has chat or goal context but no agent, and
   `ROUTINE_ACTIONS` otherwise.

@@ -2,7 +2,7 @@ jest.mock('./chatApi', () => ({ completeChat: jest.fn() }));
 
 const { completeChat } = require('./chatApi');
 const {
-  DEFAULT_INSIGHT_MODEL,
+  insightModels,
   previousDates,
   periodDates,
   dayPlan,
@@ -153,7 +153,8 @@ describe('generateRoutineInsight', () => {
       summary, routineName: 'Jog', previous: ['Old title\nOld spark.\nNext time: Run hills.'],
     });
     const [[messages, options]] = completeChat.mock.calls;
-    expect(options).toMatchObject({ models: [DEFAULT_INSIGHT_MODEL], temperature: 1 });
+    // The free roster writes it: no chosen model, so no `models` of its own.
+    expect(options.models).toBeUndefined();
     const [system, user] = messages;
     expect(system.content).toMatch(/Answer with JSON only/);
     expect(user.content).toMatch(/^Routine: Jog\nHOOK: .+\nLEVER \(for the NEXT session\): .+/);
@@ -170,13 +171,27 @@ describe('generateRoutineInsight', () => {
     expect(retry[retry.length - 1].content).toMatch(/^Fix these and answer with the JSON again: the answer was not the JSON object/);
   });
 
-  it('moves to the free roster when the chosen model is unavailable', async () => {
+  it('never names a paid model, even one configured', () => {
+    const saved = process.env.ROUTINE_INSIGHT_MODEL;
+    process.env.ROUTINE_INSIGHT_MODEL = 'anthropic/claude-fable-5.1, chosen/model:free';
+    expect(insightModels()).toEqual(['chosen/model:free']);
+    delete process.env.ROUTINE_INSIGHT_MODEL;
+    expect(insightModels()).toEqual([]);
+    if (saved !== undefined) process.env.ROUTINE_INSIGHT_MODEL = saved;
+  });
+
+  it('moves to the free roster when the chosen free model is unavailable', async () => {
+    const saved = process.env.ROUTINE_INSIGHT_MODEL;
+    process.env.ROUTINE_INSIGHT_MODEL = 'chosen/model:free';
     completeChat
       .mockRejectedValueOnce(new Error('402 credits'))
       .mockResolvedValueOnce(reply(CARD, 'free:model'));
     const result = await generateRoutineInsight({ summary, routineName: 'Jog' });
     expect(result.model).toBe('free:model');
+    expect(completeChat.mock.calls[0][1].models).toEqual(['chosen/model:free']);
     expect(completeChat.mock.calls[1][1].models).toBeUndefined();
+    if (saved === undefined) delete process.env.ROUTINE_INSIGHT_MODEL;
+    else process.env.ROUTINE_INSIGHT_MODEL = saved;
   });
 
   it('writes the same strategy without a model when nothing usable comes back', async () => {
