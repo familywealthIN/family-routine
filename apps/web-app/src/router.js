@@ -148,6 +148,14 @@ export default new Router({
       meta: { appShell: true },
     },
     {
+      // The MCP connector's consent page, opened by an AI app (Claude, ChatGPT…)
+      // mid sign-in. Its own chrome: no nav, just the card.
+      path: '/connect',
+      name: 'connect',
+      component: () => import(/* webpackChunkName: "connect" */ './pages/ConnectApp.vue'),
+      meta: { appShell: true },
+    },
+    {
       path: '/search',
       name: 'search',
       component: () => import(/* webpackChunkName: "search" */ './views/Search.vue'),

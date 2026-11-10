@@ -2,7 +2,6 @@
   <connect-ai-panel
     :connected="connected"
     :server-url="serverUrl"
-    :client-secret="clientSecret"
     :copied-key="copiedKey"
     @copy="onCopy"
   />
@@ -19,39 +18,30 @@
  * MCP endpoint. The same arrangement `StepModalContainer` has: a container home
  * for an organism whose domain happens to involve no query.
  *
- * ## The client secret is NOT issued through the app (known gap)
+ * ## No client secret
  *
- * The server validates `process.env.OAUTH_CLIENT_SECRET`
- * (apps/server/src/mcp-http-server.js) and exposes it through no GraphQL field,
- * so the page cannot know the real one. The pre-existing behaviour — mint a
- * `frt_secret_…` string client-side — is preserved here rather than silently
- * changed, but it is a placeholder: it is generated once per mount and will not
- * match the server. `chassis.md` only settles the PREFIX (`frt_secret_`, not the
- * mock's `rn_sec_`). Issuing the real secret needs a server field; until then
- * the disconnected panel at least tells the user the chip flips on a successful
- * handshake instead of implying one already happened.
+ * MCP clients register themselves and sign in with PKCE at the server's
+ * origin (apps/server src/utils/mcpOAuth.js), so the card shows the Server URL
+ * and the pre-registered Client ID and nothing secret. It used to mint a
+ * `frt_secret_…` here that the server never accepted.
  */
 import ConnectAiPanel from '@routine-notes/ui/organisms/ConnectAiPanel/ConnectAiPanel.vue';
-import { SECRET_PREFIX } from '@routine-notes/ui/constants/profile';
 import { copyText } from '../utils/clipboard';
 
 /** How long the copy tick stays on a row. */
 const COPIED_MS = 1500;
 
 /**
- * Unchanged from the page this replaces: dev runs the MCP server on :4000 while
- * GraphQL is on :3000, so it cannot be derived from `graphQLUrl`. The production
- * host is a placeholder in the original too — reported, not invented here.
+ * The MCP server's own domain: MCP clients sign in at the ORIGIN ROOT
+ * (/.well-known/…, /authorize, /token), which the raw execute-api URL can't
+ * serve because its root sits outside the /dev stage. Dev runs the MCP server
+ * on :4000 beside GraphQL on :3000. VUE_APP_MCP_URL overrides both.
  */
-function mcpUrl() {
-  return process.env.NODE_ENV === 'production'
-    ? 'https://your-api-domain.com/dev/mcp'
-    : 'http://localhost:4000/mcp';
-}
+export const PRODUCTION_MCP_URL = 'https://mcp.routinenotes.app/mcp';
 
-function placeholderSecret() {
-  const rand = () => Math.random().toString(36).slice(2, 15);
-  return `${SECRET_PREFIX}${rand()}${rand()}`;
+export function mcpUrl(env = process.env) {
+  if (env.VUE_APP_MCP_URL) return env.VUE_APP_MCP_URL;
+  return env.NODE_ENV === 'production' ? PRODUCTION_MCP_URL : 'http://localhost:4000/mcp';
 }
 
 export default {
@@ -67,7 +57,6 @@ export default {
   data() {
     return {
       serverUrl: mcpUrl(),
-      clientSecret: placeholderSecret(),
       copiedKey: '',
     };
   },

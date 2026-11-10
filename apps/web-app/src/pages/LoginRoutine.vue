@@ -110,6 +110,7 @@ import {
 import { SignInWithApple } from '@capacitor-community/apple-sign-in';
 import ContainerBox from '@routine-notes/ui/templates/ContainerBox/ContainerBox.vue';
 import { gauthOption } from '../blob/config';
+import { takeAfterSignIn } from '../utils/afterSignIn';
 
 export default {
   name: 'Login',
@@ -237,7 +238,7 @@ export default {
             if (needsOnboarding) {
               this.$router.push('wizard');
             } else {
-              this.$router.push('home');
+              this.$router.push(takeAfterSignIn('home'));
             }
 
             setTimeout(() => {
@@ -486,7 +487,7 @@ export default {
                 from_page: 'login',
                 to_page: 'home',
               });
-              this.$router.push('home');
+              this.$router.push(takeAfterSignIn('home'));
             }
 
             setTimeout(() => {
@@ -530,7 +531,7 @@ export default {
           to_page: 'home',
           redirect_count: this.redirectCount,
         });
-        this.$router.push('home');
+        this.$router.push(takeAfterSignIn('home'));
         this.isLoading = false;
         // eslint-disable-next-line no-plusplus
         this.redirectCount++;

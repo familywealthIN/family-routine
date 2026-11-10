@@ -14,10 +14,8 @@ const {
   normaliseTimeFormat,
   timeFormatPreview,
   timeFormatConsequence,
-  maskSecret,
   platformGuides,
   isDeleteConfirmed,
-  SECRET_PREFIX,
   MCP_CLIENT_ID,
 } = require('./profile');
 
@@ -115,36 +113,25 @@ describe('time format — two previews, both spellings accepted', () => {
   });
 });
 
-describe('the MCP credentials', () => {
-  it('uses the server\'s own secret prefix, not the mock\'s rn_sec_', () => {
-    expect(SECRET_PREFIX).toBe('frt_secret_');
-    expect(maskSecret('frt_secret_4b9c1e77a03d8f2a')).toBe(`frt_secret_${'•'.repeat(12)}8f2a`);
-    expect(maskSecret('frt_secret_4b9c1e77a03d8f2a')).not.toContain('rn_sec_');
-  });
-
-  it('shows no tail at all for a secret too short to have one', () => {
-    expect(maskSecret('frt_secret_abc')).toBe(`frt_secret_${'•'.repeat(12)}`);
-  });
-
-  it('masks nothing when there is nothing to mask', () => {
-    expect(maskSecret('')).toBe('');
-    expect(maskSecret(null)).toBe('');
-  });
-
-  it('is the one client id the server validates', () => {
+describe('the MCP connector', () => {
+  it('is the pre-registered public client', () => {
     expect(MCP_CLIENT_ID).toBe('routine-notes-mcp');
   });
 
-  it('offers the four platform guides as numbered steps', () => {
+  it('offers five platform guides as numbered steps, Claude first', () => {
     const guides = platformGuides('https://mcp.example.com/mcp');
-    expect(guides.map((guide) => guide.key)).toEqual(['ChatGPT', 'n8n', 'Gemini', 'Perplexity']);
+    expect(guides.map((guide) => guide.key)).toEqual(['Claude', 'ChatGPT', 'n8n', 'Gemini', 'Perplexity']);
     guides.forEach((guide) => expect(guide.steps.length).toBeGreaterThan(2));
   });
 
-  it('substitutes the real endpoints into the n8n guide', () => {
-    const n8n = platformGuides('https://mcp.example.com/mcp').find((g) => g.key === 'n8n');
-    expect(n8n.steps.join(' ')).toContain('https://mcp.example.com/mcp/oauth/authorize');
-    expect(n8n.steps.join(' ')).toContain('https://mcp.example.com/mcp/oauth/token');
+  it('asks for no client secret anywhere: clients sign in with PKCE', () => {
+    platformGuides('https://mcp.example.com/mcp')
+      .forEach((guide) => expect(guide.steps.join(' ')).not.toMatch(/secret/i));
+  });
+
+  it('puts the real address into the one command that quotes it', () => {
+    const gemini = platformGuides('https://mcp.example.com/mcp').find((g) => g.key === 'Gemini');
+    expect(gemini.steps[0]).toContain('routine-notes https://mcp.example.com/mcp');
   });
 });
 

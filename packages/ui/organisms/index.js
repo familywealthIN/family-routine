@@ -26,6 +26,7 @@ export { default as WeekdaySelector } from './WeekdaySelector/WeekdaySelector.vu
 export { default as NextSteps } from './NextSteps/NextSteps.vue';
 export { default as QuickGoalCreation } from './QuickGoalCreation/QuickGoalCreation.vue';
 export { default as SearchResults } from './SearchResults/SearchResults.vue';
+export { default as ConnectConsent } from './ConnectConsent/ConnectConsent.vue';
 export { default as SummaryCards } from './SummaryCards/SummaryCards.vue';
 
 // Dashboard surfaces
