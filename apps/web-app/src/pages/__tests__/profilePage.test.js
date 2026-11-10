@@ -271,15 +271,19 @@ describe('ProfileTime — mounted', () => {
   it('shows the session identity, not an invented name, before the profile loads', () => {
     const el = mount({ xsOnly: true, width: 412 }).$el;
     expect(el.querySelector('[data-testid="profile-identity-name"]').textContent.trim()).toBe('Gaurav');
-    expect(el.textContent).not.toContain('Routine Notes');
+    // The setup guides name the app ("Name it Routine Notes"); nothing else may.
+    const rest = el.cloneNode(true);
+    rest.querySelector('[data-testid="connect-ai"]').remove();
+    expect(rest.textContent).not.toContain('Routine Notes');
   });
 
   it('shows Connect AI disconnected, which the design never draws', () => {
     const el = mount({ xsOnly: true, width: 412 }).$el;
     expect(el.querySelector('[data-testid="connect-ai-status"]').textContent)
       .toContain('Not connected');
-    expect(el.querySelector('[data-testid="connect-ai-value-sec"]').textContent)
-      .toContain('frt_secret_');
+    expect(el.querySelector('[data-testid="connect-ai-value-url"]').textContent)
+      .toContain('/mcp');
+    expect(el.querySelector('[data-testid="connect-ai-value-sec"]')).toBeNull();
   });
 
   it('keeps the delete gate shut until it is opened and typed into', () => {
