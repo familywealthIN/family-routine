@@ -195,3 +195,41 @@ describe('the MCP connector', () => {
     expect(res.headers.get('www-authenticate')).toMatch(/error="invalid_token"/);
   });
 });
+
+// The tests above use a plain HTTP server. On Lambda, API Gateway's events go
+// through serverless-express, which used to take the path from `{proxy+}`:
+// /.well-known/oauth-protected-resource arrived as /oauth-protected-resource.
+describe('MCP connector through API Gateway', () => {
+  const handler = new HttpMCPServer().createServerlessHandler();
+  const event = (httpMethod, path, resource, proxy, body) => ({
+    httpMethod,
+    path,
+    resource,
+    pathParameters: proxy ? { proxy } : null,
+    headers: { Host: 'mcp.routinenotes.app', 'Content-Type': 'application/json' },
+    multiValueHeaders: { Host: ['mcp.routinenotes.app'], 'Content-Type': ['application/json'] },
+    queryStringParameters: null,
+    multiValueQueryStringParameters: null,
+    requestContext: {
+      stage: 'dev', path, httpMethod, resourcePath: resource, identity: { sourceIp: '127.0.0.1' },
+    },
+    body: body || null,
+    isBase64Encoded: false,
+  });
+
+  it('serves the discovery documents at the origin root', async () => {
+    const resource = await handler(event('GET', '/.well-known/oauth-protected-resource/mcp', '/.well-known/{proxy+}', 'oauth-protected-resource/mcp'), {});
+    expect(resource.statusCode).toBe(200);
+    expect(JSON.parse(resource.body).resource).toBe('https://mcp.routinenotes.app/mcp');
+
+    const as = await handler(event('GET', '/.well-known/oauth-authorization-server', '/.well-known/{proxy+}', 'oauth-authorization-server'), {});
+    expect(as.statusCode).toBe(200);
+    expect(JSON.parse(as.body).token_endpoint).toBe('https://mcp.routinenotes.app/token');
+  });
+
+  it('keeps /mcp on a /mcp/{proxy+} route', async () => {
+    const res = await handler(event('GET', '/mcp/.well-known/mcp-configuration', '/mcp/{proxy+}', '.well-known/mcp-configuration'), {});
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body).oauth.tokenUrl).toBe('https://mcp.routinenotes.app/token');
+  });
+});

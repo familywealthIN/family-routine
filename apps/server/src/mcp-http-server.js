@@ -1002,12 +1002,24 @@ class HttpMCPServer {
     }
     return (event, context) => {
       context.callbackWaitsForEmptyEventLoop = false;
-      return this._cachedServerlessHandler(event, context);
+      return this._cachedServerlessHandler(withFullPath(event), context);
     };
   }
 }
 
-module.exports = { HttpMCPServer };
+/**
+ * serverless-express takes the path from a `{proxy+}` parameter when there is
+ * one, so `/.well-known/{proxy+}` reached Express as `/oauth-protected-resource`
+ * and `/mcp/{proxy+}` lost its `/mcp`. Drop the parameter so it uses
+ * `event.path`, the whole path (without the stage).
+ */
+function withFullPath(event) {
+  if (!event || !event.path || !event.pathParameters || !event.pathParameters.proxy) return event;
+  const { proxy, ...pathParameters } = event.pathParameters;
+  return { ...event, pathParameters };
+}
+
+module.exports = { HttpMCPServer, withFullPath };
 
 // Start the server if this file is run directly
 if (require.main === module) {
