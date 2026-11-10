@@ -52,34 +52,50 @@ provider:
     MCP_BASE_URL: ${self:custom.secrets.MCP_BASE_URL}
 
 functions:
+  # GraphQL, served as https://api.routinenotes.app/graphql (custom domain,
+  # docs/oauth-credentials.md). No `cors: true`: that answers the preflight
+  # with Access-Control-Allow-Origin: * from API Gateway. OPTIONS goes to the
+  # Lambda instead, which allows only the app's own sites and the mobile apps
+  # (src/utils/corsOrigins.js).
   query:
     handler: handler.handler
     events:
       - http:
           path: graphql
           method: post
-          cors: true
+      - http:
+          path: graphql
+          method: options
 
+  # The MCP connector (src/mcp-http-server.js), public: any AI app may call it,
+  # so CORS stays open. MCP clients sign in at the ORIGIN ROOT (/.well-known/…,
+  # /authorize, /token, /register), so it needs its custom domain,
+  # mcp.routinenotes.app, mapped to the `dev` stage with an empty base path. On
+  # the raw execute-api URL the root sits outside /dev and API Gateway answers
+  # {"message":"Forbidden"} before the Lambda runs.
   mcp:
     handler: serverless-mcp.handler
     events:
       - http:
           path: mcp
+          method: any
+          cors: true
+      - http:
+          path: mcp/{proxy+}
+          method: any
+          cors: true
+      - http:
+          path: .well-known/{proxy+}
           method: get
           cors: true
       - http:
-          path: mcp/call
+          path: authorize
+          method: get
+      - http:
+          path: token
           method: post
           cors: true
       - http:
-          path: mcp/resources
-          method: get
-          cors: true
-      - http:
-          path: mcp/tools
-          method: get
-          cors: true
-      - http:
-          path: mcp/graphql
+          path: register
           method: post
           cors: true

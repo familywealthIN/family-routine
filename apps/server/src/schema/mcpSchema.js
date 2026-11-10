@@ -118,8 +118,6 @@ type Mutation {
   # ── User ──────────────────────────────────────────────────────────────────
   # Generate a new API key for MCP / external tool access
   generateApiKey: UserItem
-  # Generate a short-lived OAuth authorization code (expires in 10 min)
-  generateOAuthCode: OAuthCode
   # Mark onboarding as complete for the authenticated user.
   # Optional 'name' lets users supply a display name during onboarding;
   # used for Apple sign-in, where Apple returns names only on first
@@ -309,11 +307,6 @@ type UserItem {
   oauthConnected: Boolean
   motto: [MottoItem]
   tags: [String]
-}
-
-type OAuthCode {
-  authCode: String
-  expiresAt: String
 }
 
 type DeleteAccountResponse {

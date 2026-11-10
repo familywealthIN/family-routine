@@ -14,6 +14,7 @@ const ai = require('./ai');
 const agent = require('./agent');
 const routineChat = require('./routineChat');
 const xp = require('./xp');
+const mcpConnect = require('./mcpConnect');
 
 const schema = new GraphQLSchema({
   query: new GraphQLObjectType({
@@ -30,6 +31,7 @@ const schema = new GraphQLSchema({
       ...agent.query,
       ...routineChat.query,
       ...xp.query,
+      ...mcpConnect.query,
     },
   }),
   mutation: new GraphQLObjectType({
@@ -46,6 +48,7 @@ const schema = new GraphQLSchema({
       ...agent.mutation,
       ...routineChat.mutation,
       ...xp.mutation,
+      ...mcpConnect.mutation,
     },
   }),
 });

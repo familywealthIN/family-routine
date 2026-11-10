@@ -5,9 +5,13 @@ const { createServer, proxy } = require('aws-serverless-express');
 const jwt = require('jsonwebtoken');
 
 const { schema } = require('./resolvers');
+const { graphqlCorsOptions, rejectForeignOrigin } = require('./utils/corsOrigins');
 
 const app = express();
-app.use(cors());
+// Only the app's own sites and the mobile apps (utils/corsOrigins.js). This
+// also answers the preflight: API Gateway passes OPTIONS through to here.
+app.use(cors(graphqlCorsOptions));
+app.use(rejectForeignOrigin);
 
 app.enable('trust proxy');
 app.disable('x-powered-by');
