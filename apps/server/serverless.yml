@@ -64,6 +64,12 @@ provider:
           Condition:
             StringEquals:
               ses:FromAddress: noreply@familywealth.in
+        # The GraphQL warm-up calls copies of itself (src/utils/warmer.js) — and
+        # nothing else.
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+          Resource: arn:aws:lambda:${aws:region}:${aws:accountId}:function:${self:service}-${sls:stage}-query
 
 functions:
   # Hourly: one email to people who missed 3 days of routines
@@ -88,6 +94,14 @@ functions:
       - http:
           path: graphql
           method: options
+      # Keep containers warm (src/utils/warmer.js): opening the app sends its
+      # first reads together, and each one that meets a cold container waits
+      # 2.6s (median) to 5.6s (p90) for it to start and reach Mongo.
+      - schedule:
+          rate: rate(5 minutes)
+          input:
+            warmer: true
+            concurrency: 6
 
   # The MCP connector (src/mcp-http-server.js), public: any AI app may call it,
   # so CORS stays open. MCP clients sign in at the ORIGIN ROOT (/.well-known/…,
