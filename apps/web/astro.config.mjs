@@ -4,7 +4,7 @@ import sitemap from '@astrojs/sitemap';
 import icon from 'astro-icon';
 
 export default defineConfig({
-  site: 'https://routinenotes.ai',
+  site: 'https://routinenotes.app',
   output: 'static',
   trailingSlash: 'ignore',
   integrations: [sitemap(), icon({ include: { ph: ['*'] } })],

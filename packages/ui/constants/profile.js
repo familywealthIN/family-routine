@@ -121,72 +121,91 @@ export function timeFormatConsequence(format) {
   return normaliseTimeFormat(format) === '12' ? '12-hour · 6:30 PM' : '24-hour · 18:30';
 }
 
-/** The one OAuth client id the server validates (`OAUTH_CLIENT_ID`'s default). */
-export const MCP_CLIENT_ID = 'routine-notes-mcp';
+/** The Always on display switch (DISPLAY card, iPad and tablets). Off sits left. */
+export const ALWAYS_ON_OPTIONS = [
+  { key: 'off', label: 'Off' },
+  { key: 'on', label: 'On' },
+];
 
-/** The server's own prefix (`mcp-http-server.js`), not the mock's `rn_sec_`. */
-export const SECRET_PREFIX = 'frt_secret_';
-
-/**
- * `frt_secret_••••••••••••a1b2` — enough to tell two secrets apart, not enough
- * to use one. Anything too short to have a tail is masked whole.
- */
-export function maskSecret(secret) {
-  const value = String(secret || '');
-  if (!value) return '';
-  const cut = value.lastIndexOf('_') + 1;
-  const head = value.slice(0, cut);
-  const tail = value.length - cut >= 8 ? value.slice(-4) : '';
-  return `${head}${'•'.repeat(12)}${tail}`;
+/** The row's line, the glyph beside the label, and the toast, for each state. */
+export function alwaysOnCopy(on) {
+  return on
+    ? {
+      sub: 'This screen stays on while Routine Notes is open',
+      icon: 'light_mode',
+      iconColor: '#f9a825',
+      toast: {
+        title: 'Always on display is on', sub: 'This screen won’t sleep while the app is open', icon: 'light_mode', color: '#ffd54f',
+      },
+    }
+    : {
+      sub: 'Keep this screen on while Routine Notes is open',
+      icon: 'bedtime',
+      iconColor: 'rgba(0, 0, 0, .4)',
+      toast: {
+        title: 'Always on display is off', sub: 'The screen sleeps as usual', icon: 'bedtime', color: '#64b5f6',
+      },
+    };
 }
 
+/** The pre-registered public client (apps/server src/utils/mcpOAuth.js STATIC_CLIENT_ID). */
+export const MCP_CLIENT_ID = 'routine-notes-mcp';
+
 /**
- * The four setup guides, as the design's numbered steps rather than the old
- * page's nested prerequisite lists. `serverUrl` is substituted in so the n8n
- * endpoints are the real ones rather than an ellipsis.
+ * The setup guides, as the design's numbered steps. Every client finds the
+ * sign-in endpoints itself from the Server URL; only n8n's form asks for the
+ * Client ID. `serverUrl` is kept as an argument for guides that quote it.
  */
 export function platformGuides(serverUrl) {
-  const base = serverUrl || '';
+  const url = serverUrl || 'the Server URL';
   return [
+    {
+      key: 'Claude',
+      label: 'Claude',
+      steps: [
+        'Open Claude → Settings → Connectors',
+        'Click Add custom connector',
+        'Name it Routine Notes and paste the Server URL',
+        'Click Connect, then Allow on the Routine Notes page',
+      ],
+    },
     {
       key: 'ChatGPT',
       label: 'ChatGPT',
       steps: [
-        'Open ChatGPT → profile → Settings → Beta features',
-        'Find MCP Servers and click Add MCP Server',
-        'Paste the Server URL, Client ID and Client Secret',
-        'Click Authorize, then Authorize again here',
+        'Settings → Apps & Connectors → Advanced → turn on Developer mode',
+        'Back in Apps & Connectors, click Create',
+        'Name it Routine Notes, paste the Server URL, choose OAuth',
+        'Click Create, then Allow on the Routine Notes page',
       ],
     },
     {
       key: 'n8n',
       label: 'n8n',
       steps: [
-        'Credentials → New credential → OAuth2 API',
-        'Grant type: Authorization Code',
-        `Auth URL ${base}/oauth/authorize · Token URL ${base}/oauth/token`,
-        'Client ID, Client Secret, scope “read write”',
-        'Connect my account, then use an HTTP Request node',
+        'Add an MCP Client Tool node to your agent',
+        'Endpoint: the Server URL · Transport: HTTP Streamable',
+        'Authentication: MCP OAuth2 → new credential',
+        'Client ID as above, then Connect my account',
+        'Allow on the Routine Notes page',
       ],
     },
     {
       key: 'Gemini',
       label: 'Gemini',
       steps: [
-        'Open Gemini → Settings → Extensions',
-        'Add Extension → Custom OAuth App / MCP Server',
-        'Paste the Server URL, Client ID and Client Secret',
-        'Click Connect',
+        `Gemini CLI: run gemini mcp add --transport http routine-notes ${url}`,
+        'Start gemini and run /mcp auth routine-notes',
+        'Allow on the Routine Notes page',
       ],
     },
     {
       key: 'Perplexity',
       label: 'Perplexity',
       steps: [
-        'Settings → Integrations → Add Integration',
-        'Choose OAuth 2.0, name it Routine Notes',
-        'Paste the Server URL, Client ID and Client Secret',
-        'Click Connect',
+        'Settings → Connectors → Add connector → Custom (remote MCP)',
+        'Name it Routine Notes and paste the Server URL',
+        'Click Connect, then Allow on the Routine Notes page',
       ],
     },
   ];
@@ -210,9 +229,9 @@ export default {
   normaliseTimeFormat,
   timeFormatPreview,
   timeFormatConsequence,
+  ALWAYS_ON_OPTIONS,
+  alwaysOnCopy,
   MCP_CLIENT_ID,
-  SECRET_PREFIX,
-  maskSecret,
   platformGuides,
   DELETE_CONFIRM_WORD,
   isDeleteConfirmed,
