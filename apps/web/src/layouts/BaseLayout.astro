@@ -9,15 +9,28 @@ interface Props {
   title?: string;
   description?: string;
   ogImage?: string;
+  /** Alt text for og:image / twitter:image. */
+  ogImageAlt?: string;
+  /** 'article' on blog posts; 'website' everywhere else. */
+  ogType?: 'website' | 'article';
+  /** Blog posts: ISO dates for article:published_time / modified_time. */
+  publishedTime?: string;
+  modifiedTime?: string;
 }
 
 const {
   title = `${SITE.name} — Show up daily. Evolve weekly.`,
   description = SITE.description,
   ogImage = '/og.png',
+  ogImageAlt,
+  ogType = 'website',
+  publishedTime,
+  modifiedTime,
 } = Astro.props;
 
-const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://routinenotes.app').toString();
+const site = Astro.site ?? 'https://routinenotes.app';
+const canonical = new URL(Astro.url.pathname, site).toString();
+const ogImageUrl = new URL(ogImage, site).toString();
 ---
 
 <!doctype html>
@@ -33,9 +46,18 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://routinenote
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content={new URL(ogImage, Astro.site ?? 'https://routinenotes.app').toString()} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:image" content={ogImageUrl} />
+    {ogImageAlt && <meta property="og:image:alt" content={ogImageAlt} />}
+    {publishedTime && <meta property="article:published_time" content={publishedTime} />}
+    {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+    {ogImageAlt && <meta name="twitter:image:alt" content={ogImageAlt} />}
+    <slot name="head" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

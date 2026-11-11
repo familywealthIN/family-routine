@@ -21,7 +21,38 @@ Astro 5 static site for **routinenotes.app**. Lives alongside the web-app
 - `/pricing` — Free vs Subscriber comparison + earn-your-way explainer
 - `/about` — Founder origin story
 
+- `/blog` — persona posts on the KDG framework and "Chat with MCP" posts, filterable by category and pillar
+- `/blog/<slug>` — one post: featured image, key takeaways, the body with its diagrams, related posts
+- `/blog/rss.xml` — RSS feed · `/llms.txt` — the guide and every post with a one-line summary
+
 Privacy and Terms are external links to `familywealth.in/*`.
+
+## Blog
+
+Posts are Markdown in `src/content/blog/` (an Astro content collection; the
+schema is `src/content.config.ts`). Besides the words, each post's frontmatter
+holds the data its pictures are drawn from: the persona's `routines` (time,
+name, points, pillar, cue), the `focus` routine and the goal `cascade`, or the
+`mcp` prompt and tool calls. `takeaways` fill the box at the top, and `howTo`
+(setup posts only) adds HowTo JSON-LD.
+
+A post whose `publishDate` is in the future is left out of the index, the
+post pages, the sitemap, the RSS feed and `llms.txt` until a build on or after
+that date (`src/lib/blogPosts.ts`).
+
+```
+node apps/web/scripts/blog-images.mjs [slug …]   # featured images → public/blog/<slug>.png
+node apps/web/scripts/blog-audit.mjs  [slug …]   # anti-slop + SEO checks; exits 1 on failure
+```
+
+`blog-images.mjs` draws each 1200×630 image from the post's frontmatter with
+sharp, in Montserrat and Plus Jakarta Sans from `scripts/fonts/` (SIL OFL).
+Re-run it after changing a post's title, persona, routines or tools, and commit
+the PNG. `blog-audit.mjs` must pass before a blog change merges: banned filler
+phrases, duplicate titles or descriptions, missing images, diagram data or alt
+text, near-duplicate posts (over 12% shared 5-word shingles), and the
+structure rules (an opening that answers the title, a worked example with real
+numbers, a "what goes wrong" section, an in-app path).
 
 ## Local development
 

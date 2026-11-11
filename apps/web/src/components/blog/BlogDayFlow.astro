@@ -1,0 +1,271 @@
+---
+import { pillarOf, windowFor, toMinutes, wrap, type Routine } from '~/lib/blog';
+
+/**
+ * The persona's day, drawn from the post's frontmatter: the routine set on a
+ * time axis (coloured by pillar, the focus routine's punctuality window shaded),
+ * then that one routine as a flow: cue → routine → ticked in the window or
+ * missed and checked in late → points to D, K and G. Inline SVG, no JS; the
+ * text stays text and the <title>/<desc> say the same thing in words.
+ */
+interface Props {
+  slug: string;
+  persona: string;
+  routines: Routine[];
+  focus: string;
+}
+const { slug, persona, routines, focus } = Astro.props;
+const r = routines.find((x) => x.name === focus) ?? routines[0];
+const win = windowFor(r.time);
+const p = pillarOf(r.pillar);
+const id = `day-${slug}`;
+const who = persona.charAt(0).toLowerCase() + persona.slice(1);
+
+// --- the time axis -------------------------------------------------------
+const TW = 600;
+const tx0 = 20;
+const tx1 = TW - 20;
+const mins = routines.map((x) => toMinutes(x.time));
+let start = Math.max(0, Math.floor(Math.min(...mins) / 60) * 60 - 60);
+let end = Math.min(1440, Math.ceil(Math.max(...mins) / 60) * 60 + 60);
+if (end - start < 360) end = Math.min(1440, start + 360);
+const tx = (m: number) => tx0 + ((Math.min(Math.max(m, start), end) - start) / (end - start)) * (tx1 - tx0);
+const span = (end - start) / 60;
+const step = span > 16 ? 4 : span > 9 ? 3 : 2;
+const hours: number[] = [];
+for (let h = Math.ceil(start / 60); h * 60 <= end; h += step) hours.push(h);
+const sorted = routines.map((x) => ({ ...x, m: toMinutes(x.time) })).sort((a, b) => a.m - b.m);
+const blocks = sorted.map((x, i) => {
+  const next = sorted[i + 1] ? sorted[i + 1].m : x.m + 60;
+  return { ...x, x: tx(x.m), w: Math.max(7, Math.min(tx(next) - tx(x.m) - 3, 90)), color: pillarOf(x.pillar).color };
+});
+const fm = toMinutes(r.time);
+const band = { x: tx(fm - 60), w: tx(fm + 30) - tx(fm - 60) };
+const bandLabelX = Math.min(Math.max(band.x + band.w / 2, 80), TW - 80);
+const focusLabel = `${r.time} ${r.name}`;
+const labelX = Math.min(Math.max(tx(fm), tx0 + 4), tx1 - focusLabel.length * 9.5);
+
+// --- the flow ------------------------------------------------------------
+const FW = 420;
+const cueLines = wrap(r.cue, 40, 2);
+const b1 = { y: 0, h: 50 + cueLines.length * 20 };
+const a1 = b1.y + b1.h;
+const b2 = { y: a1 + 30, h: 90 };
+const split = b2.y + b2.h;
+const b3 = { y: split + 34, h: 132 };
+const merge = b3.y + b3.h;
+const b4 = { y: merge + 34, h: 102 };
+const FH = b4.y + b4.h + 2;
+const chips = [
+  { k: 'D', label: `+${r.points} on time`, color: pillarOf('D').color },
+  { k: 'K', label: 'steps + tasks', color: pillarOf('K').color },
+  { k: 'G', label: 'linked goals', color: pillarOf('G').color },
+];
+
+const stripTitle = `The ${who}'s routines on a time axis`;
+const stripDesc =
+  `${routines.length} routines, ${routines.reduce((s, x) => s + x.points, 0)} points in all: ` +
+  sorted.map((x) => `${x.time} ${x.name}, ${x.points} points, ${pillarOf(x.pillar).name}`).join('; ') +
+  `. The ${r.name} window, ${win.open} to ${win.close}, is shaded.`;
+const title = `The ${who}'s day: cue, routine, tick or late check-in, points`;
+const desc =
+  `The ${r.name} routine at ${r.time} starts with the cue "${r.cue}". Ticked between ${win.open} and ${win.close}, it earns ${r.points} Discipline points; ` +
+  `after ${win.close} it moves to Past, where a late check-in the same day costs ${r.points} points, keeps the streak and still runs its agents. ` +
+  `Its steps and quick tasks earn Kinetics, its linked goal items earn Geniuses, and the day's points settle overnight.`;
+---
+
+<figure class="bd card-soft not-prose">
+  <p class="bd__eyebrow">The day, as a flow</p>
+
+  <svg class="bd__strip" viewBox={`0 0 ${TW} 132`} role="img" aria-labelledby={`${id}-t ${id}-d`}>
+    <title id={`${id}-t`}>{stripTitle}</title>
+    <desc id={`${id}-d`}>{stripDesc}</desc>
+    <rect x={band.x} y="30" width={band.w} height="66" rx="8" class="bd-band" />
+    <text x={bandLabelX} y="108" text-anchor="middle" class="bd-band-label">on time {win.open}–{win.close}</text>
+    {blocks.map((b) => (
+      <rect x={b.x} y="52" width={b.w} height="26" rx="5" fill={b.color} class:list={[b.name === r.name && 'bd-focus']} />
+    ))}
+    <text x={labelX} y="40" class="bd-focus-label">{focusLabel}</text>
+    <line x1={tx0} y1="86" x2={tx1} y2="86" class="bd-axis" />
+    {hours.map((h) => (
+      <text x={tx(h * 60)} y="128" text-anchor="middle" class="bd-hour">{String(h).padStart(2, '0')}:00</text>
+    ))}
+  </svg>
+
+  <svg class="bd__flow" viewBox={`0 0 ${FW} ${FH}`} role="img" aria-labelledby={`${id}-ft ${id}-fd`}>
+    <title id={`${id}-ft`}>{title}</title>
+    <desc id={`${id}-fd`}>{desc}</desc>
+    <defs>
+      <marker id={`${id}-arrow`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" class="bd-arrowhead" />
+      </marker>
+    </defs>
+
+    <!-- 1 cue -->
+    <rect x="1" y={b1.y + 1} width={FW - 2} height={b1.h - 2} rx="14" class="bd-box" />
+    <text x="18" y={b1.y + 26} class="bd-eye">1 · Step 1, the cue</text>
+    {cueLines.map((l, i) => <text x="18" y={b1.y + 50 + i * 20} class="bd-main">{l}</text>)}
+
+    <path d={`M${FW / 2} ${a1 + 2} V${b2.y - 4}`} class="bd-line" marker-end={`url(#${id}-arrow)`} />
+
+    <!-- 2 routine -->
+    <rect x="1" y={b2.y + 1} width={FW - 2} height={b2.h - 2} rx="14" class="bd-box bd-box--routine" style={`stroke:${p.color}`} />
+    <text x="18" y={b2.y + 26} class="bd-eye">2 · The routine</text>
+    <text x="18" y={b2.y + 52} class="bd-main">{wrap(`${r.name} at ${r.time}`, 40, 1)[0]}</text>
+    <text x="18" y={b2.y + 74} class="bd-sub">Window {win.open}–{win.close} · {r.points} points · {p.name}</text>
+
+    <path d={`M${FW / 2} ${split + 2} V${split + 14} H${FW * 0.25} V${b3.y - 4}`} class="bd-line" marker-end={`url(#${id}-arrow)`} />
+    <path d={`M${FW / 2} ${split + 14} H${FW * 0.75} V${b3.y - 4}`} class="bd-line bd-line--late" marker-end={`url(#${id}-arrow)`} />
+
+    <!-- 3a on time / 3b late -->
+    <rect x="1" y={b3.y + 1} width={FW / 2 - 9} height={b3.h - 2} rx="14" class="bd-box" />
+    <text x="16" y={b3.y + 26} class="bd-eye">3 · Ticked by {win.close}</text>
+    <text x="16" y={b3.y + 52} class="bd-main">On time</text>
+    <text x="16" y={b3.y + 74} class="bd-sub">+{r.points} Discipline</text>
+    <text x="16" y={b3.y + 94} class="bd-sub">steps earn Kinetics</text>
+    <text x="16" y={b3.y + 114} class="bd-sub">agents start</text>
+
+    <rect x={FW / 2 + 8} y={b3.y + 1} width={FW / 2 - 9} height={b3.h - 2} rx="14" class="bd-box bd-box--late" />
+    <text x={FW / 2 + 23} y={b3.y + 26} class="bd-eye">3 · Missed {win.close}</text>
+    <text x={FW / 2 + 23} y={b3.y + 52} class="bd-main">Moves to Past</text>
+    <text x={FW / 2 + 23} y={b3.y + 74} class="bd-sub">check in late today</text>
+    <text x={FW / 2 + 23} y={b3.y + 94} class="bd-sub">costs {r.points} points</text>
+    <text x={FW / 2 + 23} y={b3.y + 114} class="bd-sub">streak kept, agents run</text>
+
+    <path d={`M${FW * 0.25} ${merge + 2} V${merge + 16} H${FW / 2} V${b4.y - 4}`} class="bd-line" marker-end={`url(#${id}-arrow)`} />
+    <path d={`M${FW * 0.75} ${merge + 2} V${merge + 16} H${FW / 2}`} class="bd-line bd-line--late" />
+
+    <!-- 4 points -->
+    <rect x="1" y={b4.y + 1} width={FW - 2} height={b4.h - 2} rx="14" class="bd-box" />
+    <text x="18" y={b4.y + 26} class="bd-eye">4 · Points, settled overnight</text>
+    {chips.map((c, i) => (
+      <g>
+        <rect x={18 + i * 132} y={b4.y + 40} width="122" height="44" rx="10" class="bd-chip" style={`stroke:${c.color}`} />
+        <text x={30 + i * 132} y={b4.y + 67} class="bd-chip-k" style={`fill:${c.color}`}>{c.k}</text>
+        <text x={48 + i * 132} y={b4.y + 67} class="bd-chip-t">{c.label}</text>
+      </g>
+    ))}
+  </svg>
+
+  <figcaption class="bd__caption">
+    {r.name} at {r.time}: on time from {win.open} to {win.close}. Miss it and the same-day late check-in costs {r.points} points.
+  </figcaption>
+</figure>
+
+<style>
+  .bd {
+    padding: 1.4rem 1.25rem 1.1rem;
+    margin: 2.25rem 0;
+  }
+  .bd__eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-brand-600);
+  }
+  .bd__strip {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-top: 0.75rem;
+  }
+  .bd__flow {
+    display: block;
+    width: 100%;
+    max-width: 440px;
+    height: auto;
+    margin: 1.25rem auto 0;
+  }
+  .bd__caption {
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px dashed var(--color-ink-100);
+    font-size: 13.5px;
+    color: var(--color-ink-500);
+    text-align: center;
+  }
+  .bd-band {
+    fill: var(--color-brand-50);
+    stroke: var(--color-brand-200);
+    stroke-dasharray: 4 4;
+  }
+  .bd-band-label {
+    font-size: 13px;
+    font-weight: 600;
+    fill: var(--color-brand-600);
+  }
+  .bd-focus {
+    stroke: var(--color-ink-900);
+    stroke-width: 2.5;
+  }
+  .bd-focus-label {
+    font-size: 16px;
+    font-weight: 700;
+    fill: var(--color-ink-900);
+  }
+  .bd-axis {
+    stroke: var(--color-ink-200);
+    stroke-width: 2;
+  }
+  .bd-hour {
+    font-size: 13px;
+    font-weight: 500;
+    fill: var(--color-ink-400);
+  }
+  .bd-box {
+    fill: var(--color-surface);
+    stroke: var(--color-ink-100);
+    stroke-width: 1.5;
+  }
+  .bd-box--routine {
+    stroke-width: 2.5;
+  }
+  .bd-box--late {
+    fill: var(--color-surface-soft);
+    stroke-dasharray: 5 4;
+    stroke: var(--color-ink-200);
+  }
+  .bd-eye {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    fill: var(--color-ink-400);
+  }
+  .bd-main {
+    font-size: 16px;
+    font-weight: 700;
+    fill: var(--color-ink-900);
+  }
+  .bd-sub {
+    font-size: 13px;
+    font-weight: 500;
+    fill: var(--color-ink-600);
+  }
+  .bd-line {
+    fill: none;
+    stroke: var(--color-ink-300);
+    stroke-width: 2;
+  }
+  .bd-line--late {
+    stroke-dasharray: 5 4;
+  }
+  .bd-arrowhead {
+    fill: var(--color-ink-300);
+  }
+  .bd-chip {
+    fill: var(--color-surface);
+    stroke-width: 1.5;
+  }
+  .bd-chip-k {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .bd-chip-t {
+    font-size: 11.5px;
+    font-weight: 600;
+    fill: var(--color-ink-700);
+  }
+</style>

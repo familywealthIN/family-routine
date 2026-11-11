@@ -1,0 +1,227 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import FinalCta from '~/components/sections/FinalCta.astro';
+import BlogCard from '~/components/blog/BlogCard.astro';
+import { Icon } from 'astro-icon/components';
+import { getPublishedPosts } from '~/lib/blogPosts';
+import { CATEGORIES, PILLARS } from '~/lib/blog';
+
+/**
+ * The blog index: a short lede, two filter rows (who the post is for, and
+ * which KDG pillar it leans on) and the cards. The filters are progressive:
+ * without JS every card shows; with it, ?category= and ?pillar= in the URL
+ * pick the tab so a filtered view can be shared.
+ */
+const posts = await getPublishedPosts();
+const site = Astro.site ?? new URL('https://routinenotes.app');
+const ld = {
+  '@context': 'https://schema.org',
+  '@type': 'Blog',
+  name: 'Routine Notes Blog',
+  url: new URL('/blog/', site).toString(),
+  publisher: { '@type': 'Organization', name: 'Routine Notes', url: site.toString() },
+  blogPost: posts.map((p) => ({
+    '@type': 'BlogPosting',
+    headline: p.data.title,
+    url: new URL(`/blog/${p.id}/`, site).toString(),
+    datePublished: p.data.publishDate.toISOString(),
+  })),
+};
+const countBy = (key: 'category' | 'pillar', id: string) => posts.filter((p) => p.data[key] === id).length;
+---
+
+<BaseLayout
+  title="The Blog — Routine Notes"
+  description="How different people put the KDG evolution framework to work in Routine Notes: routines, points and goals for real-life schedules, and ways to chat with your routines over MCP."
+>
+  <Fragment slot="head">
+    <link rel="alternate" type="application/rss+xml" title="Routine Notes Blog" href="/blog/rss.xml" />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(ld)} />
+  </Fragment>
+  <section class="relative pt-20 pb-10 overflow-hidden">
+    <div class="absolute inset-0 -z-10 pointer-events-none">
+      <div
+        class="absolute -top-24 left-1/2 -translate-x-1/2 h-[480px] w-[760px] rounded-full blur-3xl opacity-45"
+        style="background:radial-gradient(circle, rgba(40,139,213,0.20), rgba(40,139,213,0) 70%)"
+      >
+      </div>
+      <div class="absolute inset-0 opacity-[0.5]" style="background-image:radial-gradient(rgba(40,139,213,0.10) 1px,transparent 1px);background-size:28px 28px"></div>
+    </div>
+
+    <div class="container-page" data-reveal>
+      <span class="pill">
+        <Icon name="ph:notebook" width={14} height={14} />
+        The blog
+      </span>
+      <h1 class="mt-6 max-w-3xl text-5xl sm:text-6xl lg:text-7xl font-semibold leading-[1.02]">
+        One framework.<br />
+        <span class="italic font-display text-[color:var(--color-brand-600)]">Many lives.</span>
+      </h1>
+      <p class="mt-6 max-w-2xl text-lg text-[color:var(--color-ink-600)] leading-relaxed">
+        How different people set up routines, points and goals to show up, do the work and improve
+        the plan, plus a few ways to chat with your routines over MCP. Every persona here is an
+        illustrative composite.
+      </p>
+    </div>
+  </section>
+
+  <section class="container-page pb-16" data-blog-index>
+    <div class="space-y-3" data-reveal>
+      <div class="blog-filter" role="group" aria-label="Filter by who the post is for">
+        <button type="button" class="blog-chip" data-filter-category="all" aria-pressed="true">
+          All <span class="blog-chip__n">{posts.length}</span>
+        </button>
+        {CATEGORIES.map((c) => (
+          <button type="button" class="blog-chip" data-filter-category={c.id} aria-pressed="false">
+            <Icon name={c.icon} width={15} height={15} />
+            {c.label} <span class="blog-chip__n">{countBy('category', c.id)}</span>
+          </button>
+        ))}
+      </div>
+      <div class="blog-filter" role="group" aria-label="Filter by KDG pillar">
+        <button type="button" class="blog-chip blog-chip--small" data-filter-pillar="all" aria-pressed="true">
+          Every pillar
+        </button>
+        {PILLARS.map((p) => (
+          <button type="button" class="blog-chip blog-chip--small" data-filter-pillar={p.id} aria-pressed="false">
+            <b class="font-display" style={`color:${p.color}`}>{p.id}</b>
+            {p.name} <span class="blog-chip__n">{countBy('pillar', p.id)}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <p class="mt-8 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-ink-500)]" aria-live="polite" data-blog-count>
+      {posts.length} posts
+    </p>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-reveal>
+      {posts.map((post) => <BlogCard post={post} />)}
+    </div>
+
+    <div class="card-soft mt-4 p-8 text-center" data-blog-empty hidden>
+      <p class="font-semibold text-[color:var(--color-ink-900)]">No posts in this mix yet.</p>
+      <p class="mt-1 text-sm text-[color:var(--color-ink-500)]">Try another pillar, or show every post.</p>
+    </div>
+  </section>
+
+  <FinalCta />
+</BaseLayout>
+
+<script>
+  type Filter = 'category' | 'pillar';
+
+  function initBlogIndex() {
+    const root = document.querySelector<HTMLElement>('[data-blog-index]');
+    if (!root || root.dataset.ready) return;
+    root.dataset.ready = '1';
+
+    const cards = Array.from(root.querySelectorAll<HTMLElement>('[data-post]'));
+    const buttons = {
+      category: Array.from(root.querySelectorAll<HTMLButtonElement>('[data-filter-category]')),
+      pillar: Array.from(root.querySelectorAll<HTMLButtonElement>('[data-filter-pillar]')),
+    };
+    const empty = root.querySelector<HTMLElement>('[data-blog-empty]');
+    const count = root.querySelector<HTMLElement>('[data-blog-count]');
+
+    const valid = (key: Filter, value: string | null) =>
+      value && buttons[key].some((b) => b.dataset[key === 'category' ? 'filterCategory' : 'filterPillar'] === value)
+        ? value
+        : 'all';
+    const params = new URLSearchParams(window.location.search);
+    const state: Record<Filter, string> = {
+      category: valid('category', params.get('category')),
+      pillar: valid('pillar', params.get('pillar')),
+    };
+
+    const apply = (updateUrl: boolean) => {
+      let shown = 0;
+      cards.forEach((card) => {
+        const match =
+          (state.category === 'all' || card.dataset.category === state.category) &&
+          (state.pillar === 'all' || card.dataset.pillar === state.pillar);
+        card.hidden = !match;
+        if (match) shown += 1;
+      });
+      buttons.category.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filterCategory === state.category)));
+      buttons.pillar.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filterPillar === state.pillar)));
+      if (empty) empty.hidden = shown > 0;
+      if (count) count.textContent = `${shown} post${shown === 1 ? '' : 's'}`;
+
+      if (updateUrl) {
+        const query = new URLSearchParams();
+        if (state.category !== 'all') query.set('category', state.category);
+        if (state.pillar !== 'all') query.set('pillar', state.pillar);
+        const search = query.toString();
+        history.replaceState(history.state, '', search ? `?${search}` : window.location.pathname);
+      }
+    };
+
+    buttons.category.forEach((b) =>
+      b.addEventListener('click', () => {
+        state.category = b.dataset.filterCategory || 'all';
+        apply(true);
+      }),
+    );
+    buttons.pillar.forEach((b) =>
+      b.addEventListener('click', () => {
+        state.pillar = b.dataset.filterPillar || 'all';
+        apply(true);
+      }),
+    );
+
+    apply(false);
+  }
+
+  document.addEventListener('astro:page-load', initBlogIndex);
+</script>
+
+<style>
+  .blog-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .blog-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--color-ink-100);
+    background: var(--color-surface-soft);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-ink-700);
+    cursor: pointer;
+    transition: border-color 160ms var(--ease-out-soft), color 160ms var(--ease-out-soft),
+      background 160ms var(--ease-out-soft);
+  }
+  .blog-chip:hover {
+    border-color: var(--color-brand-300);
+    color: var(--color-brand-700);
+  }
+  .blog-chip:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+  .blog-chip[aria-pressed='true'] {
+    background: var(--color-brand-50);
+    border-color: var(--color-brand-300);
+    color: var(--color-brand-700);
+  }
+  .blog-chip--small {
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+  .blog-chip__n {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-ink-400);
+    font-variant-numeric: tabular-nums;
+  }
+  .blog-chip[aria-pressed='true'] .blog-chip__n {
+    color: var(--color-brand-500);
+  }
+</style>

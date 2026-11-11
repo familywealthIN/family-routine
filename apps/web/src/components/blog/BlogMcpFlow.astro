@@ -1,0 +1,203 @@
+---
+import { wrap } from '~/lib/blog';
+
+/**
+ * How one MCP chat reaches Routine Notes, from the post's frontmatter: your
+ * prompt → the AI app → mcp.routinenotes.app (OAuth sign-in, Allow once) →
+ * the tool calls in order → your account, and the answer back. Inline SVG,
+ * no JS, real <title>/<desc>.
+ */
+interface Props {
+  slug: string;
+  mcp: { client?: string; prompt: string; tools: readonly string[] };
+}
+const { slug, mcp } = Astro.props;
+const client = mcp.client || 'Claude';
+const id = `mcp-${slug}`;
+
+const W = 420;
+const promptLines = wrap(`“${mcp.prompt}”`, 42, 3);
+const b1 = { y: 0, h: 44 + promptLines.length * 20 };
+const b2 = { y: b1.y + b1.h + 30, h: 74 };
+const b3 = { y: b2.y + b2.h + 46, h: 74 };
+const b4 = { y: b3.y + b3.h + 30, h: 46 + mcp.tools.length * 30 };
+const b5 = { y: b4.y + b4.h + 30, h: 74 };
+const H = b5.y + b5.h + 2;
+const MAIN = W - 46; // room on the right for the answer's return path
+
+const title = `How ${client} answers from Routine Notes over MCP`;
+const desc =
+  `You ask ${client}: "${mcp.prompt}". ${client} reaches the Routine Notes connector at mcp.routinenotes.app/mcp, ` +
+  `signed in with OAuth after you clicked Allow once, and calls ${mcp.tools.length} tool${mcp.tools.length === 1 ? '' : 's'} in order: ${mcp.tools.join(', ')}. ` +
+  `The tools read or change your own routines, goals and points, and ${client} answers from that data.`;
+---
+
+<figure class="bm card-soft not-prose">
+  <p class="bm__eyebrow">The chat, as a flow</p>
+  <svg class="bm__svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby={`${id}-t ${id}-d`}>
+    <title id={`${id}-t`}>{title}</title>
+    <desc id={`${id}-d`}>{desc}</desc>
+    <defs>
+      <marker id={`${id}-arrow`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" class="bm-arrowhead" />
+      </marker>
+    </defs>
+
+    <!-- 1 the prompt -->
+    <rect x="1" y={b1.y + 1} width={MAIN - 2} height={b1.h - 2} rx="16" class="bm-box bm-box--you" />
+    <text x="18" y={b1.y + 24} class="bm-eye">1 · You ask</text>
+    {promptLines.map((l, i) => <text x="18" y={b1.y + 46 + i * 20} class="bm-prompt">{l}</text>)}
+    <path d={`M${MAIN / 2} ${b1.y + b1.h + 2} V${b2.y - 4}`} class="bm-line" marker-end={`url(#${id}-arrow)`} />
+
+    <!-- 2 the AI app -->
+    <rect x="1" y={b2.y + 1} width={MAIN - 2} height={b2.h - 2} rx="14" class="bm-box bm-box--client" />
+    <text x="18" y={b2.y + 26} class="bm-eye bm-eye--light">2 · The AI app</text>
+    <text x="18" y={b2.y + 52} class="bm-main bm-main--light">{client} picks the tools</text>
+
+    <path d={`M${MAIN / 2} ${b2.y + b2.h + 2} V${b3.y - 4}`} class="bm-line" marker-end={`url(#${id}-arrow)`} />
+    <rect x={MAIN / 2 + 12} y={b2.y + b2.h + 10} width="168" height="26" rx="13" class="bm-pill" />
+    <text x={MAIN / 2 + 96} y={b2.y + b2.h + 28} text-anchor="middle" class="bm-pill-t">OAuth · you Allow once</text>
+
+    <!-- 3 the connector -->
+    <rect x="1" y={b3.y + 1} width={MAIN - 2} height={b3.h - 2} rx="14" class="bm-box bm-box--server" />
+    <text x="18" y={b3.y + 26} class="bm-eye">3 · The connector</text>
+    <text x="18" y={b3.y + 52} class="bm-main">mcp.routinenotes.app/mcp</text>
+    <path d={`M${MAIN / 2} ${b3.y + b3.h + 2} V${b4.y - 4}`} class="bm-line" marker-end={`url(#${id}-arrow)`} />
+
+    <!-- 4 the tool calls -->
+    <rect x="1" y={b4.y + 1} width={MAIN - 2} height={b4.h - 2} rx="14" class="bm-box" />
+    <text x="18" y={b4.y + 26} class="bm-eye">4 · Tool calls, in order</text>
+    {mcp.tools.map((t, i) => (
+      <g>
+        <circle cx="29" cy={b4.y + 48 + i * 30} r="10" class="bm-n" />
+        <text x="29" y={b4.y + 52 + i * 30} text-anchor="middle" class="bm-n-t">{i + 1}</text>
+        <text x="48" y={b4.y + 53 + i * 30} class="bm-tool">{t}</text>
+      </g>
+    ))}
+    <path d={`M${MAIN / 2} ${b4.y + b4.h + 2} V${b5.y - 4}`} class="bm-line" marker-end={`url(#${id}-arrow)`} />
+
+    <!-- 5 the account -->
+    <rect x="1" y={b5.y + 1} width={MAIN - 2} height={b5.h - 2} rx="14" class="bm-box bm-box--app" />
+    <text x="18" y={b5.y + 26} class="bm-eye bm-eye--light">5 · Your Routine Notes</text>
+    <text x="18" y={b5.y + 52} class="bm-main bm-main--light">routines · goals · points</text>
+
+    <!-- the answer goes back up to the AI app -->
+    <path d={`M${MAIN + 2} ${b5.y + b5.h / 2} H${W - 26} V${b2.y + b2.h / 2} H${MAIN + 8}`} class="bm-line bm-line--back" marker-end={`url(#${id}-arrow)`} />
+    <text x={W - 6} y={(b2.y + b5.y + b5.h) / 2} text-anchor="middle" class="bm-back-t" transform={`rotate(-90 ${W - 6} ${(b2.y + b5.y + b5.h) / 2})`}>the answer, from your data</text>
+  </svg>
+  <figcaption class="bm__caption">
+    {mcp.tools.length} tool call{mcp.tools.length === 1 ? '' : 's'} through one connector. Ticking routines on time stays in the app.
+  </figcaption>
+</figure>
+
+<style>
+  .bm {
+    padding: 1.4rem 1.25rem 1.1rem;
+    margin: 2.25rem 0;
+  }
+  .bm__eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-brand-600);
+  }
+  .bm__svg {
+    display: block;
+    width: 100%;
+    max-width: 440px;
+    height: auto;
+    margin: 1rem auto 0;
+  }
+  .bm__caption {
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px dashed var(--color-ink-100);
+    font-size: 13.5px;
+    color: var(--color-ink-500);
+    text-align: center;
+  }
+  .bm-box {
+    fill: var(--color-surface);
+    stroke: var(--color-ink-100);
+    stroke-width: 1.5;
+  }
+  .bm-box--you {
+    fill: var(--color-surface-soft);
+  }
+  .bm-box--client {
+    fill: var(--color-ink-900);
+    stroke: none;
+  }
+  .bm-box--server {
+    fill: var(--color-brand-50);
+    stroke: var(--color-brand-200);
+  }
+  .bm-box--app {
+    fill: var(--color-brand-500);
+    stroke: none;
+  }
+  .bm-eye {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    fill: var(--color-ink-400);
+  }
+  .bm-eye--light {
+    fill: rgb(255 255 255 / 0.7);
+  }
+  .bm-main {
+    font-size: 16px;
+    font-weight: 700;
+    fill: var(--color-ink-900);
+  }
+  .bm-main--light {
+    fill: #fff;
+  }
+  .bm-prompt {
+    font-size: 14.5px;
+    font-weight: 600;
+    fill: var(--color-ink-800);
+  }
+  .bm-tool {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13.5px;
+    font-weight: 600;
+    fill: var(--color-brand-800);
+  }
+  .bm-n {
+    fill: var(--color-brand-50);
+    stroke: var(--color-brand-200);
+  }
+  .bm-n-t {
+    font-size: 11px;
+    font-weight: 700;
+    fill: var(--color-brand-700);
+  }
+  .bm-line {
+    fill: none;
+    stroke: var(--color-ink-300);
+    stroke-width: 2;
+  }
+  .bm-line--back {
+    stroke-dasharray: 5 4;
+  }
+  .bm-arrowhead {
+    fill: var(--color-ink-300);
+  }
+  .bm-pill {
+    fill: var(--color-surface);
+    stroke: var(--color-ink-200);
+  }
+  .bm-pill-t {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--color-ink-600);
+  }
+  .bm-back-t {
+    font-size: 11px;
+    font-weight: 600;
+    fill: var(--color-ink-400);
+  }
+</style>
