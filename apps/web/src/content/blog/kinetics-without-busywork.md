@@ -4,7 +4,7 @@ description: "Over-planners pile steps onto routines until the checklist is nois
 category: playbook
 persona: "Over-planner"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-11
 readingTime: 4
 tags: ["kinetics", "steps", "checklists", "playbook"]
 takeaways:

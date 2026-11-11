@@ -4,7 +4,7 @@ description: "A night-shift nurse lays routines on each calendar day rather than
 category: work
 persona: "Night-shift nurse"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-12
 readingTime: 4
 tags: ["shift-work", "night-shift", "skip-day", "anchors"]
 takeaways:

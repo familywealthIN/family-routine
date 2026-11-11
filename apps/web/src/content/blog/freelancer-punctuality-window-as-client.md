@@ -4,7 +4,7 @@ description: "A freelance developer with no fixed hours turns client blocks into
 category: work
 persona: "Freelance developer"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-02
 readingTime: 4
 tags: ["freelance", "punctuality", "agents", "client-work"]
 takeaways:

@@ -4,7 +4,7 @@ description: "A retail manager moving into UX research turns one year goal into 
 category: life
 persona: "Career switcher"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-13
 readingTime: 4
 tags: ["career-change", "learning-plan", "portfolio", "year-goal"]
 takeaways:

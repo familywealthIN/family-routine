@@ -4,7 +4,7 @@ description: "A data-minded user reads the Progress page once a week: D, K and G
 category: playbook
 persona: "Data-minded user"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-21
 readingTime: 4
 tags: ["progress", "weekly-review", "discipline", "playbook"]
 takeaways:

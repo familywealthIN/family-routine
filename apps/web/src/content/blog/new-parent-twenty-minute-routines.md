@@ -4,7 +4,7 @@ description: "How a new parent keeps a routine list that survives feeds, naps an
 category: home
 persona: "New parent"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-08
 readingTime: 4
 tags: ["new-parent", "short-routines", "skip-day", "late-check-in"]
 takeaways:

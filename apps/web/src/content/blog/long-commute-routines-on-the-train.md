@@ -4,7 +4,7 @@ description: "A long-distance commuter gives each leg of the trip its own routin
 category: life
 persona: "Long-distance commuter"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-04
 readingTime: 4
 tags: ["commute", "reading", "kinetics", "quick-tasks"]
 takeaways:

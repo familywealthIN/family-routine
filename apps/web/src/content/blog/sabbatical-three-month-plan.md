@@ -4,7 +4,7 @@ description: "Someone on a three-month sabbatical gives each month a theme (rest
 category: life
 persona: "Someone on sabbatical"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-18
 readingTime: 4
 tags: ["sabbatical", "seasonal-plan", "month-goals", "themes"]
 takeaways:

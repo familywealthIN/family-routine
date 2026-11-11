@@ -4,7 +4,7 @@ description: "A writer builds a blogging habit around a 19:00 routine, keeps a t
 category: mind
 persona: "Writer building a blog habit"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-25
 readingTime: 3
 tags: ["writing", "evening", "discipline", "blogging"]
 takeaways:

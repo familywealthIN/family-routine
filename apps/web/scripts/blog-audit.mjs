@@ -12,6 +12,8 @@
  *   - duplicate titles or meta descriptions;
  *   - a missing featured image (public/blog/<slug>.png), missing diagram data
  *     (routines + focus + cascade, or mcp for "Chat with MCP" posts) or image alt text;
+ *   - a link to /blog/<slug> that has no post, or whose post goes live after
+ *     this one (posts are drip-published by publishDate; the link would 404);
  *   - any pair of posts sharing more than 12% of their 5-word shingles
  *     (shared shingles / the smaller post's shingles, prose only);
  *   - structure: first two sentences that don't answer the title, no worked
@@ -228,6 +230,18 @@ for (const key of ['title', 'description']) {
       fail(p.slug, `duplicate ${key} with ${seen.get(v)}`);
       fail(seen.get(v), `duplicate ${key} with ${p.slug}`);
     } else seen.set(v, p.slug);
+  }
+}
+
+// links between posts: the target exists and is live no later than the source
+const dayOf = (p) => new Date(p.data?.publishDate || 0).toISOString().slice(0, 10);
+const bySlug = new Map(posts.map((p) => [p.slug, p]));
+for (const p of posts) {
+  if (!p.body) continue;
+  for (const [, target] of p.body.matchAll(/\]\(\/blog\/([a-z0-9-]+)\/?[)#]/g)) {
+    const t = bySlug.get(target);
+    if (!t) fail(p.slug, `links to /blog/${target}, which has no post`);
+    else if (dayOf(t) > dayOf(p)) fail(p.slug, `links to /blog/${target}, which goes live ${dayOf(t)}, after this post (${dayOf(p)})`);
   }
 }
 

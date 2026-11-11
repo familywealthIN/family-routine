@@ -4,7 +4,7 @@ description: "Use area: and project: tags to give every routine an owner, get a 
 category: playbook
 persona: "Person juggling too many projects"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-03
 readingTime: 4
 tags: ["tags", "areas", "projects", "before-you-start"]
 takeaways:

@@ -4,7 +4,7 @@ description: "A remote worker with clients six hours apart keeps a fixed local m
 category: life
 persona: "Remote worker with clients in two time zones"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-18
 readingTime: 4
 tags: ["remote-work", "time-zones", "discipline", "re-timing"]
 takeaways:

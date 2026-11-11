@@ -4,7 +4,7 @@ description: "An amateur pianist builds a practice routine whose steps run warm-
 category: mind
 persona: "Amateur pianist"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-07
 readingTime: 3
 tags: ["music", "practice", "kinetics", "steps"]
 takeaways:

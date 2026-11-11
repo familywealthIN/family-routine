@@ -4,7 +4,7 @@ description: "An evening journaler sends the End of day progress notification ju
 category: mind
 persona: "Evening journaler"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-09
 readingTime: 3
 tags: ["journaling", "evening", "reflection", "notifications"]
 takeaways:

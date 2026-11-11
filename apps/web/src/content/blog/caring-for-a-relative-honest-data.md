@@ -4,7 +4,7 @@ description: "A family carer sorts days into ordinary, late and lost, and uses l
 category: home
 persona: "Family carer"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-20
 readingTime: 4
 tags: ["carer", "skip-day", "late-check-in", "honest-data"]
 takeaways:

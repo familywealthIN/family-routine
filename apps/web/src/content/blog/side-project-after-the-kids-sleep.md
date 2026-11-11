@@ -4,7 +4,7 @@ description: "A parent with a day job runs a side project from one late-evening 
 category: life
 persona: "Parent with a side project"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-22
 readingTime: 4
 tags: ["side-project", "evening-routine", "week-goal", "shipping"]
 takeaways:

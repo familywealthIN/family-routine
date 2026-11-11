@@ -4,7 +4,7 @@ description: "Someone working on their listening gives each month one theme, and
 category: mind
 persona: "Someone working on their listening skills"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-01
 readingTime: 4
 tags: ["listening", "year-goal", "relationships", "monthly-themes"]
 takeaways:

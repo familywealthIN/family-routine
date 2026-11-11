@@ -4,7 +4,7 @@ description: "An amateur footballer runs one evening routine every day: training
 category: body
 persona: "Amateur footballer"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-23
 readingTime: 4
 tags: ["team-sport", "punctuality-window", "skip-day", "evening"]
 takeaways:

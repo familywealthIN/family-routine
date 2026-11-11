@@ -4,7 +4,7 @@ description: "How a meditation practitioner keeps a short daily sit unchanged, g
 category: mind
 persona: "Meditation practitioner"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-03
 readingTime: 4
 tags: ["meditation", "year-goal", "monthly-themes", "morning"]
 takeaways:

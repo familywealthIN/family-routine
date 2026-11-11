@@ -4,7 +4,7 @@ description: "A volunteer organiser with a day job gives the garden one daily ad
 category: life
 persona: "Community volunteer organiser"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-24
 readingTime: 4
 tags: ["volunteering", "delegate", "weekly-rhythm", "priority"]
 takeaways:

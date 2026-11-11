@@ -4,7 +4,7 @@ description: "A practical first agent: pick the routine you repeat most, point i
 category: playbook
 persona: "Automation tinkerer"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-25
 readingTime: 4
 tags: ["agents", "webhook", "automation", "n8n"]
 takeaways:

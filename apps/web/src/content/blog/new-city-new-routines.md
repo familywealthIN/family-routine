@@ -4,7 +4,7 @@ description: "A week-by-week plan for someone who has just moved cities: rebuild
 category: life
 persona: "Someone who just moved cities"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-08
 readingTime: 4
 tags: ["relocation", "first-30-days", "anchors", "month-goal"]
 takeaways:

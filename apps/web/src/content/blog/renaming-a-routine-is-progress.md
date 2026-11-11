@@ -4,7 +4,7 @@ description: "Six weeks into a season, a night routine stops working. Rebuilding
 category: playbook
 persona: "Someone re-planning mid-season"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-01
 readingTime: 4
 tags: ["re-planning", "night-routine", "steps", "geniuses"]
 takeaways:

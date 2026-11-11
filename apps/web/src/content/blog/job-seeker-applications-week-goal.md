@@ -4,7 +4,7 @@ description: "A job seeker structures the search as work: a weekday routine set,
 category: life
 persona: "Job seeker"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-02
 readingTime: 4
 tags: ["job-search", "week-goal", "interviews", "cascade"]
 takeaways:

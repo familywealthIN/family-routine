@@ -4,7 +4,7 @@ description: "An inside sales rep whose check-ins are punctual but whose Kinetic
 category: work
 persona: "Inside sales rep"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-18
 readingTime: 4
 tags: ["sales", "kinetics", "steps", "delegate", "troubleshooting"]
 takeaways:

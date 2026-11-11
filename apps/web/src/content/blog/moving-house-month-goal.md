@@ -4,7 +4,7 @@ description: "A week-by-week plan for a house move run as one month goal: an eve
 category: home
 persona: "Someone moving house"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-04
 readingTime: 4
 tags: ["moving-house", "month-goal", "milestones", "planning"]
 takeaways:

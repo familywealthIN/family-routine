@@ -4,7 +4,7 @@ description: "Every routine shares one 100-point day budget. How to split it by 
 category: playbook
 persona: "Anyone setting up routines"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-09
 readingTime: 4
 tags: ["points", "setup", "priorities", "budget"]
 takeaways:

@@ -4,7 +4,7 @@ description: "A gap-year traveller packs six portable routines, uses Skip Day fo
 category: life
 persona: "Traveller on a gap year"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-25
 readingTime: 4
 tags: ["travel", "time-zones", "skip-day", "language-learning"]
 takeaways:

@@ -4,7 +4,7 @@ description: "Why a morning of yoga followed by a run works better as two routin
 category: body
 persona: "Morning yoga and running practitioner"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-24
 readingTime: 3
 tags: ["yoga", "running", "punctuality-window", "morning"]
 takeaways:

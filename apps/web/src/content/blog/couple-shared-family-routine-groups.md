@@ -4,7 +4,7 @@ description: "A couple keeps two routine lists that match up, weights the same r
 category: home
 persona: "Couple sharing a family routine"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-25
 readingTime: 4
 tags: ["groups", "couples", "accountability", "family"]
 takeaways:

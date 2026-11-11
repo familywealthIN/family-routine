@@ -4,7 +4,7 @@ description: "A travelling consultant keeps one portable routine set across flig
 category: work
 persona: "Travelling consultant"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-19
 readingTime: 4
 tags: ["travel", "skip-day", "late-check-in", "week-goals"]
 takeaways:

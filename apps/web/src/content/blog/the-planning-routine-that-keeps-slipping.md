@@ -4,7 +4,7 @@ description: "A short planning slot squeezed between breakfast and work is often
 category: playbook
 persona: "Someone whose morning planning slot keeps slipping"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-23
 readingTime: 4
 tags: ["planning", "troubleshooting", "cues", "morning"]
 takeaways:

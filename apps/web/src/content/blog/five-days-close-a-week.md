@@ -4,7 +4,7 @@ description: "Why a week goal closes at five met days even if you planned seven,
 category: playbook
 persona: "Seven-day planner"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-13
 readingTime: 4
 tags: ["goal-rules", "week-goals", "thresholds", "geniuses"]
 takeaways:

@@ -4,7 +4,7 @@ description: "Use generate_milestone_plan to draft a plan, argue with it, then s
 category: mcp
 persona: "Goal-setter with a big, vague ambition"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-19
 readingTime: 3
 tags: ["mcp", "claude", "year-goals", "milestones"]
 takeaways:

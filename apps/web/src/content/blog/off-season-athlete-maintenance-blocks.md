@@ -4,7 +4,7 @@ description: "How a competitive rower re-weights routines for the off-season, ke
 category: body
 persona: "Athlete in the off-season"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-09
 readingTime: 3
 tags: ["off-season", "re-planning", "points", "seasonal-plan"]
 takeaways:

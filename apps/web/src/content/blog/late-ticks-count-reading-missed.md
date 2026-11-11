@@ -4,7 +4,7 @@ description: "Why an item can be ticked and read Missed at the same time, why it
 category: playbook
 persona: "Goal tracker puzzled by the Missed label"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-24
 readingTime: 4
 tags: ["goals", "late-ticks", "status", "week-goals"]
 takeaways:

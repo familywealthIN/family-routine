@@ -4,7 +4,7 @@ description: "A hiker works back from a September trek: daily walks, weekend hik
 category: body
 persona: "Hiker preparing for a multi-day trek"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-26
 readingTime: 4
 tags: ["hiking", "countdown", "sub-tasks", "deadlines"]
 takeaways:

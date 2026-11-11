@@ -4,7 +4,7 @@ description: "How a distance runner turns one time goal into month-long training
 category: body
 persona: "Distance runner chasing a pace"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-11
 readingTime: 4
 tags: ["running", "year-goals", "training-blocks", "cascade"]
 takeaways:

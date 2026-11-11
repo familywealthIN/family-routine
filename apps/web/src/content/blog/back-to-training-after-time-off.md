@@ -4,7 +4,7 @@ description: "Low points, tiny steps and no year goal yet: a 30-day plan for get
 category: body
 persona: "Returning to exercise after months off"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-11-12
 readingTime: 3
 tags: ["comeback", "first-30-days", "steps", "kinetics"]
 takeaways:

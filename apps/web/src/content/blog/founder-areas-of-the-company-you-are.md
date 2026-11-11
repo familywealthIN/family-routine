@@ -4,7 +4,7 @@ description: "A solo founder tags each routine with an area (CEO, CTO, CMO, COO,
 category: work
 persona: "Solo founder"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-30
 readingTime: 4
 tags: ["area-tags", "year-goals", "founder", "before-you-start"]
 takeaways:

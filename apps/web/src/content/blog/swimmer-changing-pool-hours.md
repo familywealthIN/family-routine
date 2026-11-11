@@ -4,7 +4,7 @@ description: "A masters swimmer's lane times move every term. How to re-time the
 category: body
 persona: "Masters swimmer"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-21
 readingTime: 3
 tags: ["swimming", "re-timing", "alarm", "skip-day"]
 takeaways:

@@ -4,7 +4,7 @@ description: "An on-call developer goes through a night page hour by hour: what 
 category: work
 persona: "On-call developer"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-10
 readingTime: 4
 tags: ["on-call", "late-check-in", "skip-day", "honest-data"]
 takeaways:

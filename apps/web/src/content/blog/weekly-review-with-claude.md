@@ -4,7 +4,7 @@ description: "Run a Sunday review on facts instead of feelings: get_progress for
 category: mcp
 persona: "Weekly reviewer"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-30
 readingTime: 3
 tags: ["mcp", "claude", "weekly-review", "progress"]
 takeaways:

@@ -4,7 +4,7 @@ description: "Use search_goals to ask Claude what you did last time, filter it b
 category: mcp
 persona: "Note-taker who never rereads their notes"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-12
 readingTime: 4
 tags: ["mcp", "claude", "search", "notes"]
 takeaways:

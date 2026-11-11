@@ -4,7 +4,7 @@ description: "A remote worker with no commute builds a start-of-work routine who
 category: work
 persona: "Remote worker"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-14
 readingTime: 4
 tags: ["remote-work", "cues", "shutdown", "first-30-days"]
 takeaways:

@@ -4,7 +4,7 @@ description: "An engineering lead puts 30 of the day's 100 points on one deep-wo
 category: work
 persona: "Engineering lead"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-25
 readingTime: 4
 tags: ["points", "deep-work", "quick-tasks", "priority"]
 takeaways:

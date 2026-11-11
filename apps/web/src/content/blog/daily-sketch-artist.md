@@ -4,7 +4,7 @@ description: "A hobby artist commits to a 20-minute morning sketch, scores the s
 category: mind
 persona: "Hobby artist"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-20
 readingTime: 4
 tags: ["drawing", "daily-habit", "discipline", "first-30-days"]
 takeaways:

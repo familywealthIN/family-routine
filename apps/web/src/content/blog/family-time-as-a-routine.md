@@ -4,7 +4,7 @@ description: "A parent turns the family evening into a routine with five plain s
 category: home
 persona: "Parent making family time a routine"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-11-13
 readingTime: 4
 tags: ["family-time", "evening", "steps", "kinetics"]
 takeaways:

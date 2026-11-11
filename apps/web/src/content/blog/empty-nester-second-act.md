@@ -4,7 +4,7 @@ description: "When the children leave home, the hours between 17:00 and 20:00 op
 category: life
 persona: "Empty nester"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-23
 readingTime: 4
 tags: ["empty-nest", "year-goal", "music", "second-act"]
 takeaways:

@@ -4,7 +4,7 @@ description: "A student plans six weeks of revision as week goals per subject, p
 category: mind
 persona: "Student before exams"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-23
 readingTime: 4
 tags: ["exams", "revision", "week-goals", "students"]
 takeaways:

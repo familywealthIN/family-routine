@@ -4,7 +4,7 @@ description: "A guide to the three reminder modes and the daily notifications, f
 category: playbook
 persona: "Someone who ignores notifications"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-27
 readingTime: 4
 tags: ["reminders", "notifications", "alarm", "discipline"]
 takeaways:

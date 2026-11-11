@@ -4,7 +4,7 @@ description: "A new graduate sets one goal for the job, one for a skill and one 
 category: life
 persona: "New graduate in a first job"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-27
 readingTime: 4
 tags: ["first-job", "year-goals", "cascade", "skills"]
 takeaways:

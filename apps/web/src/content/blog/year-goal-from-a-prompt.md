@@ -4,7 +4,7 @@ description: "The in-app AI plan turns one sentence into dated milestones. How t
 category: playbook
 persona: "Ambitious but vague goal-setter"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-07
 readingTime: 4
 tags: ["year-goals", "ai-plan", "milestones", "planning"]
 takeaways:

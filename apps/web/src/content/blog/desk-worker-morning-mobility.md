@@ -4,7 +4,7 @@ description: "A short mobility routine with five steps, an afternoon reset and h
 category: body
 persona: "Desk worker"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-11-24
 readingTime: 3
 tags: ["mobility", "desk-work", "steps", "kinetics"]
 takeaways:

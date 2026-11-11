@@ -4,7 +4,7 @@ description: "A video creator makes each weekly upload a week goal with one day 
 category: work
 persona: "Video creator"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-23
 readingTime: 4
 tags: ["creator", "week-goals", "publishing", "cadence"]
 takeaways:

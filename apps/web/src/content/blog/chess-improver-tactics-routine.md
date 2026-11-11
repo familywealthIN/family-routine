@@ -4,7 +4,7 @@ description: "A chess improver splits training into a morning tactics routine an
 category: mind
 persona: "Adult chess improver"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-11-17
 readingTime: 4
 tags: ["chess", "tactics", "kinetics", "practice"]
 takeaways:

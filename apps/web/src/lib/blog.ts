@@ -47,7 +47,15 @@ export const THRESHOLD = { weekDays: 5, monthWeeks: 3, yearMonths: 6 } as const;
 /** The punctuality window around a routine's start time, in minutes. */
 export const WINDOW = { before: 60, after: 30 } as const;
 
-export const AUTHOR = { name: 'Routine Notes team', url: '/about' } as const;
+/** The byline on every post: the founder, whose /about page introduces him. */
+export const AUTHOR = {
+  name: 'Gaurav Panchal',
+  role: 'founder',
+  jobTitle: 'Founder, Routine Notes',
+  url: '/about',
+  image: 'https://avatars.githubusercontent.com/grvpanchal',
+  sameAs: ['https://github.com/grvpanchal'],
+} as const;
 
 export type CategoryId = (typeof CATEGORIES)[number]['id'];
 export type PillarId = (typeof PILLARS)[number]['id'];

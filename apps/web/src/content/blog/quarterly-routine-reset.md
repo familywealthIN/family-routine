@@ -4,7 +4,7 @@ description: "Once a season, re-time, re-weight and rebuild your routines from w
 category: playbook
 persona: "Seasonal planner"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-17
 readingTime: 4
 tags: ["review", "seasonal", "re-planning", "points"]
 takeaways:

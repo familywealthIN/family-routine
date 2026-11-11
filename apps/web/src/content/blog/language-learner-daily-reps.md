@@ -4,7 +4,7 @@ description: "A language learner turns flashcards and shadowing into routine ste
 category: mind
 persona: "Language learner"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-11-25
 readingTime: 4
 tags: ["language-learning", "kinetics", "ai-plan", "steps"]
 takeaways:

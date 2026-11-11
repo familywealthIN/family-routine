@@ -4,7 +4,7 @@ description: "The Routine Notes MCP server isn't only for Claude. Set it up in C
 category: mcp
 persona: "Automation builder"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-11-23
 readingTime: 3
 tags: ["mcp", "n8n", "chatgpt", "gemini", "automation"]
 takeaways:

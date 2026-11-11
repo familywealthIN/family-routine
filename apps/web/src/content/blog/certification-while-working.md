@@ -4,7 +4,7 @@ description: "A working professional studies before work, books the exam as a mi
 category: mind
 persona: "Professional studying for a certification"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-24
 readingTime: 4
 tags: ["certification", "study", "sub-tasks", "re-planning"]
 takeaways:

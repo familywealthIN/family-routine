@@ -4,7 +4,7 @@ description: "Three taper weeks as milestones, why shorter sessions still close 
 category: body
 persona: "Marathoner in taper"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-30
 readingTime: 3
 tags: ["marathon", "taper", "week-goals", "race-day"]
 takeaways:

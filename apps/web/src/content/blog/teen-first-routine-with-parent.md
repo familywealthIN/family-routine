@@ -4,7 +4,7 @@ description: "A thirty-minute setup session for a teenager's first school-day ro
 category: home
 persona: "Teenager setting up a first routine with a parent"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-18
 readingTime: 4
 tags: ["teenagers", "school", "homework", "first-routine"]
 takeaways:

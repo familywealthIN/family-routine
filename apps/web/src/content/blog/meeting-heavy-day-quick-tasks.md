@@ -4,7 +4,7 @@ description: "A manager in back-to-back meetings captures every promise as a qui
 category: work
 persona: "Manager in back-to-back meetings"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-08
 readingTime: 4
 tags: ["meetings", "quick-tasks", "inbox", "routine-chat"]
 takeaways:

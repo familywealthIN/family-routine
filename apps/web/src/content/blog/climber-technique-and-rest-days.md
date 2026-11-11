@@ -4,7 +4,7 @@ description: "How a climber turns a wall session into steps, gives rest days the
 category: body
 persona: "Boulderer"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-11-16
 readingTime: 3
 tags: ["climbing", "steps", "rest-days", "kinetics"]
 takeaways:

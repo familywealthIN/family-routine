@@ -4,7 +4,7 @@ description: "A product manager turns a year-long AI learning plan into monthly 
 category: mind
 persona: "Product manager learning AI"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-11
 readingTime: 4
 tags: ["ai", "learning-plan", "product-management", "year-goal"]
 takeaways:

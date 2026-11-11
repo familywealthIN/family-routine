@@ -4,7 +4,7 @@ description: "A self-taught programmer gives each month one small project, split
 category: mind
 persona: "Self-taught programmer"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-17
 readingTime: 4
 tags: ["programming", "projects", "monthly-goals", "geniuses"]
 takeaways:

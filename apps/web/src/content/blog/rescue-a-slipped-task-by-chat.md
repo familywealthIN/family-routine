@@ -4,7 +4,7 @@ description: "A slipped day, handled in one conversation: reschedule_goal_item f
 category: mcp
 persona: "Someone whose Tuesday fell apart"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-26
 readingTime: 3
 tags: ["mcp", "claude", "reschedule", "late-ticks"]
 takeaways:

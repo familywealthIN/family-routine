@@ -4,7 +4,7 @@ description: "A gentle, three-routine setup for someone putting a day back toget
 category: life
 persona: "Someone rebuilding after burnout"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-10
 readingTime: 4
 tags: ["burnout", "gentle-start", "skip-day", "minimal-setup"]
 takeaways:

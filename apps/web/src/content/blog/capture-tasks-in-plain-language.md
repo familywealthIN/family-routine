@@ -4,7 +4,7 @@ description: "How extract_day_task and add_goal_item turn a rushed sentence in C
 category: mcp
 persona: "Busy professional capturing tasks between meetings"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-11-16
 readingTime: 3
 tags: ["mcp", "claude", "capture", "quick-tasks"]
 takeaways:

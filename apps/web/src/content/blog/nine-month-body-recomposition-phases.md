@@ -4,7 +4,7 @@ description: "How a lifter maps a long programme (strength, deload, hypertrophy,
 category: body
 persona: "Lifter on a long programme"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-07
 readingTime: 3
 tags: ["strength", "programme", "month-goals", "deload"]
 takeaways:

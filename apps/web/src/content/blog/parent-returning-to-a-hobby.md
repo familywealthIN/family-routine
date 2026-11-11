@@ -4,7 +4,7 @@ description: "A stay-at-home parent links a daily nap-time sewing routine to a y
 category: home
 persona: "Stay-at-home parent"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-14
 readingTime: 4
 tags: ["hobby", "year-goal", "nap-time", "ai-plan"]
 takeaways:

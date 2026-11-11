@@ -4,7 +4,7 @@ description: "A course learner who keeps losing notes puts them on day items, ta
 category: mind
 persona: "Online course learner"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-03
 readingTime: 4
 tags: ["notes", "learning", "project-tags", "before-you-start"]
 takeaways:

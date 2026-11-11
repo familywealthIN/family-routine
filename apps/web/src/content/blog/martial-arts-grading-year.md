@@ -4,7 +4,7 @@ description: "A martial arts student turns a grading date into a year goal, spli
 category: body
 persona: "Martial arts student"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-02
 readingTime: 3
 tags: ["martial-arts", "year-goals", "syllabus", "drills"]
 takeaways:

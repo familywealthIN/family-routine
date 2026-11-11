@@ -4,7 +4,7 @@ description: "A cyclist works backwards from a June sportive: a daily ride routi
 category: body
 persona: "Cyclist training for a 100-mile ride"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-11-19
 readingTime: 4
 tags: ["cycling", "year-goals", "long-ride", "re-planning"]
 takeaways:

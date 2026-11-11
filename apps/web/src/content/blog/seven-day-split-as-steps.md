@@ -4,7 +4,7 @@ description: "How a gym-goer stores a weekly training split inside one routine's
 category: body
 persona: "Gym-goer with a weekly split"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-15
 readingTime: 3
 tags: ["strength", "steps", "weekly-split", "kinetics"]
 takeaways:

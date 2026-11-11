@@ -4,7 +4,7 @@ description: "A parent returning to work after years at home builds a 90-day re-
 category: life
 persona: "Parent returning to work after a break"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-16
 readingTime: 4
 tags: ["return-to-work", "re-entry", "month-goals", "family"]
 takeaways:

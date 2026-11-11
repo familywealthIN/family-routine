@@ -4,7 +4,7 @@ description: "A three-week walkthrough for a new jogger: a tiny physical first s
 category: body
 persona: "New jogger"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-17
 readingTime: 3
 tags: ["running", "cues", "first-21-days", "reminders"]
 takeaways:

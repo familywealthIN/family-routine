@@ -96,7 +96,14 @@ const ld: Record<string, unknown>[] = [
     image: { '@type': 'ImageObject', url: imageUrl, width: FEATURED.width, height: FEATURED.height, caption: imageAlt },
     datePublished: published,
     dateModified: modified,
-    author: { '@type': 'Organization', name: AUTHOR.name, url: new URL(AUTHOR.url, site).toString() },
+    author: {
+      '@type': 'Person',
+      name: AUTHOR.name,
+      jobTitle: AUTHOR.jobTitle,
+      url: new URL(AUTHOR.url, site).toString(),
+      image: AUTHOR.image,
+      sameAs: AUTHOR.sameAs,
+    },
     publisher: {
       '@type': 'Organization',
       name: SITE.name,
@@ -179,7 +186,7 @@ if (d.howTo) {
                 <span class="text-[color:var(--color-ink-500)]">— {p.short.toLowerCase()}</span>
               </span>
               <span class="text-sm text-[color:var(--color-ink-500)]">
-                By <a href={AUTHOR.url} rel="author" class="font-semibold text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)]">{AUTHOR.name}</a>
+                By <a href={AUTHOR.url} rel="author" class="font-semibold text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)]">{AUTHOR.name}</a>, {AUTHOR.role}
                 · <time datetime={published.slice(0, 10)}>{formatDate(d.publishDate)}</time> · {d.readingTime} min read
               </span>
             </div>

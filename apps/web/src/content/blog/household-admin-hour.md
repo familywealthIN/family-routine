@@ -4,7 +4,7 @@ description: "One evening routine for forms, letters and bookings, fed by the In
 category: home
 persona: "Person with a weekly admin backlog"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-01
 readingTime: 4
 tags: ["admin", "inbox", "quick-tasks", "delegate"]
 takeaways:

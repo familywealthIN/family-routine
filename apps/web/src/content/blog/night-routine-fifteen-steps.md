@@ -4,7 +4,7 @@ description: "A night routine grew to fifteen steps and started landing in Past.
 category: home
 persona: "Someone with a long night routine"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-10
 readingTime: 4
 tags: ["night-routine", "steps", "cues", "re-planning"]
 takeaways:

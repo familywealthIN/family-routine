@@ -4,7 +4,7 @@ description: "An early reader sets a 05:40 reading routine, keeps notes on each 
 category: mind
 persona: "Early reader"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-15
 readingTime: 4
 tags: ["reading", "early-morning", "notes", "discipline"]
 takeaways:

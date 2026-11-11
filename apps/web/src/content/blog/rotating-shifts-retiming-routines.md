@@ -4,7 +4,7 @@ description: "A rotating-shift worker keeps one routine list, re-times it in ten
 category: work
 persona: "Rotating-shift worker"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-16
 readingTime: 4
 tags: ["shift-work", "re-timing", "cues", "skip-day"]
 takeaways:

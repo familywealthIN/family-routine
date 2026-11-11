@@ -4,7 +4,7 @@ description: "How the points balance works, what a late check-in buys and costs,
 category: playbook
 persona: "Points saver"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-17
 readingTime: 4
 tags: ["points", "late-check-in", "redemption", "discipline"]
 takeaways:

@@ -4,7 +4,7 @@ description: "An accountant facing a twelve-week deadline season cuts the routin
 category: work
 persona: "Accountant in busy season"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-16
 readingTime: 4
 tags: ["seasonal-plan", "busy-season", "points", "re-planning"]
 takeaways:

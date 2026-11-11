@@ -4,7 +4,7 @@ description: "A troubleshooting guide for the early riser whose first routine of
 category: playbook
 persona: "Early riser on a plateau"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-20
 readingTime: 4
 tags: ["troubleshooting", "discipline", "alarm", "plateau"]
 takeaways:

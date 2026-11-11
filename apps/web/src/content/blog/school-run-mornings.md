@@ -4,7 +4,7 @@ description: "A minute-by-minute look at a school-day morning for a parent of tw
 category: home
 persona: "Parent of two school-age children"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-18
 readingTime: 3
 tags: ["school-run", "morning", "routine-chain", "family"]
 takeaways:

@@ -4,7 +4,7 @@ description: "Early flights, long drives and conference days: when to take one o
 category: playbook
 persona: "Someone deciding on a travel day"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-17
 readingTime: 4
 tags: ["skip-day", "travel", "late-check-in", "decisions"]
 takeaways:

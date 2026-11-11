@@ -4,7 +4,7 @@ description: "A setup guide for a household iPad that stays awake on the morning
 category: home
 persona: "Household with a shared iPad"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-18
 readingTime: 4
 tags: ["ipad", "always-on-display", "morning", "household"]
 takeaways:

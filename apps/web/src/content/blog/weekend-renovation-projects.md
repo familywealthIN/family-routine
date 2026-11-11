@@ -4,7 +4,7 @@ description: "A DIY renovator turns a ground-floor refurbishment into a year goa
 category: home
 persona: "DIY renovator"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-22
 readingTime: 4
 tags: ["diy", "renovation", "priority-matrix", "sub-tasks"]
 takeaways:

@@ -4,7 +4,7 @@ description: "A first-time conference speaker builds a short morning rehearsal w
 category: mind
 persona: "First-time conference speaker"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-21
 readingTime: 4
 tags: ["public-speaking", "rehearsal", "deadline", "kinetics"]
 takeaways:

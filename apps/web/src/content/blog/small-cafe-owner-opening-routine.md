@@ -4,7 +4,7 @@ description: "A café owner keeps the opening and the close-down as routines wit
 category: work
 persona: "Café owner"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-22
 readingTime: 4
 tags: ["small-business", "checklists", "steps", "delegate"]
 takeaways:

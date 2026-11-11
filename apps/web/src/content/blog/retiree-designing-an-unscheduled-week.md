@@ -4,7 +4,7 @@ description: "A recent retiree replaces the work calendar with eight anchor rout
 category: life
 persona: "Recent retiree"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-14
 readingTime: 4
 tags: ["retirement", "anchors", "reading", "week-design"]
 takeaways:

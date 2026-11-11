@@ -4,7 +4,7 @@ description: "A secondary-school teacher builds term-time routines around the ti
 category: work
 persona: "Secondary-school teacher"
 pillar: G
-publishDate: 2026-11-11
+publishDate: 2026-12-24
 readingTime: 4
 tags: ["teaching", "seasonal-plan", "marking", "month-goals"]
 takeaways:

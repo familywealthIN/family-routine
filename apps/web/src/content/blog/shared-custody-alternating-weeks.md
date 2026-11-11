@@ -4,7 +4,7 @@ description: "A single parent with alternating weeks names routines by purpose, 
 category: home
 persona: "Single parent with alternating weeks"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-12-16
 readingTime: 4
 tags: ["co-parenting", "week-goals", "routines", "alternating-weeks"]
 takeaways:

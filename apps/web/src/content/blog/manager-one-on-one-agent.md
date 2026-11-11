@@ -4,7 +4,7 @@ description: "An engineering manager binds an agent to the afternoon people-time
 category: work
 persona: "Engineering manager"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-04
 readingTime: 4
 tags: ["agents", "one-on-ones", "automation", "manager"]
 takeaways:

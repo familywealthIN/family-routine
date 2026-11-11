@@ -4,7 +4,7 @@ description: "A product designer reads the self-sorting Priority matrix three ti
 category: work
 persona: "Product designer"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-11-26
 readingTime: 3
 tags: ["priority", "maker-block", "do-now", "planning"]
 takeaways:

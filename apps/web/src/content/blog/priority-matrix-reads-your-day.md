@@ -4,7 +4,7 @@ description: "Do now, Plan, Delegate, Automate: the matrix fills itself from how
 category: playbook
 persona: "Overcommitted professional"
 pillar: K
-publishDate: 2026-11-11
+publishDate: 2026-12-15
 readingTime: 4
 tags: ["priority", "matrix", "do-now", "delegation"]
 takeaways:

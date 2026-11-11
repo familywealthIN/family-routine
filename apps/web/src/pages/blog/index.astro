@@ -71,7 +71,7 @@ const countBy = (key: 'category' | 'pillar', id: string) => posts.filter((p) => 
         <button type="button" class="blog-chip" data-filter-category="all" aria-pressed="true">
           All <span class="blog-chip__n">{posts.length}</span>
         </button>
-        {CATEGORIES.map((c) => (
+        {CATEGORIES.filter((c) => countBy('category', c.id) > 0).map((c) => (
           <button type="button" class="blog-chip" data-filter-category={c.id} aria-pressed="false">
             <Icon name={c.icon} width={15} height={15} />
             {c.label} <span class="blog-chip__n">{countBy('category', c.id)}</span>
@@ -82,7 +82,7 @@ const countBy = (key: 'category' | 'pillar', id: string) => posts.filter((p) => 
         <button type="button" class="blog-chip blog-chip--small" data-filter-pillar="all" aria-pressed="true">
           Every pillar
         </button>
-        {PILLARS.map((p) => (
+        {PILLARS.filter((p) => countBy('pillar', p.id) > 0).map((p) => (
           <button type="button" class="blog-chip blog-chip--small" data-filter-pillar={p.id} aria-pressed="false">
             <b class="font-display" style={`color:${p.color}`}>{p.id}</b>
             {p.name} <span class="blog-chip__n">{countBy('pillar', p.id)}</span>
@@ -92,7 +92,7 @@ const countBy = (key: 'category' | 'pillar', id: string) => posts.filter((p) => 
     </div>
 
     <p class="mt-8 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-ink-500)]" aria-live="polite" data-blog-count>
-      {posts.length} posts
+      {posts.length} post{posts.length === 1 ? '' : 's'}
     </p>
 
     <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-reveal>

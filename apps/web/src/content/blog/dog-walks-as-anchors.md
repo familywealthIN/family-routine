@@ -4,7 +4,7 @@ description: "A dog owner uses the three daily walks as anchor routines, stacks 
 category: home
 persona: "Dog owner"
 pillar: D
-publishDate: 2026-11-11
+publishDate: 2026-11-27
 readingTime: 4
 tags: ["dog-walks", "anchors", "habit-stacking", "reminders"]
 takeaways:
