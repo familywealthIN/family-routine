@@ -107,7 +107,7 @@ Goals overview + year goal pages as designed; the year goal sheet supports one g
 - Invite (email validation, 10-member cap, pending rows with Cancel); join request card; leave confirmation.
 
 ### Profile & About — `Profile and About.dc.html`
-- **Profile:** user card; Time (12/24 sliding switch with preview, time zone select, week start locked); point rates (read-only); roll-up chain 1 day → 5 days = wk → 3 wks = mo → 9 mos = yr; Connect AI (Server URL, Client ID, masked secret, copy; platform chips with steps); legacy API key; Delete account (type DELETE).
+- **Profile:** user card; Time (12/24 sliding switch with preview, time zone select, week start locked); Display, iPads and tablets only (`ProfileDisplaySettings`, under Time): Always on display, an Off/On sliding switch, off by default, `bedtime` grey glyph and "Keep this screen on while Routine Notes is open" when off, `light_mode` `#f9a825` and "This screen stays on while Routine Notes is open" when on; per device, keeps the screen awake while the app is open (native KeepAwake plugin, else the Screen Wake Lock); never on a phone or a computer; point rates (read-only); roll-up chain 1 day → 5 days = wk → 3 wks = mo → 9 mos = yr; Connect AI (Server URL, Client ID, masked secret, copy; platform chips with steps); legacy API key; Delete account (type DELETE).
 - **About:** hero; five equal-width feature tabs with sliding underline; Getting started steps.
 
 ## New fields / API (UI + GraphQL + new fields)

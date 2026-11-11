@@ -42,6 +42,7 @@ import dataIdFromObject from './apollo/dataIdFromObject';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
 import { startHomeSync } from './services/homeSync';
+import { restoreAlwaysOn } from './services/keepAwake';
 import { retryPendingRelease } from './services/pushSession';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
 // Load Google Identity Services script
@@ -279,6 +280,9 @@ loadData().then(() => {
 
     // A sign-out that could not reach the server left this device subscribed.
     retryPendingRelease(apolloClient);
+
+    // Profile → Always on display, if this tablet has it on.
+    restoreAlwaysOn();
 
     // Hide the native Capacitor splashscreen now that Vue is mounted and
     // the persisted Apollo cache is hydrated. launchAutoHide is set to
