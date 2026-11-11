@@ -83,7 +83,7 @@ const BAR_GROUP = [{
     barLabel: '4/5 milestones',
     barPct: 80,
     status: { label: 'Active', color: '#FF9800', bg: 'rgba(255,152,0,.14)' },
-    meta: 'Needs all 5 day milestones met (min 5)',
+    meta: 'Needs 5 of 8 day milestones met',
     blocked: false,
   }],
 }];
@@ -183,11 +183,36 @@ describe('GoalCascade — the three row shapes', () => {
     expect(events.toggled).toEqual(['d2']);
   });
 
+  it('greys a missed day goal under the Missed pill and keeps it tickable', () => {
+    const missedGroup = [{
+      ...GROUPS[1],
+      rows: [{
+        ...GROUPS[1].rows[0],
+        missed: true,
+        status: { label: 'Missed', color: '#c62828', bg: 'rgba(229,57,53,.12)' },
+      }],
+    }];
+    const { el, events } = render({ groups: missedGroup });
+    const row = q(el, 'goal-row-d2');
+    expect(q(el, 'goal-status-d2').textContent).toBe('Missed');
+    expect(row.querySelector('.rn-gcas__row-body').className).toContain('rn-gcas__row-body--missed');
+    expect(row.querySelector('.rn-gcas__row-body').className).not.toContain('rn-gcas__row-body--done');
+    expect(row.querySelector('.rn-gcas__box').textContent).toBe('check_box_outline_blank');
+    row.click();
+    expect(events.toggled).toEqual(['d2']);
+  });
+
+  it('gives a day goal that was never missed no status chip', () => {
+    const { el } = render();
+    expect(q(el, 'goal-status-d1')).toBeNull();
+    expect(q(el, 'goal-status-d2')).toBeNull();
+  });
+
   it('gives a week goal its streak bar, status chip and rule line', () => {
     const { el } = render({ tab: 'week', groups: BAR_GROUP });
     expect(q(el, 'goal-row-w1').textContent).toContain('4/5 milestones');
     // D-04: the rule its counter is measured against, as the focus card prints it.
-    expect(q(el, 'goal-row-w1').textContent).toContain('Needs all 5 day milestones met (min 5)');
+    expect(q(el, 'goal-row-w1').textContent).toContain('Needs 5 of 8 day milestones met');
     expect(q(el, 'goal-status-w1').textContent).toBe('Active');
     expect(q(el, 'goal-row-w1').querySelector('.rn-gcas__bar-fill').style.width).toBe('80%');
   });

@@ -325,6 +325,8 @@ import MoleculeDateSelector from '../../molecules/DateSelector/DateSelector.vue'
 import GoalTaskSelector from '../../molecules/GoalTaskSelector/GoalTaskSelector.vue';
 import GoalRefSelector from '../../molecules/GoalRefSelector/GoalRefSelector.vue';
 import { htmlToText } from '../../utils/htmlPreview';
+import { isMissed } from '../../utils/taskStatus';
+import { GOAL_STATUS } from '../../constants/goalsCascade';
 
 /** A lifetime goal has no calendar date; the server files it under this one. */
 const LIFETIME_DATE = '01-01-1970';
@@ -344,10 +346,16 @@ const emptyForm = (seed = {}) => ({
   goalRef: seed.goalRef || '',
 });
 
-/** The three states the design names, with their palette tokens. */
+/**
+ * The three states the design names, with their palette tokens, plus Missed:
+ * an open item recorded as not done, in the StatusPill's Missed colours.
+ */
 const STATUS = {
   complete: { label: 'Complete', color: '#4CAF50', tint: 'rgba(76,175,80,.12)' },
   ready: { label: 'Ready · agent target', color: '#1976d2', tint: 'rgba(25,118,210,.1)' },
+  missed: {
+    label: GOAL_STATUS.missed.label, color: GOAL_STATUS.missed.color, tint: GOAL_STATUS.missed.bg,
+  },
   open: { label: 'Open', color: 'rgba(0,0,0,.54)', tint: 'rgba(0,0,0,.06)' },
 };
 
@@ -460,6 +468,9 @@ export default {
     },
     statusKey() {
       if (!this.item) return 'open';
+      // Status is one-to-one with timing: Missed (not done in its window) stays
+      // Missed after a late tick, and Complete means ticked on time.
+      if (isMissed(this.item)) return 'missed';
       if (this.item.isComplete) return 'complete';
       return this.item.ready ? 'ready' : 'open';
     },

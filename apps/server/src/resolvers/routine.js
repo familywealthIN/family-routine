@@ -38,6 +38,33 @@ async function findIdandSort(args, email) {
   return null;
 }
 
+/**
+ * Create the day's routine document from the user's routine items, unless it
+ * already exists. Atomic: `$setOnInsert` with upsert, so two callers racing on
+ * a new day (routineDate and addRoutine, or two devices) still leave ONE
+ * document — a second one is where a tick used to vanish.
+ *
+ * @param {string} email
+ * @param {string} date      DD-MM-YYYY
+ * @param {Array}  [items]   the user's routine items, when already loaded
+ */
+async function createDayRoutine(email, date, items) {
+  const tasklist = items || await RoutineItemModel.find({ email }).exec();
+  sortTimes(tasklist);
+  tasklist.forEach((task) => {
+    resetDayState(task);
+    task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
+  });
+
+  await RoutineModel.findOneAndUpdate(
+    { date, email },
+    { $setOnInsert: { date, email, tasklist } },
+    { upsert: true },
+  ).exec();
+
+  return findTodayandSort({ date }, email);
+}
+
 async function getSkipDayCount(email) {
   const weekNo = moment().weeks();
   const currentDayIndex = moment().weeks(weekNo).weekday();
@@ -154,9 +181,9 @@ function refreshStimuliSplitRates(stimuli, taskId, tasklist) {
  * Clear the per-day state on a routine item seeded from the shared
  * `routineItems` template.
  *
- * One routineItem document is reused by every day, so `ticked` / `passed` /
- * `redeemed` / `passedPoints` only ever mean anything on the copy inside a
- * day's `routines.tasklist[]`. Every writer already respects that (see
+ * One routineItem document is reused by every day, so `ticked` / `tickedAt` /
+ * `passed` / `redeemed` / `passedPoints` only ever mean anything on the copy
+ * inside a day's `routines.tasklist[]`. Every writer already respects that (see
  * xp.js redeemRoutineItem and passRoutineItem below, which both write
  * `tasklist.$.*`), but the seeding paths used to inherit whatever the template
  * happened to carry. Resetting explicitly makes "per day" an invariant rather
@@ -169,6 +196,7 @@ function resetDayState(task) {
   task.passed = false;
   task.redeemed = false;
   task.passedPoints = undefined;
+  task.tickedAt = undefined;
 }
 
 // Threshold constants for G stimulus scaling
@@ -321,7 +349,12 @@ const query = {
 
       const tasklist = await RoutineItemModel.find({ email }).exec();
 
-      if (todayTasks && todayTasks.tasklist && Array.isArray(todayTasks.tasklist)) {
+      // The first read of a day makes the day. It used to answer null, and the
+      // app then had to call addRoutine and read again: three round trips in a
+      // row, on the open that is most likely to meet a cold server.
+      if (!todayTasks) return createDayRoutine(email, args.date, tasklist);
+
+      if (todayTasks.tasklist && Array.isArray(todayTasks.tasklist)) {
         const todayTasklist = todayTasks.tasklist;
 
         sortTimes(tasklist);
@@ -337,6 +370,9 @@ const query = {
             task.ticked = foundTask.ticked;
             task.redeemed = foundTask.redeemed;
             task.passedPoints = foundTask.passedPoints;
+            // When the tick happened: the cue engine learns a routine's usual
+            // time from it, so dropping it here erased it on every read.
+            task.tickedAt = foundTask.tickedAt;
             // splitRate is a property of the schedule, not of the day: it is
             // recomputed from the current times on every read, while `earned`
             // (the only part the day owns) is carried over. Without this, every
@@ -438,23 +474,7 @@ const mutation = {
         return findTodayandSort(args, email);
       }
 
-      const tasklist = await RoutineItemModel.find({ email });
-      sortTimes(tasklist);
-      tasklist.forEach((task) => {
-        resetDayState(task);
-        task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
-      });
-
-      // Use atomic upsert to prevent race-condition duplicate documents
-      // when addRoutine is called concurrently (e.g. from handleDayChange
-      // and the routineDate Apollo update callback simultaneously).
-      await RoutineModel.findOneAndUpdate(
-        { date: args.date, email },
-        { $setOnInsert: { date: args.date, email, tasklist } },
-        { upsert: true },
-      ).exec();
-
-      return findTodayandSort(args, email);
+      return createDayRoutine(email, args.date);
     },
   },
   deleteRoutine: {
@@ -588,4 +608,5 @@ module.exports = {
   refreshStimuliSplitRates,
   aggregateStimuliForRoutine,
   resetDayState,
+  createDayRoutine,
 };

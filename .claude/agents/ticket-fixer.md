@@ -35,7 +35,16 @@ Specifically, **do not**:
 - change any `@capacitor/*` version;
 - reintroduce the `busy` disable-during-load prop (it was removed deliberately);
 - move CSS out of the inline root-class-prefixed `<style>` blocks in organisms;
-- reuse an entity's id for a filtered projection.
+- put CSS inline in `apps/web-app`: page, layout, view and container styles live in
+  `packages/ui/styles/app/**`, loaded by the `.vue` with `<style [scoped] src>` (so
+  `RoutineFocus.vue`'s CSS is `packages/ui/styles/app/pages/RoutineFocus.css`), and
+  `cssLivesInUi.test.js` fails otherwise;
+- reuse an entity's id for a filtered projection;
+- derive a goal item's status from its tick. Status is one-to-one with timing: a late tick
+  stays `missed` and reads Missed, ticked; "Complete" is only on-time. Go through
+  `resolveDisplayStatus` / `isMissed` (`packages/ui/utils/taskStatus.js`) and read
+  `docs/task-status-system.md` first;
+- add a server-side time-window check to a tick. Late ticks are allowed and count.
 
 ## The new home screen
 
@@ -67,6 +76,13 @@ one as a side effect of another ticket:
   prompt cannot be a goal title — never default, copy or force the plan title to the typed
   text. That change was made and reverted twice (D-15, 6 and 11 Oct 2026); a ticket asking
   for it is a product decision, so stop and report instead of fixing.
+- **Never break the threshold rule.** A week / month / year goal auto-ticks once its threshold
+  of milestones is met (5 / 3 / 6, `utils/getDates.js`), however many more were planned:
+  `evaluateAutoComplete` is `met >= completionThreshold` and nothing else. Do not add an
+  "every milestone must be met" condition, raise the gate to `milestonesTotal`, or make the
+  client gate (`milestoneTally.required`, `manualTickBlocked`) stricter than the server's. D-03
+  did exactly that in Sep 2026 and left month goals at 3/5 open until the owner reverted it
+  (25 Oct 2026). A ticket that asks for it is a product decision: stop and report.
 
 Routine chat answers through **OpenRouter's free tier only** (`chatApi.js`), with the roster
 discovered at runtime and ranked by JSON-contract support. Never pin a hardcoded roster, and

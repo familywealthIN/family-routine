@@ -9,6 +9,7 @@
  */
 import moment from 'moment';
 import { CASCADE_UNIT_STYLE, STIMULI } from '@routine-notes/ui/constants/routineFocus';
+import { isMissed } from '@routine-notes/ui/utils/taskStatus';
 import { threshold } from './getDates';
 
 /**
@@ -458,11 +459,14 @@ export function linkedGoals({
       if (!child) return;
       const done = !!child.isComplete;
       const childPeriod = goal.period || (CASCADE_META[period] || {}).stepDown || '';
-      // A window that closed before the viewed day without the tick is missed.
+      // A window that closed before the viewed day without the tick is missed,
+      // and so is one recorded as missed (markGoalItemMissed) inside its window.
       const ended = at.isValid() && viewed.isValid()
         && at.isBefore(viewed, CASCADE_UNIT_GRANULARITY[period] || 'day');
+      // Status is one-to-one with timing: missed stays Missed after a late tick.
       let status = 'Open';
-      if (done) status = 'Done';
+      if (isMissed(child)) status = 'Missed';
+      else if (done) status = 'Done';
       else if (ended) status = 'Missed';
       rows.push({
         id: String(child.id || `${goal.date}-${order}`),
@@ -513,9 +517,13 @@ export function milestoneTally({ item, period }) {
   const done = Number(item.milestonesComplete) || 0;
   const total = Number(item.milestonesTotal) || 0;
   // What the real gate waits for: evaluateAutoComplete ticks on
-  // `met >= completionThreshold && !outstanding.length`, so the goal needs
-  // every milestone it holds, and never fewer than the threshold.
-  const required = Math.max(total, limit);
+  // `met >= completionThreshold`. Milestones planned beyond the threshold do
+  // not raise it (owner's rule, 25 Oct: a month goal ticks at 3 week
+  // milestones even with 5 planned).
+  const required = limit;
+  // The counter still reads against every milestone planned ("3/5"), never
+  // fewer than the threshold ("2/3"), so the plan stays visible after the tick.
+  const outOf = Math.max(total, limit);
   // The server owns completion. `|| done >= limit` here let the card declare
   // "Done" off its own arithmetic while autoCheckTaskPeriod had not ticked the
   // goal — a client must not out-vote the server on whether a goal is met.
@@ -527,13 +535,14 @@ export function milestoneTally({ item, period }) {
     // calendar cells, but a cell can hold more than one milestone.
     unitName: 'milestones',
     done,
-    threshold: required,
+    threshold: outOf,
+    required,
     complete,
     statusLabel: complete ? 'Done' : 'Active',
     statusColor: complete ? '#4CAF50' : '#FF9800',
     pct: Math.min(100, Math.round((done / Math.max(required, 1)) * 100)),
-    rule: total
-      ? `Needs all ${total} ${meta.stepDown} milestones met (min ${limit})`
+    rule: total > limit
+      ? `Needs ${limit} of ${total} ${meta.stepDown} milestones met`
       : `Needs ${limit} ${meta.stepDown} milestones met`,
   };
 }

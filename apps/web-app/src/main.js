@@ -15,12 +15,12 @@ import 'firebase/messaging';
 import { Capacitor } from '@capacitor/core';
 import { graphQLUrl } from './blob/config';
 import './plugins/vuetify';
-import './theme-override.css';
+import '@routine-notes/ui/styles/app/global/theme-override.css';
 import './plugins/notifications';
 import './plugins/curl-executor';
-import './styles/ios-input-zoom-fix.css';
+import '@routine-notes/ui/styles/app/global/ios-input-zoom-fix.css';
 import VueApollo from './plugins/apollo';
-import './styles/android-safe-area.css';
+import '@routine-notes/ui/styles/app/global/android-safe-area.css';
 import './utils/androidSafeArea'; // Initialize Android safe area manager (native only)
 import currentTaskPlugin from './plugins/currentTask';
 import routinePlugin from './plugins/routine';
@@ -41,6 +41,7 @@ import { createGuardLink } from './apollo/guardLink';
 import dataIdFromObject from './apollo/dataIdFromObject';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
+import { startHomeSync } from './services/homeSync';
 import { retryPendingRelease } from './services/pushSession';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
 // Load Google Identity Services script
@@ -255,6 +256,11 @@ loadData().then(() => {
 
   // Initialize Apollo cache persistence before mounting app
   setupCachePersistence().then(async () => {
+    // Today's Home data goes on the wire now, before the app mounts, and stays
+    // fresh while the app runs (services/homeSync.js). Home's own queries fold
+    // into these requests rather than waiting their turn.
+    startHomeSync(apolloClient, { getEmail: () => getSessionItem(GC_USER_EMAIL) });
+
     const app = new Vue({
       router,
       apolloProvider,

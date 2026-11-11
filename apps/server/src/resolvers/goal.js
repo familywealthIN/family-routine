@@ -33,6 +33,10 @@ const { threshold } = require('../utils/getProgressReport');
 const { deriveGoalItemStatus } = require('../utils/goalItemStatus');
 const { collectPeriodCriteria, buildMilestoneDays, evaluateAutoComplete } = require('../utils/goalCompletionCriteria');
 
+/** searchGoals: the periods it can narrow to, and the most items one call returns. */
+const SEARCH_PERIODS = ['day', 'week', 'month', 'year'];
+const SEARCH_LIMIT_MAX = 500;
+
 const getDaysArray = (year, month) => {
   let firstMonday = '';
   const threeFridays = [];
@@ -241,9 +245,8 @@ async function autoCheckTaskPeriod({
 
       const dayCleanGoals = childPeriodGoals.filter((g) => g.goalItems && g.goalItems.length);
 
-      // Everything the user hung off this goal inside the period. The streak
-      // threshold alone used to close a week goal at five wins with a seventh
-      // milestone still open, so it is now a floor rather than the whole rule.
+      // Everything the user hung off this goal inside the period. The goal
+      // ticks once `completionThreshold` of them are met (evaluateAutoComplete).
       const criteria = collectPeriodCriteria(dayCleanGoals, periodGoalItem.id);
 
       // The figure the dashboard renders for "how close am I?". Derived from the
@@ -285,7 +288,7 @@ async function autoCheckTaskPeriod({
         // Judged once, on the whole period. Inside the loop above it was judged
         // against `progress`, which counts one win per child DOCUMENT, so a
         // parent whose milestones share a child document — five week milestones
-        // in one week doc — could never clear the floor however many of them
+        // in one week doc — could never clear the threshold however many of them
         // were met, while the tallies above reported 5 of 5.
         const autoComplete = evaluateAutoComplete({
           criteria,
@@ -1269,18 +1272,27 @@ const query = {
       limit: { type: GraphQLString },
       taskRef: { type: GraphQLString },
       tags: { type: GraphQLString },
+      // 'day' | 'week' | 'month' | 'year'. Filtered before the limit, so a
+      // period's matches are not crowded out by another period's.
+      period: { type: GraphQLString },
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
       const searchQuery = args.query.toLowerCase().trim();
-      const limit = args.limit ? parseInt(args.limit, 10) : 50;
+      const asked = parseInt(args.limit, 10);
+      const limit = Number.isFinite(asked) && asked > 0 ? Math.min(asked, SEARCH_LIMIT_MAX) : 50;
 
       if (!searchQuery || searchQuery.length < 2) {
         return [];
       }
 
-      // Fetch all goals for the user — post-find middleware auto-decrypts body/contribution
-      const goals = await GoalModel.find({ email }).exec();
+      const filter = { email };
+      if (SEARCH_PERIODS.includes(args.period)) filter.period = args.period;
+
+      // Fetch the user's goals — post-find middleware auto-decrypts
+      // body/contribution. Newest first, so when the limit cuts the list it
+      // keeps what was written lately rather than the oldest goals.
+      const goals = await GoalModel.find(filter).sort({ _id: -1 }).exec();
 
       // Track seen goalItem IDs to deduplicate
       const seenIds = new Set();
@@ -2308,4 +2320,6 @@ const mutation = {
   },
 };
 
-module.exports = { query, mutation, autoCheckTaskPeriod };
+module.exports = {
+  query, mutation, autoCheckTaskPeriod, periodChildDates,
+};

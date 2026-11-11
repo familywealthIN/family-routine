@@ -8,7 +8,7 @@ Implemented a comprehensive fix that specifically targets Android 14+ devices wh
 
 ## Changes Made
 
-### 1. Updated CSS Safe Area Handling (`src/styles/android-safe-area.css`)
+### 1. Updated CSS Safe Area Handling (`packages/ui/styles/app/global/android-safe-area.css`)
 - Added Android 14+ specific CSS rules using `@supports` queries
 - Implemented CSS custom properties for safe area insets with proper fallbacks
 - Added proper positioning for header and footer elements
@@ -88,7 +88,7 @@ Implemented a comprehensive fix that specifically targets Android 14+ devices wh
 - Implement dynamic island support if needed for future Android versions
 
 ## Files Modified
-- `src/styles/android-safe-area.css`
+- `packages/ui/styles/app/global/android-safe-area.css`
 - `src/layouts/MobileLayout.vue`
 - `src/App.vue`
 - `src/main.js`

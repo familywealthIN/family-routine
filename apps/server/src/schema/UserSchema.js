@@ -26,6 +26,11 @@ const UserSchema = new mongoose.Schema({
   notificationId: String,
   // One push token per signed-in device (passport.js registerPushToken).
   notificationIds: [String],
+  // Those of notificationIds whose app draws routine cues with their buttons
+  // itself (the Android build with RoutineNotification.java): the cron sends
+  // them data-only (apps/cron/src/utils/push.js). Set by
+  // registerNotificationActions; cleared with the token.
+  notificationActionTokens: [String],
   notificationPrefs: NotificationPrefsSchema,
   holidays: Number,
   apiKey: {
@@ -38,6 +43,9 @@ const UserSchema = new mongoose.Schema({
     refreshToken: String,
     expiresAt: Date,
     authCode: String, // Temporary auth code for OAuth flow
+    // When an MCP client last finished signing in (utils/mcpOAuth.js). The
+    // connector's tokens are signed, not stored, so this is what says "connected".
+    connectedAt: Date,
   },
   needsOnboarding: {
     type: Boolean,

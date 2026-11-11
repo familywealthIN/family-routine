@@ -1,6 +1,6 @@
 const {
   cueTiming, itemHistory, dueCues, batchCues, candidateSetTimes, rewardLine,
-  historyDates, toMinutes, fromMinutes,
+  historyDates, toMinutes, fromMinutes, cueCopy, twoMinuteAsk, firstStep,
 } = require('../src/cue/cueEngine');
 
 const TZ = 'Asia/Kolkata'; // UTC+5:30, no DST
@@ -51,6 +51,19 @@ describe('itemHistory', () => {
     expect(h.usual).toBe(toMinutes('07:20'));
     expect(h.streak).toBe(5);
     expect(h.missedYesterday).toBe(false);
+  });
+
+  it('learns only from ticks in the window, not late check-ins', () => {
+    const routines = [
+      ...doneDays(3, '07:20'),
+      ...doneDays(5, '21:40', { redeemed: true }).slice(3),
+    ];
+    const h = itemHistory({
+      itemId: 'run', routines, today: TODAY, timezone: TZ,
+    });
+    expect(h.samples).toBe(3);
+    expect(h.usual).toBe(toMinutes('07:20'));
+    expect(h.streak).toBe(5); // a late check-in still keeps the run
   });
 
   it('does not trust fewer than three samples', () => {
@@ -161,6 +174,92 @@ describe('dueCues', () => {
     const [cue] = dueCues({ ...base, now: at('07:00'), routines });
     expect(cue.kind).toBe('recovery');
     expect(cue.body).not.toMatch(/fail/i);
+  });
+});
+
+describe('template cues lead with the first step', () => {
+  const WAKE = {
+    _id: 'wake', name: 'Wake Up', time: '06:00', points: 5, steps: [{ name: 'Feet on the floor' }],
+  };
+  const fresh = {
+    streak: 0, missedYesterday: false, missedTwice: false, everDone: false, usual: null,
+  };
+  const copy = (item, history = fresh, extra = {}) => cueCopy({
+    item, history, timing: { mode: 'set' }, anchor: null, identity: null, today: TODAY, ...extra,
+  });
+  // Every variant a day can pick: the pick hashes the item id and the day.
+  const everyDay = (item, extra) => historyDates(TODAY, 20).map((today) => copy(item, fresh, { ...extra, today }));
+
+  it('the ask is the first step, else two minutes', () => {
+    expect(firstStep(WAKE)).toBe('Feet on the floor');
+    expect(firstStep(BRUSH)).toBeNull();
+    expect(firstStep({ steps: [{ name: '  ' }, { name: 'Second' }] })).toBe('Second');
+    expect(twoMinuteAsk(WAKE)).toBe('Feet on the floor — that\'s the whole start.');
+    expect(twoMinuteAsk(BRUSH)).toBe('Two minutes counts.');
+  });
+
+  it('every everyday variant names the step, and the body leads with it unless the title does', () => {
+    const variants = everyDay(WAKE, { identity: 'an early riser' });
+    expect(new Set(variants.map((v) => v.kind))).toEqual(new Set(['reward', 'twoMinute', 'identity']));
+    variants.forEach((v) => {
+      if (v.kind === 'twoMinute') expect(v.title).toBe('Wake Up: Feet on the floor — that\'s the whole start.');
+      else expect(v.body.startsWith('Feet on the floor — that\'s the whole start.')).toBe(true);
+    });
+  });
+
+  it('keeps every kind, each leading with the step', () => {
+    const recovery = copy(WAKE, { ...fresh, missedYesterday: true, everDone: true });
+    expect(recovery.kind).toBe('recovery');
+    expect(recovery.body).toBe('Feet on the floor — that\'s the whole start. Yesterday slipped; today is the one that counts. +5 pts · day 1 of a new run');
+    const restart = copy(WAKE, {
+      ...fresh, missedYesterday: true, missedTwice: true, everDone: true,
+    });
+    expect(restart).toMatchObject({ kind: 'restart', body: expect.stringMatching(/^Feet on the floor — .*Small beats perfect\./) });
+    const atRisk = cueCopy({
+      item: WAKE, history: { ...fresh, streak: 30, usual: toMinutes('06:05') }, timing: { mode: 'atRisk' }, today: TODAY,
+    });
+    expect(atRisk).toMatchObject({ kind: 'atRisk', body: expect.stringMatching(/^Feet on the floor — .*Later than your usual 06:05\./) });
+    const stack = copy(WAKE, fresh, { anchor: 'Brush teeth' });
+    expect(stack).toMatchObject({ kind: 'stack', body: expect.stringMatching(/^Feet on the floor — that's the whole start\./) });
+  });
+
+  it('without steps, the copy is as before', () => {
+    const recovery = copy(BRUSH, { ...fresh, missedYesterday: true, everDone: true });
+    expect(recovery.body).toBe('Yesterday slipped; today is the one that counts. Two minutes counts. +5 pts · day 1 of a new run');
+    everyDay(BRUSH).forEach((v) => {
+      if (v.kind === 'reward') expect(v.body).toBe('+5 pts · day 1 of a new run. Two minutes counts.');
+      if (v.kind === 'twoMinute') expect(v.title).toBe('Brush teeth: Two minutes counts.');
+    });
+  });
+
+  it('keeps the title limit: a long step stays in the title, the rest moves to the body', () => {
+    const long = { ...WAKE, name: 'Evening wind-down routine', steps: [{ name: 'Put the phone on the charger in the hall' }] };
+    const two = everyDay(long).find((v) => v.kind === 'twoMinute');
+    expect(two.title).toBe('Evening wind-down routine: Put the phone on the charger in the hall');
+    expect(two.body).toMatch(/^That's the whole start\./);
+    const cues = dueCues({
+      now: at('06:00'), timezone: TZ, today: TODAY, items: [long], routines: [], identity: null,
+    });
+    expect(cues[0].title.length).toBeLessThanOrEqual(60);
+    expect(firstStep({ steps: [{ name: 'x'.repeat(80) }] })).toHaveLength(50);
+  });
+
+  it('an alarm keeps its fixed title and names the step in the body', () => {
+    const alarm = { ...WAKE, notifyMode: 'alarm' };
+    const [ring] = dueCues({
+      now: at('06:00'), timezone: TZ, today: TODAY, items: [alarm], routines: [], identity: null,
+    });
+    expect(ring.title).toBe('⏰ Wake Up · 06:00');
+    expect(ring.body).toBe('Feet on the floor — that\'s the whole start. +5 pts · day 1 of a new run');
+    const [again] = dueCues({
+      now: at('06:05'), timezone: TZ, today: TODAY, items: [alarm], routines: [], identity: null,
+    });
+    expect(again.body).toMatch(/^Still on\. Feet on the floor/);
+  });
+
+  it('a batch starts with the first routine\'s step', () => {
+    const batched = batchCues([{ item: WAKE, title: 'a', body: 'b' }, { item: BRUSH, title: 'c', body: 'd' }]);
+    expect(batched[0].body).toBe('Wake Up · Brush teeth. Start with the first: Feet on the floor.');
   });
 });
 

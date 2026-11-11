@@ -13,11 +13,11 @@
         :mini-title="miniTitle"
         :mini-breathing="agentLive"
         :mini-ring-ms="agentRingMs"
-        :available="(xpBalance && xpBalance.available) || 0"
-        :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
-        :entitled="!!(xpBalance && xpBalance.entitled)"
-        :points-loading="$apollo.queries.xpBalance.loading && !xpBalance"
-        :points-error="xpBalanceError && !xpBalance"
+        :available="(homeXpBalance && homeXpBalance.available) || 0"
+        :pending-today="(homeXpBalance && homeXpBalance.pendingToday) || 0"
+        :entitled="!!(homeXpBalance && homeXpBalance.entitled)"
+        :points-loading="$apollo.queries.xpBalance.loading && !homeXpBalance"
+        :points-error="xpBalanceError && !homeXpBalance"
         :picture="profileImage"
         :user-name="userName"
         :inbox-count="inboxCount"
@@ -173,11 +173,11 @@
               >{{ inboxCount }}</span>
             </div>
             <focus-points-chip
-              :available="(xpBalance && xpBalance.available) || 0"
-              :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
-              :entitled="!!(xpBalance && xpBalance.entitled)"
-              :loading="$apollo.queries.xpBalance.loading && !xpBalance"
-              :error="xpBalanceError && !xpBalance"
+              :available="(homeXpBalance && homeXpBalance.available) || 0"
+              :pending-today="(homeXpBalance && homeXpBalance.pendingToday) || 0"
+              :entitled="!!(homeXpBalance && homeXpBalance.entitled)"
+              :loading="$apollo.queries.xpBalance.loading && !homeXpBalance"
+              :error="xpBalanceError && !homeXpBalance"
               :size="28"
               @click="goTo('/progress')"
             />
@@ -382,7 +382,7 @@
     <paywall-drawer
       v-model="paywallDrawerOpen"
       :cost="paywallCost"
-      :available="(xpBalance && xpBalance.available) || 0"
+      :available="(homeXpBalance && homeXpBalance.available) || 0"
       :show-purchase="showPaywallPurchase"
     />
 
@@ -436,6 +436,7 @@ import {
   REDEEM_ROUTINE_ITEM_MUTATION,
 } from '../composables/graphql/queries';
 import { XP_PAYWALL_PURCHASE } from '../config/featureFlags';
+import { TIMES_UP_TIME, PROACTIVE_START_TIME } from '../constants/settings';
 import {
   updateRoutineTaskInCache,
   updateRoutineTaskKEarnedInCache,
@@ -450,6 +451,10 @@ import { pendingMutations } from '../utils/pendingMutations';
 import { guardFields, releaseEntity } from '../utils/cacheGuard';
 import { startAgentWhenReady } from '../utils/agentStart';
 import { runNewDayReset } from '../utils/newDay';
+import {
+  homeDay, homeTemplate, homeXp, saveHomeDay, saveHomeXp,
+} from '../utils/homeSnapshot';
+import { optimisticRoutine, withClockFlags } from '../utils/optimisticDay';
 import { describeRedeemFailure, describeRedeemReceipt } from '../utils/routineTaskDisplay';
 import { scopeGoalsToRef } from '../utils/goalRefScope';
 import { threshold } from '../utils/getDates';
@@ -484,6 +489,9 @@ const WEEK_STRIP_OPEN_PX = 68;
 const REWARD_SEEN_KEY = 'rn-reward-seen';
 // Shortest time the pull-to-refresh spinner shows, so a fast refetch still reads as one.
 const PULL_MIN_SPIN_MS = 600;
+// How long a push deep link waits for pass/wait maintenance to settle its
+// routine before saying so, rather than acting on flags still being written.
+const ROUTE_SETTLE_MS = 15000;
 // Day-goal quick-picks on the goal-item page: today, tomorrow, and the start of
 // next week (the design's "Mon").
 const DATE_PICKS = [
@@ -537,6 +545,7 @@ export default {
         if (data.routineDate) {
           this.did = data.routineDate.id || '';
           this.$routine.setSkipDay(!!data.routineDate.skip);
+          saveHomeDay(this.userEmail, data.routineDate.date || this.date, { routineDate: data.routineDate });
           return data.routineDate;
         }
         if (data.routineDate === null) this.addNewDayRoutine();
@@ -560,7 +569,14 @@ export default {
       },
       update(data) {
         this.goalsFirstLoad = false;
-        return data.optimizedDailyGoals;
+        const goals = data && data.optimizedDailyGoals;
+        if (Array.isArray(goals)) {
+          // Which day `goals` belongs to: Apollo keeps the previous day's list
+          // on screen until the new day's arrives.
+          this.goalsDate = this.date;
+          saveHomeDay(this.userEmail, this.date, { goals });
+        }
+        return goals;
       },
       error(error) {
         console.error('[RoutineFocus] daily goals query error:', error);
@@ -572,7 +588,8 @@ export default {
         return !this.$root.$data.email;
       },
       update(data) {
-        return data.xpBalance;
+        if (data && data.xpBalance) saveHomeXp(this.userEmail, data.xpBalance);
+        return data && data.xpBalance;
       },
       result({ data }) {
         if (data) this.xpBalanceError = false;
@@ -644,6 +661,12 @@ export default {
       endEventFiring: {},
       routineFirstLoad: true,
       goalsFirstLoad: true,
+      // The date `goals` was last answered for (see the goals query's update).
+      goalsDate: '',
+      // Routines ticked while Home was still drawing its placeholder: green at
+      // once, and the tick itself goes out the moment the real day arrives
+      // (`tickRoutine`).
+      localTicks: {},
       // True while the day's routine document is being created. Without it the
       // gap between "no routine for today" and "created + refetched" paints the
       // empty state, which reads as "you have no routine items".
@@ -651,6 +674,11 @@ export default {
       loadError: false,
       xpBalanceError: false,
       dispatchedRouteAction: '',
+      // The deep link waiting for its routine's flags to settle, and whether
+      // that wait has run out (see `awaitRouteSettle`).
+      routeSettleKey: '',
+      routeSettleExpired: '',
+      routeSettleTimer: null,
       mountTime: Date.now(),
     };
   },
@@ -713,16 +741,59 @@ export default {
      * v-for keys and two cards rendering the same routine. Dedupe on read.
      */
     tasklist() {
-      const list = (this.routineDate && this.routineDate.tasklist) || [];
+      const list = (this.dayRoutine && this.dayRoutine.tasklist) || [];
       const seen = {};
-      return list.filter((task) => {
-        if (!task || !task.id || seen[task.id]) return false;
-        seen[task.id] = true;
-        return true;
+      return list
+        .filter((task) => {
+          if (!task || !task.id || seen[task.id]) return false;
+          seen[task.id] = true;
+          return true;
+        })
+        .map((task) => (this.localTicks[task.id] && !task.ticked ? { ...task, ticked: true } : task));
+    },
+    /**
+     * The server's routine for the viewed date. Apollo keeps the previous
+     * date's routine on screen while a new date loads, which used to draw one
+     * day's routine under another day's header.
+     */
+    liveRoutine() {
+      const doc = this.routineDate;
+      return doc && doc.date === this.date ? doc : null;
+    },
+    /**
+     * What Home draws until the server answers (utils/homeSnapshot.js,
+     * utils/optimisticDay.js): the day as this device last read it, or — for a
+     * day it has never read, like the first open of the day — the routine
+     * template, started clean. Never written against: it has no document id.
+     */
+    placeholderRoutine() {
+      if (this.liveRoutine) return null;
+      const day = homeDay(this.userEmail, this.date);
+      if (day && day.routineDate) {
+        return this.isToday ? withClockFlags(day.routineDate, this.date, this.now) : day.routineDate;
+      }
+      return optimisticRoutine(homeTemplate(this.userEmail), this.date, {
+        now: this.now, today: this.todayDate,
       });
     },
+    dayRoutine() {
+      return this.liveRoutine || this.placeholderRoutine;
+    },
+    showingPlaceholder() {
+      return !this.liveRoutine && !!this.placeholderRoutine;
+    },
+    /** The viewed date's goals: the server's, else the last ones this device saw. */
+    homeGoals() {
+      if (this.goalsDate === this.date && Array.isArray(this.goals)) return this.goals;
+      const day = homeDay(this.userEmail, this.date);
+      return (day && day.goals) || [];
+    },
+    /** The points chip: the server's balance, else the last one this device saw. */
+    homeXpBalance() {
+      return this.xpBalance || homeXp(this.userEmail);
+    },
     dayGoalItems() {
-      return (this.goals || [])
+      return this.homeGoals
         .filter((goal) => goal && goal.period === 'day')
         .reduce((acc, goal) => acc.concat(goal.goalItems || []), []);
     },
@@ -846,10 +917,18 @@ export default {
       const id = this.resolvedFocusId;
       if (!id) return 'none';
       if (this.endEventFiring[id]) return 'firing';
-      return this.effectiveAgentStatus(id) || 'none';
+      const status = this.effectiveAgentStatus(id) || 'none';
+      // D-13: a run whose end event was due and never completed is not still
+      // listening, and saying so is the only thing that told the user anything.
+      if (status === 'listening' && this.runStalled(id)) return 'stalled';
+      return status;
     },
     agentLive() {
       return AGENT_LIVE_STAGES.indexOf(this.agentStage) !== -1;
+    },
+    /** Neither working nor done — the stall needs its own branch everywhere. */
+    agentStalled() {
+      return this.agentStage === 'stalled';
     },
     /** Any of today's routines has an agent mid-run (badge running/listening). */
     anyAgentLiveToday() {
@@ -868,14 +947,15 @@ export default {
     },
     miniColor() {
       const stage = agentStageOf(this.agentStage);
-      return this.agentLive && stage ? stage.color : '#4CAF50';
+      return (this.agentLive || this.agentStalled) && stage ? stage.color : '#4CAF50';
     },
     miniGlyph() {
       const stage = agentStageOf(this.agentStage);
-      return this.agentLive && stage ? stage.glyph : 'check';
+      return (this.agentLive || this.agentStalled) && stage ? stage.glyph : 'check';
     },
     miniTitle() {
       if (this.agentLive) return 'Agent working';
+      if (this.agentStalled) return 'Agent run stalled — tap to retry or cancel it';
       if (this.agentFinished) return 'View agent result';
       return 'Ticked';
     },
@@ -883,7 +963,7 @@ export default {
       return this.redeemCostForTask(this.focusRow);
     },
     displayGoals() {
-      return this.goals || [];
+      return this.homeGoals;
     },
     /** Open items on the focused routine — the action sheet's hint line. */
     focusOpenItemCount() {
@@ -931,7 +1011,7 @@ export default {
     },
     /** The Goal document the open item lives in — the mutation's `date`. */
     openGoalItemDate() {
-      const owner = (this.goals || []).find((goal) => goal
+      const owner = this.homeGoals.find((goal) => goal
         && goal.period === 'day'
         && (goal.goalItems || [])
           .some((item) => item && String(item.id) === String(this.openGoalItemId)));
@@ -956,7 +1036,7 @@ export default {
     goalSheetGoalRefLabel() {
       const item = this.openGoalItem;
       if (!item || !item.goalRef) return '';
-      const parent = (this.goals || [])
+      const parent = this.homeGoals
         .filter((goal) => goal && goal.period !== 'day')
         .reduce((acc, goal) => acc.concat(goal.goalItems || []), [])
         .find((candidate) => candidate && String(candidate.id) === String(item.goalRef));
@@ -1090,7 +1170,7 @@ export default {
 
     // --- skip day ---------------------------------------------------------
     isSkippedDay() {
-      return !!(this.routineDate && this.routineDate.skip);
+      return !!(this.dayRoutine && this.dayRoutine.skip);
     },
     /** The optimistic half of the week strip's pause overlay. */
     skippedDates() {
@@ -1104,7 +1184,7 @@ export default {
     cascadeGoalItemId() {
       if (this.period === 'day') return '';
       const item = pickCascadeItem({
-        goals: this.goals, period: this.period, focusRow: this.focusRow,
+        goals: this.homeGoals, period: this.period, focusRow: this.focusRow,
       });
       return item ? item.id : '';
     },
@@ -1112,7 +1192,7 @@ export default {
       if (this.period === 'day') return null;
       return buildCascade({
         period: this.period,
-        goals: this.goals,
+        goals: this.homeGoals,
         focusRow: this.focusRow,
         date: this.date,
         children: this.cascadeChildren || [],
@@ -1171,6 +1251,9 @@ export default {
         isPastDay: this.isPastDay,
         // On the phone the thread scrolls with the card's checklist.
         sharedScroller: this.shell === 'phone',
+        neighbourRefs: [this.rows[this.focusIndex - 1], this.rows[this.focusIndex + 1]]
+          .filter((row) => this.focusIndex >= 0 && row)
+          .map((row) => row.id),
       };
     },
     chatHandlers() {
@@ -1205,8 +1288,9 @@ export default {
     },
     showGoalsSkeleton() {
       const loading = this.$apollo.queries.goals && this.$apollo.queries.goals.loading;
-      const hasData = Array.isArray(this.goals) && this.goals.length > 0;
-      return !!loading && this.goalsFirstLoad && !hasData;
+      const hasData = this.homeGoals.length > 0;
+      // Also while another day's goals load: `goals` still holds the last day's.
+      return !!loading && (this.goalsFirstLoad || this.goalsDate !== this.date) && !hasData;
     },
     headerRingSize() {
       return HEADER_RING_SIZE;
@@ -1380,6 +1464,7 @@ export default {
     this.stopIntelligentRefresh();
     if (this.nowTimerId) clearInterval(this.nowTimerId);
     if (this.flyTimer) clearTimeout(this.flyTimer);
+    if (this.routeSettleTimer) clearTimeout(this.routeSettleTimer);
   },
   methods: {
     drawerTiming,
@@ -1621,7 +1706,18 @@ export default {
     toggleItem(item) {
       if (!item || !item.id) return;
       const nextComplete = !item.isComplete;
-      const goal = (this.goals || []).find((g) => g
+      // One tick, one write. A second toggle that lands while the first is
+      // still in flight (seen after closing the AI search modal) carries the
+      // same stale `isComplete`, so it asked for the same state again — and
+      // its `.then` posted "all done" and fired the end event a second time.
+      // Only a repeat of the SAME target is dropped: unticking straight back
+      // still goes through, and nothing is disabled while the write is out.
+      if (!this.togglesInFlight) this.togglesInFlight = {};
+      if (this.togglesInFlight[item.id] === nextComplete) return;
+      const settle = () => {
+        if (this.togglesInFlight[item.id] === nextComplete) delete this.togglesInFlight[item.id];
+      };
+      const goal = this.homeGoals.find((g) => g
         && g.period === 'day'
         && (g.goalItems || []).some((gi) => gi.id === item.id));
 
@@ -1637,6 +1733,7 @@ export default {
         });
       }
 
+      this.togglesInFlight[item.id] = nextComplete;
       this.$goals
         .completeGoalItem({
           id: item.id,
@@ -1648,11 +1745,13 @@ export default {
           dayDate: this.date,
         })
         .then(() => {
+          settle();
           eventBus.$emit(EVENTS.ROUTINE_TICKED);
           if (nextComplete) this.onItemCompleted(item);
           if (this.$apollo.queries.goals) this.$apollo.queries.goals.refetch();
         })
         .catch(() => {
+          settle();
           this.notifyGeneric();
         });
     },
@@ -1770,6 +1869,12 @@ export default {
      */
     onMiniClick() {
       if (this.agentLive) return;
+      // Retry and cancel live on the agent's detail sheet (D-13); this is the
+      // way through to them from the badge that shows the stall.
+      if (this.agentStalled) {
+        this.goTo('/agents');
+        return;
+      }
       if (this.agentFinished) {
         this.openAgentResult();
         return;
@@ -1866,11 +1971,20 @@ export default {
       if (pendingMutations.has(pendingKey)) return;
       pendingMutations.add(pendingKey);
 
+      // Tapped on the placeholder (the server's day has not arrived yet): the
+      // ring goes green now, and the tick is sent once the real day is here and
+      // agrees it can be ticked.
+      const onPlaceholder = this.showingPlaceholder;
+      if (onPlaceholder) this.$set(this.localTicks, task.id, true);
+      const dropLocalTick = () => {
+        if (this.localTicks[task.id]) this.$delete(this.localTicks, task.id);
+      };
+
       this.measureFly(task);
       const tickedAt = Date.now();
       // Copied before the optimistic write lands: the pill names what the tick
       // credited, which is this against the stimuli the mutation returns.
-      const stimuliBefore = (task.stimuli || []).map((st) => ({ name: st.name, earned: st.earned }));
+      let stimuliBefore = (task.stimuli || []).map((st) => ({ name: st.name, earned: st.earned }));
 
       // Claim the tick locally the instant it is tapped: from here until the
       // server confirms, no query response may write `ticked` on this task —
@@ -1886,6 +2000,7 @@ export default {
       if (!did) {
         releaseEntity('RoutineItem', task.id);
         pendingMutations.remove(pendingKey);
+        dropLocalTick();
         this.clearFly();
         this.$notify({
           title: 'Error',
@@ -1895,6 +2010,23 @@ export default {
           duration: 3000,
         });
         return;
+      }
+
+      if (onPlaceholder) {
+        // The placeholder only guessed this routine's state; the server's day
+        // decides. Already ticked (another device): nothing to send. Its
+        // window gone: that is a redeem, not a tick.
+        const settled = this.settledTask(task.id);
+        if (!settled || settled.ticked || settled.passed || settled.wait) {
+          releaseEntity('RoutineItem', task.id);
+          pendingMutations.remove(pendingKey);
+          dropLocalTick();
+          this.clearFly();
+          if (settled && settled.redeemable) this.redeemWhenSettled(settled, { fireAgent, agentImplicit });
+          else if (settled && !settled.ticked) this.notifyRouteRefused(settled);
+          return;
+        }
+        stimuliBefore = (settled.stimuli || []).map((st) => ({ name: st.name, earned: st.earned }));
       }
 
       await this.$apollo
@@ -1984,7 +2116,103 @@ export default {
         })
         .finally(() => {
           pendingMutations.remove(pendingKey);
+          // By now the cache holds the tick (or Apollo has rolled it back).
+          dropLocalTick();
         });
+    },
+
+    /**
+     * A routine as the SERVER's day has it, brought up to the clock the way the
+     * pass/wait sweep is about to (`withClockFlags`), with `redeemable` worked
+     * out by the same rule as the card (utils/routineFocusModel.js). Null while
+     * the server's day has not arrived.
+     */
+    settledTask(taskId) {
+      const live = this.liveRoutine;
+      const raw = live && (live.tasklist || []).find((t) => t && t.id === taskId);
+      if (!raw) return null;
+      const task = this.isToday
+        ? withClockFlags({ tasklist: [raw] }, this.date, this.now || moment()).tasklist[0]
+        : raw;
+      return {
+        ...task,
+        redeemable: !!task.passed && !task.ticked && !task.redeemed && this.isToday,
+      };
+    },
+
+    /**
+     * Resolve once the server's copy of a routine satisfies `test`, or with
+     * null after `ms`. A redeem needs the server to have marked the routine
+     * passed (the pass/wait sweep runs just after the day arrives); sent any
+     * sooner, it is refused.
+     */
+    untilServerTask(taskId, test, ms = 6000) {
+      const deadline = Date.now() + ms;
+      return new Promise((resolve) => {
+        const check = () => {
+          const live = this.liveRoutine;
+          const raw = live && (live.tasklist || []).find((t) => t && t.id === taskId);
+          if (raw && test(raw)) {
+            resolve(raw);
+            return;
+          }
+          if (Date.now() > deadline) {
+            resolve(null);
+            return;
+          }
+          setTimeout(check, 150);
+        };
+        check();
+      });
+    },
+
+    /** A redeem tapped on the placeholder: wait for the server's day, then decide. */
+    async redeemWhenSettled(task, opts) {
+      // One wait per routine however often it is tapped. Not pendingMutations:
+      // nothing is on the wire yet, and that registry pauses every refresh.
+      if (!this.settlingRedeems) this.settlingRedeems = {};
+      if (this.settlingRedeems[task.id]) return;
+      this.settlingRedeems[task.id] = true;
+      try {
+        let did = '';
+        try {
+          did = await this.ensureRoutineId();
+        } catch (e) {
+          did = '';
+        }
+        if (!did) {
+          this.$notify({
+            title: 'Error',
+            text: "Couldn't load today's routine. Check your connection and try again.",
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+          return;
+        }
+        const settled = this.settledTask(task.id);
+        if (!settled || settled.ticked) return;
+        if (!settled.redeemable) {
+          if (!settled.passed && !settled.wait) this.tickRoutine(settled, opts);
+          else this.notifyRouteRefused(settled);
+          return;
+        }
+        await this.untilServerTask(task.id, (raw) => raw.passed || raw.ticked);
+        const row = this.rows.find((r) => r.id === task.id);
+        if (row && row.redeemable) {
+          this.redeemRoutine(row, opts);
+        } else if (row && !row.ticked) {
+          this.$notify({
+            title: `${row.name} isn't ready to redeem yet`,
+            text: 'Try again in a moment.',
+            group: 'notify',
+            type: 'info',
+            duration: 3000,
+          });
+        }
+      } finally {
+        delete this.settlingRedeems[task.id];
+      }
     },
 
     onRoutineTicked(task, { fireAgent, agentImplicit, credited = [] }) {
@@ -2027,6 +2255,11 @@ export default {
     /** Spend points to rescue a passed routine. Ported from redeemClick. */
     redeemRoutine(task, { fireAgent = true, agentImplicit = true } = {}) {
       this.actionSheetOpen = false;
+      // Placeholder: there is no document id to redeem against yet.
+      if (this.showingPlaceholder || !this.did) {
+        this.redeemWhenSettled(task, { fireAgent, agentImplicit });
+        return;
+      }
       const cost = this.getRedeemCost(task);
       const balance = this.xpBalance;
       const entitled = !!(balance && balance.entitled);
@@ -2262,6 +2495,16 @@ export default {
       if (!taskRef) return false;
       return this.dayGoalItems.some((item) => item.taskRef === taskRef && item.reward);
     },
+    /**
+     * Whether the run on a routine has stalled — its end event was due and
+     * never completed (D-13). The verdict is the store's: it holds the due
+     * stamp and knows what is on the wire. `now` is read so the page's minute
+     * ticker re-evaluates it as the bound passes.
+     */
+    runStalled(taskRef) {
+      if (!taskRef || typeof this.$agent.isStalled !== 'function') return false;
+      return this.$agent.isStalled(taskRef, this.now && this.now.valueOf());
+    },
     /** See utils/agentPointsGuard — the rule is shared with the Start sheet. */
     refuseAgentWithoutPoints(taskRef) {
       return refuseAgentWithoutPoints(this.$notify, this.tasklist.find((t) => t.id === taskRef));
@@ -2296,6 +2539,10 @@ export default {
       const total = this.countTaskTotal(task);
       const completed = this.countTaskCompleted(task);
       if (total <= 0 || completed < total) return;
+      // The counter is full, so the end event is OWED from here on however this
+      // call ends. That stamp is what bounds the stall (D-13) — without it a
+      // run that never closed looked identical to one still listening.
+      if (typeof this.$agent.markEndEventDue === 'function') this.$agent.markEndEventDue(taskRef);
 
       // Say nothing unless something is actually going out. `fireEndEvent`
       // refuses three ways — no end event configured, no run open, or a run
@@ -2339,6 +2586,9 @@ export default {
       });
     },
     dispatchAgentEndEvent(taskRef, goalId) {
+      // Already going out for this routine: a second "end event firing" pill
+      // (and a second webhook) is a duplicate, not a retry.
+      if (this.endEventFiring[taskRef]) return;
       const gid = goalId || this.findFirstGoalIdForRoutine(taskRef);
       this.$set(this.endEventFiring, taskRef, true);
       this.postChatEvent({
@@ -2503,12 +2753,21 @@ export default {
       if (!routineId || !action) return;
       if (!this.rows.length) return;
 
+      // The placeholder is a guess: only the server's day may act on a deep
+      // link, or say a routine is not on today's list. The `rows` watcher runs
+      // this again when that day arrives. Bringing the routine into view needs
+      // no wait.
+      if (this.showingPlaceholder) {
+        if (this.rows.some((r) => r.id === routineId)) this.focusRoutineId = routineId;
+        return;
+      }
+
       const dispatchKey = `${routineId}:${action}`;
       if (this.dispatchedRouteAction === dispatchKey) return;
-      this.dispatchedRouteAction = dispatchKey;
 
       const row = this.rows.find((r) => r.id === routineId);
       if (!row) {
+        this.dispatchedRouteAction = dispatchKey;
         this.$notify({
           title: 'Routine not found',
           text: "That routine isn't on today's list.",
@@ -2520,9 +2779,22 @@ export default {
         return;
       }
 
+      // Complete and Start decide from `ticked`/`passed`/`wait`, and on a cold
+      // open those are still being written: the first rows of a new day carry
+      // the template's `wait`, and a routine past its window is not `passed`
+      // until the sweep's response lands. Deciding on the first rows ticked
+      // nothing (tickRoutine refuses `wait`) or ticked a missed routine for free.
+      if ((action === 'complete' || action === 'start') && !this.routeRowSettled(row, action)) {
+        this.awaitRouteSettle(dispatchKey, row);
+        return;
+      }
+      this.dispatchedRouteAction = dispatchKey;
+      if (this.routeSettleTimer) clearTimeout(this.routeSettleTimer);
+      this.routeSettleTimer = null;
+
       this.focusRoutineId = row.id;
       if (action === 'complete') {
-        if (!row.ticked) this.tickRoutine(row);
+        this.completeFromRoute(row);
         return;
       }
       // "Do now" and body taps open the routine; an insight nudge also brings
@@ -2549,8 +2821,102 @@ export default {
         });
         return;
       }
-      if (action === 'start') this.onStartAgent();
+      if (action === 'start') this.startFromRoute(row);
       if (action === 'build') this.onBuildAgent();
+    },
+    /**
+     * Whether pass/wait maintenance has caught up with a routine — the same
+     * clock rule `routinePassWaitMixin` writes from: `passed` once it is
+     * TIMES_UP_TIME past, `wait` cleared PROACTIVE_START_TIME before. Both flags
+     * only ever move toward the clock, so a row that already agrees is settled.
+     * Start also reads the day's goal items, so it waits for those to load.
+     */
+    routeRowSettled(row, action) {
+      if (!row) return false;
+      if (action === 'start' && this.goalsFirstLoad) return false;
+      if (row.ticked) return true;
+      if (!this.canMaintainPassWait) return false;
+      const minutes = moment.duration(moment(row.time, 'HH:mm').diff(moment())).asMinutes();
+      if (minutes < -TIMES_UP_TIME && !row.passed) return false;
+      if (minutes < PROACTIVE_START_TIME && row.wait) return false;
+      return true;
+    },
+    /**
+     * Hold a deep link until its routine settles. The rows watcher re-runs the
+     * dispatch as the sweep's responses land; if they never do (a failed
+     * mutation, a document that never loads) the link is consumed with a toast
+     * instead of acting on the unsettled flags.
+     */
+    awaitRouteSettle(dispatchKey, row) {
+      if (this.routeSettleExpired === dispatchKey) {
+        this.dispatchedRouteAction = dispatchKey;
+        this.$notify({
+          title: `Couldn't open ${row.name}`,
+          text: "Today's routine is still updating. Tap the ring to try again.",
+          group: 'notify',
+          type: 'warning',
+          duration: 4000,
+        });
+        return;
+      }
+      if (this.routeSettleKey === dispatchKey) return;
+      this.routeSettleKey = dispatchKey;
+      this.focusRoutineId = row.id;
+      if (this.routeSettleTimer) clearTimeout(this.routeSettleTimer);
+      this.routeSettleTimer = setTimeout(() => {
+        this.routeSettleTimer = null;
+        this.routeSettleExpired = dispatchKey;
+        this.maybeDispatchRouteAction();
+      }, ROUTE_SETTLE_MS);
+    },
+    /**
+     * Push "Complete" is the sheet's Start Task, reached the way the ring
+     * reaches it: an open routine ticks (no agent), a passed one goes through
+     * the late check-in sheet and its price, and one that cannot be ticked says
+     * why.
+     */
+    completeFromRoute(row) {
+      if (row.ticked) return;
+      if (row.redeemable) {
+        this.onRingAction();
+        return;
+      }
+      if (row.buttonDisabled) {
+        this.notifyRouteRefused(row);
+        return;
+      }
+      this.tickRoutine(row, { fireAgent: false });
+    },
+    /**
+     * Push "Start agent" is the sheet's Start Agent. An agent has nothing to run
+     * against without an open goal item, and the sheet is where one is typed, so
+     * without one — or on a passed routine, whose late check-in is confirmed
+     * there — it opens the sheet and ticks nothing.
+     */
+    startFromRoute(row) {
+      if (!row.ticked) {
+        if (row.buttonDisabled) {
+          this.notifyRouteRefused(row);
+          return;
+        }
+        const hasOpenItem = (row.items || []).some((item) => item && !item.isComplete);
+        if (row.redeemable || !hasOpenItem) {
+          this.onRingAction();
+          return;
+        }
+      }
+      this.onStartAgent();
+    },
+    notifyRouteRefused(row) {
+      this.$notify({
+        title: row.wait ? `${row.name} isn't open yet` : `${row.name} can't be ticked now`,
+        text: row.wait
+          ? `It opens ${PROACTIVE_START_TIME} minutes before ${row.time}.`
+          : 'Its window has closed.',
+        group: 'notify',
+        type: 'info',
+        duration: 3000,
+      });
     },
 
     // =====================================================================
@@ -2607,441 +2973,4 @@ export default {
 };
 </script>
 
-<style>
-/* Root-class prefixed: this page is a full app shell rendered OUTSIDE
-   MobileLayout/DesktopLayout, and none of it may reach the legacy screens. */
-.rn-home {
-  /* Mirrors AppShell: the iPhone PWA home-indicator inset, zeroed inside the
-     native shell (Capacitor already insets the web view). */
-  --rn-safe-bottom: env(safe-area-inset-bottom, 0px);
-  position: relative;
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
-  background: #f4f4f4;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  color: rgba(0, 0, 0, .87);
-}
-
-/* There is deliberately no `.capacitor-native` override zeroing --rn-safe-bottom.
-   It used to be zeroed on the theory that "Capacitor already insets the web
-   view", but that does not hold for this shell: `.rn-home--phone` is
-   `position: fixed; inset: 0`, and a fixed element anchors to the whole window,
-   underneath WKWebView's contentInset. The nav therefore sits on the very bottom
-   of the screen on both platforms, and zeroing the inset drew its labels beneath
-   the home indicator / gesture pill. Verified on an iPhone 16 Pro Max simulator
-   and an API 36 emulator (inset 24px; the bar grew by exactly that). It also beat
-   android-safe-area.css's correct `.capacitor-native .v-bottom-nav` handling on
-   specificity, so Android lost its padding twice over. */
-
-/* Fixed to the window, not sized by vh: in an iPhone standalone PWA 100vh /
-   100dvh can be taller than the window (by the status bar), which pushed the
-   bottom of the column - and anything laid out against it - off-screen. The
-   pre-redesign MobileLayout survived only because its nav was position: fixed.
-   inset: 0 makes the whole column match the real window. */
-.rn-home--phone {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: auto;
-  display: flex;
-  flex-direction: column;
-  padding-top: env(safe-area-inset-top);
-  /* The page's own pull-to-refresh replaces the browser's; don't run both. */
-  overscroll-behavior-y: contain;
-}
-
-.rn-home--tablet,
-.rn-home--desktop {
-  display: flex;
-}
-
-/* Inbox button in the tablet / desktop header. The phone's lives in
-   RoutineTopBar, where the design puts it at the leading edge. */
-.rn-home__inbox {
-  position: relative;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
-  color: rgba(0, 0, 0, .65);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  margin-right: 10px;
-}
-
-.rn-home__inbox-badge {
-  position: absolute;
-  top: -3px;
-  right: -4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  box-sizing: border-box;
-  border-radius: 8px;
-  background: #FF9800;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 0 2px #f4f4f4;
-}
-
-/* ---- phone ---- */
-.rn-home__week {
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.rn-home__phone-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 8px 16px calc(64px + var(--rn-safe-bottom));
-  overflow: hidden;
-}
-
-/* Typing: the tab bar is hidden, so the composer drops onto the keyboard. */
-.rn-home--typing .rn-home__phone-body {
-  padding-bottom: 8px;
-}
-
-/* The MobileLayout bottom nav: fixed to the viewport bottom, grown by the
-   home-indicator inset with the buttons padded above it. */
-/* 64px of tabs, matching AppShell's `.rn-shell__tabbar` and the phone chassis
-   ("64px header + 64px bottom bar", docs/redesign/chassis.md). Home used to be
-   56px, which made the bar visibly change height when moving between Home and
-   every other page. */
-.rn-home .rn-home__nav.v-bottom-nav {
-  height: calc(64px + var(--rn-safe-bottom)) !important;
-  padding-bottom: var(--rn-safe-bottom);
-  box-sizing: border-box;
-  box-shadow: 0 -1px 3px rgba(0, 0, 0, .08);
-  z-index: 5;
-}
-
-.rn-home .rn-home__nav .v-btn {
-  height: 64px;
-}
-
-/* ---- tablet / desktop ---- */
-/* The rail/sidebar is AppShell's (77px rail, 264px sidebar); Home supplies only
-   the main column, so the shell just has to fill the row .rn-home lays out. */
-.rn-home__shell {
-  flex: 1;
-  min-width: 0;
-}
-
-/* The shell's sidebar slot insets its content 12px, but RoutineRail already
-   insets its own rows (6px margin + 12px padding) — cancel the slot's so the
-   rail sits where it did when Home drew its own sidebar. */
-.rn-home__rail {
-  flex: 1;
-  min-height: 0;
-  margin: 0 -12px;
-}
-
-.rn-home__main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-/* The handoff caps Home's desktop content column at 980px and centres it beside
-   the 264px sidebar. Without this the checklist and chat panes stretch across the
-   whole 1440px viewport, which makes every measurement inside them read wider
-   than the design — the "desktop container size" defect. Tablet is unaffected:
-   its 1133px viewport minus the 76px rail already sits under the cap. */
-.rn-home--desktop .rn-home__main {
-  width: 100%;
-  max-width: 980px;
-  margin: 0 auto;
-}
-
-.rn-home__header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 20px 28px 12px;
-  flex-shrink: 0;
-}
-
-/* 25px on top centres the date on the rail's logo (centred 41px down), the line
-   every other tablet page's title sits on too (AppShell's no-status head). */
-.rn-home--tablet .rn-home__header {
-  padding: 25px 20px 8px;
-}
-
-.rn-home__header-text {
-  flex: 1;
-  min-width: 0;
-}
-
-/* 20px on both large shells. chassis.md's "desktop titles run 26px" is a
-   generalisation; Home's own frames (6a and 6b) both draw the date at 20/700,
-   and the .dc.html is the source of truth. Desktop was the outlier at 26px. */
-.rn-home__date {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.rn-home__header-sub {
-  font-size: 13px;
-  color: rgba(0, 0, 0, .54);
-}
-
-/* No width: the strip is seven fixed 38px cells, so it sizes itself. Pinning it
-   at 360px (280 on tablet) stretched every cell to 50px. */
-.rn-home__header-week {
-  flex-shrink: 0;
-}
-
-.rn-home__content {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  gap: 12px;
-  padding: 4px 28px 28px;
-}
-
-.rn-home--tablet .rn-home__content {
-  padding: 0 20px 20px;
-}
-
-/*
-  A true 3:2 that scales, both shells. The chat pane used to be 420px fixed
-  (400 on tablet) against a checklist with a 1.15 grow factor, which read as
-  1.15:1 at the 980px column and drifted with every viewport: the pane kept its
-  420px while the checklist absorbed the whole difference. The design gives both
-  panes a flex basis of 0 so the ratio is the only thing deciding the split —
-  547.2/364.8 at desktop's 980px column, 602.4/401.6 at the iPad's uncapped 1133.
-
-  Which only works while the card is padding-FREE. A `box-sizing: border-box`
-  flex item cannot resolve `flex-basis: 0` below its own padding, so the card's
-  `16px 20px 0` floored its base size at 40px: it took 40 off the top and the
-  ratio then applied to the remaining 872, giving 563.2/348.8. `RoutineFocusCard`
-  now keeps only vertical padding and hands the horizontal inset to an inner
-  `.rn-focus-card__body` — the same nesting the design frames use.
-*/
-.rn-home__content > .rn-focus-card {
-  flex: 3 1 0;
-  min-width: 0;
-}
-
-.rn-home__chat-pane {
-  flex: 2 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  border-radius: 20px;
-  overflow: hidden;
-}
-
-/*
-  One elevation for both panes. The phone's card shadow is deliberately heavier
-  (a 15px blur) because the card floats over a deck; side by side in a pane the
-  design flattens it, and the chat pane was carrying a third variant of its own
-  (alpha .1/.06). The phone card is NOT inside .rn-home__content, so it keeps
-  the deck shadow.
-
-  TODO this belongs on .rn-focus-card--tablet/--desktop in RoutineFocusCard.vue
-  (that organism owns the card's own chrome); it is an override here only
-  because this pass does not own that file.
-*/
-.rn-home__content > .rn-focus-card,
-.rn-home__chat-pane {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .08), 0 2px 4px -1px rgba(0, 0, 0, .05);
-}
-
-.rn-home__chat-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, .06);
-  flex-shrink: 0;
-}
-
-.rn-home__chat-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.rn-home__chat-head-text {
-  min-width: 0;
-}
-
-.rn-home__chat-name {
-  font-size: 15px;
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rn-home__chat-sub {
-  font-size: 12px;
-  color: rgba(0, 0, 0, .54);
-}
-
-.rn-home__chat-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 0 16px;
-}
-
-/* ---- empty / error ---- */
-.rn-home__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  height: 100%;
-  padding: 24px;
-  box-sizing: border-box;
-  background: #fff;
-  border-radius: 16px;
-  text-align: center;
-  font-size: 14px;
-  color: rgba(0, 0, 0, .54);
-}
-
-.rn-home__empty--pane {
-  flex: 1;
-  border-radius: 20px;
-}
-
-.rn-home__empty-btn {
-  border: 1px solid rgba(40, 139, 213, .45);
-  background: #fff;
-  color: #1f6fab;
-  border-radius: 999px;
-  height: 36px;
-  padding: 0 16px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-/* ---- sheet body ---- */
-.rn-home__sheet-note {
-  font-size: 12px;
-  color: rgba(0, 0, 0, .54);
-  margin: 0 0 12px;
-}
-
-/* ---- goal sheet ---- */
-.rn-home__goal-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: rgba(0, 0, 0, .54);
-  margin-bottom: 8px;
-}
-
-.rn-home__goal-status {
-  font-weight: 700;
-}
-
-.rn-home__goal-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.rn-home__goal-tag {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #f0f0f0;
-  color: rgba(0, 0, 0, .6);
-}
-
-.rn-home__goal-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .5px;
-  color: rgba(0, 0, 0, .45);
-  margin: 8px 0 4px;
-}
-
-.rn-home__goal-sub {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  font-size: 14px;
-}
-
-.rn-home__goal-sub-box {
-  font-size: 20px;
-}
-
-.rn-home__goal-btn {
-  width: 100%;
-  height: 44px;
-  margin-top: 8px;
-  border: 0;
-  border-radius: 999px;
-  background: #288bd5;
-  color: #fff;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-/* ---- tick flight ---- */
-.rn-home__fly-ring {
-  position: absolute;
-  z-index: 40;
-  border-radius: 50%;
-  background: #4CAF50;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 20px rgba(76, 175, 80, .45);
-  pointer-events: none;
-  transform-origin: center;
-  animation: rn-fly .8s cubic-bezier(.5, 0, .3, 1) forwards;
-}
-
-.rn-home__fly-glyph {
-  font-size: 34px;
-}
-
-.rn-home__fly-title {
-  position: absolute;
-  z-index: 41;
-  font-size: 19px;
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
-  pointer-events: none;
-  color: rgba(0, 0, 0, .87);
-  transform-origin: left top;
-  animation: rn-fly .8s cubic-bezier(.5, 0, .3, 1) forwards;
-}
-</style>
+<style src="@routine-notes/ui/styles/app/pages/RoutineFocus.css"></style>

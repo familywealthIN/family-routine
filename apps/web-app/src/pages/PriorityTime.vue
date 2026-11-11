@@ -454,29 +454,4 @@ export default {
 };
 </script>
 
-<style>
-/* The shell owns the frame; the page only has to stop the old layout's gutters
-   from doubling up on it. Root-class prefixed so nothing leaks. */
-.rn-priority {
-  height: 100%;
-  min-height: 0;
-}
-
-.rn-priority .rn-shell__body {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Tablet and desktop render all four quadrant cards at once, so the board has to
-   fill the body rather than scroll inside it. */
-.rn-priority .rn-shell--tablet .rn-shell__body,
-.rn-priority .rn-shell--desktop .rn-shell__body {
-  overflow: hidden;
-}
-
-.rn-priority .rn-pboard--tablet,
-.rn-priority .rn-pboard--desktop {
-  flex: 1;
-  min-height: 0;
-}
-</style>
+<style src="@routine-notes/ui/styles/app/pages/PriorityTime.css"></style>

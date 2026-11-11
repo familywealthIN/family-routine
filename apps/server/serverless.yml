@@ -43,44 +43,95 @@ provider:
     JWT_SECRET: ${self:custom.secrets.JWT_SECRET}
     DOMAIN: ${self:custom.secrets.DOMAIN}
     ENCRYPTION_KEY: ${self:custom.secrets.ENCRYPTION_KEY}
-    GEMINI_API_KEY: ${self:custom.secrets.GEMINI_API_KEY}
     OPENROUTER_API_KEY: ${self:custom.secrets.OPENROUTER_API_KEY}
-    # Routine chat runs on OpenRouter's FREE tier only. Comma-separated, every
+    # Every model on the backend runs on OpenRouter's FREE tier. Comma-separated, every
     # id must carry the `:free` suffix (ids without it are dropped at runtime).
     # Omit to use the built-in roster in src/utils/chatApi.js.
     OPENROUTER_FREE_MODELS: ${self:custom.secrets.OPENROUTER_FREE_MODELS, ''}
     WEB_APP_URL: ${self:custom.secrets.WEB_APP_URL, ''}
     MCP_BASE_URL: ${self:custom.secrets.MCP_BASE_URL}
+    # Sender of the missed-days email. SES in ap-south-1 has production access
+    # and this address verified; a new sender must be verified there first.
+    EMAIL_FROM: ${self:custom.secrets.EMAIL_FROM, 'Routine Notes <noreply@familywealth.in>'}
+  iam:
+    role:
+      statements:
+        # Only the missed-days email sends mail, and only as the verified sender.
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+          Resource: arn:aws:ses:${aws:region}:${aws:accountId}:identity/*
+          Condition:
+            StringEquals:
+              ses:FromAddress: noreply@familywealth.in
+        # The GraphQL warm-up calls copies of itself (src/utils/warmer.js) — and
+        # nothing else.
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+          Resource: arn:aws:lambda:${aws:region}:${aws:accountId}:function:${self:service}-${sls:stage}-query
 
 functions:
+  # Hourly: one email to people who missed 3 days of routines
+  # (src/jobs/missedDays.js). Dry run: node scripts/preview-missed-email.js
+  missedDaysEmail:
+    handler: missed-days-email.handler
+    timeout: 300
+    events:
+      - schedule: rate(1 hour)
+
+  # GraphQL, served as https://api.routinenotes.app/graphql (custom domain,
+  # docs/oauth-credentials.md). No `cors: true`: that answers the preflight
+  # with Access-Control-Allow-Origin: * from API Gateway. OPTIONS goes to the
+  # Lambda instead, which allows only the app's own sites and the mobile apps
+  # (src/utils/corsOrigins.js).
   query:
     handler: handler.handler
     events:
       - http:
           path: graphql
           method: post
-          cors: true
+      - http:
+          path: graphql
+          method: options
+      # Keep containers warm (src/utils/warmer.js): opening the app sends its
+      # first reads together, and each one that meets a cold container waits
+      # 2.6s (median) to 5.6s (p90) for it to start and reach Mongo.
+      - schedule:
+          rate: rate(5 minutes)
+          input:
+            warmer: true
+            concurrency: 6
 
+  # The MCP connector (src/mcp-http-server.js), public: any AI app may call it,
+  # so CORS stays open. MCP clients sign in at the ORIGIN ROOT (/.well-known/…,
+  # /authorize, /token, /register), so it needs its custom domain,
+  # mcp.routinenotes.app, mapped to the `dev` stage with an empty base path. On
+  # the raw execute-api URL the root sits outside /dev and API Gateway answers
+  # {"message":"Forbidden"} before the Lambda runs.
   mcp:
     handler: serverless-mcp.handler
     events:
       - http:
           path: mcp
+          method: any
+          cors: true
+      - http:
+          path: mcp/{proxy+}
+          method: any
+          cors: true
+      - http:
+          path: .well-known/{proxy+}
           method: get
           cors: true
       - http:
-          path: mcp/call
+          path: authorize
+          method: get
+      - http:
+          path: token
           method: post
           cors: true
       - http:
-          path: mcp/resources
-          method: get
-          cors: true
-      - http:
-          path: mcp/tools
-          method: get
-          cors: true
-      - http:
-          path: mcp/graphql
+          path: register
           method: post
           cors: true

@@ -141,3 +141,11 @@ Add to the schema in `apps/server/src/schema/*` and resolvers, and update the fr
 ## Files (`packages/design/`)
 `Routine Notes Final.dc.html`, `Priority.dc.html`, `Agents.dc.html`, `Goals.dc.html`, `Year Goals.dc.html`, `Routines.dc.html`, `Progress.dc.html`, `Groups.dc.html`, `Profile and About.dc.html`, `README.md`, plus the runtime (`support.js`, `android-frame.jsx`, `browser-window.jsx`).
 Placeholder values to replace: point rates (3 h / 1 h / 25%), the About version label, and all sample data in each file's logic class.
+
+## Shipped since the handoff (to 25 Oct 2026)
+Where the app now differs from the `.dc.html` files. The design system (`README.md`, `tokens.json`, `components/`, `canvases/`) shows the shipped state.
+- **One toast everywhere.** Every `$notify` call renders the dark `AppToast` card (title + consequence). The old `vue-notification` stack is gone.
+- **Goal thresholds are the rule.** A week goal ticks at 5 met day milestones, a month at 3 week milestones, a year at 6 month milestones, however many more were planned. Goal rows read "3/5 milestones" with the rule "Needs 3 of 5 week milestones met". (Profile's roll-up chain in the design says 9 months; it is 6.)
+- **The chat answers before it adds.** A question gets an answer that ends with one question or offer; tasks it wants to add arrive as proposals with "Add all to checklist", and the reply's follow-ups lead the quick-reply chips ("How was my week?" joined the defaults). The chat reads the routine's last 7 days and its area/project context.
+- **Post-tick insight.** After a tick the routine posts one three-sentence message (a true win, one idea for next time, something to look forward to), styled as a primary-tinted bubble with a `bolt` title.
+- **A stalled agent** (end event due and never came) shows a static orange `warning` ring with retry and cancel, instead of breathing "listening" for ever.

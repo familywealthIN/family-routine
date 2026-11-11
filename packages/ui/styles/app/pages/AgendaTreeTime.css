@@ -1,0 +1,253 @@
+/* Styles for apps/web-app/src/pages/AgendaTreeTime.vue, loaded there with <style src> (global, root-class prefixed). */
+.rn-plan {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* ---- header action, as Milestones draws it ---- */
+
+.rn-plan__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rn-plan__pick {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 140px;
+  max-width: 220px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 6px;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  background: #f5f5f5;
+}
+
+.rn-plan__pick--wide {
+  flex-basis: 100%;
+  max-width: none;
+}
+
+.rn-plan__pick-glyph,
+.rn-plan__pick-chev {
+  flex: 0 0 auto;
+  font-size: 14px;
+  color: rgba(0, 0, 0, .5);
+}
+
+/* The native control, stripped back to the text. `appearance:none` takes the
+   platform chrome; the chevron beside it is ours, so it matches the one on the
+   AI search modal's selects.
+
+   16px on a phone and not the 12px the toolbar pills use: iOS zooms the whole
+   page when a focused form control renders under 16px, and this one is a form
+   control (commit 4ed0905 fixed the same thing on four other fields). */
+.rn-plan__sel {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .8);
+  text-overflow: ellipsis;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.rn-plan__sel:focus {
+  outline: none;
+}
+
+.rn-plan--tablet .rn-plan__sel,
+.rn-plan--desktop .rn-plan__sel {
+  font-size: 13px;
+}
+
+/* ---- the cascade ---- */
+
+.rn-plan__month,
+.rn-plan__week {
+  min-width: 0;
+  padding: 12px 14px 14px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .06), 0 8px 18px -12px rgba(0, 0, 0, .12);
+}
+
+.rn-plan__month-head,
+.rn-plan__week-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+
+.rn-plan__tag {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 9px;
+  background: rgba(40, 139, 213, .12);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #1f6fab;
+}
+
+.rn-plan__tag--week {
+  background: rgba(0, 0, 0, .06);
+  color: rgba(0, 0, 0, .6);
+}
+
+.rn-plan__month-date,
+.rn-plan__week-range {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: rgba(0, 0, 0, .8);
+}
+
+.rn-plan__filled {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .45);
+}
+
+/*
+  One node. Rendered as a <button> while empty and a <div> once it holds a goal,
+  because only the empty one does anything — the old markup made every node
+  look tappable and then ignored the tap on the ones that were filled.
+*/
+.rn-plan__node {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, .08);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  color: rgba(0, 0, 0, .85);
+  overflow-wrap: anywhere;
+}
+
+.rn-plan__node--month {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rn-plan__node--empty {
+  align-items: center;
+  border-style: dashed;
+  background: transparent;
+  font-weight: 600;
+  color: #288bd5;
+  cursor: pointer;
+}
+
+.rn-plan__node--empty:active {
+  background: rgba(40, 139, 213, .06);
+}
+
+.rn-plan__node-add {
+  font-size: 16px;
+}
+
+/* Phone: one column. Tablet two, desktop three — a week card holds five rows of
+   wrapping text, so a fourth column would be narrower than its own content. */
+.rn-plan__weeks {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.rn-plan--tablet .rn-plan__weeks {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rn-plan--desktop .rn-plan__weeks {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* The rail: what used to be absolutely-positioned connector lines of a fixed
+   width. A border reads the same and costs no layout. */
+.rn-plan__days {
+  margin: 10px 0 0;
+  padding: 2px 0 0 10px;
+  border-left: 2px solid rgba(0, 0, 0, .08);
+  list-style: none;
+}
+
+.rn-plan__day {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 0;
+}
+
+/* Fixed column so the day bodies line up, and `tabular-nums` so the dates do
+   not jitter between rows. */
+.rn-plan__day-date {
+  flex: 0 0 52px;
+  padding-top: 11px;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(0, 0, 0, .45);
+}
+
+.rn-plan__node--day {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+/* ---- notes ---- */
+
+.rn-plan__note {
+  margin: 4px 2px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, .55);
+}
+
+.rn-plan__hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(76, 175, 80, .1);
+  font-size: 12px;
+  line-height: 1.45;
+  color: #2e7d32;
+}
+
+.rn-plan__hint-glyph {
+  flex: 0 0 auto;
+  font-size: 16px;
+}

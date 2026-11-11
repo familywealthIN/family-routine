@@ -5,9 +5,13 @@ const { createServer, proxy } = require('aws-serverless-express');
 const jwt = require('jsonwebtoken');
 
 const { schema } = require('./resolvers');
+const { graphqlCorsOptions, rejectForeignOrigin } = require('./utils/corsOrigins');
 
 const app = express();
-app.use(cors());
+// Only the app's own sites and the mobile apps (utils/corsOrigins.js). This
+// also answers the preflight: API Gateway passes OPTIONS through to here.
+app.use(cors(graphqlCorsOptions));
+app.use(rejectForeignOrigin);
 
 app.enable('trust proxy');
 app.disable('x-powered-by');
@@ -54,7 +58,26 @@ const attachDecodedToken = (req, res, next) => {
 
 app.use(attachDecodedToken);
 
-const startGraphQL = (req, res) => graphqlHTTP({
+/**
+ * One line per operation: its name, how long it took, and whether this
+ * container had just started. That is what says which reads make the app wait
+ * (CloudWatch: filter `[gql]`).
+ */
+let coldContainer = true;
+const timeOperation = (req, res, next) => {
+  const started = Date.now();
+  const cold = coldContainer;
+  coldContainer = false;
+  res.on('finish', () => {
+    const body = req.body || {};
+    const name = body.operationName || (Array.isArray(body) ? 'batch' : 'anonymous');
+    console.log(`[gql] ${name} ${Date.now() - started}ms${cold ? ' cold' : ''}`);
+  });
+  next();
+};
+
+// Built once per container. It used to be built inside every request.
+const graphqlMiddleware = graphqlHTTP({
   schema,
   // customFormatErrorFn: (error) => {
   //   const {
@@ -73,7 +96,9 @@ const startGraphQL = (req, res) => graphqlHTTP({
   //   };
   // },
   graphiql: true,
-})(req, res);
+});
+
+const startGraphQL = (req, res) => graphqlMiddleware(req, res);
 
 const startServer = () => {
   app.use('/graphql', startGraphQL);
@@ -82,13 +107,28 @@ const startServer = () => {
   });
 };
 
+/**
+ * The Lambda entry. The route and the HTTP server are made on the FIRST call
+ * and reused by every call after it. They used to be made on every call: each
+ * one stacked another copy of the route on the app and left another server
+ * listening on its own socket, so a container got slower the longer it lived.
+ */
+let lambdaServer = null;
+
+function serverlessServer() {
+  if (!lambdaServer) {
+    app.use('/', timeOperation, startGraphQL);
+    lambdaServer = createServer(app);
+  }
+  return lambdaServer;
+}
+
 const startServerless = (event, context) => {
   // eslint-disable-next-line no-param-reassign
   context.callbackWaitsForEmptyEventLoop = false;
-  app.use('/', startGraphQL);
-  const server = createServer(app);
-
-  return proxy(server, event, context);
+  return proxy(serverlessServer(), event, context);
 };
 
-module.exports = { startServer, startServerless, attachDecodedToken };
+module.exports = {
+  startServer, startServerless, serverlessServer, attachDecodedToken,
+};

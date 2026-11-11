@@ -1,8 +1,7 @@
 <template>
   <!--
     Write container for the agent form — the New/Edit sheet plus the agent write
-    CRUD behind it (create · update · delete), the way GoalItemListContainer owns
-    "goal-item write CRUD" as one responsibility: all three write the SAME entity
+    CRUD behind it (create · update · delete), owned as one responsibility: all three write the SAME entity
     through the same store path, so the blast radius is still one slice.
 
     Imperative `openNew()` / `openEdit(agent)` so the page carries no sheet state

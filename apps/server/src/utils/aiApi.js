@@ -1,6 +1,11 @@
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODEL = 'google/gemini-2.5-flash';
+// Planning (milestone plans, task extraction, the goal cards) runs on
+// OpenRouter's FREE roster, the same failover chain as the chat (chatApi.js):
+// no model on the backend spends credits (owner rule, 8 Nov 2026).
+const { completeChat } = require('./chatApi');
+
+// A plan is the longest answer the app asks for (a month of entries); the
+// cards pass their own, much smaller cap.
+const PLAN_MAX_TOKENS = 4000;
 
 function cleanJsonResponse(text) {
   let cleaned = text.trim();
@@ -31,87 +36,23 @@ function cleanJsonResponse(text) {
  * @param {boolean} [isJsonMode]
  * @param {{maxTokens?: ?number}} [options] `maxTokens` caps the answer. Pass it
  *   wherever the caller's UI has a fixed shape to fill: unbounded, a model
- *   answers a one-sentence ask with a page of prose, and this path is the paid
- *   one, so it pays for every token of that page.
+ *   answers a one-sentence ask with a page of prose.
  */
 async function fetchFromAi(prompt, isJsonMode = false, { maxTokens = null } = {}) {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  const openRouterApiKey = process.env.OPENROUTER_API_KEY;
-
   const fullPrompt = isJsonMode
     ? `${prompt}\n\nRespond ONLY with a valid JSON object.`
     : prompt;
 
-  const generationConfig = {
-    ...(isJsonMode && { response_mime_type: 'application/json' }),
-    ...(maxTokens && { maxOutputTokens: maxTokens }),
-  };
-
-  if (geminiApiKey) {
-    try {
-      const response = await fetch(GEMINI_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': geminiApiKey,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: fullPrompt }] }],
-          ...(Object.keys(generationConfig).length && { generationConfig }),
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gemini API Error: ${response.status} ${errorText}`);
-      }
-
-      const data = await response.json();
-      if (!data.candidates || !data.candidates[0].content.parts[0].text) {
-        throw new Error('Invalid response structure from Gemini');
-      }
-      const result = data.candidates[0].content.parts[0].text.trim();
-      return isJsonMode ? cleanJsonResponse(result) : result;
-    } catch (error) {
-      console.warn(`Gemini API request failed: ${error.message}. Falling back to OpenRouter.`);
-    }
+  try {
+    const { content } = await completeChat([{ role: 'user', content: fullPrompt }], {
+      jsonMode: isJsonMode,
+      maxTokens: maxTokens || PLAN_MAX_TOKENS,
+    });
+    return isJsonMode ? cleanJsonResponse(content) : content;
+  } catch (error) {
+    console.error(`AI request failed: ${error.message}`);
+    throw new Error('The free AI models are unavailable or misconfigured.');
   }
-
-  if (openRouterApiKey) {
-    try {
-      const response = await fetch(OPENROUTER_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${openRouterApiKey}`,
-          'HTTP-Referer': process.env.WEB_APP_URL,
-          'X-Title': 'Routine Notes AI',
-        },
-        body: JSON.stringify({
-          model: OPENROUTER_MODEL,
-          messages: [{ role: 'user', content: fullPrompt }],
-          ...(maxTokens && { max_tokens: maxTokens }),
-          ...(isJsonMode && { response_format: { type: 'json_object' } }),
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenRouter API Error: ${response.status} ${errorText}`);
-      }
-
-      const data = await response.json();
-      if (!data.choices || !data.choices[0].message.content) {
-        throw new Error('Invalid response structure from OpenRouter');
-      }
-      const result = data.choices[0].message.content.trim();
-      return isJsonMode ? cleanJsonResponse(result) : result;
-    } catch (error) {
-      console.error(`OpenRouter API request failed: ${error.message}`);
-    }
-  }
-
-  throw new Error('Both AI services are unavailable or misconfigured.');
 }
 
 async function enhanceRoutineItemWithAI(routineItem) {
@@ -382,9 +323,22 @@ function monthWeekAnchors(monthDate, from) {
   return upcoming.length ? upcoming : anchors.slice(-1);
 }
 
-function generateEntriesTemplate(timeframe, userQuery = '') {
+/**
+ * The user's today as a local Date (noon, clear of DST edges), from their
+ * DD-MM-YYYY. The server runs on UTC, so its own `new Date()` is tomorrow for
+ * a user west of UTC in their evening: a Saturday-night week plan then started
+ * on Sunday and was filed under the next week. Falls back to the server's
+ * date when no local day is known.
+ */
+function planToday(localToday) {
+  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(String(localToday || ''));
+  if (!match) return new Date();
+  return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), 12, 0, 0);
+}
+
+function generateEntriesTemplate(timeframe, userQuery = '', localToday = null) {
   const entriesTemplate = [];
-  const today = new Date();
+  const today = planToday(localToday);
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   // The frontend (modifyQueryPeriod in AiGoalPlanFormContainer) rewrites
@@ -517,8 +471,8 @@ function alignEntriesToTemplate(entries, entriesTemplate) {
   });
 }
 
-function generateFallbackPlan(userQuery, timeframe) {
-  const entriesTemplate = generateEntriesTemplate(timeframe, userQuery);
+function generateFallbackPlan(userQuery, timeframe, localToday = null) {
+  const entriesTemplate = generateEntriesTemplate(timeframe, userQuery, localToday);
   const mappedEntries = entriesTemplate.map(fallbackEntry);
   return {
     period: timeframe,
@@ -528,7 +482,13 @@ function generateFallbackPlan(userQuery, timeframe) {
   };
 }
 
-async function generateMilestonePlan(userQuery, systemPrompt = null, period = null) {
+/**
+ * @param {string} userQuery
+ * @param {string|null} systemPrompt
+ * @param {string|null} period the toolbar's period, authoritative when given
+ * @param {{ today?: string }} [options] the user's local today, DD-MM-YYYY
+ */
+async function generateMilestonePlan(userQuery, systemPrompt = null, period = null, { today = null } = {}) {
   let timeframe = 'week';
 
   if (PLAN_TIMEFRAMES.includes(period)) {
@@ -545,11 +505,11 @@ async function generateMilestonePlan(userQuery, systemPrompt = null, period = nu
     timeframe = 'year';
   }
 
-  const useFallback = () => generateFallbackPlan(userQuery, timeframe);
+  const useFallback = () => generateFallbackPlan(userQuery, timeframe, today);
 
   try {
-    const entriesTemplate = generateEntriesTemplate(timeframe, userQuery);
-    const baseDate = new Date();
+    const entriesTemplate = generateEntriesTemplate(timeframe, userQuery, today);
+    const baseDate = planToday(today);
     const contextPrefix = systemPrompt
       ? `Context from parent goal:\n${systemPrompt}\n\nUsing the above parent goal as context, generate a plan that aligns with and supports it.\n\n`
       : '';
@@ -562,7 +522,7 @@ async function generateMilestonePlan(userQuery, systemPrompt = null, period = nu
         "description": "overall description / rationale for the plan — 2-4 markdown lines summarising WHAT the top-level goal means, WHY it matters, and HOW the milestones roll up into it. Use bullet points with newline characters where useful. This text is stored on the PARENT goal itself, so keep it self-contained (do not repeat the milestone list).",
         "entries": ${JSON.stringify(entriesTemplate, null, 2)}
     }
-    Current date: ${baseDate.toISOString().split('T')[0]}
+    Current date: ${[baseDate.getFullYear(), String(baseDate.getMonth() + 1).padStart(2, '0'), String(baseDate.getDate()).padStart(2, '0')].join('-')}
     Follow these rules strictly:
     1. Use ONLY the period type specified in the template.
     2. Keep all periodName and date values exactly as provided.

@@ -58,7 +58,8 @@ describe('RoutineFocus tasklist', () => {
   // keys and two cards rendering the same routine.
   it('drops a repeated task id and anything without one', () => {
     const list = call('tasklist', {
-      routineDate: {
+      localTicks: {},
+      dayRoutine: {
         tasklist: [
           { id: 'a', name: 'First' },
           { id: 'a', name: 'First again' },
@@ -72,7 +73,7 @@ describe('RoutineFocus tasklist', () => {
   });
 
   it('is empty before the routine loads', () => {
-    expect(call('tasklist', { routineDate: null })).toEqual([]);
+    expect(call('tasklist', { dayRoutine: null, localTicks: {} })).toEqual([]);
   });
 });
 
@@ -113,6 +114,7 @@ describe('RoutineFocus agent stage', () => {
     resolvedFocusId: 'sw',
     endEventFiring: {},
     effectiveAgentStatus: () => '',
+    runStalled: () => false,
     ...over,
   });
 
@@ -123,6 +125,31 @@ describe('RoutineFocus agent stage', () => {
   it('reports the store status when nothing is firing', () => {
     expect(call('agentStage', ctx({ effectiveAgentStatus: () => 'listening' })))
       .toBe('listening');
+  });
+
+  // D-13. A run whose end event was due and never completed sat on 'listening'
+  // — breathing ring, `hearing` glyph — for four days with nothing to press.
+  it('reports stalled for a listening run the store has given up on', () => {
+    const vm = ctx({ effectiveAgentStatus: () => 'listening', runStalled: () => true });
+    expect(call('agentStage', vm)).toBe('stalled');
+  });
+
+  it('leaves every other stage alone when the store reports a stall', () => {
+    ['running', 'waiting', 'finished', 'failed'].forEach((status) => {
+      const vm = ctx({ effectiveAgentStatus: () => status, runStalled: () => true });
+      expect(call('agentStage', vm)).toBe(status);
+    });
+  });
+
+  // The page's end rule is the only thing that knows the counter is full, so it
+  // is the only thing that may start the stall clock.
+  it('is still firing while this page has the end event on the wire', () => {
+    const vm = ctx({
+      endEventFiring: { sw: true },
+      effectiveAgentStatus: () => 'listening',
+      runStalled: () => true,
+    });
+    expect(call('agentStage', vm)).toBe('firing');
   });
 
   // The store has no end-event status of its own — it shows 'running' for both
@@ -568,6 +595,9 @@ describe('RoutineFocus tick credit', () => {
     const vm = {
       date: '12-09-2026',
       tasklist: [task],
+      // The server's day is on screen (not the placeholder).
+      showingPlaceholder: false,
+      localTicks: {},
       isSkippedDay: false,
       blockedBySkip: methods.blockedBySkip,
       trackTaskEvent: jest.fn(),
@@ -705,7 +735,10 @@ describe('RoutineFocus computed graph', () => {
           date: TODAY,
           todayDate: TODAY,
           now: AT_0930(),
-          routineDate: { id: 'r1', tasklist: TASKS },
+          routineDate: { id: 'r1', date: TODAY, tasklist: TASKS },
+          // The day the goals below were answered for (the goals query's update).
+          goalsDate: TODAY,
+          localTicks: {},
           goals: [{
             id: 'd1',
             period: 'day',
@@ -785,7 +818,7 @@ describe('RoutineFocus computed graph', () => {
       { ...TASKS[1], stimuli: stim(7 / 3) }, // 2h20m: still 1 slot, but 2 items
       { ...TASKS[2], stimuli: stim(4.5) }, // 2 slots
     ];
-    const vm = graph({ routineDate: { id: 'r1', tasklist } });
+    const vm = graph({ routineDate: { id: 'r1', date: TODAY, tasklist } });
     expect(vm.rows.map((r) => r.totalCount)).toEqual([1, 2, 2]);
     expect(vm.daySummary).toContain('1/5 tasks');
   });
@@ -799,7 +832,7 @@ describe('RoutineFocus computed graph', () => {
       { ...TASKS[1], points: 0, stimuli: split(7 / 3, 2) }, // 1 slot, 0 points
       TASKS[2],
     ];
-    const vm = graph({ routineDate: { id: 'r1', tasklist } });
+    const vm = graph({ routineDate: { id: 'r1', date: TODAY, tasklist } });
     vm.$agent.canFireEndEvent = jest.fn(() => true);
     vm.dispatchAgentEndEvent = jest.fn();
     // The checklist header reads "2 of 2 done" against a 1-slot window.
@@ -830,7 +863,7 @@ describe('RoutineFocus computed graph', () => {
       TASKS[1],
     ];
     const vm = graph({
-      routineDate: { id: 'r1', tasklist },
+      routineDate: { id: 'r1', date: TODAY, tasklist },
       focusRoutineId: 'wu',
       now: moment().startOf('day').add(15, 'hours').add(25, 'minutes'),
     });
@@ -854,7 +887,7 @@ describe('RoutineFocus computed graph', () => {
   });
 
   it('falls back to the first routine outside today', () => {
-    const vm = graph({ date: YESTERDAY });
+    const vm = graph({ date: YESTERDAY, routineDate: { id: 'r0', date: YESTERDAY, tasklist: TASKS } });
     expect(vm.isToday).toBe(false);
     expect(vm.currentRoutineId).toBe('');
     expect(vm.resolvedFocusId).toBe('mp');
@@ -873,7 +906,7 @@ describe('RoutineFocus computed graph', () => {
   });
 
   it('has nothing to render for a day with no routine', () => {
-    const vm = graph({ routineDate: { id: 'r1', tasklist: [] } });
+    const vm = graph({ routineDate: { id: 'r1', date: TODAY, tasklist: [] } });
     expect(vm.rows).toEqual([]);
     expect(vm.focusRow).toBeNull();
     expect(vm.resolvedFocusId).toBe('');
@@ -987,9 +1020,10 @@ describe('RoutineFocus action sheet', () => {
   });
 
   it('hands the form an array even before the day goals load', () => {
-    expect(call('displayGoals', { goals: null })).toEqual([]);
+    // `homeGoals` is always a list: the server's, the snapshot's, or empty.
+    expect(call('displayGoals', { homeGoals: [] })).toEqual([]);
     const goals = [{ id: 'g1' }];
-    expect(call('displayGoals', { goals })).toBe(goals);
+    expect(call('displayGoals', { homeGoals: goals })).toBe(goals);
   });
 });
 
@@ -1083,9 +1117,9 @@ describe('RoutineFocus skip day', () => {
   });
 
   it('exposes the skipped day to the strip and the card', () => {
-    expect(call('isSkippedDay', { routineDate: { skip: true } })).toBe(true);
-    expect(call('isSkippedDay', { routineDate: { skip: false } })).toBe(false);
-    expect(call('isSkippedDay', { routineDate: null })).toBe(false);
+    expect(call('isSkippedDay', { dayRoutine: { skip: true } })).toBe(true);
+    expect(call('isSkippedDay', { dayRoutine: { skip: false } })).toBe(false);
+    expect(call('isSkippedDay', { dayRoutine: null })).toBe(false);
     expect(call('skippedDates', { isSkippedDay: true, date: '12-09-2026' }))
       .toEqual(['12-09-2026']);
     expect(call('skippedDates', { isSkippedDay: false, date: '12-09-2026' })).toEqual([]);
@@ -1140,7 +1174,7 @@ describe('RoutineFocus goal-item page', () => {
   const ctx = (over = {}) => ({
     openGoalItemId: 'g1',
     dayGoalItems: [ITEM],
-    goals: [
+    homeGoals: [
       {
         id: 'd1', period: 'day', date: '12-09-2026', goalItems: [ITEM],
       },
@@ -1496,13 +1530,17 @@ describe('RoutineFocus capture', () => {
  * the shell measuring something else. These tests hold the page to the design's
  * own figures (frame 6a, iPad mini 1133x744; frame 6b, desktop 1440x900).
  *
- * They read the SFC's `<style>` text, which is the only place these values live
- * — the page has no scoped styles and vue-jest does not hand the compiled CSS
- * back (the GoalsTime.vue / AppShell.vue suites read source the same way).
+ * They read the page's stylesheet text, which is the only place these values
+ * live — the page has no scoped styles and vue-jest does not hand the compiled
+ * CSS back (the GoalsTime.vue / AppShell.vue suites read source the same way).
+ * RoutineFocus.vue loads it with `<style src>` from packages/ui/styles/app.
  */
 describe('RoutineFocus shell geometry', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'RoutineFocus.vue'), 'utf8');
-  const css = source.slice(source.lastIndexOf('<style>'));
+  const css = fs.readFileSync(
+    path.join(__dirname, '..', '..', '..', '..', '..', 'packages', 'ui', 'styles', 'app', 'pages', 'RoutineFocus.css'),
+    'utf8',
+  );
 
   /** The declarations of the first rule whose selector list mentions `selector`. */
   const declarations = (selector) => {
@@ -1946,5 +1984,77 @@ describe('RoutineFocus goalSheetDateLocked', () => {
 
   it('never locks today', () => {
     expect(locked(false, { id: 'g', isComplete: true })).toBe(false);
+  });
+});
+
+/**
+ * One tick, one write. After closing the AI search modal a single tick ran
+ * toggleItem twice with the same stale item, so "<item> · all done" and "All
+ * tasks complete — end event firing" were each posted twice at once.
+ */
+describe('RoutineFocus — a tick is not doubled', () => {
+  const ITEM_SW = {
+    id: 'g9', body: 'Full body workout', taskRef: 'sw', isComplete: false,
+  };
+  const tickVm = () => {
+    let resolve;
+    const vm = {
+      date: '15-10-2026',
+      homeGoals: [],
+      $apollo: { provider: { defaultClient: {} }, queries: {} },
+      $goals: { completeGoalItem: jest.fn(() => new Promise((r) => { resolve = r; })) },
+      onItemCompleted: jest.fn(),
+      notifyGeneric: jest.fn(),
+    };
+    return { vm, finish: () => resolve() };
+  };
+
+  it('drops a second identical tick while the first is still saving', async () => {
+    const { vm, finish } = tickVm();
+    const item = { ...ITEM_SW, taskRef: '' };
+    methods.toggleItem.call(vm, item);
+    methods.toggleItem.call(vm, item);
+    expect(vm.$goals.completeGoalItem).toHaveBeenCalledTimes(1);
+    finish();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(vm.onItemCompleted).toHaveBeenCalledTimes(1);
+  });
+
+  it('still lets the item be unticked straight back', () => {
+    const { vm } = tickVm();
+    const item = { ...ITEM_SW, taskRef: '' };
+    methods.toggleItem.call(vm, item);
+    methods.toggleItem.call(vm, { ...item, isComplete: true });
+    expect(vm.$goals.completeGoalItem).toHaveBeenCalledTimes(2);
+    expect(vm.$goals.completeGoalItem.mock.calls[1][0].isComplete).toBe(false);
+  });
+
+  it('accepts the same tick again once the first has settled', async () => {
+    const { vm, finish } = tickVm();
+    const item = { ...ITEM_SW, taskRef: '' };
+    methods.toggleItem.call(vm, item);
+    finish();
+    await Promise.resolve();
+    await Promise.resolve();
+    methods.toggleItem.call(vm, item);
+    expect(vm.$goals.completeGoalItem).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not post or fire a second end event while one is going out', () => {
+    const vm = {
+      endEventFiring: {},
+      postChatEvent: jest.fn(),
+      findFirstGoalIdForRoutine: () => 'g1',
+      // eslint-disable-next-line no-param-reassign
+      $set: (o, k, v) => { o[k] = v; },
+      // eslint-disable-next-line no-param-reassign
+      $delete: (o, k) => { delete o[k]; },
+      $agent: { fireEndEvent: jest.fn(() => new Promise(() => {})) },
+    };
+    methods.dispatchAgentEndEvent.call(vm, 'sw', 'g1');
+    methods.dispatchAgentEndEvent.call(vm, 'sw', 'g1');
+    expect(vm.postChatEvent).toHaveBeenCalledTimes(1);
+    expect(vm.$agent.fireEndEvent).toHaveBeenCalledTimes(1);
   });
 });

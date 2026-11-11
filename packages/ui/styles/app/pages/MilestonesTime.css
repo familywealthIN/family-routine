@@ -1,0 +1,155 @@
+/* Styles for apps/web-app/src/pages/MilestonesTime.vue, loaded there with <style src> (global, root-class prefixed). */
+.rn-miles {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* One column on a phone. The lists are tall, so two is the most that stays
+   readable even on a desktop — a third column would just make each card
+   narrower than its own rows need. */
+.rn-miles--tablet,
+.rn-miles--desktop {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rn-miles__card {
+  min-width: 0;
+  padding: 14px 16px 6px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .06), 0 8px 18px -12px rgba(0, 0, 0, .12);
+}
+
+.rn-miles__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.rn-miles__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, .87);
+}
+
+/* The count sits in the header rather than beside each row: the question this
+   page answers is "how much is outstanding", and that is a per-period number. */
+.rn-miles__count {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 11px;
+  background: rgba(0, 0, 0, .06);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 22px;
+  text-align: center;
+  color: rgba(0, 0, 0, .55);
+}
+
+.rn-miles__note--card {
+  padding: 8px 0 14px;
+}
+
+.rn-miles__retry {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: #288bd5;
+  cursor: pointer;
+}
+
+.rn-miles__more {
+  display: block;
+  width: 100%;
+  margin: 2px 0 10px;
+  padding: 9px 0;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, .04);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #288bd5;
+  cursor: pointer;
+}
+
+/* GoalItemMilestoneList is markup from before the redesign — an <li> wrapping
+   <details>/<div> rows, with Vuetify spacing classes. It is this page's only
+   consumer, so rather than rewrite the recursive component the card restates
+   how its rows should look: no marker (the bare <li> was drawing a bullet
+   beside the first row), and indentation that comes from the nesting level
+   instead of the pl-2/pl-4 utilities. */
+.rn-miles__card ul,
+.rn-miles__card li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rn-miles__card ul ul {
+  margin-left: 14px;
+  border-left: 1px solid rgba(0, 0, 0, .08);
+  padding-left: 10px;
+}
+
+.rn-miles__card .pl-2,
+.rn-miles__card .pl-4 {
+  padding-left: 0 !important;
+}
+
+.rn-miles__card details > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.rn-miles__card details > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Each row is icon + text, with the text wrapping against the text column
+   rather than running back under the icon.
+
+   The component's root element is itself an <li>, so there is no <ul> above
+   these rows to anchor a child selector on — hence `li > div > span` rather
+   than `> ul > li > ...`. And the tile writes `style="display:inline"` on its
+   <h4> inline, which no amount of specificity beats, so that one needs
+   `!important` to become a block that can wrap. */
+.rn-miles__card details > summary > span,
+.rn-miles__card li > div > span {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(0, 0, 0, .05);
+}
+
+.rn-miles__card h4 {
+  display: block !important;
+  margin: 0;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* The glyph keeps its own column so a wrapped title never slides under it. */
+.rn-miles__card .v-icon {
+  flex: 0 0 auto;
+  font-size: 18px;
+}
+
+.rn-miles__note {
+  margin: 0;
+  padding: 24px 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, .55);
+}

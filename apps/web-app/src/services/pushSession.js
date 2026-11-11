@@ -33,6 +33,12 @@ const REGISTER = gql`
   }
 `;
 
+const REGISTER_ACTIONS = gql`
+  mutation registerNotificationActions($notificationId: String!) {
+    registerNotificationActions(notificationId: $notificationId)
+  }
+`;
+
 export const isRealPushToken = (token) => typeof token === 'string'
   && token.length > 0 && token !== 'undefined' && token !== 'null';
 
@@ -104,9 +110,19 @@ export async function registerDevicePush(client, token) {
   if (!isRealPushToken(token) || !client || !isSignedIn()) return false;
   try {
     await client.mutate({ mutation: REGISTER, variables: { notificationId: token } });
-    return true;
   } catch (error) {
     console.log('push register failed', error);
     return false;
   }
+  // This Android build draws routine cues with their buttons itself
+  // (RoutineNotification.java), so the server may send them data-only. Its own
+  // call, so a server without it fails only this, never the registration.
+  if (Capacitor.getPlatform() === 'android') {
+    try {
+      await client.mutate({ mutation: REGISTER_ACTIONS, variables: { notificationId: token } });
+    } catch (error) {
+      console.log('push actions register failed', error);
+    }
+  }
+  return true;
 }

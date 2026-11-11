@@ -105,8 +105,8 @@ export default {
       default: null,
     },
     // --- presentation -----------------------------------------------------
-    // Off by default: the classic dashboard and QuickTaskModalContainer already
-    // wrap this container in their own v-dialog, so the organism renders inline
+    // Off by default: a host that wraps this container in its own v-dialog
+    // keeps working, so the organism renders inline
     // for them. Routine Focus turns it on and the organism owns the chassis
     // sheet (phone bottom sheet · tablet 860 · desktop 720).
     sheet: {

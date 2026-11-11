@@ -14,6 +14,7 @@ import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
 import { USER_TAGS } from '../constants/settings';
 import { clearData } from '../token';
+import { clearHomeSnapshot } from './homeSnapshot';
 import { releasePushOnSignOut } from '../services/pushSession';
 import { gauthOption } from '../blob/config';
 
@@ -64,6 +65,9 @@ export async function signOut(vm) {
   try {
     await clearData();
     localStorage.removeItem(USER_TAGS);
+    // Home's snapshot belongs to the account leaving. (Its background sync
+    // needs no stopping: it reads nothing while nobody is signed in.)
+    clearHomeSnapshot();
   } catch (error) {
     console.log(error);
   }

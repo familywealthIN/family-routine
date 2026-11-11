@@ -68,7 +68,39 @@
         the editor's preview pane uses, so Preview here and the eye button in
         the editor show the text identically (images capped to the width).
       -->
-      <vue-markdown v-if="hasValue" class="rn-markdown" :source="draft" :html="false" />
+      <!--
+        Embeds are the one exception, and they never pass through as HTML:
+        `splitEmbeds` lifts an allowed https iframe's src out of the text and
+        the preview draws its OWN sandboxed iframe for it (utils/markdownEmbeds).
+      -->
+      <template v-if="hasValue">
+        <template v-for="(segment, index) in segments">
+          <div
+            v-if="segment.type === 'embed'"
+            :key="`embed-${index}`"
+            class="rn-mdf__embed"
+            :style="embedStyle(segment)"
+            data-testid="markdown-embed"
+          >
+            <iframe
+              :src="segment.src"
+              :title="segment.title"
+              sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox"
+              allow="encrypted-media; picture-in-picture; fullscreen; clipboard-write"
+              allowfullscreen
+              loading="lazy"
+              referrerpolicy="strict-origin-when-cross-origin"
+            ></iframe>
+          </div>
+          <vue-markdown
+            v-else
+            :key="`md-${index}`"
+            class="rn-markdown"
+            :source="segment.text"
+            :html="false"
+          />
+        </template>
+      </template>
       <span v-else>{{ placeholder }}</span>
     </div>
   </div>
@@ -76,6 +108,7 @@
 
 <script>
 import VueMarkdown from 'vue-markdown';
+import { splitEmbeds } from '../../utils/markdownEmbeds';
 import { MarkdownEditor } from '@routine-notes/markdown-editor';
 import '@routine-notes/markdown-editor/styles/markdown-content.css';
 
@@ -107,6 +140,9 @@ export default {
     };
   },
   computed: {
+    segments() {
+      return splitEmbeds(this.draft);
+    },
     hasValue() {
       return !!(this.draft && this.draft.trim());
     },
@@ -160,13 +196,19 @@ export default {
       this.saved = this.draft;
       this.$emit('commit', this.draft);
     },
+    /** 16:9 unless the pasted code gave a shape of its own. */
+    embedStyle(segment) {
+      if (segment.ratio) return { paddingTop: `${(segment.ratio * 100).toFixed(2)}%` };
+      if (segment.height) return { height: `${segment.height}px`, paddingTop: 0 };
+      return {};
+    },
     toggle() {
       this.setEditing(!this.editing);
     },
     onPreviewClick(event) {
       // A link inside the rendered markdown is a link, not an edit affordance.
       const target = event && event.target;
-      if (target && target.closest && target.closest('a')) return;
+      if (target && target.closest && target.closest('a, .rn-mdf__embed')) return;
       this.setEditing(true);
     },
     setEditing(next) {
@@ -247,6 +289,28 @@ export default {
   background: #fafafa;
   font-size: 11px;
   color: rgba(0, 0, 0, .45);
+}
+
+/* A responsive frame: the box takes its height from padding-top (the ratio),
+   and the iframe fills it, so a video scales with the sheet's width. */
+.rn-mdf__embed {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  margin: 8px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, .04);
+  cursor: default;
+}
+
+.rn-mdf__embed iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
 }
 
 .rn-mdf__preview {

@@ -8,7 +8,6 @@ const {
 
 const uniqid = require('uniqid');
 const { v4: uuidv4 } = require('uuid');
-const crypto = require('crypto');
 
 const { UserItemType, UserModel } = require('../schema/UserSchema');
 const {
@@ -66,8 +65,10 @@ const query = {
       const user = await UserModel.findOne({ email }).exec();
       if (!user) return null;
 
-      // Check if OAuth is connected
-      const oauthConnected = !!(user.oauth && user.oauth.accessToken);
+      // An MCP client has signed in: the connector's tokens (utils/mcpOAuth.js)
+      // are signed rather than stored, so `connectedAt` is the record of it;
+      // `accessToken` is the retired flow's.
+      const oauthConnected = !!(user.oauth && (user.oauth.connectedAt || user.oauth.accessToken));
 
       return {
         ...user.toObject(),
@@ -378,43 +379,6 @@ const mutation = {
       );
     },
   },
-  generateOAuthCode: {
-    type: new GraphQLObjectType({
-      name: 'OAuthCodeType',
-      fields: {
-        authCode: { type: GraphQLString },
-        expiresAt: { type: GraphQLString },
-      },
-    }),
-    resolve: async (root, args, context) => {
-      const email = getEmailfromSession(context);
-
-      if (!email) {
-        throw new ApiError(401, '401:Authentication required');
-      }
-
-      // Generate a unique authorization code
-      const authCode = `oac_${crypto.randomBytes(32).toString('hex')}`;
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-      // Store the auth code temporarily
-      await UserModel.findOneAndUpdate(
-        { email },
-        {
-          oauth: {
-            authCode,
-            expiresAt,
-          },
-        },
-        { new: true },
-      );
-
-      return {
-        authCode,
-        expiresAt: expiresAt.toISOString(),
-      };
-    },
-  },
   /**
    * Sign-out: stop pushing to this device. Deliberately needs no session —
    * the device is signing out, its JWT may already be expired (60 days), and a
@@ -453,6 +417,29 @@ const mutation = {
       ).exec();
       if (!user) return false;
       await registerPushToken(UserModel, user, args.notificationId);
+      return true;
+    },
+  },
+  /**
+   * This device's app draws routine cues with their buttons itself (the
+   * Android build with RoutineNotification.java), so the cron may send it
+   * cues data-only. Its own mutation so an app calling it on an older server
+   * only loses this, never the device registration. Only for a token already
+   * registered to this user.
+   */
+  registerNotificationActions: {
+    type: GraphQLBoolean,
+    args: {
+      notificationId: { type: GraphQLNonNull(GraphQLString) },
+    },
+    resolve: async (root, args, context) => {
+      const email = getEmailfromSession(context);
+      if (!email) throw new ApiError(401, '401:Authentication required');
+      if (!isRealPushToken(args.notificationId)) return false;
+      await UserModel.updateOne(
+        { email, notificationIds: args.notificationId },
+        { $addToSet: { notificationActionTokens: args.notificationId } },
+      ).exec();
       return true;
     },
   },

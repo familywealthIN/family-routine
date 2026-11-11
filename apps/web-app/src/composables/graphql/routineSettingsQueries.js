@@ -86,6 +86,7 @@ export const ADD_ROUTINE_ITEM_MUTATION = gql`
     $steps: [StepInputItem]!
     $tags: [String]!
     $notifyMode: String
+    $suggestSteps: Boolean
   ) {
     addRoutineItem(
       name: $name
@@ -95,9 +96,21 @@ export const ADD_ROUTINE_ITEM_MUTATION = gql`
       steps: $steps
       tags: $tags
       notifyMode: $notifyMode
+      suggestSteps: $suggestSteps
     ) {
       ${ROUTINE_TEMPLATE_FIELDS}
     }
+  }
+`;
+
+/**
+ * The standard steps for a routine name — step 1 is the cue that starts it.
+ * A plain list of strings: nothing here is an entity, so nothing normalizes,
+ * and Apollo's per-argument cache makes a name typed twice one request.
+ */
+export const SUGGEST_ROUTINE_STEPS_QUERY = gql`
+  query suggestRoutineSteps($name: String!) {
+    suggestRoutineSteps(name: $name)
   }
 `;
 

@@ -156,6 +156,12 @@
           />
         </div>
       </div>
+      <!-- A new routine's steps arrive pre-filled from its name (the standard
+           steps, step 1 being the cue the reminder leads with). They are
+           ordinary rows; this line goes once the user makes the list theirs. -->
+      <div v-if="stepsSuggested" class="rn-red__steps-hint" data-testid="editor-steps-suggested">
+        {{ suggestedHint }}
+      </div>
 
       <div class="rn-red__label rn-red__label--spaced">REMINDER</div>
       <div class="rn-red__notify" role="radiogroup" aria-label="Reminder" data-testid="editor-notify">
@@ -246,6 +252,12 @@ export const DEFAULT_START = '19:30';
 /** What a new routine is worth before the stepper is touched. */
 export const DEFAULT_POINTS = 10;
 
+/** The line under a new routine's pre-filled steps. */
+export const SUGGESTED_HINT = 'Suggested steps — the first one is your cue';
+
+/** A name compared the way the suggestion was asked for it. */
+const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+
 let stepSeq = 0;
 /** A render key for a step row. Not an id — the container owns persisted ids. */
 const nextKey = () => {
@@ -326,6 +338,13 @@ export default {
     yearGoal: { type: Object, default: null },
     /** A failed save's reason, shown above the fields so the sheet can stay open. */
     errorMessage: { type: String, default: '' },
+    /**
+     * `{ name, steps: [String] }` — the standard steps for the name a NEW
+     * routine was given, fetched by the container on the `name-input` this
+     * sheet emits. Used only while the user has not touched the steps, and only
+     * when `name` is still the name in the field.
+     */
+    suggestedSteps: { type: Object, default: null },
   },
 
   data() {
@@ -334,11 +353,17 @@ export default {
       stepText: '',
       movedKey: '',
       localProblem: '',
+      // The user has added, removed or moved a step: the list is theirs now,
+      // and no suggestion may replace it.
+      stepsEdited: false,
+      // The rows on screen are a suggestion the user has not touched yet.
+      stepsSuggested: false,
     };
   },
 
   computed: {
     notifyModes: () => NOTIFY_MODES,
+    suggestedHint: () => SUGGESTED_HINT,
     notifyHint() {
       const mode = NOTIFY_MODES.find((m) => m.value === this.draft.notifyMode) || NOTIFY_MODES[0];
       return mode.hint;
@@ -412,6 +437,15 @@ export default {
     routine() {
       if (this.open) this.reset();
     },
+    // A new routine asks for its standard steps by name. The container
+    // debounces; nothing is asked once the steps are the user's own.
+    'draft.name': function onName(name) {
+      if (!this.open || !this.isNew || this.stepsEdited) return;
+      this.$emit('name-input', String(name || '').trim());
+    },
+    suggestedSteps(suggestion) {
+      this.applySuggestion(suggestion);
+    },
   },
 
   methods: {
@@ -419,6 +453,8 @@ export default {
       this.draft = toDraft(this.routine, this.defaultTime, this.pointsCeiling);
       this.stepText = '';
       this.movedKey = '';
+      this.stepsEdited = false;
+      this.stepsSuggested = false;
       // A new routine on a spent day cannot be saved at any value; say so up
       // front instead of on the first Save.
       this.localProblem = this.isNew && this.pointsCeiling < POINTS_MIN ? this.pointsRefusal() : '';
@@ -475,15 +511,48 @@ export default {
       }
     },
 
+    /**
+     * Pre-fill a new routine's steps from its name. Ignored once the user has
+     * edited the list, for an existing routine, and for a stale answer (the
+     * name has moved on since it was asked). An answer with no steps clears a
+     * suggestion that no longer fits, never steps the user wrote.
+     */
+    applySuggestion(suggestion) {
+      if (!suggestion || !this.open || !this.isNew || this.stepsEdited) return;
+      if (!sameName(suggestion.name, this.draft.name)) return;
+      const steps = (suggestion.steps || [])
+        .map((step) => String(step || '').trim())
+        .filter(Boolean);
+      if (!steps.length) {
+        if (this.stepsSuggested) {
+          this.draft.steps = [];
+          this.stepsSuggested = false;
+        }
+        return;
+      }
+      this.draft.steps = steps.map((name) => ({ key: nextKey(), id: '', name }));
+      this.stepsSuggested = true;
+    },
+
+    /** The user changed the list: it is theirs from here on. */
+    markStepsEdited() {
+      this.stepsSuggested = false;
+      if (this.stepsEdited) return;
+      this.stepsEdited = true;
+      this.$emit('steps-edited');
+    },
+
     addStep() {
       const name = this.stepText.trim();
       if (!name) return;
       this.draft.steps.push({ key: nextKey(), id: '', name });
       this.stepText = '';
+      this.markStepsEdited();
     },
 
     removeStep(index) {
       this.draft.steps.splice(index, 1);
+      this.markStepsEdited();
     },
 
     /**
@@ -496,6 +565,7 @@ export default {
       if (next === this.draft.steps) return;
       this.movedKey = this.draft.steps[index].key;
       this.draft.steps = next;
+      this.markStepsEdited();
     },
 
     onStepKey(event) {
@@ -841,7 +911,9 @@ export default {
   color: #288bd5;
 }
 
-.rn-red__notify-hint {
+/* The pre-filled steps' line is the same caption as the reminder's. */
+.rn-red__notify-hint,
+.rn-red__steps-hint {
   margin-top: 6px;
   font-size: 12px;
   color: rgba(0, 0, 0, .5);

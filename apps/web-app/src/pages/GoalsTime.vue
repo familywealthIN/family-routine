@@ -539,26 +539,4 @@ export default {
      a scoped block cannot address. Every selector carries the page's root class or
      its own `goals-page__` prefix, so nothing leaks into the legacy layouts (see
      the web-app CSS convention). -->
-<style>
-.goals-page {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-/* Tablet and desktop give the two columns the body's full height to divide, so
-   each scrolls on its own instead of the page scrolling as one sheet.
-   `height: 100%` rather than `flex: 1`: `.rn-shell__body` is a BLOCK with a
-   resolved height (flex:1 of the 100vh shell column), not a flex container, so a
-   flex-grow on this child would do nothing. */
-.goals-page--tablet,
-.goals-page--desktop {
-  height: 100%;
-}
-
-.goals-page--tablet > .rn-gcas,
-.goals-page--desktop > .rn-gcas {
-  flex: 1;
-  min-height: 0;
-}
-</style>
+<style src="@routine-notes/ui/styles/app/pages/GoalsTime.css"></style>

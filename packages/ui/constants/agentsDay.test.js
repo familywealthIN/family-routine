@@ -33,4 +33,20 @@ describe('agent status is only about today\'s trigger', () => {
     ];
     expect(agentTotals(agents, NOW).live).toBe(1);
   });
+
+  // D-13. The store decides a listening run has stalled (its end event was due
+  // and never completed) and flags the document; a run going nowhere must stop
+  // reading as live, which is what "3 live now" claimed for four days.
+  it('reads a flagged listening run as stalled, and not as live', () => {
+    const stalled = { executionStatus: 'listening', lastRunAt: String(today.getTime()), stalled: true };
+    expect(agentStatusKey(stalled, NOW)).toBe('stalled');
+    expect(agentTotals([stalled], NOW).live).toBe(0);
+  });
+
+  it('only lets a listening run stall — every other status is in flight or terminal', () => {
+    ['running', 'finished', 'failed', 'idle'].forEach((status) => {
+      const agent = { executionStatus: status, lastRunAt: String(today.getTime()), stalled: true };
+      expect(agentStatusKey(agent, NOW)).toBe(status);
+    });
+  });
 });

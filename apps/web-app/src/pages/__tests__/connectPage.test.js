@@ -26,7 +26,9 @@ const QUERY = {
 const FULL_PATH = '/connect?client_id=cid-1&state=st';
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function mount({ signedIn = true, query = QUERY, check, approve } = {}) {
+function mount({
+  signedIn = true, query = QUERY, check, approve,
+} = {}) {
   if (signedIn) localStorage.setItem('token', 'session'); else localStorage.removeItem('token');
   localStorage.setItem('email', 'alex@example.com');
   const apollo = {
@@ -68,7 +70,9 @@ describe('/connect', () => {
     expect(apollo.query.mock.calls[0][0]).toMatchObject({
       query: MCP_AUTH_REQUEST,
       fetchPolicy: 'no-cache',
-      variables: { clientId: 'cid-1', redirectUri: QUERY.redirect_uri, codeChallenge: 'cc', state: 'st' },
+      variables: {
+        clientId: 'cid-1', redirectUri: QUERY.redirect_uri, codeChallenge: 'cc', state: 'st',
+      },
     });
     expect(el.textContent).toContain('Allow Claude to use Routine Notes?');
     expect(el.textContent).toContain('alex@example.com');

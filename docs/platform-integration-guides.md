@@ -1,5 +1,7 @@
 # Platform Integration Guides
 
+> **Superseded (Nov 2026).** The connector now uses standard MCP sign-in: paste `https://mcp.routinenotes.app/mcp` into the app and Allow it on the page that opens; there is no client secret. See [oauth-credentials.md](oauth-credentials.md) and the steps on the Profile page's Connect AI card. The guides below describe the retired flow.
+
 ## Overview
 
 Your Routine Notes MCP server can be integrated with multiple AI platforms using OAuth 2.0 authentication. This document provides quick setup guides for each supported platform.

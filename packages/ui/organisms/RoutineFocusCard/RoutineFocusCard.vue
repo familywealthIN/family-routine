@@ -182,9 +182,18 @@
                 :style="{
                   fontSize: `${geometry.rowText}px`,
                   textDecoration: item.isComplete ? 'line-through' : 'none',
-                  color: item.isComplete ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.87)',
+                  color: item.isComplete || isMissed(item) ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.87)',
                 }"
               >{{ item.body }}</span>
+              <!-- Recorded as not done and still open: greyed, not struck, and
+                   the box stays tickable — a late tick counts, and a ticked
+                   item reads as done whatever its stored status says. -->
+              <span
+                v-if="isMissed(item)"
+                class="rn-focus-card__missed"
+                :style="{ background: missedPill.bg, color: missedPill.color }"
+                data-testid="checklist-missed"
+              >{{ missedPill.label }}</span>
               <span v-if="item.ready" class="rn-focus-card__ready">READY</span>
               <i
                 v-if="item.hasReward"
@@ -239,6 +248,8 @@ import {
   AGENT_LIVE_STAGES,
   focusVariant,
 } from '../../constants/routineFocus';
+import { GOAL_STATUS } from '../../constants/goalsCascade';
+import { isMissed } from '../../utils/taskStatus';
 import RoutineCascadePanel from '../RoutineCascadePanel/RoutineCascadePanel.vue';
 
 // The progress unit `ringOffset` is expressed in: the circumference of the
@@ -265,7 +276,7 @@ export default {
     /** The viewed routine is not the one the clock says is current. */
     showBackToNow: { type: Boolean, default: false },
     elapsedPct: { type: Number, default: 0 },
-    /** Day goal items under this routine: { id, body, isComplete, ready, hasReward, subDone, subTotal } */
+    /** Day goal items under this routine: { id, body, isComplete, status, ready, hasReward, subDone, subTotal } */
     items: { type: Array, default: () => [] },
     doneCount: { type: Number, default: 0 },
     totalCount: { type: Number, default: 0 },
@@ -288,6 +299,9 @@ export default {
     flying: { type: Boolean, default: false },
   },
   computed: {
+    missedPill() {
+      return GOAL_STATUS.missed;
+    },
     geometry() {
       return focusVariant(this.variant);
     },
@@ -303,6 +317,19 @@ export default {
     /** The agent's breathing rings — only while it is actually doing something. */
     agentRing() {
       return this.agentLive ? agentStageOf(this.agentStage) : null;
+    },
+    /**
+     * `stalled` (D-13) is deliberately NOT a live stage, so nothing breathes —
+     * but it still owns the button, because a run whose end event was due and
+     * never completed must not sit there in the routine's own colour as though
+     * nothing had happened.
+     */
+    agentStalledStage() {
+      return this.agentStage === 'stalled' ? agentStageOf('stalled') : null;
+    },
+    /** The stage that paints the button: the live one, else a stall. */
+    buttonStage() {
+      return this.agentRing || this.agentStalledStage;
     },
     breatheOne() {
       if (!this.agentRing) return 'none';
@@ -389,11 +416,12 @@ export default {
       return RING_CIRCUMFERENCE * (1 - pct);
     },
     tickGlyph() {
-      if (this.agentRing && this.agentRing.glyph) return this.agentRing.glyph;
+      const stage = this.buttonStage;
+      if (stage && stage.glyph) return stage.glyph;
       return this.routine.buttonGlyph || 'more_horiz';
     },
     tickStyle() {
-      const stage = this.agentRing;
+      const stage = this.buttonStage;
       const px = `${this.tickInset}px`;
       return {
         top: px, right: px, bottom: px, left: px,
@@ -418,6 +446,7 @@ export default {
     },
     tickTitle() {
       if (this.agentLive) return 'Agent working…';
+      if (this.agentStalledStage) return 'Agent run stalled — retry or cancel it on Agents';
       if (this.routine.ticked) return 'Ticked · tap to undo';
       if (this.routine.redeemable) return 'Redeem with points';
       return 'Tick routine';
@@ -478,6 +507,9 @@ export default {
     this.collapseScroll = null;
   },
   methods: {
+    isMissed(item) {
+      return isMissed(item);
+    },
     /**
      * The CHECKLIST header toggles the accordion. Collapsing removes the rows
      * from the TOP of the shared scroller, so anything scrolled less than the
@@ -917,6 +949,14 @@ export default {
   border-radius: 999px;
   background: rgba(25, 118, 210, .12);
   color: #1976d2;
+}
+
+.rn-focus-card__missed {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
 }
 
 .rn-focus-card__transcript {

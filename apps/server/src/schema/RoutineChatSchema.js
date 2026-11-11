@@ -33,6 +33,9 @@ const RoutineChatMessageSchema = new mongoose.Schema({
   // goal items — `added` flips once the user presses "Add all to checklist".
   proposals: { type: [String], default: [] },
   added: { type: Boolean, default: false },
+  // Follow-ups the reply offers as chips ("How was my week?"), written as the
+  // user would say them. Encrypted like proposals: they quote the user's items.
+  suggestions: { type: [String], default: [] },
   tone: { type: String, enum: [...TONES, null], default: null },
   icon: { type: String, default: null },
   // Which free OpenRouter model answered. Kept for debugging a roster that
@@ -55,6 +58,7 @@ RoutineChatMessageSchema.pre('save', function encryptMessage(next) {
   const encrypted = encryption.encryptObject(this.toObject(), ENCRYPTION_FIELDS.routineChat);
   Object.assign(this, encrypted);
   this.proposals = mapStrings(this.proposals, (p) => encryption.encrypt(p));
+  this.suggestions = mapStrings(this.suggestions, (p) => encryption.encrypt(p));
   next();
 });
 
@@ -63,6 +67,7 @@ const decryptMessageDoc = (doc) => {
   const plain = doc.toObject ? doc.toObject() : doc;
   Object.assign(doc, encryption.decryptObject(plain, ENCRYPTION_FIELDS.routineChat));
   doc.proposals = mapStrings(doc.proposals, (p) => encryption.decrypt(p));
+  doc.suggestions = mapStrings(doc.suggestions, (p) => encryption.decrypt(p));
   return doc;
 };
 
@@ -102,6 +107,7 @@ const RoutineChatMessageType = new GraphQLObjectType({
     items: { type: new GraphQLList(GraphQLString) },
     proposals: { type: new GraphQLList(GraphQLString) },
     added: { type: GraphQLBoolean },
+    suggestions: { type: new GraphQLList(GraphQLString) },
     tone: { type: GraphQLString },
     icon: { type: GraphQLString },
     model: { type: GraphQLString },

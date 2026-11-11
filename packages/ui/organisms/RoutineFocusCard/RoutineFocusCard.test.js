@@ -137,6 +137,54 @@ describe('OrganismRoutineFocusCard — Today tab', () => {
       .toBe('line-through');
   });
 
+  // A skip (markGoalItemMissed) stores `missed` and leaves `isComplete` alone; a
+  // tick afterwards is a late tick, which counts and reads as done.
+  describe('a missed item', () => {
+    const MIXED = [
+      { id: 'm1', body: 'Skipped', isComplete: false, status: 'missed' },
+      { id: 'm2', body: 'Open', isComplete: false, status: 'todo' },
+      { id: 'm3', body: 'Done', isComplete: true, status: 'done' },
+      { id: 'm4', body: 'Done late', isComplete: true, status: 'missed' },
+    ];
+    const rowsOf = (el) => el.querySelectorAll('.rn-focus-card__row');
+    const pillOf = (row) => row.querySelector('[data-testid="checklist-missed"]');
+    const textOf = (row) => row.querySelector('.rn-focus-card__row-text');
+    const boxOf = (row) => row.querySelector('.rn-focus-card__box');
+
+    it('is greyed with the Missed pill, not struck, and keeps an open box', () => {
+      const [missed] = rowsOf(render({ items: MIXED }).el);
+      expect(pillOf(missed).textContent.trim()).toBe('Missed');
+      expect(pillOf(missed).style.color).toBe('rgb(198, 40, 40)');
+      expect(textOf(missed).style.textDecoration).toBe('none');
+      expect(textOf(missed).style.color).toBe('rgba(0, 0, 0, 0.45)');
+      expect(boxOf(missed).textContent.trim()).toBe('check_box_outline_blank');
+    });
+
+    it('still ticks from its box', () => {
+      const { vm } = render({ items: MIXED });
+      const toggled = [];
+      vm.$children[0].$on('toggle-item', (item) => toggled.push(item.id));
+      boxOf(rowsOf(vm.$el)[0]).click();
+      expect(toggled).toEqual(['m1']);
+    });
+
+    it('leaves an open and a done row exactly as before', () => {
+      const [, open, done] = rowsOf(render({ items: MIXED }).el);
+      expect(pillOf(open)).toBeNull();
+      expect(textOf(open).style.color).toBe('rgba(0, 0, 0, 0.87)');
+      expect(boxOf(open).textContent.trim()).toBe('check_box_outline_blank');
+      expect(pillOf(done)).toBeNull();
+      expect(textOf(done).style.textDecoration).toBe('line-through');
+    });
+
+    it('is ticked when ticked late, and its status stays Missed', () => {
+      const late = rowsOf(render({ items: MIXED }).el)[3];
+      expect(pillOf(late).textContent.trim()).toBe('Missed');
+      expect(boxOf(late).textContent.trim()).toBe('check_box');
+      expect(textOf(late).style.textDecoration).toBe('line-through');
+    });
+  });
+
   it('emits toggle-item from the box without also opening the item', () => {
     const { vm } = render();
     const card = vm.$children[0];
@@ -240,7 +288,7 @@ describe('OrganismRoutineFocusCard — agent states', () => {
   // Only a domain reason (`buttonDisabled`) locks it. This suite previously
   // asserted the opposite and so locked the defect in.
   it('never disables the tick for an agent stage, whatever the stage', () => {
-    ['waiting', 'running', 'listening', 'firing', 'finished', 'failed', 'none']
+    ['waiting', 'running', 'listening', 'firing', 'finished', 'failed', 'stalled', 'none']
       .forEach((stage) => {
         expect(stageOf(stage).card.tickDisabled).toBe(false);
       });
@@ -256,6 +304,17 @@ describe('OrganismRoutineFocusCard — agent states', () => {
     const { card, el } = stageOf('finished');
     expect(el.querySelectorAll('.rn-focus-card__ring-breathe')).toHaveLength(0);
     expect(card.tickGlyph).toBe('more_horiz');
+  });
+
+  // D-13. A stalled run is not live either — nothing breathes — but it still
+  // owns the button, because the whole defect was a run going nowhere that
+  // looked exactly like a healthy one.
+  it('marks a stalled run on the button without breathing it', () => {
+    const { card, el } = stageOf('stalled');
+    expect(el.querySelectorAll('.rn-focus-card__ring-breathe')).toHaveLength(0);
+    expect(card.tickGlyph).toBe('warning');
+    expect(card.tickStyle.background).toBe('#ef6c00');
+    expect(card.tickTitle).toContain('stalled');
   });
 });
 

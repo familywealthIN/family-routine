@@ -163,6 +163,18 @@ describe('completeChat failover', () => {
       .rejects.toThrow(/All OpenRouter models failed/);
   });
 
+  // No model on the backend spends credits: a caller's own chain is held to
+  // the free suffix too, and an all-paid chain falls back to the free roster.
+  it('never sends a paid model, even one a caller names', async () => {
+    global.fetch = jest.fn().mockResolvedValue(okResponse('answered'));
+
+    await completeChat([{ role: 'user', content: 'hi' }], { models: ['anthropic/claude-fable-5.1', 'qwen/qwen3-235b-a22b-2507'] });
+    await completeChat([{ role: 'user', content: 'hi' }], { models: ['qwen/qwen3-235b-a22b-2507', 'c/three:free'] });
+
+    const sent = global.fetch.mock.calls.map(([, init]) => JSON.parse(init.body).model);
+    expect(sent).toEqual(['a/one:free', 'c/three:free']);
+  });
+
   it('refuses to run without an API key', async () => {
     delete process.env.OPENROUTER_API_KEY;
     await expect(completeChat([{ role: 'user', content: 'hi' }]))
@@ -260,11 +272,17 @@ describe('chatWithRoutine', () => {
       "I've skipped that one for today.",
       'Moved it to tomorrow for you.',
       "I've pushed the PR to Friday.",
-      'I deleted that item.',
     ])('replaces the false claim: %s', async (claim) => {
       await expect(replyFor(claim)).resolves
         .toBe("I can't move or skip items from here. Tap the item in the "
           + 'checklist to open it, then use its date chips to change the day.');
+    });
+
+    // A delete claim gets the delete refusal: "I can't move or skip items"
+    // answered "delete this routine" with a sentence about something else.
+    it('answers a false delete claim with the delete refusal', async () => {
+      await expect(replyFor('I deleted that item.')).resolves
+        .toMatch(/^I can't delete, rename or remove anything from here, so nothing changed/);
     });
 
     // The guard is narrow on purpose: advice and questions are true and useful,

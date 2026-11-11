@@ -9,6 +9,7 @@ jest.mock('../../services/pushSession', () => ({ releasePushOnSignOut: jest.fn((
 import localforage from 'localforage';
 import { releasePushOnSignOut } from '../../services/pushSession';
 import { signOut } from '../signOut';
+import { saveHomeDay, homeDay, resetHomeSnapshotMemo } from '../homeSnapshot';
 /* eslint-enable import/first */
 
 function makeVm(overrides = {}) {
@@ -69,5 +70,17 @@ describe('signOut', () => {
     const { vm } = makeVm({ $apollo: undefined });
     await signOut(vm);
     expect(localforage.clear).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('signOut and the Home snapshot', () => {
+  it('leaves nothing of the account for the next one to be drawn from', async () => {
+    resetHomeSnapshotMemo();
+    saveHomeDay('old@example.com', '11-11-2026', { routineDate: { id: 'doc', date: '11-11-2026', tasklist: [] } });
+    const { vm } = makeVm();
+    await signOut(vm);
+    resetHomeSnapshotMemo();
+    expect(homeDay('old@example.com', '11-11-2026')).toBeNull();
+    expect(localStorage.getItem('rn-home-snapshot')).toBeNull();
   });
 });

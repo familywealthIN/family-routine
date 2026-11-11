@@ -173,12 +173,4 @@ export default {
 };
 </script>
 
-<style>
-/* Root-class prefixed: this page renders its own shell, so nothing here may
-   leak into the legacy toolbar layouts (see MEMORY: web-app CSS lives inline in
-   organisms). */
-.progress-page__switch {
-  width: 340px;
-  flex-shrink: 0;
-}
-</style>
+<style src="@routine-notes/ui/styles/app/pages/ProgressTime.css"></style>

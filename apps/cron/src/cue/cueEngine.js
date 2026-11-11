@@ -11,7 +11,9 @@
  *   predicts a reward. So every cue states the reward at stake — the points,
  *   the next day of the run, the milestone in reach — and nothing is sent that
  *   cannot be acted on (already done, day skipped, not on today's list).
- * - Make it easy: the ask is the two-minute version (the first step).
+ * - Make it easy: the ask is the routine's first step — the obvious, tiny
+ *   action that starts it (shoes on for a run) — and the copy leads with it;
+ *   without steps, the two-minute version.
  * - Make it satisfying: the run is shown; after one miss the copy is "never
  *   miss twice", never guilt.
  * - Avoid habituation: the copy rotates per day, and a habit that has become
@@ -67,6 +69,14 @@ function historyDates(today, days = HISTORY_DAYS) {
   return Array.from({ length: days + 1 }, (_, i) => shiftDate(today, i));
 }
 
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+/** 0 (Sunday) to 6 (Saturday): the app's week runs Sunday to Saturday (moment's .week()). */
+function dayOfWeek(date) {
+  const [dd, mm, yyyy] = date.split('-').map(Number);
+  return new Date(Date.UTC(yyyy, mm - 1, dd)).getUTCDay();
+}
+const weekday = (date) => WEEKDAYS[dayOfWeek(date)];
+
 function median(values) {
   const s = [...values].sort((a, b) => a - b);
   const mid = Math.floor(s.length / 2);
@@ -112,10 +122,18 @@ function itemHistory({
   const missedTwice = missedYesterday && (counted[1] === 'missed' || counted[1] === 'absent');
   const everDone = counted.includes('done');
 
-  // Timing is learned from the recent fortnight only, however long the run.
+  // This calendar week (Sunday to today), not the rolling last 7 days.
+  const todayTask = findTask(byDate.get(today), itemId);
+  const doneToday = !!(todayTask && todayTask.ticked && !(byDate.get(today) || {}).skip);
+  const doneThisWeek = states.slice(0, dayOfWeek(today)).filter((s) => s === 'done').length
+    + (doneToday ? 1 : 0);
+
+  // Timing is learned from the recent fortnight only, however long the run,
+  // and from ticks made in the window: a late check-in (redeemed) records
+  // when the person caught up, not when they do the habit.
   const samples = historyDates(today).slice(1)
     .map((date) => findTask(byDate.get(date), itemId))
-    .filter((t) => t && t.ticked && t.tickedAt)
+    .filter((t) => t && t.ticked && t.tickedAt && !t.redeemed)
     .map((t) => minuteOfDay(t.tickedAt, timezone));
 
   let usual = null;
@@ -125,8 +143,17 @@ function itemHistory({
     spread = median(samples.map((m) => Math.abs(m - usual)));
   }
 
+  // The last 7 days in plain words, for the AI cue (aiCue.js). Weekday names,
+  // not dates: every number the AI may write has to be a fact it was given.
+  const week = historyDates(today, 7).slice(1).map((date, i) => {
+    const task = findTask(byDate.get(date), itemId);
+    const at = task && task.ticked && task.tickedAt ? fromMinutes(minuteOfDay(task.tickedAt, timezone)) : null;
+    return { date: weekday(date), state: states[i], at };
+  });
+
   return {
-    streak, missedYesterday, missedTwice, everDone, usual, spread, samples: samples.length,
+    streak, missedYesterday, missedTwice, everDone, usual, spread, samples: samples.length, week,
+    doneToday, doneThisWeek,
   };
 }
 
@@ -174,9 +201,22 @@ function rewardLine({ points, streak }) {
   return parts.join(' · ');
 }
 
+const MAX_STEP = 50; // a step is a cue, not a paragraph
+
+/**
+ * The routine's first step, the cue that starts it (Atomic Habits: shoes by
+ * the door for a run), or null when it has no steps.
+ */
+function firstStep(item) {
+  const first = ((item && item.steps) || []).map((s) => s && String(s.name || '').trim()).find(Boolean);
+  if (!first) return null;
+  return first.length > MAX_STEP ? `${first.slice(0, MAX_STEP - 1)}…` : first;
+}
+
+/** The ask: the first step when there is one, else the two-minute version. */
 function twoMinuteAsk(item) {
-  const first = (item.steps || []).map((s) => s && s.name).find(Boolean);
-  return first ? `Just start: ${first}.` : 'Two minutes counts.';
+  const first = firstStep(item);
+  return first ? `${first} — that's the whole start.` : 'Two minutes counts.';
 }
 
 /**
@@ -188,27 +228,31 @@ function cueCopy({
   const name = item.name || 'Your routine';
   const reward = rewardLine({ points: item.points, streak: history.streak });
   const ask = twoMinuteAsk(item);
+  const step = firstStep(item);
+  // With a first step the body leads with it: the step is the cue, the
+  // situation and the reward follow. Without one, the situation leads.
+  const lead = (situation) => (step ? `${ask} ${situation} ${reward}` : `${situation} ${ask} ${reward}`);
   const pick = (variants) => variants[hash(`${item._id}:${today}`) % variants.length];
 
   if (history.missedYesterday && !history.missedTwice && history.everDone) {
     return {
       kind: 'recovery',
       title: `${name} — never miss twice`,
-      body: `Yesterday slipped; today is the one that counts. ${ask} ${reward}`,
+      body: lead('Yesterday slipped; today is the one that counts.'),
     };
   }
   if (history.missedTwice && history.everDone) {
     return {
       kind: 'restart',
       title: `${name}: fresh start`,
-      body: `Small beats perfect. ${ask} ${reward}`,
+      body: lead('Small beats perfect.'),
     };
   }
   if (timing.mode === 'atRisk') {
     return {
       kind: 'atRisk',
       title: `${name} — keep the ${history.streak}-day run`,
-      body: `Later than your usual ${fromMinutes(history.usual)}. ${ask} ${reward}`,
+      body: lead(`Later than your usual ${fromMinutes(history.usual)}.`),
     };
   }
   if (anchor) {
@@ -220,8 +264,12 @@ function cueCopy({
   }
 
   const variants = [
-    { kind: 'reward', title: `${name} is up`, body: `${reward}. ${ask}` },
-    { kind: 'twoMinute', title: `${name}: ${ask}`, body: reward },
+    { kind: 'reward', title: `${name} is up`, body: step ? `${ask} ${reward}` : `${reward}. ${ask}` },
+    // "Wake Up: Feet on the floor — that's the whole start." When that is
+    // too long for a title, the step stays in it and the rest moves down.
+    `${name}: ${ask}`.length <= MAX_TITLE || !step
+      ? { kind: 'twoMinute', title: `${name}: ${ask}`, body: reward }
+      : { kind: 'twoMinute', title: `${name}: ${step}`, body: `That's the whole start. ${reward}` },
   ];
   if (identity) {
     variants.push({ kind: 'identity', title: `${name} — a vote for ${identity}`, body: `${ask} ${reward}` });
@@ -277,7 +325,9 @@ function dueCues({
         alarm: true,
         kind: repeat ? 'alarmRepeat' : 'alarm',
         title: trim(`⏰ ${item.name || 'Your routine'} · ${item.time}`),
-        body: `${repeat ? 'Still on — ' : ''}${twoMinuteAsk(item)} ${rewardLine({ points: item.points, streak: history.streak })}`,
+        // The title is the fixed promise (name and set time); the body may
+        // name the first step, the cue that gets the person moving.
+        body: `${repeat ? 'Still on. ' : ''}${twoMinuteAsk(item)} ${rewardLine({ points: item.points, streak: history.streak })}`,
         minute: nowMinute,
         mode: 'set',
       }];
@@ -295,7 +345,7 @@ function dueCues({
       item, history, timing, anchor, identity, today,
     });
     return [{
-      item, ...copy, title: trim(copy.title), minute: timing.minute, mode: timing.mode,
+      item, ...copy, title: trim(copy.title), minute: timing.minute, mode: timing.mode, history, anchor,
     }];
   });
 }
@@ -310,11 +360,14 @@ function batchCues(all) {
   const cues = all.filter((c) => !c.alarm);
   if (cues.length <= 1) return [...alarms, ...cues];
   const names = cues.map((c) => c.item.name).filter(Boolean);
+  const step = firstStep(cues[0].item);
   return [...alarms, {
     item: cues[0].item,
     kind: 'batch',
     title: trim(`${cues.length} routines are up`),
-    body: `${names.join(' · ')}. Start with the first — two minutes counts.`,
+    body: step
+      ? `${names.join(' · ')}. Start with the first: ${step}.`
+      : `${names.join(' · ')}. Start with the first — two minutes counts.`,
     minute: cues[0].minute,
     mode: cues[0].mode,
   }];
@@ -334,6 +387,7 @@ function candidateSetTimes(nowMinute) {
 
 module.exports = {
   HISTORY_DAYS,
+  nextTarget,
   toMinutes,
   fromMinutes,
   minuteOfDay,
@@ -342,6 +396,8 @@ module.exports = {
   itemHistory,
   cueTiming,
   cueCopy,
+  firstStep,
+  twoMinuteAsk,
   rewardLine,
   dueCues,
   batchCues,
