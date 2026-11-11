@@ -37,7 +37,7 @@ Say this out loud at home: the counter screen is one person's checklist, and any
 
 ## 2. Turn on Always on display
 
-Go to **More → Profile → Display**. The card only appears on an iPad or tablet. Set **Always on display** to On and the screen won't sleep while Routine Notes is open. Leave the iPad on charge, because it will be awake all morning. Close the app and the screen sleeps as normal, so it isn't lit all day unless you leave it open.
+Go to **More → Profile → Display**. The card only appears on an iPad or tablet. Set **Always on display** to On and the screen won't sleep while Routine Notes is open. Leave the iPad on charge, because it will be awake all morning. Close the app and the screen sleeps as normal, so it isn't lit all day unless you leave it open. Open Routine Notes again and Always on display is back on, as you set it.
 
 ## 3. Write routines you can read from two metres away
 

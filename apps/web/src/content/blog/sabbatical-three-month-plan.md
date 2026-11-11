@@ -74,7 +74,7 @@ The month calendar on Goals shows a ring for each day, so a quiet stretch stands
 
 ## Unplanned days and late starts
 
-A sabbatical should have days you didn't plan: a friend's spare room by the sea, a weekend away on a whim. On Home, long-press that day in the week strip and choose **Skip Day**. You get two a week, they go down as rest, and the streak carries on. On a sabbatical that isn't cheating. It's part of the reason for taking one.
+A sabbatical should have days you didn't plan: a friend's spare room by the sea, a weekend away on a whim. On the day, long-press today in the week strip on Home and choose **Skip Day**. You get two a week, they go down as rest, and the streak carries on. On a sabbatical that isn't cheating. It's part of the reason for taking one.
 
 If the theme block happened in the afternoon instead of at 09:30, it will already be in **Past**. Check it in from there before bed, paying with points, and the run of days holds. Points are added overnight, so a good stretch builds up a buffer.
 

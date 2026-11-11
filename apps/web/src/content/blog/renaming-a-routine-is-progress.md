@@ -80,6 +80,6 @@ The rebuild doesn't earn points by itself. Geniuses points come from ticking lin
 
 ## When the rebuilt routine slips in week one
 
-Give it about two weeks before judging it, and expect a few evenings in **Past** along the way. If you did the routine but after 23:00, when its window closed, check it in from Past before midnight with points, and the run of nights holds. If a night out means no routine at all, let it go, or long-press the day in the week strip for a Skip Day if the whole day was a write-off.
+Give it about two weeks before judging it, and expect a few evenings in **Past** along the way. If you did the routine but after 23:00, when its window closed, check it in from Past before midnight with points, and the run of nights holds. If a night out means no routine at all, let it go, or, before midnight, long-press today in the week strip for a Skip Day if the whole day was a write-off.
 
 After fourteen days, check *On the clock* again. If the new routine is on time most nights, the rebuild worked. If not, rebuild it again. Milestones get re-planned, not restarted.

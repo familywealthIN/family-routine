@@ -78,7 +78,7 @@ The checklist earns **Kinetics**. Ticking the routine between 17:00 and 18:30 ea
 
 ## Missed practice when the kids come home
 
-The children come back for a weekend. Cooking for five again leaves no time for scales. On Home, long-press each of those days in the week strip and mark it as a **Skip Day**. You get two a week, they go down as rest rather than gaps, and the streak carries on.
+The children come back for a weekend. Cooking for five again leaves no time for scales. On each of those days, long-press today in the week strip on Home and take a **Skip Day**. It works on the day itself, not in advance. You get two a week, they go down as rest rather than gaps, and the streak carries on.
 
 If you practised but late, at 21:00 after a long dinner, the routine has already gone to **Past**. Check it in from there before you go to bed, paying with points, and the run of days holds.
 
