@@ -1,0 +1,174 @@
+---
+import { THRESHOLD, pillarOf, wrap } from '~/lib/blog';
+
+/**
+ * The persona's goal cascade, from the post's frontmatter: year → month →
+ * week → day items, planned top-down and rolling up bottom-up. Each connector
+ * carries the threshold that auto-ticks the period above it (5 met days a
+ * week, 3 met weeks a month, 6 met months a year; THRESHOLD mirrors
+ * packages/ui/utils/getDates.js). Inline SVG, no JS.
+ */
+interface Props {
+  slug: string;
+  persona: string;
+  focus: string;
+  cascade: { year: string; month: string; week: string; days: string[] };
+}
+const { slug, persona, focus, cascade } = Astro.props;
+const id = `cascade-${slug}`;
+const who = persona.charAt(0).toLowerCase() + persona.slice(1);
+const g = pillarOf('G').color;
+
+const W = 420;
+const levels = [
+  { key: 'Year', text: cascade.year, rule: `auto-ticks at ${THRESHOLD.yearMonths} met months` },
+  { key: 'Month', text: cascade.month, rule: `auto-ticks at ${THRESHOLD.monthWeeks} met weeks` },
+  { key: 'Week', text: cascade.week, rule: `auto-ticks at ${THRESHOLD.weekDays} met days` },
+].map((l) => ({ ...l, lines: wrap(l.text, 36, 2) }));
+
+// stack the period boxes, each indented a little more than its parent
+let y = 0;
+const boxes = levels.map((l, i) => {
+  const h = 46 + l.lines.length * 20;
+  const box = { ...l, x: i * 16, y, h, w: W - i * 16 };
+  y += h + 44;
+  return box;
+});
+const dayTop = y;
+const dayIndent = 3 * 16;
+// all but the last shown ticked: a week in progress
+const days = cascade.days.map((d, i) => ({ text: d, y: dayTop + 34 + i * 40, done: i < cascade.days.length - 1 }));
+const dayH = 40 + days.length * 40 + 6;
+const H = dayTop + dayH + 2;
+
+const title = `The ${who}'s goal cascade, year to day`;
+const desc =
+  `Year goal: ${cascade.year}. Month milestone: ${cascade.month}. Week milestone: ${cascade.week}. ` +
+  `Day items linked to the ${focus} routine: ${cascade.days.join('; ')}. ` +
+  `Wins roll up on their own: ${THRESHOLD.weekDays} met days auto-tick the week, ${THRESHOLD.monthWeeks} met weeks the month and ${THRESHOLD.yearMonths} met months the year, however many more were planned. A late tick still counts.`;
+---
+
+<figure class="bc card-soft not-prose">
+  <p class="bc__eyebrow">The goal cascade</p>
+  <svg class="bc__svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby={`${id}-t ${id}-d`}>
+    <title id={`${id}-t`}>{title}</title>
+    <desc id={`${id}-d`}>{desc}</desc>
+    <defs>
+      <marker id={`${id}-up`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" class="bc-arrowhead" />
+      </marker>
+    </defs>
+
+    {boxes.map((b, i) => (
+      <g>
+        <rect x={b.x + 1} y={b.y + 1} width={b.w - 2} height={b.h - 2} rx="14" class="bc-box" style={i === 0 ? `stroke:${g};stroke-width:2.5` : ''} />
+        <text x={b.x + 18} y={b.y + 26} class="bc-eye">{b.key}</text>
+        {b.lines.map((l, j) => <text x={b.x + 18} y={b.y + 50 + j * 20} class="bc-main">{l}</text>)}
+        <!-- the connector from the level below, labelled with this level's rule -->
+        <path d={`M${b.x + 34} ${b.y + b.h + 40} V${b.y + b.h + 4}`} class="bc-line" marker-end={`url(#${id}-up)`} />
+        <rect x={b.x + 48} y={b.y + b.h + 9} width="196" height="26" rx="13" class="bc-rule" />
+        <text x={b.x + 146} y={b.y + b.h + 27} text-anchor="middle" class="bc-rule-t">{b.rule}</text>
+      </g>
+    ))}
+
+    <rect x={dayIndent + 1} y={dayTop + 1} width={W - dayIndent - 2} height={dayH - 2} rx="14" class="bc-box bc-box--day" />
+    <text x={dayIndent + 18} y={dayTop + 24} class="bc-eye">Day items · on {wrap(focus, 22, 1)[0]}</text>
+    {days.map((d) => (
+      <g>
+        <rect x={dayIndent + 18} y={d.y - 4} width="20" height="20" rx="5" class:list={['bc-check', !d.done && 'bc-check--open']} />
+        {d.done && <path d={`M${dayIndent + 23} ${d.y + 6} l4 4 l7 -8`} class="bc-tick" />}
+        <text x={dayIndent + 48} y={d.y + 11} class="bc-day">{wrap(d.text, 34, 1)[0]}</text>
+      </g>
+    ))}
+  </svg>
+  <figcaption class="bc__caption">
+    Planned from the top, earned from the bottom: {THRESHOLD.weekDays} met days close the week, {THRESHOLD.monthWeeks} met weeks the month,
+    {THRESHOLD.yearMonths} met months the year. Late ticks count.
+  </figcaption>
+</figure>
+
+<style>
+  .bc {
+    padding: 1.4rem 1.25rem 1.1rem;
+    margin: 2.25rem 0;
+  }
+  .bc__eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-brand-600);
+  }
+  .bc__svg {
+    display: block;
+    width: 100%;
+    max-width: 440px;
+    height: auto;
+    margin: 1rem auto 0;
+  }
+  .bc__caption {
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px dashed var(--color-ink-100);
+    font-size: 13.5px;
+    color: var(--color-ink-500);
+    text-align: center;
+  }
+  .bc-box {
+    fill: var(--color-surface);
+    stroke: var(--color-ink-100);
+    stroke-width: 1.5;
+  }
+  .bc-box--day {
+    fill: var(--color-surface-soft);
+  }
+  .bc-eye {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    fill: var(--color-ink-400);
+  }
+  .bc-main {
+    font-size: 16px;
+    font-weight: 700;
+    fill: var(--color-ink-900);
+  }
+  .bc-day {
+    font-size: 14px;
+    font-weight: 600;
+    fill: var(--color-ink-800);
+  }
+  .bc-line {
+    fill: none;
+    stroke: var(--color-ink-300);
+    stroke-width: 2;
+  }
+  .bc-arrowhead {
+    fill: var(--color-ink-300);
+  }
+  .bc-rule {
+    fill: var(--color-brand-50);
+    stroke: var(--color-brand-100);
+  }
+  .bc-rule-t {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--color-brand-700);
+  }
+  .bc-check {
+    fill: var(--color-brand-500);
+  }
+  .bc-check--open {
+    fill: var(--color-surface);
+    stroke: var(--color-ink-300);
+    stroke-width: 1.5;
+  }
+  .bc-tick {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+</style>

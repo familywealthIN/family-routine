@@ -16,6 +16,7 @@ export const LINKS = {
   playStore: 'https://play.google.com/store/apps/details?id=com.routine.note',
   why: '/why',
   guide: '/guide',
+  blog: '/blog',
   pricing: '/pricing',
   about: '/about',
   privacy: 'https://familywealth.in/privacy-policy',
@@ -27,6 +28,7 @@ export const LINKS = {
 
 export const NAV = [
   { label: 'Guide', href: LINKS.guide },
+  { label: 'Blog', href: LINKS.blog },
   { label: 'Pricing', href: LINKS.pricing },
   { label: 'About', href: LINKS.about },
 ] as const;
