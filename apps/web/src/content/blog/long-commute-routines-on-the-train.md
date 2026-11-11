@@ -85,7 +85,7 @@ Commuter routines run into two problems sooner or later.
 
 **Cancellations.** The 06:40 is cancelled, you catch the 07:30, and the window (05:40 to 07:10) has closed before you sit down. The routine moves to **Past** on Home. If you read on the later train, check it in from there that evening with points. The streak holds, and the late tick counts like any other.
 
-**Weekends.** There's no 06:40 on a Saturday. You could re-time the train routines as weekend reading slots, let them pass unticked, or long-press the day in the week strip for a Skip Day. You get two Skip Days a week and they don't cost the streak, but each one covers every routine that day, and spending both on the weekend leaves none for a sick day. Most commuters re-time instead: "Train out" becomes 08:00 reading at the kitchen table.
+**Weekends.** There's no 06:40 on a Saturday. You could re-time the train routines as weekend reading slots, let them pass unticked, or long-press today in the week strip on the Saturday itself for a Skip Day. You get two Skip Days a week and they don't cost the streak, but each one covers every routine that day, and spending both on the weekend leaves none for a sick day. Most commuters re-time instead: "Train out" becomes 08:00 reading at the kitchen table.
 
 ## A Friday look back
 

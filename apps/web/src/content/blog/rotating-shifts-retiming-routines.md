@@ -68,7 +68,7 @@ That's why Learning runs every day on every rota. The year goal is to qualify as
 
 ## The swing day
 
-Switching from lates to earlies, there's a day where nothing fits: you finish at 22:00 and you're due in at 06:00. Long-press that day in the week strip and take a Skip Day. It's a rest day, so nothing reads as missed and the streak survives. You get two a week, and a rota turn needs one, occasionally two.
+Switching from lates to earlies, there's a day where nothing fits: you finish at 22:00 and you're due in at 06:00. When it comes, long-press today in the week strip and take a Skip Day. It's a rest day, so nothing reads as missed and the streak survives. You get two a week, and a rota turn needs one, occasionally two.
 
 ## What does a late first early look like?
 

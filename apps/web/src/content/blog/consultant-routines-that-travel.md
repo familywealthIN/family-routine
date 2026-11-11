@@ -51,7 +51,7 @@ Client work carries 35 of the 100 because it's the job. Call home carries 10, do
 
 ## Monday: the travel day
 
-The flight is at 06:40. Rather than accept a morning of misses, the consultant long-presses Monday in the week strip and takes a Skip Day. The day counts as rest and the streak survives. There are only two a week, so they're worth saving for days like this one.
+The flight is at 06:40. Rather than accept a morning of misses, the consultant long-presses today, Monday, in the week strip and takes a Skip Day. The day counts as rest and the streak survives. There are only two a week, so they're worth saving for days like this one.
 
 Keeping Monday and letting the morning routines pass unticked is just as honest. What isn't honest is ticking Wake up at the gate at 05:50 and counting it as a normal morning.
 

@@ -88,7 +88,7 @@ Five dates, one item each. The week completes once all five days are met, so a f
 
 Some evenings the day job wins. If you did the admin hour but at 20:30, it will be in **Past** because its window ended at 18:30. Check it in from there before midnight, paying with points, and the run of days holds. A Wednesday item done on Wednesday but ticked on Thursday still counts toward the week, even though it will show **Missed**.
 
-If the Saturday workday takes over the whole day, long-press it in the week strip and choose **Skip Day**. You get two a week, the streak stays, and the week goal doesn't need Saturday: the five weekdays already complete it.
+If the Saturday workday takes over the whole day, long-press today in the week strip that Saturday and choose **Skip Day**. You get two a week, the streak stays, and the week goal doesn't need Saturday: the five weekdays already complete it.
 
 ## The next step
 
