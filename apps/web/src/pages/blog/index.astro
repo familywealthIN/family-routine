@@ -173,7 +173,11 @@ const countBy = (key: 'category' | 'pillar', id: string) => posts.filter((p) => 
     apply(false);
   }
 
-  document.addEventListener('astro:page-load', initBlogIndex);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBlogIndex);
+  } else {
+    initBlogIndex();
+  }
 </script>
 
 <style>

@@ -36,7 +36,7 @@ function revealNow(el: HTMLElement, delay = 0) {
 }
 
 async function init() {
-  // Runs once per page: the body is replaced on every view-transition swap.
+  // Runs once per page.
   if (document.body.dataset.revealInit) return;
   document.body.dataset.revealInit = '1';
   (window as any).__revealReady = true;
@@ -87,13 +87,9 @@ async function init() {
   }, FALLBACK_REVEAL_MS);
 }
 
-// astro:page-load fires on the first load as well as after every navigation;
-// the DOMContentLoaded path covers a first load that fired before this module
-// ran. init() guards against the two together animating the hero twice.
+// Every navigation is a full page load, so this runs once per page.
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
 }
-
-document.addEventListener('astro:page-load', init);
