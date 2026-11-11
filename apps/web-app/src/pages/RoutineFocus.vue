@@ -13,11 +13,11 @@
         :mini-title="miniTitle"
         :mini-breathing="agentLive"
         :mini-ring-ms="agentRingMs"
-        :available="(xpBalance && xpBalance.available) || 0"
-        :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
-        :entitled="!!(xpBalance && xpBalance.entitled)"
-        :points-loading="$apollo.queries.xpBalance.loading && !xpBalance"
-        :points-error="xpBalanceError && !xpBalance"
+        :available="(homeXpBalance && homeXpBalance.available) || 0"
+        :pending-today="(homeXpBalance && homeXpBalance.pendingToday) || 0"
+        :entitled="!!(homeXpBalance && homeXpBalance.entitled)"
+        :points-loading="$apollo.queries.xpBalance.loading && !homeXpBalance"
+        :points-error="xpBalanceError && !homeXpBalance"
         :picture="profileImage"
         :user-name="userName"
         :inbox-count="inboxCount"
@@ -173,11 +173,11 @@
               >{{ inboxCount }}</span>
             </div>
             <focus-points-chip
-              :available="(xpBalance && xpBalance.available) || 0"
-              :pending-today="(xpBalance && xpBalance.pendingToday) || 0"
-              :entitled="!!(xpBalance && xpBalance.entitled)"
-              :loading="$apollo.queries.xpBalance.loading && !xpBalance"
-              :error="xpBalanceError && !xpBalance"
+              :available="(homeXpBalance && homeXpBalance.available) || 0"
+              :pending-today="(homeXpBalance && homeXpBalance.pendingToday) || 0"
+              :entitled="!!(homeXpBalance && homeXpBalance.entitled)"
+              :loading="$apollo.queries.xpBalance.loading && !homeXpBalance"
+              :error="xpBalanceError && !homeXpBalance"
               :size="28"
               @click="goTo('/progress')"
             />
@@ -382,7 +382,7 @@
     <paywall-drawer
       v-model="paywallDrawerOpen"
       :cost="paywallCost"
-      :available="(xpBalance && xpBalance.available) || 0"
+      :available="(homeXpBalance && homeXpBalance.available) || 0"
       :show-purchase="showPaywallPurchase"
     />
 
@@ -451,6 +451,10 @@ import { pendingMutations } from '../utils/pendingMutations';
 import { guardFields, releaseEntity } from '../utils/cacheGuard';
 import { startAgentWhenReady } from '../utils/agentStart';
 import { runNewDayReset } from '../utils/newDay';
+import {
+  homeDay, homeTemplate, homeXp, saveHomeDay, saveHomeXp,
+} from '../utils/homeSnapshot';
+import { optimisticRoutine, withClockFlags } from '../utils/optimisticDay';
 import { describeRedeemFailure, describeRedeemReceipt } from '../utils/routineTaskDisplay';
 import { scopeGoalsToRef } from '../utils/goalRefScope';
 import { threshold } from '../utils/getDates';
@@ -541,6 +545,7 @@ export default {
         if (data.routineDate) {
           this.did = data.routineDate.id || '';
           this.$routine.setSkipDay(!!data.routineDate.skip);
+          saveHomeDay(this.userEmail, data.routineDate.date || this.date, { routineDate: data.routineDate });
           return data.routineDate;
         }
         if (data.routineDate === null) this.addNewDayRoutine();
@@ -564,7 +569,14 @@ export default {
       },
       update(data) {
         this.goalsFirstLoad = false;
-        return data.optimizedDailyGoals;
+        const goals = data && data.optimizedDailyGoals;
+        if (Array.isArray(goals)) {
+          // Which day `goals` belongs to: Apollo keeps the previous day's list
+          // on screen until the new day's arrives.
+          this.goalsDate = this.date;
+          saveHomeDay(this.userEmail, this.date, { goals });
+        }
+        return goals;
       },
       error(error) {
         console.error('[RoutineFocus] daily goals query error:', error);
@@ -576,7 +588,8 @@ export default {
         return !this.$root.$data.email;
       },
       update(data) {
-        return data.xpBalance;
+        if (data && data.xpBalance) saveHomeXp(this.userEmail, data.xpBalance);
+        return data && data.xpBalance;
       },
       result({ data }) {
         if (data) this.xpBalanceError = false;
@@ -648,6 +661,12 @@ export default {
       endEventFiring: {},
       routineFirstLoad: true,
       goalsFirstLoad: true,
+      // The date `goals` was last answered for (see the goals query's update).
+      goalsDate: '',
+      // Routines ticked while Home was still drawing its placeholder: green at
+      // once, and the tick itself goes out the moment the real day arrives
+      // (`tickRoutine`).
+      localTicks: {},
       // True while the day's routine document is being created. Without it the
       // gap between "no routine for today" and "created + refetched" paints the
       // empty state, which reads as "you have no routine items".
@@ -722,16 +741,59 @@ export default {
      * v-for keys and two cards rendering the same routine. Dedupe on read.
      */
     tasklist() {
-      const list = (this.routineDate && this.routineDate.tasklist) || [];
+      const list = (this.dayRoutine && this.dayRoutine.tasklist) || [];
       const seen = {};
-      return list.filter((task) => {
-        if (!task || !task.id || seen[task.id]) return false;
-        seen[task.id] = true;
-        return true;
+      return list
+        .filter((task) => {
+          if (!task || !task.id || seen[task.id]) return false;
+          seen[task.id] = true;
+          return true;
+        })
+        .map((task) => (this.localTicks[task.id] && !task.ticked ? { ...task, ticked: true } : task));
+    },
+    /**
+     * The server's routine for the viewed date. Apollo keeps the previous
+     * date's routine on screen while a new date loads, which used to draw one
+     * day's routine under another day's header.
+     */
+    liveRoutine() {
+      const doc = this.routineDate;
+      return doc && doc.date === this.date ? doc : null;
+    },
+    /**
+     * What Home draws until the server answers (utils/homeSnapshot.js,
+     * utils/optimisticDay.js): the day as this device last read it, or — for a
+     * day it has never read, like the first open of the day — the routine
+     * template, started clean. Never written against: it has no document id.
+     */
+    placeholderRoutine() {
+      if (this.liveRoutine) return null;
+      const day = homeDay(this.userEmail, this.date);
+      if (day && day.routineDate) {
+        return this.isToday ? withClockFlags(day.routineDate, this.date, this.now) : day.routineDate;
+      }
+      return optimisticRoutine(homeTemplate(this.userEmail), this.date, {
+        now: this.now, today: this.todayDate,
       });
     },
+    dayRoutine() {
+      return this.liveRoutine || this.placeholderRoutine;
+    },
+    showingPlaceholder() {
+      return !this.liveRoutine && !!this.placeholderRoutine;
+    },
+    /** The viewed date's goals: the server's, else the last ones this device saw. */
+    homeGoals() {
+      if (this.goalsDate === this.date && Array.isArray(this.goals)) return this.goals;
+      const day = homeDay(this.userEmail, this.date);
+      return (day && day.goals) || [];
+    },
+    /** The points chip: the server's balance, else the last one this device saw. */
+    homeXpBalance() {
+      return this.xpBalance || homeXp(this.userEmail);
+    },
     dayGoalItems() {
-      return (this.goals || [])
+      return this.homeGoals
         .filter((goal) => goal && goal.period === 'day')
         .reduce((acc, goal) => acc.concat(goal.goalItems || []), []);
     },
@@ -901,7 +963,7 @@ export default {
       return this.redeemCostForTask(this.focusRow);
     },
     displayGoals() {
-      return this.goals || [];
+      return this.homeGoals;
     },
     /** Open items on the focused routine — the action sheet's hint line. */
     focusOpenItemCount() {
@@ -949,7 +1011,7 @@ export default {
     },
     /** The Goal document the open item lives in — the mutation's `date`. */
     openGoalItemDate() {
-      const owner = (this.goals || []).find((goal) => goal
+      const owner = this.homeGoals.find((goal) => goal
         && goal.period === 'day'
         && (goal.goalItems || [])
           .some((item) => item && String(item.id) === String(this.openGoalItemId)));
@@ -974,7 +1036,7 @@ export default {
     goalSheetGoalRefLabel() {
       const item = this.openGoalItem;
       if (!item || !item.goalRef) return '';
-      const parent = (this.goals || [])
+      const parent = this.homeGoals
         .filter((goal) => goal && goal.period !== 'day')
         .reduce((acc, goal) => acc.concat(goal.goalItems || []), [])
         .find((candidate) => candidate && String(candidate.id) === String(item.goalRef));
@@ -1108,7 +1170,7 @@ export default {
 
     // --- skip day ---------------------------------------------------------
     isSkippedDay() {
-      return !!(this.routineDate && this.routineDate.skip);
+      return !!(this.dayRoutine && this.dayRoutine.skip);
     },
     /** The optimistic half of the week strip's pause overlay. */
     skippedDates() {
@@ -1122,7 +1184,7 @@ export default {
     cascadeGoalItemId() {
       if (this.period === 'day') return '';
       const item = pickCascadeItem({
-        goals: this.goals, period: this.period, focusRow: this.focusRow,
+        goals: this.homeGoals, period: this.period, focusRow: this.focusRow,
       });
       return item ? item.id : '';
     },
@@ -1130,7 +1192,7 @@ export default {
       if (this.period === 'day') return null;
       return buildCascade({
         period: this.period,
-        goals: this.goals,
+        goals: this.homeGoals,
         focusRow: this.focusRow,
         date: this.date,
         children: this.cascadeChildren || [],
@@ -1226,8 +1288,9 @@ export default {
     },
     showGoalsSkeleton() {
       const loading = this.$apollo.queries.goals && this.$apollo.queries.goals.loading;
-      const hasData = Array.isArray(this.goals) && this.goals.length > 0;
-      return !!loading && this.goalsFirstLoad && !hasData;
+      const hasData = this.homeGoals.length > 0;
+      // Also while another day's goals load: `goals` still holds the last day's.
+      return !!loading && (this.goalsFirstLoad || this.goalsDate !== this.date) && !hasData;
     },
     headerRingSize() {
       return HEADER_RING_SIZE;
@@ -1654,7 +1717,7 @@ export default {
       const settle = () => {
         if (this.togglesInFlight[item.id] === nextComplete) delete this.togglesInFlight[item.id];
       };
-      const goal = (this.goals || []).find((g) => g
+      const goal = this.homeGoals.find((g) => g
         && g.period === 'day'
         && (g.goalItems || []).some((gi) => gi.id === item.id));
 
@@ -1908,11 +1971,20 @@ export default {
       if (pendingMutations.has(pendingKey)) return;
       pendingMutations.add(pendingKey);
 
+      // Tapped on the placeholder (the server's day has not arrived yet): the
+      // ring goes green now, and the tick is sent once the real day is here and
+      // agrees it can be ticked.
+      const onPlaceholder = this.showingPlaceholder;
+      if (onPlaceholder) this.$set(this.localTicks, task.id, true);
+      const dropLocalTick = () => {
+        if (this.localTicks[task.id]) this.$delete(this.localTicks, task.id);
+      };
+
       this.measureFly(task);
       const tickedAt = Date.now();
       // Copied before the optimistic write lands: the pill names what the tick
       // credited, which is this against the stimuli the mutation returns.
-      const stimuliBefore = (task.stimuli || []).map((st) => ({ name: st.name, earned: st.earned }));
+      let stimuliBefore = (task.stimuli || []).map((st) => ({ name: st.name, earned: st.earned }));
 
       // Claim the tick locally the instant it is tapped: from here until the
       // server confirms, no query response may write `ticked` on this task —
@@ -1928,6 +2000,7 @@ export default {
       if (!did) {
         releaseEntity('RoutineItem', task.id);
         pendingMutations.remove(pendingKey);
+        dropLocalTick();
         this.clearFly();
         this.$notify({
           title: 'Error',
@@ -1937,6 +2010,23 @@ export default {
           duration: 3000,
         });
         return;
+      }
+
+      if (onPlaceholder) {
+        // The placeholder only guessed this routine's state; the server's day
+        // decides. Already ticked (another device): nothing to send. Its
+        // window gone: that is a redeem, not a tick.
+        const settled = this.settledTask(task.id);
+        if (!settled || settled.ticked || settled.passed || settled.wait) {
+          releaseEntity('RoutineItem', task.id);
+          pendingMutations.remove(pendingKey);
+          dropLocalTick();
+          this.clearFly();
+          if (settled && settled.redeemable) this.redeemWhenSettled(settled, { fireAgent, agentImplicit });
+          else if (settled && !settled.ticked) this.notifyRouteRefused(settled);
+          return;
+        }
+        stimuliBefore = (settled.stimuli || []).map((st) => ({ name: st.name, earned: st.earned }));
       }
 
       await this.$apollo
@@ -2026,7 +2116,103 @@ export default {
         })
         .finally(() => {
           pendingMutations.remove(pendingKey);
+          // By now the cache holds the tick (or Apollo has rolled it back).
+          dropLocalTick();
         });
+    },
+
+    /**
+     * A routine as the SERVER's day has it, brought up to the clock the way the
+     * pass/wait sweep is about to (`withClockFlags`), with `redeemable` worked
+     * out by the same rule as the card (utils/routineFocusModel.js). Null while
+     * the server's day has not arrived.
+     */
+    settledTask(taskId) {
+      const live = this.liveRoutine;
+      const raw = live && (live.tasklist || []).find((t) => t && t.id === taskId);
+      if (!raw) return null;
+      const task = this.isToday
+        ? withClockFlags({ tasklist: [raw] }, this.date, this.now || moment()).tasklist[0]
+        : raw;
+      return {
+        ...task,
+        redeemable: !!task.passed && !task.ticked && !task.redeemed && this.isToday,
+      };
+    },
+
+    /**
+     * Resolve once the server's copy of a routine satisfies `test`, or with
+     * null after `ms`. A redeem needs the server to have marked the routine
+     * passed (the pass/wait sweep runs just after the day arrives); sent any
+     * sooner, it is refused.
+     */
+    untilServerTask(taskId, test, ms = 6000) {
+      const deadline = Date.now() + ms;
+      return new Promise((resolve) => {
+        const check = () => {
+          const live = this.liveRoutine;
+          const raw = live && (live.tasklist || []).find((t) => t && t.id === taskId);
+          if (raw && test(raw)) {
+            resolve(raw);
+            return;
+          }
+          if (Date.now() > deadline) {
+            resolve(null);
+            return;
+          }
+          setTimeout(check, 150);
+        };
+        check();
+      });
+    },
+
+    /** A redeem tapped on the placeholder: wait for the server's day, then decide. */
+    async redeemWhenSettled(task, opts) {
+      // One wait per routine however often it is tapped. Not pendingMutations:
+      // nothing is on the wire yet, and that registry pauses every refresh.
+      if (!this.settlingRedeems) this.settlingRedeems = {};
+      if (this.settlingRedeems[task.id]) return;
+      this.settlingRedeems[task.id] = true;
+      try {
+        let did = '';
+        try {
+          did = await this.ensureRoutineId();
+        } catch (e) {
+          did = '';
+        }
+        if (!did) {
+          this.$notify({
+            title: 'Error',
+            text: "Couldn't load today's routine. Check your connection and try again.",
+            group: 'notify',
+            type: 'error',
+            duration: 3000,
+          });
+          return;
+        }
+        const settled = this.settledTask(task.id);
+        if (!settled || settled.ticked) return;
+        if (!settled.redeemable) {
+          if (!settled.passed && !settled.wait) this.tickRoutine(settled, opts);
+          else this.notifyRouteRefused(settled);
+          return;
+        }
+        await this.untilServerTask(task.id, (raw) => raw.passed || raw.ticked);
+        const row = this.rows.find((r) => r.id === task.id);
+        if (row && row.redeemable) {
+          this.redeemRoutine(row, opts);
+        } else if (row && !row.ticked) {
+          this.$notify({
+            title: `${row.name} isn't ready to redeem yet`,
+            text: 'Try again in a moment.',
+            group: 'notify',
+            type: 'info',
+            duration: 3000,
+          });
+        }
+      } finally {
+        delete this.settlingRedeems[task.id];
+      }
     },
 
     onRoutineTicked(task, { fireAgent, agentImplicit, credited = [] }) {
@@ -2069,6 +2255,11 @@ export default {
     /** Spend points to rescue a passed routine. Ported from redeemClick. */
     redeemRoutine(task, { fireAgent = true, agentImplicit = true } = {}) {
       this.actionSheetOpen = false;
+      // Placeholder: there is no document id to redeem against yet.
+      if (this.showingPlaceholder || !this.did) {
+        this.redeemWhenSettled(task, { fireAgent, agentImplicit });
+        return;
+      }
       const cost = this.getRedeemCost(task);
       const balance = this.xpBalance;
       const entitled = !!(balance && balance.entitled);
@@ -2561,6 +2752,15 @@ export default {
       const { routineId, action } = this.$route.params || {};
       if (!routineId || !action) return;
       if (!this.rows.length) return;
+
+      // The placeholder is a guess: only the server's day may act on a deep
+      // link, or say a routine is not on today's list. The `rows` watcher runs
+      // this again when that day arrives. Bringing the routine into view needs
+      // no wait.
+      if (this.showingPlaceholder) {
+        if (this.rows.some((r) => r.id === routineId)) this.focusRoutineId = routineId;
+        return;
+      }
 
       const dispatchKey = `${routineId}:${action}`;
       if (this.dispatchedRouteAction === dispatchKey) return;

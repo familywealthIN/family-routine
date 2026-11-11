@@ -41,6 +41,7 @@ import { createGuardLink } from './apollo/guardLink';
 import dataIdFromObject from './apollo/dataIdFromObject';
 import './registerServiceWorker';
 import { getSessionItem, loadData } from './token';
+import { startHomeSync } from './services/homeSync';
 import { retryPendingRelease } from './services/pushSession';
 import analytics, { AnalyticsPlugin } from './utils/analytics';
 // Load Google Identity Services script
@@ -255,6 +256,11 @@ loadData().then(() => {
 
   // Initialize Apollo cache persistence before mounting app
   setupCachePersistence().then(async () => {
+    // Today's Home data goes on the wire now, before the app mounts, and stays
+    // fresh while the app runs (services/homeSync.js). Home's own queries fold
+    // into these requests rather than waiting their turn.
+    startHomeSync(apolloClient, { getEmail: () => getSessionItem(GC_USER_EMAIL) });
+
     const app = new Vue({
       router,
       apolloProvider,

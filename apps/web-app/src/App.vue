@@ -41,6 +41,7 @@
 </template>
 
 <script>
+import moment from 'moment';
 import firebase from 'firebase/app';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -78,8 +79,9 @@ export default {
       aiSearchModal: false,
       aiSearchOpenMode: 'add',
       aiSearchTaskRef: '',
-      lastActiveTime: Date.now(),
       toast: toastState,
+      // The day the app went to the background on (handleAppVisibility).
+      hiddenOnDay: '',
     };
   },
   computed: {
@@ -140,7 +142,10 @@ export default {
       this.aiSearchTaskRef = (payload && payload.taskRef) || '';
     });
 
-    // Refresh app if inactive for more than 15 minutes
+    // Coming back no longer reloads the app. It used to after 15 minutes away,
+    // so most opens started from nothing: scripts, cache restore, sign-in
+    // check and every read again. Data now refreshes in place
+    // (services/homeSync.js); only a day change off Home still reloads.
     document.addEventListener('visibilitychange', this.handleAppVisibility);
 
     if (Capacitor.isNativePlatform()) {
@@ -168,17 +173,24 @@ export default {
     onAgentResultInput(open) {
       if (!open) this.$agent.closeResultModal();
     },
+    /**
+     * A page other than Home was built for the day it opened on. Home rolls
+     * over in place (RoutineFocus `handleDayChange`), so it never reloads;
+     * anywhere else, coming back on a later day reloads once.
+     */
     handleAppVisibility() {
+      const today = moment().format('DD-MM-YYYY');
       if (document.visibilityState === 'hidden') {
-        this.lastActiveTime = Date.now();
-      } else if (document.visibilityState === 'visible') {
-        const elapsed = Date.now() - this.lastActiveTime;
-        const fifteenMinutes = 15 * 60 * 1000;
-        if (elapsed > fifteenMinutes) {
-          console.log(`App inactive for ${Math.round(elapsed / 60000)} minutes, refreshing...`);
-          window.location.reload();
-        }
+        this.hiddenOnDay = today;
+        return;
       }
+      if (!this.hiddenOnDay || this.hiddenOnDay === today) return;
+      this.hiddenOnDay = '';
+      const meta = (this.$route && this.$route.meta) || {};
+      if (!meta.focusHome) this.reloadApp();
+    },
+    reloadApp() {
+      window.location.reload();
     },
 
     async initPwaFCM() {
