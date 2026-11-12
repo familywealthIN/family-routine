@@ -16,10 +16,13 @@
  *   soft            names of checks that only warn here (see checks.js)
  */
 const {
-  deepWork, workout, fresh, allDone,
+  deepWork, workout, fresh, allDone, withAgent,
 } = require('./fixtures');
 
 const NO_TASKS = { tasks: 'none' };
+const agentAt = (stage) => ({ ...withAgent, agent: { ...withAgent.agent, stage } });
+// A reply that says a run is going out.
+const RUNNING = /\b(?:again|running|re-?run|restart|retry|starting)\b/i;
 
 module.exports = [
   // --- 1. questions about the last seven days: answered, never added -------
@@ -285,6 +288,71 @@ module.exports = [
     context: fresh,
     text: "what's the weather like?",
     expect: { intent: 'chat', ...NO_TASKS },
+  },
+
+  // --- 11. the routine's agent: run it again when the user is not happy -----
+  {
+    id: 'agent-unhappy',
+    category: 'agent',
+    context: withAgent,
+    text: 'That summary is wrong, it left out the signup bug',
+    expect: { intent: 'run_agent', ...NO_TASKS, mentionsAny: [RUNNING] },
+  },
+  {
+    id: 'agent-tasks-changed',
+    category: 'agent',
+    context: withAgent,
+    text: 'I changed the tasks, redo it with the new list',
+    expect: { intent: 'run_agent', ...NO_TASKS, mentionsAny: [RUNNING] },
+  },
+  {
+    id: 'agent-polite',
+    category: 'agent',
+    context: withAgent,
+    text: 'Can you have another go at the digest?',
+    expect: { intent: 'run_agent', ...NO_TASKS },
+  },
+  {
+    id: 'agent-explicit',
+    category: 'agent',
+    context: withAgent,
+    text: 'rerun the agent',
+    expect: { intent: 'run_agent', ...NO_TASKS, mentions: [/site digest/i] },
+  },
+  {
+    id: 'agent-question-done',
+    category: 'agent',
+    context: withAgent,
+    text: 'Did the agent finish?',
+    expect: { intent: 'chat', ...NO_TASKS, avoid: [/running (?:it )?again|restart(?:ed|ing)/i] },
+  },
+  {
+    id: 'agent-question-why',
+    category: 'agent',
+    context: withAgent,
+    text: "why is the agent's summary so short?",
+    expect: { intent: 'chat', ...NO_TASKS },
+  },
+  {
+    id: 'agent-praise',
+    category: 'agent',
+    context: withAgent,
+    text: 'the digest looks great today',
+    expect: { intent: 'chat', ...NO_TASKS },
+  },
+  {
+    id: 'agent-busy',
+    category: 'agent',
+    context: agentAt('running'),
+    text: 'That summary is wrong, redo it',
+    expect: { intent: 'chat', ...NO_TASKS, mentions: [/already running/i] },
+  },
+  {
+    id: 'agent-none',
+    category: 'agent',
+    context: allDone,
+    text: 'That result is wrong, run it again',
+    expect: { intent: 'chat', ...NO_TASKS, avoid: [/running (?:it )?again|restart(?:ed|ing)/i] },
   },
 
   // --- 10. small talk and ambiguity ------------------------------------------
