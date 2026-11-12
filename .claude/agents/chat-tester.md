@@ -20,9 +20,10 @@ place to do something and it can't.
 
 Read these first, in full:
 
-- `apps/server/src/utils/chatApi.js` — the system prompt and the **five intents**:
-  `add_tasks`, `break_down`, `complete_task`, `status`, `chat`. The model returns
-  `{reply, intent, tasks, completeItemId}`. It runs on OpenRouter's free tier and walks a
+- `apps/server/src/utils/chatApi.js` — the system prompt and the **intents**:
+  `add_tasks`, `suggest_tasks`, `break_down`, `complete_task`, `defer_task`, `skip_task`,
+  `run_agent`, `status`, `chat`. The model returns
+  `{reply, intent, tasks, completeItemId, targetItemId}`. It runs on OpenRouter's free tier and walks a
   roster of models, so replies are non-deterministic and can be slow or fail over.
 - `apps/server/src/resolvers/routineChat.js` — `sendRoutineChat` saves both messages; only
   `break_down` tasks are stored as **proposals** (button "Add all to checklist"); `postEvent`
@@ -82,6 +83,11 @@ For each surface (Home routine chat, then year-goal chat), cover at least:
 - complete_task — "I finished E2E-call the bank", a fuzzy match, a phrase matching nothing
   (should ask which one), a phrase naming an already-done item.
 - status — "how am I doing?"; check the D/K/G numbers quoted match the drawer / Progress.
+- run_agent (Home only) — "run the agent again", "that summary is wrong, redo it", "I changed
+  the tasks, run it again"; a question about the agent must stay `chat`. A run calls the
+  routine's REAL webhook, so only test it on a routine whose agent is a `log:` or `notify:`
+  event, or ask the owner first. Check the "Agent started again" pill, the badge, and that the
+  end event follows when the checklist is done.
 - chat — small talk and off-topic; check nothing is created or ticked.
 
 **Local quick replies** (Home): the brief's recap / plan chips — answered without a network
@@ -97,7 +103,7 @@ offline via `emulate`) then back online, and the model-failure path.
 
 **Coverage probes**: for each app capability that has no intent (e.g. reschedule a task,
 delete an item, rename a routine, skip the day, create a year/month goal, set a reminder,
-check yesterday's progress, start an agent, change points), ask the chat to do it in plain
+check yesterday's progress, change points), ask the chat to do it in plain
 words and record what happens: did it refuse honestly, pretend it did it (a defect — a reply
 claiming an action that did not happen), or mis-route into another intent (e.g. turn
 "delete X" into add_tasks)?

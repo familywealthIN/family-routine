@@ -417,6 +417,7 @@ import FocusPointsChip from '@routine-notes/ui/molecules/FocusPointsChip/FocusPo
 import PullToRefresh from '@routine-notes/ui/molecules/PullToRefresh/PullToRefresh.vue';
 import { FOCUS_NAV, agentStageOf, AGENT_LIVE_STAGES } from '@routine-notes/ui/constants/routineFocus';
 import { MORE_NAV } from '@routine-notes/ui/constants/navigation';
+import { ranToday } from '@routine-notes/ui/constants/agents';
 
 import WeekdaySelectorContainer from '../containers/WeekdaySelectorContainer.vue';
 import RoutineChatContainer from '../containers/RoutineChatContainer.vue';
@@ -1254,7 +1255,25 @@ export default {
         neighbourRefs: [this.rows[this.focusIndex - 1], this.rows[this.focusIndex + 1]]
           .filter((row) => this.focusIndex >= 0 && row)
           .map((row) => row.id),
+        agent: this.chatAgent,
       };
+    },
+    /**
+     * The focused routine's agent, as the chat is told about it: its name and
+     * the ring's stage, or one of the two reasons `runAgentFromChat` refuses
+     * (another day, a 0-point routine), so the reply can say why up front.
+     * null when the routine has no agent to start.
+     */
+    chatAgent() {
+      const row = this.focusRow;
+      if (!row) return null;
+      const agent = this.$agent.getByTaskRef(row.id);
+      if (!agent || !agent.startEvent || !agent.startEvent.value) return null;
+      const task = this.tasklist.find((t) => t.id === row.id);
+      let stage = this.agentStage;
+      if (!this.isToday) stage = 'closed';
+      else if (task && !(Number(task.points) > 0)) stage = 'no_points';
+      return { name: agent.name || 'Agent', stage };
     },
     chatHandlers() {
       return {
@@ -1265,6 +1284,7 @@ export default {
         // thing the entity-level write cannot express — same as the goal sheet's
         // `move-date`.
         'items-moved': this.refetchGoals,
+        'run-agent': this.runAgentFromChat,
       };
     },
     chatSubline() {
@@ -2602,6 +2622,43 @@ export default {
         .catch(() => {})
         .then(() => {
           this.$delete(this.endEventFiring, taskRef);
+        });
+    },
+    /**
+     * The chat's `run_agent` turn: the user did not like the result, or changed
+     * the checklist it was made from, and asked for the agent again.
+     *
+     * The server only answers `run_agent` for a stage that can take a run, but
+     * the model's round trip takes long enough for that to change, so the same
+     * refusals are read again here, against the routine and day the message
+     * was sent on.
+     *
+     * A stalled run gets its end event back on the wire, the stall's own retry.
+     * Anything else opens a new run with the start event, as Start Agent does,
+     * and when the checklist is already done the end event follows straight
+     * away: that is what makes the new result, which replaces the saved one.
+     */
+    runAgentFromChat({ taskRef, date } = {}) {
+      if (!taskRef || date !== this.date || !this.isToday) return null;
+      const agent = this.$agent.getByTaskRef(taskRef);
+      if (!agent || !agent.startEvent || !agent.startEvent.value) return null;
+      if (this.refuseAgentWithoutPoints(taskRef)) return null;
+      const status = this.effectiveAgentStatus(taskRef);
+      if (this.endEventFiring[taskRef] || status === 'running' || status === 'waiting') return null;
+      if (status === 'listening' && this.runStalled(taskRef)) {
+        this.maybeFireAgentEndEvent(taskRef);
+        return null;
+      }
+      this.postChatEvent({
+        text: (status || ranToday(agent)) ? 'Agent started again' : 'Agent started',
+        tone: 'blue',
+        icon: 'smart_toy',
+        taskRef,
+      });
+      return Promise.resolve(this.fireAgentWhenReady(taskRef, { implicit: false }))
+        .then(() => {
+          // Only a start that opened a run has an end event to send.
+          if (this.$agent.canFireEndEvent(taskRef)) this.maybeFireAgentEndEvent(taskRef);
         });
     },
 

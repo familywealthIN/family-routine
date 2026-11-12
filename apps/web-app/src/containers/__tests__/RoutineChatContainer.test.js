@@ -741,6 +741,96 @@ describe('RoutineChatContainer — defer and skip', () => {
   });
 });
 
+/**
+ * "Allow routine chat to trigger the events if the user is not satisfied or the
+ * tasks changed." The page owns the agent; the container tells the model which
+ * agent the routine has and hands a `run_agent` turn back up.
+ */
+describe('RoutineChatContainer — running the agent again', () => {
+  it('hands a run_agent turn to the page, for the routine and day it was sent on', async () => {
+    const ctx = makeCtx({
+      intent: 'run_agent',
+      reply: 'Running “Day log” again with today’s checklist.',
+      replyMessage: { id: 'reply-run' },
+    });
+    // The user swipes to another routine while the reply is on its way.
+    const { mutate } = ctx.$apollo;
+    ctx.$apollo.mutate = jest.fn((options) => {
+      if (options.mutation === SEND_ROUTINE_CHAT_MUTATION) ctx.taskRef = 'lunch';
+      return mutate(options);
+    });
+
+    await Container.methods.send.call(ctx, 'That summary is wrong, redo it');
+    await flush();
+
+    expect(ctx.$emit).toHaveBeenCalledWith('run-agent', { taskRef: 'sw', date: '12-09-2026' });
+    // A run writes nothing to the checklist, and the page posts its own pill.
+    expect(ctx.$goals.addGoalItem).not.toHaveBeenCalled();
+    expect(events(ctx)).toHaveLength(0);
+  });
+
+  it('does not ask for a run on any other intent', async () => {
+    const ctx = makeCtx({ intent: 'chat', reply: 'It finished at 09:40.' });
+    await Container.methods.send.call(ctx, 'did the agent run?');
+    await flush();
+
+    expect(ctx.$emit).not.toHaveBeenCalledWith('run-agent', expect.anything());
+  });
+
+  it('tells the model which agent the routine has, and how it did today', () => {
+    const context = Container.computed.chatContext.call({
+      routine: {
+        id: 'sw', time: '09:00', points: 12, ticked: true,
+      },
+      routineName: 'Start Work',
+      endTime: '12:30',
+      statusLabel: 'In progress',
+      doneCount: 1,
+      goalItems: ITEMS,
+      scores: { D: 64, K: 100, G: 56 },
+      insightBrief: () => '',
+      agent: { name: 'Day log', stage: 'finished' },
+    });
+
+    expect(context).toEqual(expect.objectContaining({
+      agentName: 'Day log',
+      agentStage: 'finished',
+    }));
+  });
+
+  it('tells it nothing when the routine has no agent', () => {
+    const context = Container.computed.chatContext.call({
+      routine: { id: 'sw' },
+      routineName: 'Start Work',
+      goalItems: [],
+      scores: {},
+      insightBrief: () => '',
+      agent: null,
+    });
+
+    expect(context).toEqual(expect.objectContaining({ agentName: null, agentStage: null }));
+  });
+
+  const chipsFor = (agent) => Container.computed.quickReplies.call({
+    routine: { ticked: true }, openItems: [{ id: 'g1' }], briefDataBlocks: [], offeredFollowUps: () => [], agent,
+  });
+
+  // The server answers this chip without the model, so its words are fixed.
+  it('leads with "Run the agent again" once the agent has today’s result', () => {
+    expect(chipsFor({ name: 'Day log', stage: 'finished' })[0]).toBe('Run the agent again');
+    expect(chipsFor({ name: 'Day log', stage: 'failed' })[0]).toBe('Run the agent again');
+  });
+
+  it.each([
+    ['still listening', { name: 'Day log', stage: 'listening' }],
+    ['running', { name: 'Day log', stage: 'running' }],
+    ['on another day', { name: 'Day log', stage: 'closed' }],
+    ['missing', null],
+  ])('offers no run chip when the agent is %s', (label, agent) => {
+    expect(chipsFor(agent)).not.toContain('Run the agent again');
+  });
+});
+
 describe('RoutineChatContainer.addProposals', () => {
   it('turns the three proposals into items, marks the bubble and logs an event', async () => {
     const ctx = makeCtx({});
