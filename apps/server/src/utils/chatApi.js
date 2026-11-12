@@ -233,7 +233,7 @@ async function completeChat(messages, {
 
 const INTENTS = [
   'add_tasks', 'suggest_tasks', 'break_down', 'complete_task', 'defer_task', 'skip_task',
-  'status', 'chat',
+  'run_agent', 'status', 'chat',
 ];
 
 // The intents whose tasks are PROPOSALS: shown with an "Add all to checklist"
@@ -365,6 +365,178 @@ function claimsCarryOver(reply) {
   return CARRY_OVER_CLAIMS.some((re) => re.test(claims));
 }
 
+// ---------------------------------------------------------------------------
+// The routine's agent
+// ---------------------------------------------------------------------------
+
+/**
+ * The agent's stage today, as the client's Home badge reads it
+ * (`agentStageOf`), in words the model can use. Two stages are the client's
+ * own and mean no run can go out: `closed` (the viewed day is not today) and
+ * `no_points` (a 0-point routine never fills its counter, so a run could never
+ * finish).
+ */
+const AGENT_STAGE_TEXT = {
+  none: 'has not run today',
+  waiting: 'is running right now',
+  running: 'is running right now',
+  firing: 'is running right now',
+  listening: 'started today and is waiting for the checklist to be done',
+  stalled: 'started today, but its end event was due and never finished',
+  finished: 'finished today, and its result is saved on the task',
+  failed: 'failed today: its last event did not answer 200',
+  closed: 'cannot run from this thread: it is not today’s routine',
+  no_points: 'cannot run: the routine is worth 0 points',
+};
+
+// A run is on the wire: a second start would race the first.
+const AGENT_BUSY_STAGES = ['waiting', 'running', 'firing'];
+
+// The agent has a result today the user can be unhappy with, so a checklist
+// edit leaves that result describing the old list.
+const AGENT_DONE_STAGES = ['finished', 'failed'];
+
+// The intents that change the checklist an agent's result was made from.
+const CHECKLIST_EDITS = ['add_tasks', 'defer_task', 'skip_task'];
+
+/** The chip offered after a checklist edit, and the words it sends. */
+const RUN_AGAIN_CHIP = 'Run the agent again';
+
+/** The agent the client described, or null when the routine has none. */
+function normaliseAgent(value) {
+  if (!value || typeof value !== 'object') return null;
+  const name = String(value.name || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  if (!name) return null;
+  const stage = AGENT_STAGE_TEXT[value.stage] ? value.stage : 'none';
+  return { name, stage };
+}
+
+const AGENT_NOUN = '(?:agent|automation|webhook)s?';
+const AGENT_VERB = '(?:run|re-?run|start|re-?start|trigger|re-?trigger|fire|re-?fire'
+  + '|kick(?:\\s+it)?\\s+off|launch|re-?launch|redo|re-?do|retry)';
+// "Run the agent again", "yes, rerun the agent", "can you restart the automation".
+// The verb has to lead, as an add's does: "the Start Work agent is great" names
+// the routine, it does not ask for anything.
+const RUN_AGENT_COMMAND = new RegExp(`^\\s*${ADD_LEAD}${AGENT_VERB}\\b[^.?!]{0,30}\\b${AGENT_NOUN}\\b`, 'i');
+const AGENT_AGAIN = new RegExp(`\\b${AGENT_NOUN}\\s+(?:again|once more|one more time)\\b`, 'i');
+// "Why didn't the agent run again?" asks about it.
+const ASKS_ABOUT = /^\s*(?:why|how|what|when|where|which|who|did|does|is|was|has|had|are|were)\b/i;
+// "Can you run it again?" is a request in a question's clothes.
+const POLITE_ASK = /^\s*(?:please\s+)?(?:can|could|would|will)\s+you\b/i;
+// "Don't run the agent again" is the opposite request.
+const NEGATED_RUN = /\b(?:don'?t|do not|never|no need to|stop|cancel)\b[^.?!]{0,20}\b(?:run|re-?run|start|re-?start|trigger|fire|redo)\b/i;
+
+/**
+ * The message with the routine's own name taken out. Routines are named for
+ * what they start ("Start Work"), so "Start Work agent is great" would read as
+ * a command to start it.
+ */
+function withoutRoutineName(text, routineName) {
+  const t = String(text || '');
+  const name = String(routineName || '').trim();
+  if (!name) return t;
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+  return t.replace(new RegExp(escaped, 'gi'), 'routine');
+}
+
+/** Whether the user asked, in so many words, for the agent to run. */
+function asksToRunAgent(text, routineName) {
+  const t = withoutRoutineName(text, routineName);
+  if (ASKS_ABOUT.test(t) || NEGATED_RUN.test(t)) return false;
+  return RUN_AGENT_COMMAND.test(t) || AGENT_AGAIN.test(t);
+}
+
+/**
+ * Whether a `run_agent` the MODEL chose may stand on this message.
+ *
+ * Unhappiness is the point of the intent ("that summary is wrong, redo it"),
+ * so it does not need the word "agent". But a run calls the user's webhook, so
+ * a question about the agent never fires one, and neither does a "don't".
+ */
+function mayRunAgent(text, routineName) {
+  const t = String(text || '').trim();
+  if (NEGATED_RUN.test(t)) return false;
+  if (asksToRunAgent(t, routineName)) return true;
+  const question = ASKS_ABOUT.test(t) || /\?\s*$/.test(t);
+  return !question || POLITE_ASK.test(t);
+}
+
+/** What the reply says when a run is going out. */
+function runAgentReply(agent) {
+  const name = `“${agent.name}”`;
+  if (agent.stage === 'stalled') return `Retrying ${name} now: its end event was due and never finished.`;
+  if (agent.stage === 'none') return `Starting ${name} now.`;
+  return `Running ${name} again with today’s checklist.`;
+}
+
+const NO_AGENT_REPLY = 'This routine has no agent, so nothing ran. Build one on the Agents page '
+  + 'and I can start it from here.';
+
+/** Why no run can go out for this agent right now, or null when one can. */
+function agentRefusal(agent) {
+  if (!agent) return NO_AGENT_REPLY;
+  const name = `“${agent.name}”`;
+  if (agent.stage === 'closed') {
+    return `${name} only runs on today’s routine, so nothing ran. Switch to today to run it.`;
+  }
+  if (agent.stage === 'no_points') {
+    return `This routine is worth 0 points, so ${name} could never finish a run. Give it at least `
+      + '1 point in Routines, then ask me again.';
+  }
+  if (AGENT_BUSY_STAGES.includes(agent.stage)) {
+    return `${name} is already running on this routine. Let it finish, and if the result is not `
+      + 'right, ask me to run it again.';
+  }
+  return null;
+}
+
+/** What a reply that claimed a run says instead, when the agent could have run. */
+function agentNotRunReply(agent) {
+  return `I haven’t started “${agent.name}”. Say “${RUN_AGAIN_CHIP.toLowerCase()}” and I will.`;
+}
+
+// A model's own run_agent reply is kept when it says the run is going out
+// ("Running it again so it picks up the shorter list"), and replaced when it
+// does not: "I can run it again" is an offer, read under a run that already went.
+const RUN_WORDS = /\b(?:running|re-?running|restarting|starting|retrying|kicking off)\b/i;
+const RUN_OFFER = /\b(?:can|could|shall|should|would|will|want me to|let me)\b[^.!?]{0,20}\b(?:run|re-?run|start|re-?start|retry)\b/i;
+
+// "Run the agent again and add a review step" asks for two things. Only a
+// message that asks for the run alone is answered without the model.
+const SECOND_REQUEST = /\b(?:and|then|also|but|plus)\b/i;
+const isRunOnly = (text) => text.length <= 80 && !SECOND_REQUEST.test(text);
+
+// "I've restarted the agent", "Your agent is running again". The reply is
+// written before anything is dispatched, so a claim with no run behind it is
+// replaced, the same rule as a claimed move. Narrow like that one: "the agent
+// started at 09:02" and "since you started the agent" are facts, not claims.
+const AGENT_DONE_VERBS = 'started|restarted|re-?started|re-?ran|re-?run|triggered|re-?triggered'
+  + '|fired|re-?fired|kicked off|launched|re-?launched';
+const AGENT_DOING_VERBS = 're-?running|restarting|running|starting|triggering|firing|launching';
+const AGENT_WILL_VERBS = 'run|re-?run|start|re-?start|trigger|re-?trigger|fire|launch|kick off';
+const AGENT_RUN_CLAIMS = [
+  // "I've restarted the agent", "I'm re-running your automation", "I'll start the agent now"
+  new RegExp(`\\bi(?:(?:'ve|’ve| have|'m|’m| am| just)\\s+|\\s+)(?:just\\s+)?(?:${AGENT_DONE_VERBS}|${AGENT_DOING_VERBS})\\b[^.!?]{0,40}\\b${AGENT_NOUN}\\b`, 'i'),
+  new RegExp(`\\bi(?:'ll|’ll| will)\\s+(?:now\\s+)?(?:${AGENT_WILL_VERBS})\\b[^.!?]{0,40}\\b${AGENT_NOUN}\\b`, 'i'),
+  // "Restarted the agent for you.", "Running your agent again now."
+  new RegExp(`(?:^|[.!?]\\s+)(?:${AGENT_DONE_VERBS}|${AGENT_DOING_VERBS})\\b[^.!?]{0,40}\\b${AGENT_NOUN}\\b`, 'i'),
+  // "Your agent is running again", "the agent has been restarted"
+  new RegExp(`\\b${AGENT_NOUN}\\b[^.!?]{0,30}\\b(?:is|has been)\\s+(?:now\\s+)?`
+    + '(?:running again|started again|restarted|re-?run|re-?triggered|on it)\\b', 'i'),
+];
+
+/** Whether this reply says the agent was started. Offers and advice do not count. */
+function claimsAgentRun(reply) {
+  const text = String(reply || '');
+  if (!text || CAPABILITY_DENIAL.test(text)) return false;
+  const claims = text
+    .split(/(?<=[.!?])\s+/)
+    .filter((sentence) => !/\?\s*$/.test(sentence))
+    .join(' ')
+    .replace(ADVICE_CLAUSE, '');
+  return AGENT_RUN_CLAIMS.some((re) => re.test(claims));
+}
+
 // Giveaways that a model answered with its own thinking instead of a reply:
 // a numbered deliberation, an explicit preamble, or quoting the contract back.
 const REASONING_MARKERS = [
@@ -397,11 +569,15 @@ Routine Notes vocabulary:
 - A routine's "checklist" holds that slot's day goal items.
 - D/K/G are the three stimuli: Discipline (habits kept), Kinetics (body moved), Geniuses (focused output).
 - Ticking a routine earns its stimulus points. Completing checklist items moves Kinetics on that routine.
+- A routine can have an "agent": the user's own automation bound to it. Its start event fires
+  when the routine starts, its end event when the checklist is done, and its result is saved on
+  the routine's task.
 
 What you know, and only this: today's checklist, the LAST 7 DAYS of this routine, today
 included (how each session went, the items done, done late, skipped or left open, and the
-milestone tally of the goals it feeds), and the AREA / PROJECT context this routine belongs to
-(its description and next steps), when they are given below.
+milestone tally of the goals it feeds), this routine's agent and how it did today, and the
+AREA / PROJECT context this routine belongs to (its description and next steps), when they are
+given below.
 
 How to talk:
 - Answer the question that was asked, first. When the user asks about their week, their
@@ -421,7 +597,7 @@ How to talk:
 You MUST reply with a single JSON object and nothing else:
 {
   "reply": "the message shown in the chat bubble",
-  "intent": "add_tasks | suggest_tasks | break_down | complete_task | defer_task | skip_task | status | chat",
+  "intent": "add_tasks | suggest_tasks | break_down | complete_task | defer_task | skip_task | run_agent | status | chat",
   "tasks": ["checklist item", "..."],
   "completeItemId": "id of the checklist item the user says is done, or null",
   "targetItemId": "id of the checklist item a defer_task or skip_task acts on, or null",
@@ -454,6 +630,14 @@ Rules for the fields:
   is NOT carried over, nothing is created on another day.
 - Tomorrow is the only day you can reach. If the user names any other day, use intent "chat"
   and tell them to use the task's own date chips on the checklist.
+- intent "run_agent": the user wants this routine's agent to run again. They ask you to start,
+  run, re-run or retry it, they say they are not happy with what it produced ("that summary is
+  wrong, redo it"), or they changed the checklist and want the agent to redo its work with it
+  ("I changed the tasks, run it again"). Saying the result is wrong IS the request: run it, do
+  not offer to or ask for confirmation. "reply" says, in one sentence, that it is running again
+  now ("Running <agent> again with today's checklist."). Only when an agent is listed below and
+  it can run; otherwise use intent "chat" and say why. A question about the agent ("did the
+  agent run?", "why is the result short?") is "chat".
 - intent "status": the user asked how they are doing. Quote the D/K/G percentages you were
   given, verbatim.
 - intent "chat": anything else, including every question. Leave "tasks" empty and both ids null.
@@ -463,8 +647,9 @@ Rules for the fields:
 - "ask": for intents chat, status, suggest_tasks and break_down, ONE short question (under 15
   words, ending in "?") that invites the next step, e.g. "Want me to line up the demo video for
   tomorrow?". It is shown after "reply", so do not repeat it there. null for the other intents.
-- Never say an item was moved, carried over, skipped, deleted, renamed or completed unless you
-  set the matching intent and id above. If nothing matches, say you could not do it.
+- Never say an item was moved, carried over, skipped, deleted, renamed or completed, or that the
+  agent was started, unless you set the matching intent and id above. If nothing matches, say
+  you could not do it.
 - You cannot delete a checklist item or a routine, or change an item's points, tags or parent
   goal. If asked, use intent "chat" and say plainly that you cannot do it from here.`;
 
@@ -493,6 +678,7 @@ function describeContext(context = {}) {
     scores = {},
     date,
   } = context;
+  const agent = normaliseAgent(context.agent);
 
   const checklist = items.length
     ? items
@@ -507,6 +693,7 @@ Ticking it earns ${stimulus || 'D'} +${points || 0}.
 Checklist: ${doneCount || 0} of ${totalCount || 0} done.
 ${checklist}
 Today's stimuli: Discipline ${scores.D || 0}% · Kinetics ${scores.K || 0}% · Geniuses ${scores.G || 0}%.
+${agent ? `Agent: "${agent.name}" ${AGENT_STAGE_TEXT[agent.stage]}.` : 'Agent: none on this routine.'}
 
 THIS ROUTINE, LAST 7 DAYS (today included):
 ${week || '(no history yet)'}
@@ -572,7 +759,7 @@ const CANNOT_CHANGE_REPLY = "I can't delete, rename or remove anything from here
 /**
  * Turn the user's message into a reply plus a machine-readable intent the
  * client can act on (create goal items, tick one off, move one to tomorrow,
- * record one as missed, or nothing at all).
+ * record one as missed, run the routine's agent again, or nothing at all).
  *
  * Never throws: a model outage degrades to a plain `chat` reply that says so,
  * because a dead chat must not break the dashboard around it.
@@ -590,6 +777,24 @@ async function chatWithRoutine({ text, history = [], context = {} }) {
     return {
       reply: 'Say something and I will log it against this routine.',
       intent: 'chat',
+      tasks: [],
+      suggestions: [],
+      completeItemId: null,
+      targetItemId: null,
+      model: null,
+      error: null,
+    };
+  }
+
+  // "Run the agent again" (the chip, or the user's own words) needs no model:
+  // what it does and what it says are both fixed, and a free model can take
+  // tens of seconds to say it.
+  if (asksToRunAgent(trimmed, context.routineName) && isRunOnly(trimmed)) {
+    const agent = normaliseAgent(context.agent);
+    const refusal = agentRefusal(agent);
+    return {
+      reply: refusal || runAgentReply(agent),
+      intent: refusal ? 'chat' : 'run_agent',
       tasks: [],
       suggestions: [],
       completeItemId: null,
@@ -644,8 +849,14 @@ async function chatWithRoutine({ text, history = [], context = {} }) {
       // bubble is worse than saying nothing.
       // JSON with an empty reply is not prose either.
       const prose = (!/^\s*[{[]/.test(content) && usableProse(content)) || FALLBACK_REPLY;
+      const agent = normaliseAgent(context.agent);
+      let reply = prose;
+      if (claimsCarryOver(prose)) reply = NO_RESCHEDULE_REPLY;
+      else if (claimsAgentRun(prose) && !(agent && AGENT_BUSY_STAGES.includes(agent.stage))) {
+        reply = agentRefusal(agent) || agentNotRunReply(agent);
+      }
       return {
-        reply: claimsCarryOver(prose) ? NO_RESCHEDULE_REPLY : prose,
+        reply,
         intent: 'chat',
         tasks: [],
         suggestions: [],
@@ -662,6 +873,32 @@ async function chatWithRoutine({ text, history = [], context = {} }) {
     const downgraded = intent === 'add_tasks' && !asksToAdd(trimmed);
     if (downgraded) intent = 'suggest_tasks';
     if (intent === 'suggest_tasks' && !tasks.length) intent = 'chat';
+
+    // A run calls the user's own webhook, so it goes out only for an agent the
+    // client listed, in a stage that can take one, on words that ask for it.
+    // An explicit ask the model filed as talk is a run all the same.
+    const agent = normaliseAgent(context.agent);
+    let agentReply = null;
+    const runAsked = (intent === 'run_agent' && mayRunAgent(trimmed, context.routineName))
+      || (['chat', 'status'].includes(intent) && asksToRunAgent(trimmed, context.routineName));
+    if (runAsked) {
+      const refusal = agentRefusal(agent);
+      if (refusal) {
+        intent = 'chat';
+        agentReply = refusal;
+      } else {
+        const said = String(parsed.reply || '');
+        if (intent !== 'run_agent' || !RUN_WORDS.test(said) || RUN_OFFER.test(said)) {
+          agentReply = runAgentReply(agent);
+        }
+        intent = 'run_agent';
+      }
+    } else if (intent === 'run_agent') {
+      // A question or a "don't": nothing runs, and the reply the model wrote
+      // for a run ("Running it again.") is the one thing it cannot say.
+      intent = 'chat';
+      agentReply = agentRefusal(agent) || agentNotRunReply(agent);
+    }
     const openIds = (context.items || [])
       .filter((item) => item && !item.isComplete)
       .map((item) => String(item.id));
@@ -692,7 +929,18 @@ async function chatWithRoutine({ text, history = [], context = {} }) {
     const rawReply = String(parsed.reply || '').trim() || 'Noted.';
     let reply = rawReply;
     const proposing = PROPOSAL_INTENTS.includes(resolvedIntent);
-    if ((downgraded || proposing) && claimsAdded(rawReply)) reply = SUGGESTED_REPLY;
+    if (agentReply) reply = agentReply;
+    else if (resolvedIntent === 'run_agent') {
+      // A run adds, moves and completes nothing on the checklist.
+      if (claimsAdded(rawReply) || FALSE_ACTION_CLAIM.test(rawReply)
+        || PASSIVE_CHANGE_CLAIM.test(rawReply) || claimsCarryOver(rawReply)) {
+        reply = runAgentReply(agent);
+      }
+    } else if (ASKING_INTENTS.includes(resolvedIntent) && claimsAgentRun(rawReply)
+      && !(agent && AGENT_BUSY_STAGES.includes(agent.stage))) {
+      // Only on a turn that performs nothing: an add keeps its own words.
+      reply = agentRefusal(agent) || agentNotRunReply(agent);
+    } else if ((downgraded || proposing) && claimsAdded(rawReply)) reply = SUGGESTED_REPLY;
     else if (resolvedIntent === 'chat' && FALSE_ACTION_CLAIM.test(rawReply)) {
       reply = CHANGE_WORDS.test(rawReply) ? CANNOT_CHANGE_REPLY : CANNOT_MOVE_REPLY;
     }
@@ -710,13 +958,24 @@ async function chatWithRoutine({ text, history = [], context = {} }) {
       reply = `${reply} ${ask}`;
     }
 
+    // The checklist just changed under an agent that already has today's
+    // result, so that result describes the old list. One tap hands it the new one.
+    let suggestions = coerceSuggestions(parsed.suggestions, trimmed);
+    if (CHECKLIST_EDITS.includes(resolvedIntent) && agent
+      && AGENT_DONE_STAGES.includes(agent.stage) && !agentRefusal(agent)) {
+      suggestions = [
+        RUN_AGAIN_CHIP,
+        ...suggestions.filter((chip) => chip.toLowerCase() !== RUN_AGAIN_CHIP.toLowerCase()),
+      ].slice(0, 3);
+    }
+
     return {
       reply,
       intent: resolvedIntent,
       tasks: intent === 'add_tasks' || PROPOSAL_INTENTS.includes(intent) ? tasks : [],
       completeItemId,
       targetItemId,
-      suggestions: coerceSuggestions(parsed.suggestions, trimmed),
+      suggestions,
       model,
       error: null,
     };
@@ -754,6 +1013,10 @@ module.exports = {
   TARGET_INTENTS,
   PROPOSAL_INTENTS,
   asksToAdd,
+  asksToRunAgent,
+  claimsAgentRun,
   coerceSuggestions,
   NO_RESCHEDULE_REPLY,
+  NO_AGENT_REPLY,
+  RUN_AGAIN_CHIP,
 };
