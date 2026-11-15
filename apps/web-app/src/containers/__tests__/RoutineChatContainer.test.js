@@ -1534,6 +1534,50 @@ describe('RoutineChatContainer routine insight', () => {
     expect(ctx.refetch).toHaveBeenCalled();
   });
 
+  // D-05: the tick lands in the cache twice — the optimistic write, then the
+  // server's re-read of the day — so the watcher reported one tick as two
+  // false -> true flips and the thread kept two coach cards.
+  it('asks once however many times one tick is reported', async () => {
+    const ctx = makeCtx(null, { routineName: 'Start Work', contextTags: [], isPastDay: false });
+    tick.call(ctx, { ref: 'sw', ticked: true }, { ref: 'sw', ticked: false });
+    await flush();
+    tick.call(ctx, { ref: 'sw', ticked: true }, { ref: 'sw', ticked: false });
+    await flush();
+
+    expect(insights(ctx)).toHaveLength(1);
+  });
+
+  it('still asks for another routine’s thread, and for another day', async () => {
+    const ctx = makeCtx(null, { routineName: 'Start Work', contextTags: [], isPastDay: false });
+    tick.call(ctx, { ref: 'sw', ticked: true }, { ref: 'sw', ticked: false });
+    await flush();
+
+    ctx.taskRef = 'wo';
+    tick.call(ctx, { ref: 'wo', ticked: true }, { ref: 'wo', ticked: false });
+    await flush();
+    ctx.date = '13-09-2026';
+    tick.call(ctx, { ref: 'wo', ticked: true }, { ref: 'wo', ticked: false });
+    await flush();
+
+    expect(insights(ctx).map((m) => m.variables.taskRef)).toEqual(['sw', 'wo', 'wo']);
+    expect(insights(ctx)[2].variables.date).toBe('13-09-2026');
+  });
+
+  // A failed ask leaves no card, so it is not the one this thread gets.
+  it('may ask again after a failed ask', async () => {
+    const ctx = makeCtx(
+      null,
+      { routineName: 'Start Work', contextTags: [], isPastDay: false },
+      [ROUTINE_INSIGHT_MUTATION],
+    );
+    tick.call(ctx, { ref: 'sw', ticked: true }, { ref: 'sw', ticked: false });
+    await flush();
+    tick.call(ctx, { ref: 'sw', ticked: true }, { ref: 'sw', ticked: false });
+    await flush();
+
+    expect(insights(ctx)).toHaveLength(2);
+  });
+
   it('does not ask when swiping onto a routine that was already ticked', async () => {
     const ctx = makeCtx(null, { routineName: 'Start Work', contextTags: [], isPastDay: false });
     tick.call(ctx, { ref: 'sw', ticked: true }, { ref: 'other', ticked: false });

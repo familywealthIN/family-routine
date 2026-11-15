@@ -202,7 +202,10 @@ the pill, the toast and the model's wording cannot outrun the donuts.
   listening agent completes when that counter fills. Do not unify these two —
   the first is what the user sees, the second is what the economy counts. The
   *total* is that slot count; the *filled* side is a plain count of the
-  routine's completed goal items. It must not be inverted out of the K ledger
+  routine's completed goal items. Because that total can be the smaller of the
+  two, the end-event pill claims "All tasks complete" only when nothing on the
+  checklist is left open, and says "Routine slots filled · 1 left" otherwise
+  (D-12). It must not be inverted out of the K ledger
   (`slots × K.earned / points`): a 0-point routine never moves `K.earned`, so
   that ratio pinned the agent in `listening` forever (D-03).
 - **The end event also needs a run open today on the server**
