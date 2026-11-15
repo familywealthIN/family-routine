@@ -2035,6 +2035,8 @@ describe('RoutineFocus — the chat runs the agent again', () => {
     };
     // The real guard: the case is that the chat path consults it.
     vm.refuseAgentWithoutPoints = (ref) => methods.refuseAgentWithoutPoints.call(vm, ref);
+    // The real announcer: the pill is posted by it, after the start resolves.
+    vm.startAgentAndAnnounce = (ref, opts) => methods.startAgentAndAnnounce.call(vm, ref, opts);
     return vm;
   };
   const run = (vm, over = {}) => methods.runAgentFromChat.call(vm, { taskRef: 'sw', date: vm.date, ...over });
