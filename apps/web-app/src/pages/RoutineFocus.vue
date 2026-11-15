@@ -462,7 +462,7 @@ import { threshold } from '../utils/getDates';
 import refuseAgentWithoutPoints from '../utils/agentPointsGuard';
 import {
   buildRoutineRows, findCurrentRoutine, focusWindow, buildCascade, pickCascadeItem,
-  earnedDeltas, TICK_STIMULUS,
+  earnedDeltas, openItemsLeft, TICK_STIMULUS,
 } from '../utils/routineFocusModel';
 
 // How long the fly ghost lives (keyframes run 0.8s).
@@ -1781,7 +1781,13 @@ export default {
     },
     onItemCompleted(item) {
       const row = this.rows.find((r) => r.id === item.taskRef);
-      const left = row ? Math.max(row.totalCount - row.doneCount - 1, 0) : 0;
+      // One source of truth for the pill's number: the routine's own checklist,
+      // read here, with this item taken as done. It used to be
+      // `totalCount - doneCount - 1`, and by the time this runs the tick's cache
+      // write has already moved `doneCount`, so the item was subtracted twice
+      // (D-04). `totalCount` was the wrong total for a goal-item count anyway —
+      // it is the routine's slot count (D-20), which the agent's end event uses.
+      const left = openItemsLeft(row && row.items, item.id);
       this.postChatEvent({
         text: `${item.body} · ${left ? `${left} left` : 'all done'}`,
         tone: 'green',
