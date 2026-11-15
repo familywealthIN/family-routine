@@ -2259,17 +2259,7 @@ export default {
         duration: 3000,
       });
 
-      if (fireAgent) {
-        this.fireAgentWhenReady(task.id, { implicit: agentImplicit });
-        if (this.$agent.getByTaskRef(task.id)) {
-          this.postChatEvent({
-            text: 'Agent started',
-            tone: 'blue',
-            icon: 'smart_toy',
-            taskRef: task.id,
-          });
-        }
-      }
+      if (fireAgent) this.startAgentAndAnnounce(task.id, { implicit: agentImplicit });
     },
 
     /** Spend points to rescue a passed routine. Ported from redeemClick. */
@@ -2548,6 +2538,36 @@ export default {
       });
     },
     /**
+     * Start the agent, and post the pill only once the start event actually
+     * went out.
+     *
+     * The pill used to go up on the mere existence of an agent, in the same
+     * tick as an un-awaited `fireAgentWhenReady` (D-08). A start that waits for
+     * its goal item and never gets one ends in 'timeout' — nothing is
+     * dispatched, the explicit press says 'Agent not started' — and yet the
+     * thread kept a persisted 'Agent started' contradicting it. Announcing
+     * after the outcome is what keeps the two in step; a posted-then-deleted
+     * pill would not, since the thread is server-side.
+     *
+     * @returns {Promise<string|null>} the `startAgentWhenReady` outcome, or
+     *   null when the start was refused outright (no points).
+     */
+    startAgentAndAnnounce(taskRef, { implicit = true, text = 'Agent started' } = {}) {
+      const started = this.fireAgentWhenReady(taskRef, { implicit });
+      if (!started) return Promise.resolve(null);
+      return Promise.resolve(started).then((outcome) => {
+        if (outcome === 'fired') {
+          this.postChatEvent({
+            text,
+            tone: 'blue',
+            icon: 'smart_toy',
+            taskRef,
+          });
+        }
+        return outcome;
+      });
+    },
+    /**
      * End-event rule: a listening agent completes when the routine task's
      * SLOT counter is full — a stimulus-derived total, not the checklist
      * length (D-20). The checklist is what the user sees; the slots are what
@@ -2649,13 +2669,10 @@ export default {
         this.maybeFireAgentEndEvent(taskRef);
         return null;
       }
-      this.postChatEvent({
-        text: (status || ranToday(agent)) ? 'Agent started again' : 'Agent started',
-        tone: 'blue',
-        icon: 'smart_toy',
-        taskRef,
-      });
-      return Promise.resolve(this.fireAgentWhenReady(taskRef, { implicit: false }))
+      // Read before the dispatch — the status this reports on is the one the
+      // message was sent against — but announced after it (D-08).
+      const text = (status || ranToday(agent)) ? 'Agent started again' : 'Agent started';
+      return this.startAgentAndAnnounce(taskRef, { implicit: false, text })
         .then(() => {
           // Only a start that opened a run has an end event to send.
           if (this.$agent.canFireEndEvent(taskRef)) this.maybeFireAgentEndEvent(taskRef);
