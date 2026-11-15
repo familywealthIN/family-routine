@@ -40,6 +40,14 @@
           @changed="refreshProfile"
         />
 
+        <!-- iPads and tablets only: keep the screen on for a tablet on a stand. -->
+        <profile-display-container
+          v-if="showDisplay"
+          class="rn-profile__card"
+          @changed="onAlwaysOnChanged"
+          @failed="onSaveFailed"
+        />
+
         <profile-rates-card class="rn-profile__card" />
       </div>
 
@@ -123,8 +131,9 @@
  * `AppShellContainer` (chassis shell + the header's points read),
  * `UserProfileContainer` (the one `getUserTags` read), `ProfileTimeContainer`
  * (`updateUserTimezone`), `ApiKeyContainer` (`generateApiKey`),
- * `AccountDeleteContainer` (`deleteAccount`) and `ConnectAiContainer` (the
- * clipboard and the MCP endpoint — no query).
+ * `AccountDeleteContainer` (`deleteAccount`), `ConnectAiContainer` (the
+ * clipboard and the MCP endpoint — no query) and, on iPads and tablets,
+ * `ProfileDisplayContainer` (Always on display — this device only, no query).
  *
  * What the page orchestrates across containers (§ 6) is the re-read: a saved
  * timezone and a new API key both change `getUserTags`, and neither mutation can
@@ -141,6 +150,8 @@ import ProfileTimeContainer from '../containers/ProfileTimeContainer.vue';
 import ConnectAiContainer from '../containers/ConnectAiContainer.vue';
 import ApiKeyContainer from '../containers/ApiKeyContainer.vue';
 import AccountDeleteContainer from '../containers/AccountDeleteContainer.vue';
+import ProfileDisplayContainer from '../containers/ProfileDisplayContainer.vue';
+import { offersAlwaysOn } from '../services/keepAwake';
 import { signOut } from '../utils/signOut';
 
 export const LOGOUT_KEY = 'logout';
@@ -168,6 +179,7 @@ export default {
     ConnectAiContainer,
     ApiKeyContainer,
     AccountDeleteContainer,
+    ProfileDisplayContainer,
   },
 
   data() {
@@ -186,6 +198,10 @@ export default {
     },
     isPhone() {
       return this.shell === 'phone';
+    },
+    /** Always on display: iPads and tablets, never a phone or a computer. */
+    showDisplay() {
+      return offersAlwaysOn(this.shell);
     },
     /**
      * The phone header is just "Profile" in the design; tablet and desktop carry
@@ -238,6 +254,9 @@ export default {
 
     onFormatChanged(format, consequence) {
       this.notify('Time format updated', consequence, 'schedule', '#64b5f6');
+    },
+    onAlwaysOnChanged(toast) {
+      this.notify(toast.title, toast.sub, toast.icon, toast.color);
     },
     onTimezoneSaved(label) {
       this.notify('Time zone updated', label, 'public', '#64b5f6');

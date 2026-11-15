@@ -1,6 +1,6 @@
 const {
   buildCueContext, validateCue, generateAiCue, resolveFreeModels, clearFreeModels, stepKeywords,
-  PAID_MODELS, FALLBACK_FREE_MODELS, SCHEMA, SYSTEM,
+  FALLBACK_FREE_MODELS, SCHEMA, SYSTEM,
 } = require('../src/cue/aiCue');
 const { itemHistory, historyDates } = require('../src/cue/cueEngine');
 
@@ -234,37 +234,29 @@ describe('generateAiCue', () => {
     expect(modelsAsked(chat)).toEqual([['a/one:free'], ['b/two:free'], ['c/three:free'], ['d/four:free']]);
   });
 
-  it('falls back to the paid Qwen chain only after three free models fail', async () => {
+  // No model on the backend spends credits: after three free models fail the
+  // template goes out, with no paid model asked.
+  it('hands over to the template after three free models fail, never a paid model', async () => {
     const chat = jest.fn()
       .mockRejectedValueOnce(Object.assign(new Error('x'), { status: 429 }))
       .mockResolvedValueOnce(answer('not json'))
       .mockResolvedValueOnce(answer(good, 'length'))
       .mockResolvedValueOnce(answer(good, 'stop', 'qwen/qwen3-235b-a22b-2507'));
     const result = await run(chat);
-    expect(result).toMatchObject({ tier: 'paid', model: 'qwen/qwen3-235b-a22b-2507', reason: null });
-    expect(modelsAsked(chat)).toEqual([['a/one:free'], ['b/two:free'], ['c/three:free'], PAID_MODELS]);
+    expect(result).toMatchObject({ cue: null, reason: 'max-tokens' });
+    expect(modelsAsked(chat)).toEqual([['a/one:free'], ['b/two:free'], ['c/three:free']]);
+    modelsAsked(chat).flat().forEach((m) => expect(m).toMatch(/:free$/));
   });
 
-  it('pays only for cheap Qwen, never OpenAI or a free id', () => {
-    expect(PAID_MODELS).toEqual(['qwen/qwen3-235b-a22b-2507', 'qwen/qwen3.5-flash-02-23']);
-    PAID_MODELS.forEach((m) => {
-      expect(m).toMatch(/^qwen\//);
-      expect(m).not.toMatch(/:free$/);
-    });
-  });
-
-  it('stops trying free models when the free budget runs out, then pays', async () => {
+  it('stops trying free models when the free budget runs out', async () => {
     let t = 0;
-    const chat = jest.fn(async ({ models }) => {
-      if (models.length === 1) {
-        t += 23000; // a free model that sat on the request
-        throw Object.assign(new Error('x'), { name: 'AbortError' });
-      }
-      return answer(good, 'stop', models[0]);
+    const chat = jest.fn(async () => {
+      t += 23000; // a free model that sat on the request
+      throw Object.assign(new Error('x'), { name: 'AbortError' });
     });
     const result = await run(chat, 'sk-or-test', { now: () => t });
-    expect(result.tier).toBe('paid');
-    expect(modelsAsked(chat)).toEqual([['a/one:free'], PAID_MODELS]);
+    expect(result).toMatchObject({ cue: null, reason: 'error:AbortError' });
+    expect(modelsAsked(chat)).toEqual([['a/one:free']]);
   });
 
   it.each([

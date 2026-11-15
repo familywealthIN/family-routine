@@ -77,6 +77,10 @@ const ChatContextInput = new GraphQLInputObjectType({
     // The area/project description + next steps the client already caches for
     // the "Before you start" brief — the same text the post-tick card reads.
     brief: { type: GraphQLString },
+    // The routine's agent and its Home badge stage today, so "run it again"
+    // can be answered. No name means the routine has no agent.
+    agentName: { type: GraphQLString },
+    agentStage: { type: GraphQLString },
   },
 });
 
@@ -186,6 +190,7 @@ const mutation = {
           scores: { D: snap.scoreD, K: snap.scoreK, G: snap.scoreG },
           week,
           brief: cap(String(snap.brief || ''), BRIEF_MAX),
+          agent: snap.agentName ? { name: snap.agentName, stage: snap.agentStage } : null,
         },
       });
 

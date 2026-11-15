@@ -9,7 +9,7 @@ const {
   INTENTS, usableProse, describeContext,
 } = require('../../src/utils/chatApi');
 
-const NO_TASK_INTENTS = ['chat', 'status', 'complete_task', 'defer_task', 'skip_task'];
+const NO_TASK_INTENTS = ['chat', 'status', 'complete_task', 'defer_task', 'skip_task', 'run_agent'];
 // The categories where the reply should hand the conversation back.
 const INVITING_CATEGORIES = ['week', 'project', 'coaching'];
 

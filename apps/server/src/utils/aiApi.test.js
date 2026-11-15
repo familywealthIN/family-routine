@@ -22,7 +22,7 @@ describe('generateMilestonePlan day grid', () => {
   beforeEach(() => {
     // No AI credentials -> fetchFromAi throws and the fallback plan is built
     // straight from the entry template, which is what we're asserting on.
-    ['GEMINI_API_KEY', 'OPENROUTER_API_KEY'].forEach((key) => {
+    ['OPENROUTER_API_KEY'].forEach((key) => {
       savedKeys[key] = process.env[key];
       delete process.env[key];
     });
@@ -90,12 +90,6 @@ describe('generateMilestonePlan day grid', () => {
 // checklist verbatim, so the generator's shape is a contract and not a style
 // preference. These assert the shape survives a model that ignores the prompt.
 
-const geminiText = (text) => ({
-  ok: true,
-  status: 200,
-  json: async () => ({ candidates: [{ content: { parts: [{ text }] } }] }),
-});
-
 const openRouterText = (content) => ({
   ok: true,
   status: 200,
@@ -119,11 +113,12 @@ describe('Before-you-start card shape', () => {
   let consoleWarn;
 
   beforeEach(() => {
-    ['GEMINI_API_KEY', 'OPENROUTER_API_KEY'].forEach((key) => {
+    ['OPENROUTER_API_KEY', 'OPENROUTER_FREE_MODELS'].forEach((key) => {
       savedKeys[key] = process.env[key];
     });
-    process.env.GEMINI_API_KEY = 'test-gemini-key';
-    delete process.env.OPENROUTER_API_KEY;
+    process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
+    // A pinned roster, so no model-list discovery call reaches fetch.
+    process.env.OPENROUTER_FREE_MODELS = 'a/one:free,b/two:free';
     consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
     consoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
@@ -141,7 +136,7 @@ describe('Before-you-start card shape', () => {
   // The card has room for one line, and "a concise paragraph" is what the old
   // prompt asked for — so a paragraph is what the model returns.
   it('reduces a paragraph to a single sentence', async () => {
-    global.fetch = jest.fn().mockResolvedValue(geminiText(
+    global.fetch = jest.fn().mockResolvedValue(openRouterText(
       'These goals span product and engineering work across the quarter, covering the '
       + 'dashboard redesign, the billing migration and the hiring loop. Mornings are '
       + 'reserved for deep work. Reviews happen on Fridays.',
@@ -186,7 +181,7 @@ describe('Before-you-start card shape', () => {
   // The old prompt asked for "3-5 ... as a numbered list": the card shows 3,
   // and the numbering would land on the checklist as literal text.
   it('reduces a numbered five-item list to three clean fragments', async () => {
-    global.fetch = jest.fn().mockResolvedValue(geminiText([
+    global.fetch = jest.fn().mockResolvedValue(openRouterText([
       'Next steps:',
       '1. Clear inbox to zero.',
       '2. Log shoe mileage.',
@@ -226,15 +221,15 @@ describe('Before-you-start card shape', () => {
   // A blank list is the honest answer: apologetic copy returned here would be
   // appended to the checklist verbatim.
   it('returns no steps for an empty or garbage response', async () => {
-    global.fetch = jest.fn().mockResolvedValue(geminiText('   \n ### \n ---'));
+    global.fetch = jest.fn().mockResolvedValue(openRouterText('   \n ### \n ---'));
 
     await expect(getNextStepsListFromGoalItems(ITEMS)).resolves.toEqual([]);
     expect(normaliseNextSteps(null)).toEqual([]);
     expect(normaliseDescription(undefined)).toBe('');
   });
 
-  it('degrades to the fallback copy when both services are gone', async () => {
-    delete process.env.GEMINI_API_KEY;
+  it('degrades to the fallback copy when the AI service is gone', async () => {
+    delete process.env.OPENROUTER_API_KEY;
     global.fetch = jest.fn();
 
     await expect(getSummaryFromGoalItems(ITEMS)).resolves.toMatch(/Unable to generate summary/);
@@ -246,7 +241,7 @@ describe('Before-you-start card shape', () => {
   // The dashboard renders this string as markdown, which collapses a single
   // newline and would otherwise run the three fragments into one line.
   it('joins the string form on blank lines so markdown keeps three lines', async () => {
-    global.fetch = jest.fn().mockResolvedValue(geminiText(
+    global.fetch = jest.fn().mockResolvedValue(openRouterText(
       'Clear inbox to zero\nLog shoe mileage\nPick the next book',
     ));
 
@@ -255,23 +250,25 @@ describe('Before-you-start card shape', () => {
   });
 
   it('caps the generation so a runaway answer cannot happen upstream', async () => {
-    global.fetch = jest.fn().mockResolvedValue(geminiText('Product + engineering.'));
+    global.fetch = jest.fn().mockResolvedValue(openRouterText('Product + engineering.'));
 
     await getSummaryFromGoalItems(ITEMS);
 
     const body = JSON.parse(global.fetch.mock.calls[0][1].body);
-    expect(body.generationConfig.maxOutputTokens).toBe(400);
+    expect(body.max_tokens).toBe(400);
   });
 
-  // This path is allowed to spend credits — the paid fallback must stay intact.
-  it('still falls back to paid OpenRouter when Gemini fails', async () => {
-    process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
+  // No model on the backend spends credits: a failed free model hands over to
+  // the next free one, never to a paid model.
+  it('moves to the next free model when one fails', async () => {
     global.fetch = jest.fn()
-      .mockResolvedValueOnce(errResponse(503))
+      .mockResolvedValueOnce(errResponse(429))
       .mockResolvedValueOnce(openRouterText('1. Clear inbox to zero.'));
 
     await expect(getNextStepsListFromGoalItems(ITEMS)).resolves.toEqual(['Clear inbox to zero']);
     expect(global.fetch).toHaveBeenCalledTimes(2);
+    const models = global.fetch.mock.calls.map(([, init]) => JSON.parse(init.body).model);
+    expect(models).toEqual(['a/one:free', 'b/two:free']);
     expect(JSON.parse(global.fetch.mock.calls[1][1].body).max_tokens).toBe(400);
   });
 });

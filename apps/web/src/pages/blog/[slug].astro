@@ -1,0 +1,418 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import FinalCta from '~/components/sections/FinalCta.astro';
+import BlogCard from '~/components/blog/BlogCard.astro';
+import BlogDayFlow from '~/components/blog/BlogDayFlow.astro';
+import BlogCascade from '~/components/blog/BlogCascade.astro';
+import BlogMcpFlow from '~/components/blog/BlogMcpFlow.astro';
+import EvolutionLoop from '~/components/EvolutionLoop.astro';
+import { Icon } from 'astro-icon/components';
+import { render } from 'astro:content';
+import { getPublishedPosts, type Post } from '~/lib/blogPosts';
+import {
+  AUTHOR,
+  FEATURED,
+  categoryOf,
+  pillarOf,
+  featuredImage,
+  featuredAlt,
+  relatedPosts,
+  formatDate,
+  windowFor,
+  wrap,
+} from '~/lib/blog';
+import { LINKS, SITE } from '~/lib/links';
+
+export async function getStaticPaths() {
+  const posts = await getPublishedPosts();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post, posts } }));
+}
+
+interface Props {
+  post: Post;
+  posts: Post[];
+}
+
+const { post, posts } = Astro.props;
+const d = post.data;
+const cat = categoryOf(d.category);
+const p = pillarOf(d.pillar);
+const related = relatedPosts(post, posts);
+const site = Astro.site ?? new URL('https://routinenotes.app');
+const url = new URL(`/blog/${post.id}/`, site).toString();
+const image = featuredImage(post.id);
+const imageUrl = new URL(image, site).toString();
+const imageAlt = featuredAlt(d);
+const published = d.publishDate.toISOString();
+const modified = (d.updatedDate ?? d.publishDate).toISOString();
+
+/*
+ * The diagrams go between the post's own sections: the body's HTML is cut at
+ * its H2s and the figures are slotted in. The day flow (or, for MCP posts,
+ * the chat flow) follows the first section; the cascade goes before the
+ * first later section about goals; the loop, when asked for, before the last.
+ */
+type Figure = 'day' | 'cascade' | 'loop' | 'mcp';
+type Piece = { kind: 'html'; html: string } | { kind: Figure };
+const html = post.rendered?.html ?? '';
+const parts = html.split(/(?=<h2[\s>])/);
+const at = new Map<number, Figure[]>();
+const put = (i: number, kind: Figure) => at.set(i, [...(at.get(i) ?? []), kind]);
+const last = Math.max(parts.length - 1, 1);
+const dayAt = Math.min(2, parts.length);
+if (d.category === 'mcp' && d.mcp) {
+  put(dayAt, 'mcp');
+} else if (d.routines && d.focus && d.cascade) {
+  put(dayAt, 'day');
+  const goalIdx = parts.findIndex((s, i) => i > dayAt && /^<h2[^>]*>[^<]*(goal|cascade|week|month|year|milestone|threshold)/i.test(s));
+  const cascadeAt = goalIdx > 0 ? goalIdx : Math.max(last, dayAt + 1);
+  put(cascadeAt, 'cascade');
+  if (d.loop) put(cascadeAt === last || last <= dayAt ? parts.length : last, 'loop');
+}
+const pieces: Piece[] = [];
+parts.forEach((h, i) => {
+  (at.get(i) ?? []).forEach((kind) => pieces.push({ kind }));
+  pieces.push({ kind: 'html', html: h });
+});
+(at.get(parts.length) ?? []).forEach((kind) => pieces.push({ kind }));
+const hasRendered = Boolean(html);
+const { Content } = hasRendered ? { Content: null } : await render(post);
+
+const focus = d.routines?.find((r) => r.name === d.focus);
+const loopCaptions = focus
+  ? {
+      d: wrap(`${focus.name} ${windowFor(focus.time).open}–${windowFor(focus.time).close}`, 28, 1)[0],
+      k: wrap(`step 1: ${focus.cue}`, 28, 1)[0],
+      g: wrap(`week: ${d.cascade?.week ?? ''}`, 28, 1)[0],
+    }
+  : undefined;
+
+const ld: Record<string, unknown>[] = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: d.title,
+    description: d.description,
+    image: { '@type': 'ImageObject', url: imageUrl, width: FEATURED.width, height: FEATURED.height, caption: imageAlt },
+    datePublished: published,
+    dateModified: modified,
+    author: {
+      '@type': 'Person',
+      name: AUTHOR.name,
+      jobTitle: AUTHOR.jobTitle,
+      url: new URL(AUTHOR.url, site).toString(),
+      image: AUTHOR.image,
+      sameAs: AUTHOR.sameAs,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE.name,
+      url: site.toString(),
+      logo: { '@type': 'ImageObject', url: new URL('/logo.png', site).toString() },
+    },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    articleSection: cat.label,
+    keywords: d.tags.join(', '),
+    about: ['Kinetics', 'Discipline', 'Geniuses', 'routines', 'goals'],
+    url,
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: SITE.name, item: site.toString() },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: new URL('/blog/', site).toString() },
+      { '@type': 'ListItem', position: 3, name: d.title, item: url },
+    ],
+  },
+];
+if (d.howTo) {
+  ld.push({
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: d.howTo.name,
+    description: d.description,
+    image: imageUrl,
+    step: d.howTo.steps.map((s, i) => ({ '@type': 'HowToStep', position: i + 1, name: s.name, text: s.text, url })),
+  });
+}
+---
+
+<BaseLayout
+  title={`${d.title} — Routine Notes Blog`}
+  description={d.description}
+  ogImage={image}
+  ogImageAlt={imageAlt}
+  ogType="article"
+  publishedTime={published}
+  modifiedTime={modified}
+>
+  <Fragment slot="head">
+    <link rel="alternate" type="application/rss+xml" title="Routine Notes Blog" href="/blog/rss.xml" />
+    {ld.map((obj) => <script is:inline type="application/ld+json" set:html={JSON.stringify(obj)} />)}
+  </Fragment>
+
+  <section class="relative pt-16 pb-8 overflow-hidden">
+    <div class="absolute inset-0 -z-10 pointer-events-none">
+      <div
+        class="absolute -top-32 left-1/3 h-[380px] w-[620px] rounded-full blur-3xl opacity-35"
+        style={`background:radial-gradient(circle, ${p.color}2e, transparent 70%)`}
+      >
+      </div>
+    </div>
+
+    <div class="container-page">
+      <div class="max-w-3xl mx-auto">
+        <!-- breadcrumb -->
+        <nav class="flex items-center gap-2 text-sm text-[color:var(--color-ink-500)]" aria-label="Breadcrumb" data-reveal>
+          <a href={LINKS.blog} class="hover:text-[color:var(--color-brand-600)] font-medium">The blog</a>
+          <Icon name="ph:caret-right" width={12} height={12} />
+          <a href={`${LINKS.blog}?category=${d.category}`} class="font-semibold text-[color:var(--color-ink-800)] hover:text-[color:var(--color-brand-600)]">{cat.label}</a>
+        </nav>
+
+        <article class="mt-10">
+          <header data-reveal>
+            <span class="pill">
+              <Icon name={cat.icon} width={14} height={14} />
+              {cat.label}
+            </span>
+            <h1 class="mt-5 text-4xl sm:text-5xl font-semibold leading-[1.06]">{d.title}</h1>
+            <p class="mt-5 text-lg leading-relaxed text-[color:var(--color-ink-600)]">{d.description}</p>
+
+            <div class="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3">
+              <span class="blog-token">
+                <b class="font-display" style={`color:${p.color}`}>{p.id}</b>
+                <span class="font-semibold text-[color:var(--color-ink-800)]">{p.name}</span>
+                <span class="text-[color:var(--color-ink-500)]">— {p.short.toLowerCase()}</span>
+              </span>
+              <span class="text-sm text-[color:var(--color-ink-500)]">
+                By <a href={AUTHOR.url} rel="author" class="font-semibold text-[color:var(--color-ink-700)] hover:text-[color:var(--color-brand-600)]">{AUTHOR.name}</a>, {AUTHOR.role}
+                · <time datetime={published.slice(0, 10)}>{formatDate(d.publishDate)}</time> · {d.readingTime} min read
+              </span>
+            </div>
+            <p class="blog-persona">
+              <Icon name="ph:user-focus" width={15} height={15} />
+              <span><b>{d.persona}</b> · an illustrative persona, not a real user</span>
+            </p>
+          </header>
+
+          <figure class="blog-hero mt-8" data-reveal>
+            <img src={image} alt={imageAlt} width={FEATURED.width} height={FEATURED.height} decoding="async" fetchpriority="high" />
+          </figure>
+
+          <aside class="blog-takeaways mt-8" aria-labelledby="key-takeaways">
+            <p id="key-takeaways" class="blog-takeaways__label">
+              <Icon name="ph:list-checks" width={14} height={14} />
+              Key takeaways
+            </p>
+            <ul>
+              {d.takeaways.map((t) => (
+                <li>
+                  <Icon name="ph:check-circle-fill" width={18} height={18} class="blog-takeaways__mark" />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+          </aside>
+
+          <div
+            class="blog-prose prose prose-lg mt-10 max-w-none text-[color:var(--color-ink-700)] leading-relaxed prose-headings:text-[color:var(--color-ink-900)] prose-h2:text-2xl prose-h2:font-semibold prose-h2:mt-12 prose-h2:mb-3 prose-h3:text-xl prose-a:text-[color:var(--color-brand-600)] prose-a:font-semibold prose-a:no-underline hover:prose-a:underline prose-strong:text-[color:var(--color-ink-900)]"
+          >
+            {hasRendered
+              ? pieces.map((piece) =>
+                  piece.kind === 'html' ? (
+                    <Fragment set:html={piece.html} />
+                  ) : piece.kind === 'day' && d.routines && d.focus ? (
+                    <BlogDayFlow slug={post.id} persona={d.persona} routines={d.routines} focus={d.focus} />
+                  ) : piece.kind === 'cascade' && d.cascade && d.focus ? (
+                    <BlogCascade slug={post.id} persona={d.persona} focus={d.focus} cascade={d.cascade} />
+                  ) : piece.kind === 'mcp' && d.mcp ? (
+                    <BlogMcpFlow slug={post.id} mcp={d.mcp} />
+                  ) : piece.kind === 'loop' ? (
+                    <EvolutionLoop
+                      variant="loop"
+                      captions={loopCaptions}
+                      caption={`One loop for the ${d.persona.toLowerCase()}: show up for ${d.focus}, work its steps, and let the week goal improve the plan.`}
+                      desc={`The daily loop for the ${d.persona.toLowerCase()}. Discipline: ${loopCaptions?.d}. Kinetics: ${loopCaptions?.k}. Geniuses: ${loopCaptions?.g}.`}
+                    />
+                  ) : null,
+                )
+              : Content && <Content />}
+          </div>
+        </article>
+      </div>
+
+      <!-- keep reading -->
+      <div class="mt-20">
+        <div class="flex items-end justify-between gap-4" data-reveal>
+          <h2 class="text-2xl sm:text-3xl font-semibold">Keep reading</h2>
+          <a href={LINKS.blog} class="btn-ghost text-sm text-[color:var(--color-brand-600)] shrink-0">
+            All posts
+            <Icon name="ph:arrow-right" width={14} height={14} />
+          </a>
+        </div>
+        <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-reveal-group>
+          {related.map((r) => <BlogCard post={r} data-reveal-item />)}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <FinalCta />
+</BaseLayout>
+
+<style>
+  .blog-token {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 13.5px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-ink-100);
+    border-radius: 999px;
+    padding: 7px 14px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .blog-persona {
+    margin-top: 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: var(--color-ink-500);
+  }
+  .blog-persona b {
+    font-weight: 600;
+    color: var(--color-ink-700);
+  }
+  .blog-persona :global(svg) {
+    margin-top: 2px;
+    flex-shrink: 0;
+    color: var(--color-brand-500);
+  }
+
+  .blog-hero img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-ink-100);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .blog-takeaways {
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-ink-100);
+    border-radius: var(--radius-card);
+    padding: 1.1rem 1.25rem 1.2rem;
+  }
+  .blog-takeaways__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-brand-600);
+  }
+  .blog-takeaways ul {
+    margin-top: 0.75rem;
+    display: grid;
+    gap: 0.6rem;
+  }
+  .blog-takeaways li {
+    display: flex;
+    gap: 0.55rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--color-ink-800);
+  }
+  .blog-takeaways :global(.blog-takeaways__mark) {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+    color: var(--color-brand-500);
+  }
+
+  /* Markdown body: tables, images, quotes and code in the site's tokens */
+  .blog-prose :global(table) {
+    width: 100%;
+    font-size: 0.9rem;
+    border: 1px solid var(--color-ink-100);
+    border-radius: 12px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  /* a wide table scrolls inside itself on a phone instead of the page */
+  @media (max-width: 640px) {
+    .blog-prose :global(table) {
+      display: block;
+      overflow-x: auto;
+    }
+  }
+  .blog-prose :global(thead) {
+    background: var(--color-surface-soft);
+  }
+  .blog-prose :global(thead th) {
+    padding: 0.65rem 0.9rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+    white-space: nowrap;
+  }
+  .blog-prose :global(tbody td) {
+    padding: 0.6rem 0.9rem;
+    border-top: 1px solid var(--color-ink-100);
+    vertical-align: top;
+  }
+  .blog-prose :global(tbody td:first-child) {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--color-ink-900);
+    white-space: nowrap;
+  }
+  /* the phone screenshot stays phone-sized */
+  .blog-prose :global(img[src$='home-mobile.png']) {
+    max-width: 320px;
+    margin-inline: auto;
+  }
+  .blog-prose :global(img) {
+    border-radius: 14px;
+    border: 1px solid var(--color-ink-100);
+    box-shadow: var(--shadow-card);
+  }
+  .blog-prose :global(blockquote) {
+    font-style: normal;
+    font-weight: 500;
+    color: var(--color-ink-800);
+    border-left: 3px solid var(--color-brand-300);
+    background: var(--color-brand-50);
+    border-radius: 0 12px 12px 0;
+    padding: 0.75rem 1.1rem;
+  }
+  .blog-prose :global(blockquote p::before),
+  .blog-prose :global(blockquote p::after) {
+    content: none;
+  }
+  .blog-prose :global(pre) {
+    border-radius: 12px;
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  .blog-prose :global(:not(pre) > code) {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--color-brand-800);
+    background: var(--color-brand-50);
+    border-radius: 6px;
+    padding: 0.1em 0.35em;
+  }
+  .blog-prose :global(:not(pre) > code::before),
+  .blog-prose :global(:not(pre) > code::after) {
+    content: none;
+  }
+</style>

@@ -58,7 +58,8 @@ describe('RoutineFocus tasklist', () => {
   // keys and two cards rendering the same routine.
   it('drops a repeated task id and anything without one', () => {
     const list = call('tasklist', {
-      routineDate: {
+      localTicks: {},
+      dayRoutine: {
         tasklist: [
           { id: 'a', name: 'First' },
           { id: 'a', name: 'First again' },
@@ -72,7 +73,7 @@ describe('RoutineFocus tasklist', () => {
   });
 
   it('is empty before the routine loads', () => {
-    expect(call('tasklist', { routineDate: null })).toEqual([]);
+    expect(call('tasklist', { dayRoutine: null, localTicks: {} })).toEqual([]);
   });
 });
 
@@ -594,6 +595,9 @@ describe('RoutineFocus tick credit', () => {
     const vm = {
       date: '12-09-2026',
       tasklist: [task],
+      // The server's day is on screen (not the placeholder).
+      showingPlaceholder: false,
+      localTicks: {},
       isSkippedDay: false,
       blockedBySkip: methods.blockedBySkip,
       trackTaskEvent: jest.fn(),
@@ -731,7 +735,10 @@ describe('RoutineFocus computed graph', () => {
           date: TODAY,
           todayDate: TODAY,
           now: AT_0930(),
-          routineDate: { id: 'r1', tasklist: TASKS },
+          routineDate: { id: 'r1', date: TODAY, tasklist: TASKS },
+          // The day the goals below were answered for (the goals query's update).
+          goalsDate: TODAY,
+          localTicks: {},
           goals: [{
             id: 'd1',
             period: 'day',
@@ -811,7 +818,7 @@ describe('RoutineFocus computed graph', () => {
       { ...TASKS[1], stimuli: stim(7 / 3) }, // 2h20m: still 1 slot, but 2 items
       { ...TASKS[2], stimuli: stim(4.5) }, // 2 slots
     ];
-    const vm = graph({ routineDate: { id: 'r1', tasklist } });
+    const vm = graph({ routineDate: { id: 'r1', date: TODAY, tasklist } });
     expect(vm.rows.map((r) => r.totalCount)).toEqual([1, 2, 2]);
     expect(vm.daySummary).toContain('1/5 tasks');
   });
@@ -825,7 +832,7 @@ describe('RoutineFocus computed graph', () => {
       { ...TASKS[1], points: 0, stimuli: split(7 / 3, 2) }, // 1 slot, 0 points
       TASKS[2],
     ];
-    const vm = graph({ routineDate: { id: 'r1', tasklist } });
+    const vm = graph({ routineDate: { id: 'r1', date: TODAY, tasklist } });
     vm.$agent.canFireEndEvent = jest.fn(() => true);
     vm.dispatchAgentEndEvent = jest.fn();
     // The checklist header reads "2 of 2 done" against a 1-slot window.
@@ -856,7 +863,7 @@ describe('RoutineFocus computed graph', () => {
       TASKS[1],
     ];
     const vm = graph({
-      routineDate: { id: 'r1', tasklist },
+      routineDate: { id: 'r1', date: TODAY, tasklist },
       focusRoutineId: 'wu',
       now: moment().startOf('day').add(15, 'hours').add(25, 'minutes'),
     });
@@ -880,7 +887,7 @@ describe('RoutineFocus computed graph', () => {
   });
 
   it('falls back to the first routine outside today', () => {
-    const vm = graph({ date: YESTERDAY });
+    const vm = graph({ date: YESTERDAY, routineDate: { id: 'r0', date: YESTERDAY, tasklist: TASKS } });
     expect(vm.isToday).toBe(false);
     expect(vm.currentRoutineId).toBe('');
     expect(vm.resolvedFocusId).toBe('mp');
@@ -899,7 +906,7 @@ describe('RoutineFocus computed graph', () => {
   });
 
   it('has nothing to render for a day with no routine', () => {
-    const vm = graph({ routineDate: { id: 'r1', tasklist: [] } });
+    const vm = graph({ routineDate: { id: 'r1', date: TODAY, tasklist: [] } });
     expect(vm.rows).toEqual([]);
     expect(vm.focusRow).toBeNull();
     expect(vm.resolvedFocusId).toBe('');
@@ -1013,9 +1020,10 @@ describe('RoutineFocus action sheet', () => {
   });
 
   it('hands the form an array even before the day goals load', () => {
-    expect(call('displayGoals', { goals: null })).toEqual([]);
+    // `homeGoals` is always a list: the server's, the snapshot's, or empty.
+    expect(call('displayGoals', { homeGoals: [] })).toEqual([]);
     const goals = [{ id: 'g1' }];
-    expect(call('displayGoals', { goals })).toBe(goals);
+    expect(call('displayGoals', { homeGoals: goals })).toBe(goals);
   });
 });
 
@@ -1109,9 +1117,9 @@ describe('RoutineFocus skip day', () => {
   });
 
   it('exposes the skipped day to the strip and the card', () => {
-    expect(call('isSkippedDay', { routineDate: { skip: true } })).toBe(true);
-    expect(call('isSkippedDay', { routineDate: { skip: false } })).toBe(false);
-    expect(call('isSkippedDay', { routineDate: null })).toBe(false);
+    expect(call('isSkippedDay', { dayRoutine: { skip: true } })).toBe(true);
+    expect(call('isSkippedDay', { dayRoutine: { skip: false } })).toBe(false);
+    expect(call('isSkippedDay', { dayRoutine: null })).toBe(false);
     expect(call('skippedDates', { isSkippedDay: true, date: '12-09-2026' }))
       .toEqual(['12-09-2026']);
     expect(call('skippedDates', { isSkippedDay: false, date: '12-09-2026' })).toEqual([]);
@@ -1166,7 +1174,7 @@ describe('RoutineFocus goal-item page', () => {
   const ctx = (over = {}) => ({
     openGoalItemId: 'g1',
     dayGoalItems: [ITEM],
-    goals: [
+    homeGoals: [
       {
         id: 'd1', period: 'day', date: '12-09-2026', goalItems: [ITEM],
       },
@@ -1991,6 +1999,165 @@ describe('RoutineFocus end-event dispatch', () => {
   });
 });
 
+/**
+ * "Allow routine chat to trigger the events if the user is not satisfied or the
+ * tasks changed." The chat's `run_agent` turn reaches the page as `run-agent`,
+ * and the page fires the routine's events again through the same paths a tap
+ * uses: the start event as Start Agent sends it, then the end rule.
+ */
+describe('RoutineFocus — the chat runs the agent again', () => {
+  const today = new Date().toISOString();
+  const AGENT = {
+    id: 'a1',
+    name: 'Day log',
+    startEvent: { kind: 'url', value: 'https://hooks.test/start?goal={{goal_id}}' },
+    endEvent: { kind: 'url', value: 'https://hooks.test/end?goal={{goal_id}}' },
+    lastRunAt: today,
+  };
+  const vmFor = ({
+    status = 'finished', canFire = true, points = 12, stalled = false, agent = AGENT,
+  } = {}) => {
+    const vm = {
+      date: '12-11-2026',
+      isToday: true,
+      tasklist: [{ id: 'sw', points }],
+      endEventFiring: {},
+      $notify: jest.fn(),
+      postChatEvent: jest.fn(),
+      effectiveAgentStatus: jest.fn(() => status),
+      runStalled: jest.fn(() => stalled),
+      fireAgentWhenReady: jest.fn(() => Promise.resolve('fired')),
+      maybeFireAgentEndEvent: jest.fn(),
+      $agent: {
+        getByTaskRef: jest.fn(() => agent),
+        canFireEndEvent: jest.fn(() => canFire),
+      },
+    };
+    // The real guard: the case is that the chat path consults it.
+    vm.refuseAgentWithoutPoints = (ref) => methods.refuseAgentWithoutPoints.call(vm, ref);
+    return vm;
+  };
+  const run = (vm, over = {}) => methods.runAgentFromChat.call(vm, { taskRef: 'sw', date: vm.date, ...over });
+
+  // Not happy with the result: a new run, and with the checklist already done
+  // the end event follows at once — that is what makes the new result.
+  it('starts a finished agent again, as Start Agent does, and then runs the end rule', async () => {
+    const vm = vmFor();
+    await run(vm);
+
+    expect(vm.postChatEvent).toHaveBeenCalledWith({
+      text: 'Agent started again', tone: 'blue', icon: 'smart_toy', taskRef: 'sw',
+    });
+    expect(vm.fireAgentWhenReady).toHaveBeenCalledWith('sw', { implicit: false });
+    expect(vm.maybeFireAgentEndEvent).toHaveBeenCalledWith('sw');
+  });
+
+  it('sends no end event when the start opened no run', async () => {
+    const vm = vmFor({ canFire: false });
+    await run(vm);
+
+    expect(vm.fireAgentWhenReady).toHaveBeenCalled();
+    expect(vm.maybeFireAgentEndEvent).not.toHaveBeenCalled();
+  });
+
+  it('calls it a start when the agent has not run today', async () => {
+    const vm = vmFor({ status: '', agent: { ...AGENT, lastRunAt: '2026-01-01T09:00:00Z' } });
+    await run(vm);
+
+    expect(vm.postChatEvent).toHaveBeenCalledWith(expect.objectContaining({ text: 'Agent started' }));
+  });
+
+  // A stalled run's end event was due and never finished: retry that, rather
+  // than sending its start event a second time.
+  it('retries a stalled run’s end event instead of starting a new run', () => {
+    const vm = vmFor({ status: 'listening', stalled: true });
+    run(vm);
+
+    expect(vm.maybeFireAgentEndEvent).toHaveBeenCalledWith('sw');
+    expect(vm.fireAgentWhenReady).not.toHaveBeenCalled();
+    expect(vm.postChatEvent).not.toHaveBeenCalled();
+  });
+
+  it.each(['running', 'waiting'])('leaves a %s agent alone', (status) => {
+    const vm = vmFor({ status });
+    run(vm);
+    expect(vm.fireAgentWhenReady).not.toHaveBeenCalled();
+    expect(vm.maybeFireAgentEndEvent).not.toHaveBeenCalled();
+  });
+
+  it('leaves an end event that is already on the wire alone', () => {
+    const vm = vmFor();
+    vm.endEventFiring.sw = true;
+    run(vm);
+    expect(vm.fireAgentWhenReady).not.toHaveBeenCalled();
+  });
+
+  // The reply took long enough for the user to move to another day.
+  it('does nothing for a turn sent on another day, or on a day that is not today', () => {
+    const moved = vmFor();
+    run(moved, { date: '11-11-2026' });
+    expect(moved.fireAgentWhenReady).not.toHaveBeenCalled();
+
+    const past = vmFor();
+    past.isToday = false;
+    run(past);
+    expect(past.fireAgentWhenReady).not.toHaveBeenCalled();
+  });
+
+  it('refuses a 0-point routine and says why', () => {
+    const vm = vmFor({ points: 0 });
+    run(vm);
+    expect(vm.fireAgentWhenReady).not.toHaveBeenCalled();
+    expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'This routine is worth 0 points',
+    }));
+  });
+
+  it('does nothing without an agent that has a start event', () => {
+    const none = vmFor({ agent: null });
+    run(none);
+    expect(none.fireAgentWhenReady).not.toHaveBeenCalled();
+
+    const noStart = vmFor({ agent: { ...AGENT, startEvent: null } });
+    run(noStart);
+    expect(noStart.fireAgentWhenReady).not.toHaveBeenCalled();
+  });
+
+  it('listens for the chat’s run-agent event', () => {
+    const handlers = call('chatHandlers', { runAgentFromChat: methods.runAgentFromChat });
+    expect(handlers['run-agent']).toBe(methods.runAgentFromChat);
+  });
+
+  describe('what the chat is told', () => {
+    const ctxFor = (over = {}) => ({
+      focusRow: { id: 'sw' },
+      tasklist: [{ id: 'sw', points: 12 }],
+      isToday: true,
+      agentStage: 'finished',
+      $agent: { getByTaskRef: () => AGENT },
+      ...over,
+    });
+
+    it('names the agent and the ring’s stage', () => {
+      expect(call('chatAgent', ctxFor())).toEqual({ name: 'Day log', stage: 'finished' });
+    });
+
+    // Said up front, so the reply can give the reason instead of claiming a run.
+    it('says when no run can go out', () => {
+      expect(call('chatAgent', ctxFor({ isToday: false })).stage).toBe('closed');
+      expect(call('chatAgent', ctxFor({ tasklist: [{ id: 'sw', points: 0 }] })).stage).toBe('no_points');
+    });
+
+    it('is null for a routine with no agent to start', () => {
+      expect(call('chatAgent', ctxFor({ $agent: { getByTaskRef: () => null } }))).toBeNull();
+      expect(call('chatAgent', ctxFor({
+        $agent: { getByTaskRef: () => ({ ...AGENT, startEvent: { value: '' } }) },
+      }))).toBeNull();
+      expect(call('chatAgent', ctxFor({ focusRow: null }))).toBeNull();
+    });
+  });
+});
+
 // Missed-item recovery (11-17 Oct finding): an open item on a past day keeps
 // its date chips so it can be carried to today; only finished work locks.
 describe('RoutineFocus goalSheetDateLocked', () => {
@@ -2023,7 +2190,7 @@ describe('RoutineFocus — a tick is not doubled', () => {
     let resolve;
     const vm = {
       date: '15-10-2026',
-      goals: [],
+      homeGoals: [],
       $apollo: { provider: { defaultClient: {} }, queries: {} },
       $goals: { completeGoalItem: jest.fn(() => new Promise((r) => { resolve = r; })) },
       onItemCompleted: jest.fn(),

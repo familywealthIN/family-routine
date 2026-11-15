@@ -163,6 +163,52 @@ describe('WeekdaySelector — context menu is the pointer equivalent', () => {
     expect(event.defaultPrevented).toBe(false);
     expect(events['long-press']).toEqual([]);
   });
+
+  // A right-click, and a touch long press on Android, is not followed by a
+  // click. The flag it set must not swallow the user's next real tap.
+  it('a new press starts clean, so the next tap still selects a day', () => {
+    const { el, events } = render();
+    cell(el, today).dispatchEvent(new MouseEvent('contextmenu', { cancelable: true }));
+    const target = cell(el, otherDay);
+    target.dispatchEvent(new Event('pointerdown'));
+    target.dispatchEvent(new Event('pointerup'));
+    target.click();
+    expect(events['date-selected']).toEqual([otherDay]);
+  });
+});
+
+/**
+ * Holding today used to select the cell's label and number too (and raise the
+ * iOS callout), and the selection spread over the skip sheet the press opened.
+ */
+describe('WeekdaySelector — a long press selects no text', () => {
+  const css = fs.readFileSync(path.join(__dirname, 'WeekdaySelector.vue'), 'utf8');
+  const at = css.indexOf('.day-column {');
+  const dayColumn = css.slice(at, css.indexOf('}', at));
+
+  it('the cells cannot be selected or raise the callout', () => {
+    expect(dayColumn).toContain('user-select: none');
+    expect(dayColumn).toContain('-webkit-user-select: none');
+    expect(dayColumn).toContain('-webkit-touch-callout: none');
+  });
+
+  it('a selection already begun is cleared when the press fires', () => {
+    const removeAllRanges = jest.fn();
+    const spy = jest.spyOn(window, 'getSelection').mockReturnValue({ removeAllRanges });
+    try {
+      const { el, events } = render();
+      cell(el, today).dispatchEvent(new Event('pointerdown'));
+      jest.advanceTimersByTime(519);
+      expect(removeAllRanges).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(1);
+      expect(events['long-press']).toEqual([today]);
+      expect(removeAllRanges).toHaveBeenCalledTimes(1);
+      cell(el, today).dispatchEvent(new MouseEvent('contextmenu', { cancelable: true }));
+      expect(removeAllRanges).toHaveBeenCalledTimes(2);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
 
 describe('WeekdaySelector — skipped days', () => {

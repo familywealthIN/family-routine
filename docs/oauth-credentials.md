@@ -1,210 +1,104 @@
-# OAuth Credentials for ChatGPT MCP Integration
+# The MCP connector: signing in AI apps
 
-## 🔐 Your OAuth Configuration
-
-Use these credentials to connect your Routine Notes MCP server to ChatGPT:
-
-### Server URL
+Claude, ChatGPT, n8n, Gemini CLI and other MCP clients connect to Routine Notes
+with one address:
 
 ```
-Production: https://your-api-domain.com/dev/mcp
-Local Dev: http://localhost:4000/mcp
+https://mcp.routinenotes.app/mcp
 ```
 
-### OAuth Client ID
+They find everything else themselves. There is **no client secret**: each app
+registers itself and signs in with PKCE, and the user approves it on the
+`/connect` page of the web app.
 
-```
-routine-notes-mcp
-```
+## The flow
 
-### OAuth Client Secret
+1. The app calls `POST /mcp` with no token and gets `401` with
+   `WWW-Authenticate: Bearer resource_metadata=".../.well-known/oauth-protected-resource/mcp"`.
+2. It reads that document, then `/.well-known/oauth-authorization-server`.
+3. It registers at `POST /register` (RFC 7591). The client id it gets back is
+   signed and carries the app's redirect URIs; nothing is stored.
+4. It opens `GET /authorize`. A request that fails the checks (unknown client,
+   unregistered `redirect_uri`, no S256 `code_challenge`) gets a 400 page and is
+   never redirected. A good one goes to `WEB_APP_URL/connect?...`.
+5. `/connect` (ConnectApp.vue) asks the user to sign in if needed, checks the
+   request again (`mcpAuthRequest`), shows who is asking and where Allow goes,
+   and on **Allow** calls `approveMcpAccess`, which returns the redirect with a
+   one-time code. **Cancel** sends `error=access_denied`.
+6. The app exchanges the code at `POST /token` with its PKCE verifier and gets
+   a 1-hour access token and a 90-day refresh token.
+7. It speaks MCP over `POST /mcp` (Streamable HTTP, JSON responses, no
+   sessions): `initialize`, `tools/list`, `tools/call`, `resources/*`, `ping`.
 
-```
-Contact your system administrator or check your environment variables for the OAUTH_CLIENT_SECRET value.
+The pre-registered client `routine-notes-mcp` is public too (PKCE, no secret)
+and accepts any https redirect, or http to localhost, for apps whose forms ask
+for a Client ID (n8n).
 
-Default format: frt_secret_<random_32_chars>
-```
+Code: `apps/server/src/utils/mcpOAuth.js` (tokens and checks),
+`src/mcpAuthRoutes.js` (the endpoints), `src/resolvers/mcpConnect.js` (the
+consent page's two calls), `src/mcp-http-server.js` (`POST /mcp`). Tested end to
+end in `src/mcpConnector.test.js`.
 
-⚠️ **Important**: The OAuth Client Secret should be set in your environment variables as `OAUTH_CLIENT_SECRET` . If not set, a random secret will be generated on server startup.
+## Tokens
 
----
+Codes, access and refresh tokens and client ids are JWTs signed with a key
+**derived** from `JWT_SECRET`, each with its own `typ`. None of them is accepted
+as an app session, and a code works once: its id is stored on the user
+(`oauth.authCode`) and spent atomically at `/token`. A successful exchange sets
+`oauth.connectedAt`, which turns the Connect AI chip to Connected.
 
-## 🚀 Quick Setup Guide
+The legacy API key (`X-API-Key`) still works on every `/mcp` route.
 
-### Step 1: Configure Environment Variables
+## The two domains
 
-Add to your `secrets.json` :
+Both are custom domains on the same API Gateway API, each mapped to the `dev`
+stage with an **empty base path**:
 
-```json
-{
-  "OAUTH_CLIENT_ID": "routine-notes-mcp",
-  "OAUTH_CLIENT_SECRET": "frt_secret_YOUR_SECURE_RANDOM_STRING_HERE",
-  "MCP_BASE_URL": "https://your-api-domain.com",
-  "WEB_APP_URL": "https://routine-notes.netlify.app"
-}
-```
+| Domain | Serves | Who may call it from a browser |
+|---|---|---|
+| `api.routinenotes.app` | `/graphql` (the app's API) | only `routinenotes.app` and `familywealth.in` (apex or any subdomain, https), the mobile apps (`capacitor://localhost`, `http(s)://localhost`) and local dev (`src/utils/corsOrigins.js`); any other site gets 403 |
+| `mcp.routinenotes.app` | `/mcp`, `/.well-known/…`, `/authorize`, `/token`, `/register` | anyone: the MCP server is public, CORS is open, and a token is what lets a caller in |
 
-### Step 2: Generate a Secure Client Secret
+The empty base path is what MCP needs: clients look for `/.well-known/…`,
+`/authorize`, `/token` and `/register` at the **root** of the server's origin.
+On the raw API Gateway address
+(`https://<id>.execute-api.ap-south-1.amazonaws.com/dev/mcp`) the root is outside
+the `/dev` stage, so API Gateway answers `{"message":"Forbidden"}` before the
+Lambda runs.
 
-Run this command to generate a secure random secret:
+CORS only stops other websites. Requests with no `Origin` (curl, cron, n8n,
+server to server) still reach GraphQL, where the session token is the gate.
+
+### Setting them up (once)
+
+1. ACM (ap-south-1): request one certificate for `api.routinenotes.app` and
+   `mcp.routinenotes.app` (or `*.routinenotes.app`), validate it by DNS.
+2. API Gateway → Custom domain names → Create, for each domain: Regional, that
+   certificate.
+3. API mappings, for each: API `dev-familywealth-graphql-api`, stage `dev`, path empty.
+4. DNS for `routinenotes.app`: a CNAME `api` and a CNAME `mcp`, each to that
+   domain's "API Gateway domain name" (`d-….execute-api.ap-south-1.amazonaws.com`).
+5. Server secrets: `MCP_BASE_URL` = `https://mcp.routinenotes.app` (only a
+   fallback: the server reads the origin from each request), and `WEB_APP_URL` =
+   the production web app's origin (`/authorize` sends people to its `/connect`
+   page).
+6. Point the clients at the new API, then deploy them:
+   - Netlify (web app): env `GQL_URL` = `https://api.routinenotes.app/graphql`.
+   - GitHub secret `GQL_URL` (mobile builds) the same, or leave it unset: the
+     workflows default to it.
+
+Keep the execute-api URL working until the store apps built against it have
+been replaced: the old address still reaches the same Lambdas.
+
+## Checking a deployment
 
 ```bash
-node -e "console.log('frt_secret_' + require('crypto').randomBytes(16).toString('hex'))"
+curl -i https://mcp.routinenotes.app/mcp -X POST -H 'Content-Type: application/json' -d '{}'
+# 401 with a WWW-Authenticate header naming the resource metadata
+curl -i -X OPTIONS https://api.routinenotes.app/graphql -H 'Origin: https://evil.example' -H 'Access-Control-Request-Method: POST'
+# no Access-Control-Allow-Origin header: other sites can't call GraphQL
+curl https://mcp.routinenotes.app/.well-known/oauth-authorization-server
 ```
 
-Copy the output and use it as your `OAUTH_CLIENT_SECRET` .
-
-### Step 3: Add to ChatGPT
-
-1. Open ChatGPT
-2. Go to **Settings** → **Beta Features** → **MCP Servers**
-3. Click **Add MCP Server**
-4. Enter your Server URL
-5. When prompted, enter:
-   - **Client ID**: `routine-notes-mcp`
-
-   - **Client Secret**: Your generated secret from Step 2
-6. Click **Authorize**
-7. You'll be redirected to your Routine Notes app
-8. Click **Authorize** to grant permissions
-9. Done! ✅
-
----
-
-## 📋 What You'll See in Profile Page
-
-When you visit **Settings → Profile**, you'll see:
-
-1. **OAuth Configuration Section**
-   - Server URL (with copy button)
-   - OAuth Client ID (with copy button)
-   - OAuth Client Secret (masked, with show/copy buttons)
-   - Setup instructions
-
-2. **OAuth Connection Status**
-   - Shows "Connected" when ChatGPT is authorized
-   - Green checkmark indicator
-
-3. **Legacy API Key Section** (optional)
-   - For backward compatibility
-   - Not required if using OAuth
-
----
-
-## 🔒 Security Best Practices
-
-1. **Never commit secrets** to version control
-2. **Rotate secrets regularly** (every 90 days recommended)
-3. **Use different secrets** for production and development
-4. **Store secrets securely** in environment variables
-5. **Monitor OAuth token usage** in your logs
-
----
-
-## 🧪 Testing Your OAuth Setup
-
-### Test OAuth Configuration Endpoint
-
-```bash
-curl https://your-domain.com/mcp/.well-known/mcp-configuration
-```
-
-Expected response:
-
-```json
-{
-  "oauth": {
-    "authorizationUrl": "https://your-domain.com/mcp/oauth/authorize",
-    "tokenUrl": "https://your-domain.com/mcp/oauth/token",
-    "scopes": ["read", "write"]
-  }
-}
-```
-
-### Test Token Exchange (after getting auth code)
-
-```bash
-curl -X POST https://your-domain.com/mcp/oauth/token \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=authorization_code" \
-  -d "code=YOUR_AUTH_CODE" \
-  -d "client_id=routine-notes-mcp" \
-  -d "client_secret=YOUR_CLIENT_SECRET"
-```
-
-### Test Authenticated Request
-
-```bash
-curl -X POST https://your-domain.com/mcp/call \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "tools/list",
-    "params": {},
-    "id": 1
-  }'
-```
-
----
-
-## 🆘 Troubleshooting
-
-### "Invalid client credentials"
-
-* **Cause**: Client ID or Secret doesn't match
-* **Solution**: Verify your environment variables match what you entered in ChatGPT
-
-### "OAuth token expired"
-
-* **Cause**: Access token expired (1 hour lifetime)
-* **Solution**: ChatGPT will automatically refresh using the refresh token
-
-### "Connection not showing as Connected"
-
-* **Cause**: OAuth flow not completed
-* **Solution**: Complete the authorization flow in ChatGPT
-
-### Cannot find OAuth Client Secret
-
-* **Check**: Environment variable `OAUTH_CLIENT_SECRET`
-* **Check**: Profile page in your app (it's displayed there)
-* **Generate new**: Use the command in Step 2 above
-
----
-
-## 📚 Related Documentation
-
-* [OAuth Integration Guide](./oauth-chatgpt-integration.md)
-* [Migration Summary](./oauth-migration-summary.md)
-* [Quick Start Guide](./oauth-quick-start.md)
-
----
-
-## 🔄 Rotating Credentials
-
-To rotate your OAuth Client Secret:
-
-1. Generate a new secret:
-   
-
-```bash
-   node -e "console.log('frt_secret_' + require('crypto').randomBytes(16).toString('hex'))"
-   ```
-
-2. Update `OAUTH_CLIENT_SECRET` in your `secrets.json`
-
-3. Redeploy your backend:
-   
-
-```bash
-   serverless deploy
-   ```
-
-4. Reconnect ChatGPT with the new secret
-
----
-
-**Last Updated**: January 16, 2026  
-**Version**: 1.0  
-**Status**: Production Ready
+Then add the connector in Claude (Settings → Connectors → Add custom connector)
+and Allow it on the page that opens.

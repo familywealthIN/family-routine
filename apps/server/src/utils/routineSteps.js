@@ -10,10 +10,10 @@
  *      (case-insensitive), first match wins, so the more specific entries sit
  *      above the broader ones ("wind down" before "sleep", "workout" before
  *      "work", which is last of all);
- *   2. for any other name, a model writes 3 steps in the same style: the free
- *      OpenRouter roster first, then a cheap paid Qwen, never an OpenAI model.
- *      If both fail, or the whole thing outlives its deadline, there are no
- *      steps — a routine without suggestions is still a routine.
+ *   2. for any other name, a model writes 3 steps in the same style, from the
+ *      free OpenRouter roster only (no model on the backend spends credits,
+ *      owner rule 8 Nov 2026). If it fails, or outlives its deadline, there
+ *      are no steps — a routine without suggestions is still a routine.
  *
  * Every step is short (STEP_MAX characters), concrete and imperative.
  */
@@ -24,15 +24,10 @@ const MIN_STEPS = 2;
 const MAX_STEPS = 4;
 const NAME_MAX = 100;
 
-// The whole suggestion — free roster and paid fallback together — answers
-// within this, or answers nothing.
+// The whole suggestion answers within this, or answers nothing.
 const AI_DEADLINE_MS = 12000;
-// How much of the deadline the free roster may use before the paid model runs.
-const FREE_BUDGET_MS = 6500;
-// One free model's own deadline inside that budget.
+// One free model's own deadline, so a stuck one hands over to the next.
 const FREE_MODEL_TIMEOUT_MS = 4000;
-// Cheap paid Qwen, in order. Never an OpenAI model (owner rule).
-const PAID_MODELS = ['qwen/qwen3-235b-a22b-2507', 'qwen/qwen3.5-flash-02-23'];
 
 /**
  * keywords (regexes against the lowercased name) -> steps. Step 1 is the cue.
@@ -242,34 +237,16 @@ async function attempt(messages, options) {
 }
 
 /**
- * Ask a model for steps: the free roster, then each paid Qwen in turn, within
- * AI_DEADLINE_MS overall. Never throws; [] when nothing usable came back.
+ * Ask the free roster for steps within AI_DEADLINE_MS overall. Never throws;
+ * [] when nothing usable came back.
  */
 async function aiStepsFor(name, { deadlineMs = AI_DEADLINE_MS } = {}) {
-  const started = Date.now();
-  const left = () => deadlineMs - (Date.now() - started);
-  const messages = promptFor(name);
-
-  const free = await withDeadline(
-    attempt(messages, { timeoutMs: FREE_MODEL_TIMEOUT_MS }),
-    Math.min(FREE_BUDGET_MS, left()),
+  const steps = await withDeadline(
+    attempt(promptFor(name), { timeoutMs: FREE_MODEL_TIMEOUT_MS }),
+    deadlineMs,
     null,
   );
-  if (free) return free;
-
-  for (let i = 0; i < PAID_MODELS.length; i += 1) {
-    const remaining = left();
-    if (remaining <= 0) break;
-    // Sequential on purpose: the second model only runs when the first failed.
-    // eslint-disable-next-line no-await-in-loop
-    const paid = await withDeadline(
-      attempt(messages, { models: [PAID_MODELS[i]], timeoutMs: remaining }),
-      remaining,
-      null,
-    );
-    if (paid) return paid;
-  }
-  return [];
+  return steps || [];
 }
 
 // Model answers per name, per warm container, so a name typed twice (or the
@@ -309,7 +286,6 @@ async function suggestRoutineSteps(name, { ai = true, deadlineMs } = {}) {
 
 module.exports = {
   LIBRARY,
-  PAID_MODELS,
   STEP_MAX,
   MIN_STEPS,
   MAX_STEPS,

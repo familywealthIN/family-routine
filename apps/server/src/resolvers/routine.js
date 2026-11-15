@@ -38,6 +38,33 @@ async function findIdandSort(args, email) {
   return null;
 }
 
+/**
+ * Create the day's routine document from the user's routine items, unless it
+ * already exists. Atomic: `$setOnInsert` with upsert, so two callers racing on
+ * a new day (routineDate and addRoutine, or two devices) still leave ONE
+ * document — a second one is where a tick used to vanish.
+ *
+ * @param {string} email
+ * @param {string} date      DD-MM-YYYY
+ * @param {Array}  [items]   the user's routine items, when already loaded
+ */
+async function createDayRoutine(email, date, items) {
+  const tasklist = items || await RoutineItemModel.find({ email }).exec();
+  sortTimes(tasklist);
+  tasklist.forEach((task) => {
+    resetDayState(task);
+    task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
+  });
+
+  await RoutineModel.findOneAndUpdate(
+    { date, email },
+    { $setOnInsert: { date, email, tasklist } },
+    { upsert: true },
+  ).exec();
+
+  return findTodayandSort({ date }, email);
+}
+
 async function getSkipDayCount(email) {
   const weekNo = moment().weeks();
   const currentDayIndex = moment().weeks(weekNo).weekday();
@@ -322,7 +349,12 @@ const query = {
 
       const tasklist = await RoutineItemModel.find({ email }).exec();
 
-      if (todayTasks && todayTasks.tasklist && Array.isArray(todayTasks.tasklist)) {
+      // The first read of a day makes the day. It used to answer null, and the
+      // app then had to call addRoutine and read again: three round trips in a
+      // row, on the open that is most likely to meet a cold server.
+      if (!todayTasks) return createDayRoutine(email, args.date, tasklist);
+
+      if (todayTasks.tasklist && Array.isArray(todayTasks.tasklist)) {
         const todayTasklist = todayTasks.tasklist;
 
         sortTimes(tasklist);
@@ -442,23 +474,7 @@ const mutation = {
         return findTodayandSort(args, email);
       }
 
-      const tasklist = await RoutineItemModel.find({ email });
-      sortTimes(tasklist);
-      tasklist.forEach((task) => {
-        resetDayState(task);
-        task.stimuli = buildStimuliForRoutineItem(task._id, tasklist);
-      });
-
-      // Use atomic upsert to prevent race-condition duplicate documents
-      // when addRoutine is called concurrently (e.g. from handleDayChange
-      // and the routineDate Apollo update callback simultaneously).
-      await RoutineModel.findOneAndUpdate(
-        { date: args.date, email },
-        { $setOnInsert: { date: args.date, email, tasklist } },
-        { upsert: true },
-      ).exec();
-
-      return findTodayandSort(args, email);
+      return createDayRoutine(email, args.date);
     },
   },
   deleteRoutine: {
@@ -592,4 +608,5 @@ module.exports = {
   refreshStimuliSplitRates,
   aggregateStimuliForRoutine,
   resetDayState,
+  createDayRoutine,
 };

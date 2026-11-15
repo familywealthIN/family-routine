@@ -236,11 +236,14 @@ export default {
     },
     pressStart(weekDay) {
       this.pressEnd();
+      // A new press is a new gesture. A touch long press or a right-click is not
+      // always followed by a click, and a flag left over from one would swallow
+      // the next tap on a day.
+      this.suppressClick = false;
       if (this.isLoading || !this.canLongPress(weekDay)) return;
       this.pressTimer = setTimeout(() => {
         this.pressTimer = null;
-        this.suppressClick = true;
-        this.$emit('long-press', weekDay.fullDate);
+        this.firePress(weekDay);
       }, this.longPressMs);
     },
     pressEnd() {
@@ -254,7 +257,17 @@ export default {
       if (!this.canLongPress(weekDay)) return;
       if (event && event.preventDefault) event.preventDefault();
       this.pressEnd();
+      this.firePress(weekDay);
+    },
+    /**
+     * The cells cannot be selected (see `.day-column`), but a selection the
+     * browser began before the press fired would carry on over the sheet it
+     * opens, so it goes too.
+     */
+    firePress(weekDay) {
       this.suppressClick = true;
+      const selection = typeof window !== 'undefined' && window.getSelection && window.getSelection();
+      if (selection && selection.removeAllRanges) selection.removeAllRanges();
       this.$emit('long-press', weekDay.fullDate);
     },
     onClick(index) {
@@ -311,6 +324,12 @@ export default {
   transition: background-color 0.2s ease;
   flex: 1;
   min-width: 0;
+  /* Holding today opens Skip Day. Without these the same hold selects the day's
+     label and number (and on iOS raises the callout), and the selection spreads
+     over the sheet the press just opened. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .day-column:hover {

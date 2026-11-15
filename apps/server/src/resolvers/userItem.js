@@ -8,7 +8,6 @@ const {
 
 const uniqid = require('uniqid');
 const { v4: uuidv4 } = require('uuid');
-const crypto = require('crypto');
 
 const { UserItemType, UserModel } = require('../schema/UserSchema');
 const {
@@ -66,8 +65,10 @@ const query = {
       const user = await UserModel.findOne({ email }).exec();
       if (!user) return null;
 
-      // Check if OAuth is connected
-      const oauthConnected = !!(user.oauth && user.oauth.accessToken);
+      // An MCP client has signed in: the connector's tokens (utils/mcpOAuth.js)
+      // are signed rather than stored, so `connectedAt` is the record of it;
+      // `accessToken` is the retired flow's.
+      const oauthConnected = !!(user.oauth && (user.oauth.connectedAt || user.oauth.accessToken));
 
       return {
         ...user.toObject(),
@@ -376,43 +377,6 @@ const mutation = {
         { apiKey },
         { new: true },
       );
-    },
-  },
-  generateOAuthCode: {
-    type: new GraphQLObjectType({
-      name: 'OAuthCodeType',
-      fields: {
-        authCode: { type: GraphQLString },
-        expiresAt: { type: GraphQLString },
-      },
-    }),
-    resolve: async (root, args, context) => {
-      const email = getEmailfromSession(context);
-
-      if (!email) {
-        throw new ApiError(401, '401:Authentication required');
-      }
-
-      // Generate a unique authorization code
-      const authCode = `oac_${crypto.randomBytes(32).toString('hex')}`;
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-      // Store the auth code temporarily
-      await UserModel.findOneAndUpdate(
-        { email },
-        {
-          oauth: {
-            authCode,
-            expiresAt,
-          },
-        },
-        { new: true },
-      );
-
-      return {
-        authCode,
-        expiresAt: expiresAt.toISOString(),
-      };
     },
   },
   /**

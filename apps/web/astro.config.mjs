@@ -9,6 +9,6 @@ export default defineConfig({
   trailingSlash: 'ignore',
   integrations: [sitemap(), icon({ include: { ph: ['*'] } })],
   vite: { plugins: [tailwindcss()] },
-  prefetch: { defaultStrategy: 'viewport' },
+  prefetch: { prefetchAll: true, defaultStrategy: 'viewport' },
   experimental: { clientPrerender: true },
 });

@@ -6,8 +6,8 @@
  *      with the specific entry winning over the broad one,
  *   2. every library step is short, imperative text with no emoji, 2-4 per
  *      routine, and step 1 is the physical cue,
- *   3. an unknown name asks the FREE roster first, then each paid Qwen in
- *      turn, never an OpenAI model, and answers [] when all of them fail,
+ *   3. an unknown name asks the FREE roster only, never a paid model, and
+ *      answers [] when it fails,
  *   4. a model's answer is validated (2-4 short steps) before it is used,
  *   5. the whole model path stops at its deadline.
  */
@@ -19,7 +19,6 @@ jest.mock('./chatApi', () => {
 const { completeChat } = require('./chatApi');
 const {
   LIBRARY,
-  PAID_MODELS,
   STEP_MAX,
   libraryStepsFor,
   matchLibrary,
@@ -128,35 +127,17 @@ describe('the model fallback', () => {
     expect(messages[1].content).toContain('Pottery');
   });
 
-  it('falls to the paid Qwen when the free roster fails', async () => {
-    completeChat
-      .mockRejectedValueOnce(new Error('All OpenRouter models failed'))
-      .mockResolvedValueOnce(reply(['Get out the clay', 'Wet your hands']));
-    await expect(suggestRoutineSteps('Pottery')).resolves.toEqual(['Get out the clay', 'Wet your hands']);
-    expect(completeChat).toHaveBeenCalledTimes(2);
-    expect(completeChat.mock.calls[1][1].models).toEqual([PAID_MODELS[0]]);
-  });
-
-  it('tries the second Qwen when the first answers nothing usable', async () => {
-    completeChat
-      .mockRejectedValueOnce(new Error('free failed'))
-      .mockResolvedValueOnce({ content: 'Sure! Here are some steps…', model: PAID_MODELS[0] })
-      .mockResolvedValueOnce(reply(['Get out the clay', 'Wet your hands', 'Throw one bowl']));
-    await expect(suggestRoutineSteps('Pottery')).resolves.toHaveLength(3);
-    expect(completeChat.mock.calls.map(([, o]) => o.models)).toEqual([
-      undefined, [PAID_MODELS[0]], [PAID_MODELS[1]],
-    ]);
-  });
-
-  it('answers no steps when every model fails', async () => {
-    completeChat.mockRejectedValue(new Error('down'));
+  it('answers no steps when the free roster fails, with no paid fallback', async () => {
+    completeChat.mockRejectedValue(new Error('All OpenRouter models failed'));
     await expect(suggestRoutineSteps('Pottery')).resolves.toEqual([]);
-    expect(completeChat).toHaveBeenCalledTimes(1 + PAID_MODELS.length);
+    expect(completeChat).toHaveBeenCalledTimes(1);
+    expect(completeChat.mock.calls[0][1].models).toBeUndefined();
   });
 
-  it('never names an OpenAI model', () => {
-    expect(PAID_MODELS).toEqual(['qwen/qwen3-235b-a22b-2507', 'qwen/qwen3.5-flash-02-23']);
-    PAID_MODELS.forEach((model) => expect(model).not.toMatch(/openai|gpt/i));
+  it('answers no steps when the free answer is unusable', async () => {
+    completeChat.mockResolvedValueOnce({ content: 'Sure! Here are some steps…', model: 'a/one:free' });
+    await expect(suggestRoutineSteps('Pottery')).resolves.toEqual([]);
+    expect(completeChat).toHaveBeenCalledTimes(1);
   });
 
   it('remembers a model\'s answer for the same name', async () => {

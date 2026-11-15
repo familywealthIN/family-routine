@@ -5,13 +5,17 @@
 
     ## The design only draws the connected state
 
-    It renders the green "Connected" chip unconditionally and a fixed
-    `rn_sec_…` secret. Reality: `oauthConnected` defaults **false** (it is true
-    only once a client has completed the OAuth handshake) and the server's prefix
-    is `frt_secret_`. `docs/redesign/chassis.md` § Conflicts says to model the
-    disconnected state too — so the chip has two forms, and when nothing has
-    connected yet the panel says what will make it flip rather than leaving the
-    user to guess at a chip that never turns green.
+    It renders the green "Connected" chip unconditionally. Reality:
+    `oauthConnected` defaults **false** (it is true only once a client has
+    finished signing in). `docs/redesign/chassis.md` § Conflicts says to model
+    the disconnected state too — so the chip has two forms, and when nothing has
+    connected yet the panel says what will make it flip.
+
+    ## No client secret
+
+    MCP clients register themselves and sign in with PKCE (apps/server
+    src/utils/mcpOAuth.js), so there is nothing secret to paste. The card used to
+    show a `frt_secret_…` minted in the browser that the server never accepted.
 
     ## Copying is the container's job
 
@@ -47,18 +51,6 @@
             {{ row.display }}
           </div>
         </div>
-
-        <button
-          v-if="row.secret"
-          type="button"
-          class="rn-cai__icon-btn"
-          :title="revealed ? 'Hide' : 'Show'"
-          :aria-label="revealed ? 'Hide client secret' : 'Show client secret'"
-          data-testid="connect-ai-reveal"
-          @click="revealed = !revealed"
-        >
-          <i class="rn-mi">{{ revealed ? 'visibility_off' : 'visibility' }}</i>
-        </button>
 
         <button
           type="button"
@@ -103,7 +95,7 @@
 </template>
 
 <script>
-import { MCP_CLIENT_ID, maskSecret, platformGuides } from '../../constants/profile';
+import { MCP_CLIENT_ID, platformGuides } from '../../constants/profile';
 
 export default {
   name: 'OrganismConnectAiPanel',
@@ -112,27 +104,19 @@ export default {
     connected: { type: Boolean, default: false },
     serverUrl: { type: String, default: '' },
     clientId: { type: String, default: MCP_CLIENT_ID },
-    clientSecret: { type: String, default: '' },
     /** The row whose copy just succeeded, so only that tick flips. */
     copiedKey: { type: String, default: '' },
   },
   data() {
     return {
       /** Transient view state — not server state, so it lives here. */
-      revealed: false,
-      platform: 'ChatGPT',
+      platform: 'Claude',
     };
   },
   computed: {
     lead() {
-      if (this.connected) return 'Use these with any MCP client to read and add goals.';
-      return 'Paste these into an MCP client and authorize — this turns Connected '
-        + 'as soon as one completes the handshake.';
-    },
-    /** Hidden by default; an em dash where a value has not been issued at all. */
-    secretDisplay() {
-      if (!this.clientSecret) return '—';
-      return this.revealed ? this.clientSecret : maskSecret(this.clientSecret);
+      const how = 'Paste the Server URL into Claude, ChatGPT or any MCP client, then allow it on the page that opens.';
+      return this.connected ? how : `${how} This turns Connected once one has.`;
     },
     credentials() {
       return [
@@ -141,14 +125,6 @@ export default {
         },
         {
           key: 'cid', label: 'CLIENT ID', name: 'Client ID', value: this.clientId, display: this.clientId || '—', secret: false,
-        },
-        {
-          key: 'sec',
-          label: 'CLIENT SECRET',
-          name: 'Client secret',
-          value: this.clientSecret,
-          display: this.secretDisplay,
-          secret: true,
         },
       ];
     },

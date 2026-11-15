@@ -25,6 +25,7 @@
  */
 
 import { PERSIST_KEY, CACHE_VERSION_KEY } from './cacheHygiene';
+import { HOME_SNAPSHOT_KEY } from './homeSnapshot';
 
 /** Keys that must survive a day rollover — credentials and preferences. */
 export const PRESERVED_LOCAL_STORAGE_KEYS = [
@@ -39,6 +40,10 @@ export const PRESERVED_LOCAL_STORAGE_KEYS = [
   'ONBOARDING_COMPLETE',
   'AI_SEARCH_SETTINGS',
   'PROFILE_SETTINGS',
+  // Home's snapshot (utils/homeSnapshot.js). Keyed by date, so yesterday's
+  // entry is never drawn as today's — and its routine template is exactly what
+  // the new day is drawn from while the cache refills.
+  HOME_SNAPSHOT_KEY,
 ];
 
 /** Remembers which day the client last prepared for. */

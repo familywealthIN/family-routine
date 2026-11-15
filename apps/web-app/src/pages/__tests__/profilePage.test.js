@@ -271,15 +271,19 @@ describe('ProfileTime — mounted', () => {
   it('shows the session identity, not an invented name, before the profile loads', () => {
     const el = mount({ xsOnly: true, width: 412 }).$el;
     expect(el.querySelector('[data-testid="profile-identity-name"]').textContent.trim()).toBe('Gaurav');
-    expect(el.textContent).not.toContain('Routine Notes');
+    // The setup guides name the app ("Name it Routine Notes"); nothing else may.
+    const rest = el.cloneNode(true);
+    rest.querySelector('[data-testid="connect-ai"]').remove();
+    expect(rest.textContent).not.toContain('Routine Notes');
   });
 
   it('shows Connect AI disconnected, which the design never draws', () => {
     const el = mount({ xsOnly: true, width: 412 }).$el;
     expect(el.querySelector('[data-testid="connect-ai-status"]').textContent)
       .toContain('Not connected');
-    expect(el.querySelector('[data-testid="connect-ai-value-sec"]').textContent)
-      .toContain('frt_secret_');
+    expect(el.querySelector('[data-testid="connect-ai-value-url"]').textContent)
+      .toContain('/mcp');
+    expect(el.querySelector('[data-testid="connect-ai-value-sec"]')).toBeNull();
   });
 
   it('keeps the delete gate shut until it is opened and typed into', () => {
@@ -316,5 +320,42 @@ describe('ProfileTime — mounted', () => {
     expect(desktop.querySelectorAll('[data-testid="profile-identity"]')).toHaveLength(1);
     expect(desktop.querySelector('.rn-profile__side')
       .children[0].getAttribute('data-testid')).toBe('profile-identity');
+  });
+
+  describe('Always on display', () => {
+    const setTouch = (points) => Object.defineProperty(navigator, 'maxTouchPoints', { value: points, configurable: true });
+    const setWakeLock = (on) => Object.defineProperty(navigator, 'wakeLock', {
+      value: on ? { request: () => Promise.resolve({ addEventListener() {}, release: () => Promise.resolve() }) } : undefined,
+      configurable: true,
+    });
+    afterEach(() => { setTouch(0); setWakeLock(false); });
+
+    const card = (breakpoint) => mount(breakpoint).$el.querySelector('[data-testid="profile-display"]');
+
+    it('shows on a tablet, under the Time card', () => {
+      setTouch(5);
+      setWakeLock(true);
+      const el = mount({ xsOnly: false, width: 1133 }).$el;
+      const main = el.querySelector('.rn-profile__main');
+      const ids = [...main.children].map((c) => c.getAttribute('data-testid'));
+      expect(ids.indexOf('profile-display')).toBe(ids.indexOf('profile-time') + 1);
+    });
+
+    it('shows on an iPad that is wide enough for the desktop layout', () => {
+      setTouch(5);
+      setWakeLock(true);
+      expect(card({ xsOnly: false, width: 1366 })).not.toBeNull();
+    });
+
+    it('never shows on a phone, a computer, or a browser that cannot keep the screen on', () => {
+      setTouch(5);
+      setWakeLock(true);
+      expect(card({ xsOnly: true, width: 412 })).toBeNull();
+      setTouch(0);
+      expect(card({ xsOnly: false, width: 1440 })).toBeNull();
+      setTouch(5);
+      setWakeLock(false);
+      expect(card({ xsOnly: false, width: 1133 })).toBeNull();
+    });
   });
 });

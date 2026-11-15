@@ -155,7 +155,7 @@ export const chapters: GuideChapter[] = [
     eyebrow: 'Where days compound',
     title: 'Goals — the year → day cascade',
     lead:
-      'Goals turns one yearly ambition into month, week and day milestones — then rolls your daily wins back up. Five day wins auto-complete a week, three weeks a month, nine months a year.',
+      'Goals turns one yearly ambition into month, week and day milestones — then rolls your daily wins back up. Five day wins auto-complete a week, three weeks a month, six months a year.',
     media: {
       type: 'video',
       src: '/videos/goals-desktop.webm',
@@ -193,7 +193,7 @@ export const chapters: GuideChapter[] = [
         },
         {
           title: 'Months and years roll up',
-          body: 'Below the weeks sit the month and year accordions. Complete the children and the parents close themselves: five day wins complete a week, three weeks a month, nine months a year. You never mark a year goal done — you arrive at it.',
+          body: 'Below the weeks sit the month and year accordions. Complete the children and the parents close themselves: five day wins complete a week, three weeks a month, six months a year. You never mark a year goal done — you arrive at it.',
           img: '/screenshots/guide/goals-cascade.jpg',
           alt: 'A year goal with its ring, the 12-month strip and the focused month’s weeks and days',
         },

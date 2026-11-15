@@ -9,9 +9,16 @@ const { schema } = require('./resolvers');
 const { UserModel } = require('./schema/UserSchema');
 const { getSchemaSDL } = require('./schema/mcpSchema');
 const connectDatabase = require('./db');
+const { createAuthRouter, publicBase } = require('./mcpAuthRoutes');
+const { emailForAccessToken } = require('./utils/mcpOAuth');
 
 // MCP Protocol types
 const MCP_PROTOCOL_VERSION = '2024-11-05';
+// Newest first: `initialize` answers with the client's version when it is one
+// of these, otherwise with the newest.
+const SUPPORTED_PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
+const SERVER_INSTRUCTIONS = 'Routine Notes: a day of time-boxed routines with goals at day, week, '
+  + 'month and year. Dates are DD-MM-YYYY; call get_current_date first when the user says today or tomorrow.';
 
 class HttpMCPServer {
   constructor() {
@@ -22,183 +29,93 @@ class HttpMCPServer {
   }
 
   setupMiddleware() {
-    this.app.use(cors());
+    // Public: any AI app, from any origin (GraphQL is the one limited to the
+    // app's own sites). Browser clients need to read the sign-in challenge.
+    this.app.use(cors({
+      origin: '*',
+      exposedHeaders: ['WWW-Authenticate', 'Mcp-Session-Id', 'Mcp-Protocol-Version'],
+      maxAge: 600,
+    }));
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true }));
 
-    // OAuth and API Key authentication middleware
+    // OAuth discovery, registration, authorize and token, at the origin root.
+    this.app.use(createAuthRouter());
+
+    // Every /mcp route needs a caller: an OAuth access token, a token from the
+    // retired per-user flow, or a legacy API key.
     this.app.use('/mcp', async (req, res, next) => {
-      // Skip auth for OAuth endpoints and configuration
-      if (req.path === '/oauth/token' || req.path === '/oauth/authorize' || req.path === '/.well-known/mcp-configuration') {
+      if (req.path === '/.well-known/mcp-configuration') return next();
+
+      const authHeader = req.headers.authorization || '';
+      const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+      const challenge = (error) => {
+        const metadata = `${publicBase(req)}/.well-known/oauth-protected-resource/mcp`;
+        res.set('WWW-Authenticate', `Bearer resource_metadata="${metadata}"${error ? `, error="${error}"` : ''}`);
+        return res.status(401).json({
+          jsonrpc: '2.0',
+          error: { code: -32001, message: error ? 'Invalid or expired access token' : 'Authentication required' },
+          id: null,
+        });
+      };
+
+      const email = bearer ? emailForAccessToken(bearer) : null;
+      if (email) {
+        req.context = { decodedToken: { email } };
         return next();
       }
 
-      // Try OAuth token first (Bearer token)
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.replace('Bearer ', '');
-        try {
-          // Try to find user by OAuth access token
-          const user = await UserModel.findOne({ 'oauth.accessToken': token }).exec();
-          if (user) {
-            // Check if token is expired
-            if (user.oauth.expiresAt && new Date(user.oauth.expiresAt) < new Date()) {
-              return res.status(401).json({
-                jsonrpc: '2.0',
-                error: {
-                  code: -32001,
-                  message: 'OAuth token expired',
-                },
-              });
-            }
-            req.user = user;
-            req.context = { decodedToken: { email: user.email } };
-            return next();
-          }
-        } catch (error) {
-          console.error('OAuth token validation error:', error);
-        }
-      }
-
-      // Fallback to API Key authentication (X-API-Key header or legacy Bearer)
-      const apiKey = req.headers['x-api-key'] || (authHeader && authHeader.replace('Bearer ', ''));
-
-      if (!apiKey) {
-        return res.status(401).json({
-          jsonrpc: '2.0',
-          error: {
-            code: -32001,
-            message: 'Authentication required. Please provide OAuth token or API key.',
-          },
-        });
-      }
-
       try {
-        const user = await UserModel.findOne({ apiKey }).exec();
-        if (!user) {
-          return res.status(401).json({
-            jsonrpc: '2.0',
-            error: {
-              code: -32001,
-              message: 'Invalid API Key or OAuth token',
-            },
-          });
+        let user = null;
+        if (bearer) {
+          user = await UserModel.findOne({ 'oauth.accessToken': bearer }).exec();
+          if (user && user.oauth.expiresAt && new Date(user.oauth.expiresAt) < new Date()) user = null;
         }
-
+        const apiKey = req.headers['x-api-key'] || bearer;
+        if (!user && apiKey) user = await UserModel.findOne({ apiKey }).exec();
+        if (!user) return challenge(bearer ? 'invalid_token' : '');
         req.user = user;
         req.context = { decodedToken: { email: user.email } };
-        next();
+        return next();
       } catch (error) {
-        return res.status(500).json({
-          jsonrpc: '2.0',
-          error: {
-            code: -32002,
-            message: 'Authentication error',
-          },
-        });
+        return res.status(500).json({ jsonrpc: '2.0', error: { code: -32002, message: 'Authentication error' }, id: null });
       }
     });
   }
 
   setupRoutes() {
-    // OAuth configuration endpoint for ChatGPT
+    // Retired discovery document; the standard ones live in mcpAuthRoutes.js.
     this.app.get('/mcp/.well-known/mcp-configuration', (req, res) => {
-      const baseUrl = process.env.MCP_BASE_URL || 'https://your-domain.com';
+      const base = publicBase(req);
       res.json({
         oauth: {
-          authorizationUrl: `${baseUrl}/mcp/oauth/authorize`,
-          tokenUrl: `${baseUrl}/mcp/oauth/token`,
+          authorizationUrl: `${base}/authorize`,
+          tokenUrl: `${base}/token`,
           scopes: ['read', 'write'],
         },
       });
     });
 
-    // OAuth Authorization endpoint
-    this.app.get('/mcp/oauth/authorize', async (req, res) => {
-      const { client_id, redirect_uri, state, response_type } = req.query;
-
-      if (response_type !== 'code') {
-        return res.status(400).json({ error: 'Unsupported response_type' });
+    // MCP Streamable HTTP: JSON-RPC in, JSON out. No sessions and no server
+    // stream, which a Lambda can't hold open anyway.
+    this.app.post('/mcp', async (req, res) => {
+      const body = req.body;
+      const batch = Array.isArray(body);
+      const messages = batch ? body : [body];
+      if (!messages.length || messages.some((m) => !m || m.jsonrpc !== '2.0')) {
+        return res.status(400).json({ jsonrpc: '2.0', error: { code: -32600, message: 'Invalid Request' }, id: null });
       }
-
-      // Redirect to web app for authentication
-      const webAppUrl = process.env.WEB_APP_URL;
-      res.redirect(`${webAppUrl}/oauth/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(redirect_uri)}&state=${state}`);
+      const replies = (await Promise.all(messages.map((m) => this.handleRpc(m, req.context)))).filter(Boolean);
+      if (!replies.length) return res.status(202).end();
+      return res.json(batch ? replies : replies[0]);
     });
 
-    // OAuth Token endpoint
-    this.app.post('/mcp/oauth/token', async (req, res) => {
-      const { grant_type, code, client_id, client_secret, refresh_token } = req.body;
-
-      // Validate client credentials
-      const validClientId = process.env.OAUTH_CLIENT_ID || 'routine-notes-mcp';
-      const validClientSecret = process.env.OAUTH_CLIENT_SECRET || 'frt_secret_' + require('crypto').randomBytes(16).toString('hex');
-
-      if (client_id !== validClientId || client_secret !== validClientSecret) {
-        return res.status(401).json({ error: 'Invalid client credentials' });
-      }
-
-      try {
-        if (grant_type === 'authorization_code') {
-          // Exchange authorization code for access token
-          const user = await UserModel.findOne({ 'oauth.authCode': code }).exec();
-
-          if (!user) {
-            return res.status(401).json({ error: 'Invalid authorization code' });
-          }
-
-          // Generate tokens
-          const crypto = require('crypto');
-          const accessToken = `mcp_${crypto.randomBytes(32).toString('hex')}`;
-          const refreshToken = `mcpr_${crypto.randomBytes(32).toString('hex')}`;
-          const expiresIn = 3600; // 1 hour
-
-          // Save tokens
-          user.oauth = {
-            accessToken,
-            refreshToken,
-            expiresAt: new Date(Date.now() + expiresIn * 1000),
-            authCode: null,
-          };
-          await user.save();
-
-          return res.json({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-            token_type: 'Bearer',
-            expires_in: expiresIn,
-          });
-        } else if (grant_type === 'refresh_token') {
-          // Refresh access token
-          const user = await UserModel.findOne({ 'oauth.refreshToken': refresh_token }).exec();
-
-          if (!user) {
-            return res.status(401).json({ error: 'Invalid refresh token' });
-          }
-
-          // Generate new access token
-          const crypto = require('crypto');
-          const accessToken = `mcp_${crypto.randomBytes(32).toString('hex')}`;
-          const expiresIn = 3600;
-
-          user.oauth.accessToken = accessToken;
-          user.oauth.expiresAt = new Date(Date.now() + expiresIn * 1000);
-          await user.save();
-
-          return res.json({
-            access_token: accessToken,
-            refresh_token: user.oauth.refreshToken,
-            token_type: 'Bearer',
-            expires_in: expiresIn,
-          });
-        } else {
-          return res.status(400).json({ error: 'Unsupported grant_type' });
-        }
-      } catch (error) {
-        console.error('OAuth token error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
-      }
+    // Clients may open a server stream or end a session; this server has neither.
+    this.app.get('/mcp', (req, res, next) => {
+      if (!String(req.get('accept') || '').includes('text/event-stream')) return next();
+      return res.status(405).set('Allow', 'POST').end();
     });
+    this.app.delete('/mcp', (req, res) => res.status(405).set('Allow', 'POST').end());
 
     // MCP Server info endpoint
     this.app.get('/mcp', (req, res) => {
@@ -214,7 +131,7 @@ class HttpMCPServer {
         date_format: 'dd-mm-yyyy',
         authentication: {
           type: 'oauth',
-          oauth_config_url: '/.well-known/mcp-configuration',
+          oauth_config_url: '/.well-known/oauth-protected-resource/mcp',
           legacy_api_key: 'supported (X-API-Key header)',
         },
         capabilities: {
@@ -223,14 +140,15 @@ class HttpMCPServer {
           sse: true,
         },
         endpoints: {
+          'POST /mcp': 'MCP Streamable HTTP (JSON-RPC)',
           'POST /mcp/call': 'Execute MCP requests',
           'GET /mcp/resources': 'List available resources',
           'GET /mcp/tools': 'List available tools',
           'GET /mcp/events': 'SSE endpoint for real-time updates',
           'POST /mcp/events/send': 'Send events to SSE clients',
-          'GET /mcp/.well-known/mcp-configuration': 'OAuth configuration',
-          'GET /mcp/oauth/authorize': 'OAuth authorization',
-          'POST /mcp/oauth/token': 'OAuth token exchange',
+          'GET /.well-known/oauth-authorization-server': 'OAuth configuration',
+          'GET /authorize': 'OAuth authorization',
+          'POST /token': 'OAuth token exchange',
         },
         date_context: {
           description: 'Date context is automatically provided in dd-mm-yyyy format',
@@ -376,6 +294,36 @@ class HttpMCPServer {
         res.status(500).json({ error: error.message });
       }
     });
+  }
+
+  /**
+   * One JSON-RPC message: a reply, or null for a notification (no `id`).
+   * Errors become JSON-RPC errors, never an HTTP failure for the whole batch.
+   */
+  async handleRpc(message, context) {
+    const { id, method, params } = message;
+    if (id === undefined || id === null) return null;
+    try {
+      let result;
+      if (method === 'initialize') {
+        const asked = params && params.protocolVersion;
+        result = {
+          protocolVersion: SUPPORTED_PROTOCOL_VERSIONS.includes(asked) ? asked : SUPPORTED_PROTOCOL_VERSIONS[0],
+          capabilities: { tools: {}, resources: {} },
+          serverInfo: { name: 'routine-notes', title: 'Routine Notes', version: '1.0.0' },
+          instructions: SERVER_INSTRUCTIONS,
+        };
+      } else if (method === 'ping') {
+        result = {};
+      } else if (['tools/list', 'tools/call', 'resources/list', 'resources/read'].includes(method)) {
+        result = await this.handleMCPRequest(method, params || {}, context);
+      } else {
+        return { jsonrpc: '2.0', id, error: { code: -32601, message: `Method not found: ${method}` } };
+      }
+      return { jsonrpc: '2.0', id, result };
+    } catch (error) {
+      return { jsonrpc: '2.0', id, error: { code: -32603, message: error.message } };
+    }
   }
 
   async handleMCPRequest(method, params, context) {
@@ -1054,12 +1002,24 @@ class HttpMCPServer {
     }
     return (event, context) => {
       context.callbackWaitsForEmptyEventLoop = false;
-      return this._cachedServerlessHandler(event, context);
+      return this._cachedServerlessHandler(withFullPath(event), context);
     };
   }
 }
 
-module.exports = { HttpMCPServer };
+/**
+ * serverless-express takes the path from a `{proxy+}` parameter when there is
+ * one, so `/.well-known/{proxy+}` reached Express as `/oauth-protected-resource`
+ * and `/mcp/{proxy+}` lost its `/mcp`. Drop the parameter so it uses
+ * `event.path`, the whole path (without the stage).
+ */
+function withFullPath(event) {
+  if (!event || !event.path || !event.pathParameters || !event.pathParameters.proxy) return event;
+  const { proxy, ...pathParameters } = event.pathParameters;
+  return { ...event, pathParameters };
+}
+
+module.exports = { HttpMCPServer, withFullPath };
 
 // Start the server if this file is run directly
 if (require.main === module) {

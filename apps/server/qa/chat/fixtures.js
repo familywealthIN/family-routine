@@ -104,6 +104,15 @@ const allDone = {
   items: deepWork.items.map((item) => ({ ...item, isComplete: true })),
 };
 
+/**
+ * The project routine with an agent bound to it that already has today's
+ * result: the "not happy with it, run it again" cases.
+ */
+const withAgent = {
+  ...allDone,
+  agent: { name: 'Site digest', stage: 'finished' },
+};
+
 module.exports = {
-  deepWork, workout, fresh, allDone,
+  deepWork, workout, fresh, allDone, withAgent,
 };

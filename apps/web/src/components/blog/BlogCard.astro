@@ -1,0 +1,114 @@
+---
+import { Icon } from 'astro-icon/components';
+import type { CollectionEntry } from 'astro:content';
+import { categoryOf, pillarOf, featuredImage, FEATURED } from '~/lib/blog';
+
+/**
+ * One post as a card, on the /blog index and under a post's "Keep reading".
+ * Same surface as the guide's chapter cards: card-soft, a small eyebrow, the
+ * title, one line of description and a meta row pinned to the bottom.
+ */
+interface Props {
+  post: CollectionEntry<'blog'>;
+  [attr: string]: unknown;
+}
+const { post, ...attrs } = Astro.props;
+const { title, description, category, pillar, persona, readingTime } = post.data;
+const cat = categoryOf(category);
+const p = pillarOf(pillar);
+---
+
+<a
+  href={`/blog/${post.id}`}
+  class="blog-card card-soft group p-5"
+  data-post
+  data-category={category}
+  data-pillar={pillar}
+  {...attrs}
+>
+  <img class="blog-card__img" src={featuredImage(post.id)} alt="" width={FEATURED.width} height={FEATURED.height} loading="lazy" decoding="async" />
+  <div class="flex items-center justify-between gap-3">
+    <span class="blog-card__cat">
+      <Icon name={cat.icon} width={14} height={14} />
+      {cat.label}
+    </span>
+    <span class="blog-card__pillar font-display" style={`color:${p.color};border-color:${p.color}40`} title={p.name}>
+      {p.id}
+    </span>
+  </div>
+  <h3 class="mt-4 text-[1.05rem] font-semibold leading-snug tracking-[-0.01em] text-[color:var(--color-ink-900)] group-hover:text-[color:var(--color-brand-600)] transition-colors">
+    {title}
+  </h3>
+  <p class="mt-2 text-sm leading-relaxed text-[color:var(--color-ink-600)] blog-card__desc">{description}</p>
+  <p class="blog-card__meta">
+    <span class="truncate">{persona}</span>
+    <span aria-hidden="true">·</span>
+    <span class="shrink-0">{readingTime} min read</span>
+  </p>
+</a>
+
+<style>
+  .blog-card {
+    display: flex;
+    flex-direction: column;
+    transition: transform 200ms var(--ease-out-soft), box-shadow 200ms var(--ease-out-soft);
+  }
+  .blog-card[hidden] {
+    display: none;
+  }
+  .blog-card {
+    overflow: hidden;
+  }
+  .blog-card__img {
+    display: block;
+    width: calc(100% + 2.5rem);
+    max-width: none;
+    height: auto;
+    margin: -1.25rem -1.25rem 1.1rem;
+    border-bottom: 1px solid var(--color-ink-100);
+  }
+  .blog-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+  }
+  .blog-card__cat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink-400);
+  }
+  .blog-card__pillar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1.5px solid;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--color-surface);
+  }
+  .blog-card__desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .blog-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin-top: auto;
+    padding-top: 1rem;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--color-ink-500);
+  }
+</style>

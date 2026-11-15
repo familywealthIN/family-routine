@@ -33,6 +33,10 @@ const { threshold } = require('../utils/getProgressReport');
 const { deriveGoalItemStatus } = require('../utils/goalItemStatus');
 const { collectPeriodCriteria, buildMilestoneDays, evaluateAutoComplete } = require('../utils/goalCompletionCriteria');
 
+/** searchGoals: the periods it can narrow to, and the most items one call returns. */
+const SEARCH_PERIODS = ['day', 'week', 'month', 'year'];
+const SEARCH_LIMIT_MAX = 500;
+
 const getDaysArray = (year, month) => {
   let firstMonday = '';
   const threeFridays = [];
@@ -1268,18 +1272,27 @@ const query = {
       limit: { type: GraphQLString },
       taskRef: { type: GraphQLString },
       tags: { type: GraphQLString },
+      // 'day' | 'week' | 'month' | 'year'. Filtered before the limit, so a
+      // period's matches are not crowded out by another period's.
+      period: { type: GraphQLString },
     },
     resolve: async (root, args, context) => {
       const email = getEmailfromSession(context);
       const searchQuery = args.query.toLowerCase().trim();
-      const limit = args.limit ? parseInt(args.limit, 10) : 50;
+      const asked = parseInt(args.limit, 10);
+      const limit = Number.isFinite(asked) && asked > 0 ? Math.min(asked, SEARCH_LIMIT_MAX) : 50;
 
       if (!searchQuery || searchQuery.length < 2) {
         return [];
       }
 
-      // Fetch all goals for the user — post-find middleware auto-decrypts body/contribution
-      const goals = await GoalModel.find({ email }).exec();
+      const filter = { email };
+      if (SEARCH_PERIODS.includes(args.period)) filter.period = args.period;
+
+      // Fetch the user's goals — post-find middleware auto-decrypts
+      // body/contribution. Newest first, so when the limit cuts the list it
+      // keeps what was written lately rather than the oldest goals.
+      const goals = await GoalModel.find(filter).sort({ _id: -1 }).exec();
 
       // Track seen goalItem IDs to deduplicate
       const seenIds = new Set();

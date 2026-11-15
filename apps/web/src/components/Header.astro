@@ -59,12 +59,93 @@ import { chapters } from '~/lib/guide';
 
     <div class="flex items-center gap-2">
       <a href={LINKS.appLogin} class="btn-ghost hidden sm:inline-flex text-sm px-3 py-2">Login</a>
-      <a href={LINKS.why} class="btn-primary text-sm !py-2 !px-4">
+      <!-- Below 380px the logo, this and the menu button do not fit; the menu carries it. -->
+      <a href={LINKS.why} class="btn-primary hidden min-[380px]:inline-flex text-sm !py-2 !px-4">
         Why this App?
       </a>
+      <button
+        type="button"
+        class="menu-toggle md:hidden"
+        aria-controls="mobile-menu"
+        aria-expanded="false"
+        aria-label="Open menu"
+        data-menu-toggle
+      >
+        <Icon name="ph:list" width={22} height={22} class="menu-toggle__open" />
+        <Icon name="ph:x" width={22} height={22} class="menu-toggle__close" />
+      </button>
     </div>
   </div>
+
+  <!-- Phones and small tablets: the same links as the nav above, in a panel. -->
+  <div id="mobile-menu" class="mobile-menu md:hidden" hidden data-mobile-menu>
+    <nav class="container-page py-3" aria-label="Main">
+      <a href={LINKS.guide} class="mobile-menu__link mobile-menu__link--group">Guide</a>
+      <div class="mobile-menu__sub">
+        {chapters.map((c) => (
+          <a href={`/guide/${c.id}`} class="nav-drop__item">
+            <span class="nav-drop__icon" style={`color:${c.accent}`}>
+              <Icon name={c.icon} width={16} height={16} />
+            </span>
+            <span>
+              <b>{c.label}</b>
+              <small>{c.eyebrow}</small>
+            </span>
+          </a>
+        ))}
+      </div>
+      {NAV.filter((item) => item.label !== 'Guide').map((item) => (
+        <a href={item.href} class="mobile-menu__link">{item.label}</a>
+      ))}
+      <div class="mobile-menu__actions">
+        <a href={LINKS.appLogin} class="btn-ghost text-sm px-3 py-2">Login</a>
+        <a href={LINKS.why} class="btn-primary text-sm !py-2 !px-4">Why this App?</a>
+      </div>
+    </nav>
+  </div>
 </header>
+
+<script>
+  function initMobileMenu() {
+    const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
+    const menu = document.querySelector<HTMLElement>('[data-mobile-menu]');
+    if (!toggle || !menu || toggle.dataset.ready) return;
+    toggle.dataset.ready = '1';
+
+    const setOpen = (open: boolean) => {
+      menu.hidden = !open;
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    };
+
+    toggle.addEventListener('click', () => setOpen(menu.hidden));
+    // Tapping a link leaves the page; close first, so going back does not
+    // return to a page with the menu still open.
+    menu.addEventListener('click', (event) => {
+      if ((event.target as Element).closest('a')) setOpen(false);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !menu.hidden) {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+    document.addEventListener('click', (event) => {
+      if (!menu.hidden && !(event.target as Element).closest('header')) setOpen(false);
+    });
+    // A page restored from the back-forward cache keeps its DOM as it was.
+    window.addEventListener('pageshow', () => setOpen(false));
+    window.matchMedia('(min-width: 48rem)').addEventListener('change', (event) => {
+      if (event.matches) setOpen(false);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMobileMenu);
+  } else {
+    initMobileMenu();
+  }
+</script>
 
 <style>
   .nav-drop__menu {
@@ -146,5 +227,83 @@ import { chapters } from '~/lib/guide';
     height: 1px;
     margin: 6px 8px;
     background: var(--color-ink-100);
+  }
+
+  .menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-right: -8px;
+    border-radius: 10px;
+    color: var(--color-ink-700);
+    transition: background 140ms var(--ease-out-soft);
+  }
+  .menu-toggle:hover,
+  .menu-toggle:focus-visible {
+    background: var(--color-brand-50);
+    color: var(--color-brand-600);
+  }
+  .menu-toggle__close,
+  .menu-toggle[aria-expanded='true'] .menu-toggle__open {
+    display: none;
+  }
+  .menu-toggle[aria-expanded='true'] .menu-toggle__close {
+    display: block;
+  }
+  @media (min-width: 48rem) {
+    .menu-toggle {
+      display: none;
+    }
+  }
+
+  /* Hangs from the sticky header over the page, rather than pushing it down. */
+  .mobile-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: calc(100dvh - 4rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-ink-100);
+    box-shadow: var(--shadow-lift);
+  }
+  .mobile-menu[hidden] {
+    display: none;
+  }
+  .mobile-menu__link {
+    display: block;
+    padding: 12px 2px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-ink-900);
+    border-bottom: 1px solid var(--color-ink-100);
+  }
+  /* Guide heads its chapters; the line goes under them instead. */
+  .mobile-menu__link--group {
+    padding-bottom: 6px;
+    border-bottom: 0;
+  }
+  .mobile-menu__link:hover,
+  .mobile-menu__link:focus-visible {
+    color: var(--color-brand-600);
+  }
+  .mobile-menu__sub {
+    display: grid;
+    gap: 2px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--color-ink-100);
+  }
+  .mobile-menu__actions {
+    display: flex;
+    gap: 8px;
+    padding: 14px 0 6px;
+  }
+  .mobile-menu__actions > a {
+    flex: 1;
+    justify-content: center;
   }
 </style>

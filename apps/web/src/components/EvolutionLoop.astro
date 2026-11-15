@@ -4,16 +4,34 @@
  * full dedication → 3 improve the plan) deposits points every day; loops
  * compound through the day → week → month → year cascade toward the goal.
  * Pure inline SVG so it inherits brand tokens and ships zero JS.
+ *
+ * `variant="loop"` draws the daily loop alone, with the three micro-captions
+ * replaced by a post's own data (a blog post passes its routine's window, its
+ * first step and its week goal) and a caption of its own. No research cards.
  */
+interface Props {
+  variant?: 'full' | 'loop';
+  captions?: { d?: string; k?: string; g?: string };
+  caption?: string;
+  desc?: string;
+}
+const { variant = 'full', captions = {}, caption, desc } = Astro.props;
+const loopOnly = variant === 'loop';
+const sub = {
+  d: captions.d ?? '1h 30m punctuality window',
+  k: captions.k ?? 'sub-tasks, paced every 2h',
+  g: captions.g ?? 'milestones, re-planned',
+};
 ---
 
-<figure class="evo card-soft not-prose">
+<figure class:list={['evo card-soft not-prose', loopOnly && 'evo--loop']}>
   <div class="evo__grid">
     <!-- The daily loop -->
-    <svg viewBox="0 0 420 372" role="img" aria-labelledby="evo-loop-title" class="evo__svg">
+    <svg viewBox="0 0 420 372" role="img" aria-labelledby={loopOnly ? 'evo-loop-title evo-loop-desc' : 'evo-loop-title'} class="evo__svg">
       <title id="evo-loop-title">
         The daily loop: show up on time, act with full dedication, improve the plan — earning up to 300 points a day.
       </title>
+      {loopOnly && desc && <desc id="evo-loop-desc">{desc}</desc>}
       <defs>
         <marker id="evo-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0 0 L10 5 L0 10 z" class="evo-arrowhead" />
@@ -59,11 +77,13 @@
       </g>
 
       <!-- micro-captions under labels -->
-      <text x="210" y="130" text-anchor="middle" class="evo-sublabel">1h 30m punctuality window</text>
-      <text x="312" y="344" text-anchor="middle" class="evo-sublabel">sub-tasks, paced every 2h</text>
-      <text x="108" y="344" text-anchor="middle" class="evo-sublabel">milestones, re-planned</text>
+      <text x="210" y="130" text-anchor="middle" class="evo-sublabel">{sub.d}</text>
+      <text x="312" y="344" text-anchor="middle" class="evo-sublabel">{sub.k}</text>
+      <text x="108" y="344" text-anchor="middle" class="evo-sublabel">{sub.g}</text>
     </svg>
 
+    {!loopOnly && (
+    <>
     <!-- the overnight settlement that feeds the loop back in -->
     <div class="evo__amp" aria-hidden="true">
       <svg viewBox="0 0 64 64" class="evo__amp-arrow">
@@ -75,7 +95,7 @@
     <!-- The compounding cascade -->
     <svg viewBox="0 0 480 372" role="img" aria-labelledby="evo-curve-title" class="evo__svg">
       <title id="evo-curve-title">
-        Loops compound: five day wins auto-complete a week, three weeks a month, nine months a year — bending progress exponentially toward the goal.
+        Loops compound: five day wins auto-complete a week, three weeks a month, six months a year — bending progress exponentially toward the goal.
       </title>
 
       <!-- baseline -->
@@ -100,7 +120,7 @@
         <text x="272" y="252" text-anchor="middle" class="evo-cascade">×3</text>
         <circle cx="408" cy="128" r="5" class="evo-dot" />
         <text x="408" y="350" text-anchor="middle" class="evo-label">Year</text>
-        <text x="356" y="168" text-anchor="middle" class="evo-cascade">×9</text>
+        <text x="356" y="168" text-anchor="middle" class="evo-cascade">×6</text>
       </g>
 
       <!-- the goal -->
@@ -112,14 +132,21 @@
 
       <text x="240" y="120" text-anchor="middle" class="evo-curve-label">the loop, compounded</text>
     </svg>
+    </>
+    )}
   </div>
 
+  {loopOnly ? (
+    caption && <figcaption class="evo__caption">{caption}</figcaption>
+  ) : (
   <figcaption class="evo__caption">
     Each loop deposits up to 300 points. Five day wins auto-complete a week, three weeks a month,
-    nine months a year — the same daily effort, amplified by the cascade.
+    six months a year — the same daily effort, amplified by the cascade.
   </figcaption>
+  )}
 </figure>
 
+{!loopOnly && (
 <!-- what the research says each step buys you -->
 <div class="evo-research not-prose">
   <div class="evo-research__card">
@@ -144,6 +171,7 @@
     </p>
   </div>
 </div>
+)}
 
 <style>
   .evo {
@@ -156,6 +184,9 @@
     justify-content: center;
     gap: 0.5rem;
     flex-wrap: wrap;
+  }
+  .evo--loop .evo__svg {
+    max-width: 420px;
   }
   .evo__svg {
     flex: 1 1 320px;

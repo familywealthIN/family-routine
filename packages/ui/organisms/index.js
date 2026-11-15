@@ -14,6 +14,8 @@ export { default as WeekdaySelector } from './WeekdaySelector/WeekdaySelector.vu
 // Previously missing exports
 export { default as QuickGoalCreation } from './QuickGoalCreation/QuickGoalCreation.vue';
 export { default as SearchResults } from './SearchResults/SearchResults.vue';
+export { default as ConnectConsent } from './ConnectConsent/ConnectConsent.vue';
+export { default as ProfileDisplaySettings } from './ProfileDisplaySettings/ProfileDisplaySettings.vue';
 
 // Dashboard surfaces
 

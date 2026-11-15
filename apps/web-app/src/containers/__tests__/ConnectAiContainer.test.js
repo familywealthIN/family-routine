@@ -9,8 +9,10 @@
  */
 const Vue = require('vue');
 
-const { SECRET_PREFIX } = require('@routine-notes/ui/constants/profile');
-const Container = require('../ConnectAiContainer.vue').default;
+const ContainerModule = require('../ConnectAiContainer.vue');
+
+const Container = ContainerModule.default;
+const { mcpUrl, PRODUCTION_MCP_URL } = ContainerModule;
 
 Vue.config.productionTip = false;
 Vue.config.devtools = false;
@@ -45,14 +47,23 @@ describe('ConnectAiContainer — what it hands the panel', () => {
       .toContain('Connected');
   });
 
-  it('uses the server\'s secret prefix, not the mock\'s rn_sec_', () => {
-    const { container } = mount();
-    expect(container.clientSecret.startsWith(SECRET_PREFIX)).toBe(true);
-    expect(container.clientSecret).not.toContain('rn_sec_');
+  it('hands over no client secret: clients sign in with PKCE', () => {
+    const { container, el } = mount();
+    expect(container.clientSecret).toBeUndefined();
+    expect(el.textContent).not.toMatch(/frt_secret_|secret/i);
   });
 
   it('points at the MCP endpoint, which is not the GraphQL one', () => {
     expect(mount().container.serverUrl).toBe('http://localhost:4000/mcp');
+  });
+
+  // The placeholder `your-api-domain.com/dev/mcp` shipped to production, and
+  // the execute-api URL can't work either: clients sign in at the origin root.
+  it('in production, the MCP server\'s own domain', () => {
+    expect(mcpUrl({ NODE_ENV: 'production' })).toBe(PRODUCTION_MCP_URL);
+    expect(PRODUCTION_MCP_URL).toBe('https://mcp.routinenotes.app/mcp');
+    expect(mcpUrl({ NODE_ENV: 'production', VUE_APP_MCP_URL: 'https://mcp.example.com/mcp' }))
+      .toBe('https://mcp.example.com/mcp');
   });
 });
 
@@ -93,12 +104,12 @@ describe('ConnectAiContainer — copying', () => {
     document.execCommand = jest.fn(() => false);
     const { vm, el, events } = mount();
 
-    el.querySelector('[data-testid="connect-ai-copy-sec"]').click();
+    el.querySelector('[data-testid="connect-ai-copy-url"]').click();
     await flush();
     await vm.$nextTick();
 
-    expect(events).toEqual([['copy-failed', 'Client secret']]);
-    expect(el.querySelector('[data-testid="connect-ai-copy-sec"]').textContent.trim())
+    expect(events).toEqual([['copy-failed', 'Server URL']]);
+    expect(el.querySelector('[data-testid="connect-ai-copy-url"]').textContent.trim())
       .toBe('content_copy');
     restore();
   });

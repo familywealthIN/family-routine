@@ -47,6 +47,15 @@ import { MARK_GOAL_ITEM_MISSED_MUTATION } from '../composables/useGoalMutations'
  */
 const ADD_TASK_CHIP = 'Add a task';
 
+/**
+ * Offered once the routine's agent has today's result. The server answers it
+ * without the model (`chatApi.asksToRunAgent`), so the words must match there.
+ */
+const RUN_AGENT_CHIP = 'Run the agent again';
+
+/** Agent stages with a result the user may want redone. */
+const AGENT_DONE_STAGES = ['finished', 'failed'];
+
 const LOCAL_PREFIX = 'local-';
 const isLocal = (id) => String(id || '').indexOf(LOCAL_PREFIX) === 0;
 
@@ -111,6 +120,13 @@ export default {
      * chat at once instead of the previous routine's until the network answers.
      */
     neighbourRefs: { type: Array, default: () => [] },
+    /**
+     * The focused routine's agent: `{ name, stage }`, where `stage` is today's
+     * Home badge stage, or `closed` / `no_points` when no run can go out. null
+     * when the routine has no agent. The page owns the agent; a `run_agent`
+     * turn is handed back to it as `run-agent`.
+     */
+    agent: { type: Object, default: null },
   },
   data() {
     return {
@@ -254,6 +270,9 @@ export default {
       const offered = this.offeredFollowUps();
       if (offered.length) return [...offered, ADD_TASK_CHIP];
       const chips = [];
+      // An agent with today's result leads: what it made is the likeliest thing
+      // to talk about, and redoing it is one tap.
+      if (this.agent && AGENT_DONE_STAGES.includes(this.agent.stage)) chips.push(RUN_AGENT_CHIP);
       if (this.openItems.length) chips.push('Break it down');
       if (this.briefDataBlocks.length) {
         chips.push('What did I do last time?');
@@ -289,6 +308,9 @@ export default {
         // The area/project description + next steps, so "what's next on the
         // project?" is answered from the project, not guessed into new tasks.
         brief: this.insightBrief(),
+        // So "run it again" and "that result is wrong" can be answered.
+        agentName: (this.agent && this.agent.name) || null,
+        agentStage: (this.agent && this.agent.stage) || null,
         items: this.goalItems.map((item) => ({
           id: String(item.id),
           body: item.body,
@@ -588,6 +610,10 @@ export default {
           await this.deferItem(result.targetItemId);
         } else if (result.intent === 'skip_task' && result.targetItemId) {
           await this.skipItem(result.targetItemId);
+        } else if (result.intent === 'run_agent') {
+          // The page owns the agent, as it owns the routine. It gets the
+          // routine and day this turn was sent on, not whatever is focused now.
+          this.$emit('run-agent', { taskRef, date });
         }
 
         if (result.error) {

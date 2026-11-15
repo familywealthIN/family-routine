@@ -43,6 +43,9 @@ const UserSchema = new mongoose.Schema({
     refreshToken: String,
     expiresAt: Date,
     authCode: String, // Temporary auth code for OAuth flow
+    // When an MCP client last finished signing in (utils/mcpOAuth.js). The
+    // connector's tokens are signed, not stored, so this is what says "connected".
+    connectedAt: Date,
   },
   needsOnboarding: {
     type: Boolean,

@@ -4908,6 +4908,39 @@
     ]
    },
    {
+    "name": "ProfileDisplaySettings",
+    "dir": "organisms",
+    "story": true,
+    "legacy": false,
+    "users": [],
+    "pages": [
+     "profile"
+    ],
+    "summary": "Profile's DISPLAY card, on iPads and tablets only (`Profile and About.dc.html` § t1, the iPad frame): one row, Always on display, with the same Off/On sliding switch as the Time card's 12h/24h. The page decides whether the device is a tablet; this card only draws the choice.",
+    "shots": [
+     {
+      "id": "organisms-profiledisplaysettings--off",
+      "title": "Organisms/ProfileDisplaySettings",
+      "name": "Off",
+      "ok": true,
+      "file": "shots/organisms-profiledisplaysettings--off.jpg",
+      "width": 376,
+      "height": 120,
+      "problems": []
+     },
+     {
+      "id": "organisms-profiledisplaysettings--on",
+      "title": "Organisms/ProfileDisplaySettings",
+      "name": "On",
+      "ok": true,
+      "file": "shots/organisms-profiledisplaysettings--on.jpg",
+      "width": 376,
+      "height": 120,
+      "problems": []
+     }
+    ]
+   },
+   {
     "name": "ProfileTimeSettings",
     "dir": "organisms",
     "story": true,
