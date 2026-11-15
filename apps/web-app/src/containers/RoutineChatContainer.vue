@@ -425,9 +425,21 @@ export default {
       if (left < -12 * 60) left += 24 * 60; // a window that closes after midnight
       return { tickedAt, windowEnd: this.endTime, minutesLeft: Math.max(0, left) };
     },
+    /**
+     * Ask for today's coach card. Once per thread per day, however many times
+     * the tick is reported: the optimistic write and the server's re-read of it
+     * both flip `routine.ticked` false -> true, so the watcher fired twice for
+     * one tick and the thread kept two cards (D-05). The server is idempotent
+     * for the same day and routine too; this is what keeps the second model
+     * call off the wire.
+     */
     async requestInsight() {
       if (this.isPastDay || !this.taskRef) return;
       const { taskRef, date } = this;
+      if (!this.askedInsights) this.askedInsights = new Set();
+      const key = `${date}|${taskRef}`;
+      if (this.askedInsights.has(key)) return;
+      this.askedInsights.add(key);
       this.typing = true;
       try {
         await this.$apollo.mutate({
@@ -442,7 +454,9 @@ export default {
         });
         if (taskRef === this.taskRef && date === this.date) this.refetch();
       } catch (error) {
-        // Optional extra: the chat is open and usable without it.
+        // Optional extra: the chat is open and usable without it. A failed ask
+        // left no card, so it does not count as the one this thread gets.
+        this.askedInsights.delete(key);
         console.warn('[RoutineChat] routine insight failed:', error);
       } finally {
         this.typing = false;
