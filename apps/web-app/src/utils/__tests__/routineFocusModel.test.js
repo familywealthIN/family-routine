@@ -643,6 +643,76 @@ describe('buildCascade', () => {
     expect(linked[1].isComplete).toBe(true);
   });
 
+  // D-07: the panel used to keep only the first twelve linked rows, so a week
+  // holding sixteen day milestones lost Saturday's four — and the heading, which
+  // counts the rows it is handed, stayed at '11/12 done' while the counter above
+  // it read 15 / 16.
+  it('lists every linked milestone, so the heading’s count matches the counter', () => {
+    const dense = buildCascade({
+      period: 'week',
+      goals: [{
+        id: 'wk',
+        period: 'week',
+        date: '12-09-2026',
+        goalItems: [{
+          id: 'wg_sw',
+          body: 'Ship the dashboard',
+          taskRef: 'sw',
+          isComplete: false,
+          milestonesTotal: 16,
+          milestonesComplete: 15,
+          milestoneDays: [
+            { date: '06-09-2026', status: 'complete' },
+            { date: '07-09-2026', status: 'complete' },
+            { date: '08-09-2026', status: 'complete' },
+            { date: '09-09-2026', status: 'complete' },
+            { date: '10-09-2026', status: 'complete' },
+            { date: '11-09-2026', status: 'complete' },
+            { date: '12-09-2026', status: 'partial' },
+          ],
+        }],
+      }],
+      focusRow: { id: 'sw', items: [] },
+      date: '12-09-2026',
+      // Twelve milestones over Sunday to Friday, then Saturday's four — the
+      // rows the cut used to land on.
+      children: [
+        ...['06-09-2026', '07-09-2026', '08-09-2026', '09-09-2026', '10-09-2026', '11-09-2026']
+          .map((day, i) => ({
+            id: `d${i}`,
+            period: 'day',
+            date: day,
+            goalItems: [
+              { id: `${i}a`, body: `${day} a`, isComplete: true },
+              { id: `${i}b`, body: `${day} b`, isComplete: true },
+            ],
+          })),
+        {
+          id: 'sat',
+          period: 'day',
+          date: '12-09-2026',
+          goalItems: [
+            { id: 's1', body: 'Sat one', isComplete: true },
+            { id: 's2', body: 'Sat two', isComplete: true },
+            { id: 's3', body: 'Sat three', isComplete: true },
+            { id: 's4', body: 'Sat four', isComplete: false },
+          ],
+        },
+      ],
+    });
+
+    expect(dense.linked).toHaveLength(16);
+    // Saturday's rows are 13 – 16: past the old cut.
+    expect(dense.linked.slice(12).map((row) => row.body))
+      .toEqual(['Sat one', 'Sat two', 'Sat three', 'Sat four']);
+    expect(dense.linked.slice(12).every((row) => row.label === 'Sat')).toBe(true);
+    // What the heading draws — done rows over listed rows — against the
+    // milestone counter above the panel.
+    const headingDone = dense.linked.filter((row) => row.isComplete).length;
+    expect([headingDone, dense.linked.length]).toEqual([dense.done, dense.threshold]);
+    expect([headingDone, dense.linked.length]).toEqual([15, 16]);
+  });
+
   it('numbers a month goal’s linked weeks by their place in the grid', () => {
     const month = buildCascade({
       period: 'month',

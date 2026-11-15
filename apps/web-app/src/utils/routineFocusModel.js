@@ -576,9 +576,15 @@ export function buildCascade({
   // two counters, two floors or two rules on the two screens (D-04).
   const tally = milestoneTally({ item, period });
 
+  // Every linked child, uncut. A `.slice(0, 12)` here — one row per month of a
+  // year — dropped a week's later milestones off the panel and took its
+  // "N/12 done" header with them, because that header counts the rows it was
+  // handed: four Saturday ticks moved neither number while the counter above
+  // read 15 / 16 (D-07). Length is the collapse's job: the linked group is shut
+  // by default and the card scrolls.
   const linked = linkedGoals({
     period, children, unitDates: days.map((day) => day.date), date,
-  }).slice(0, 12);
+  });
 
   return {
     title: item.body,
