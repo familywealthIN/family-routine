@@ -8,6 +8,7 @@ import {
   pickCascadeItem,
   buildCascade,
   routineSlotCount,
+  openItemsLeft,
   earnedDeltas,
   TICK_STIMULUS,
 } from '../routineFocusModel';
@@ -863,5 +864,27 @@ describe('buildRoutineRows totalCount', () => {
     }], { now: moment('06:30', 'HH:mm'), itemsByTask: {}, isToday: true });
     expect(row.doneCount).toBe(0);
     expect(row.totalCount).toBe(1);
+  });
+});
+
+describe('openItemsLeft', () => {
+  const items = (doneIds) => ['g1', 'g2', 'g3', 'g4']
+    .map((id) => ({ id, isComplete: doneIds.includes(id) }));
+
+  it('counts the open items once the named one is done', () => {
+    expect(openItemsLeft(items(['g1', 'g2', 'g3']), 'g3')).toBe(1);
+    expect(openItemsLeft(items(['g1', 'g2', 'g3', 'g4']), 'g4')).toBe(0);
+  });
+
+  // The same answer whether or not the tick's cache write has landed (D-04).
+  it('does not care whether the completed item reads complete yet', () => {
+    expect(openItemsLeft(items(['g1', 'g2']), 'g3')).toBe(1);
+    expect(openItemsLeft(items(['g1', 'g2', 'g3']), 'g4')).toBe(0);
+  });
+
+  it('matches the id across types and survives a missing checklist', () => {
+    expect(openItemsLeft([{ id: 7, isComplete: false }], '7')).toBe(0);
+    expect(openItemsLeft(undefined, 'g1')).toBe(0);
+    expect(openItemsLeft([null], 'g1')).toBe(0);
   });
 });

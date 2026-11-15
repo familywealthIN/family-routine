@@ -228,6 +228,23 @@ export function buildRoutineRows(tasklist, {
   });
 }
 
+/**
+ * How many of a routine's goal items are still open once `completedId` is done.
+ *
+ * Counted from the checklist itself, so it is a GOAL-ITEM number: a row's
+ * `totalCount` is the slot count from the routine's time gap (routineSlotCount,
+ * D-20) and says nothing about how many items are left. The item just completed
+ * is excluded by id rather than read from its own `isComplete`, so the count is
+ * the same whether or not that tick's cache write has landed — deriving it from
+ * `doneCount` instead counted the ticked item twice and said "all done" with an
+ * item still open (D-04).
+ */
+export function openItemsLeft(items, completedId) {
+  return (Array.isArray(items) ? items : []).filter((item) => item
+    && String(item.id) !== String(completedId)
+    && !item.isComplete).length;
+}
+
 function formatLeft(minutes) {
   if (minutes <= 0) return 'ended';
   const hours = Math.floor(minutes / 60);

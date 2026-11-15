@@ -2250,3 +2250,84 @@ describe('RoutineFocus — a tick is not doubled', () => {
     expect(vm.$agent.fireEndEvent).toHaveBeenCalledTimes(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// The item-completed pill
+// ---------------------------------------------------------------------------
+/**
+ * The pill's "x left" is a GOAL-ITEM count, taken from the routine's checklist
+ * at the moment it is written. It used to be `totalCount - doneCount - 1`, run
+ * after the tick's cache write had already moved `doneCount`, so the item just
+ * ticked was subtracted twice: "all done" with one item open, "1 left" with
+ * two (D-04).
+ */
+describe('RoutineFocus item-completed pill count', () => {
+  const items = (doneIds) => ['g1', 'g2', 'g3', 'g4'].map((id) => ({
+    id, body: `Item ${id}`, taskRef: 'sw', isComplete: doneIds.includes(id),
+  }));
+  // `totalCount` is the routine's slot count (D-20), which is why the pill may
+  // not read it.
+  const vmFor = (rowItems) => ({
+    rows: [{
+      id: 'sw',
+      name: 'Start Work',
+      points: 12,
+      items: rowItems,
+      doneCount: rowItems.filter((item) => item.isComplete).length,
+      totalCount: 6,
+    }],
+    postChatEvent: jest.fn(),
+    $notify: jest.fn(),
+    $nextTick: jest.fn(),
+    maybeFireAgentEndEvent: jest.fn(),
+  });
+  const pillText = (vm) => vm.postChatEvent.mock.calls[0][0].text;
+
+  it('says "1 left" when the third of four is ticked', () => {
+    // The cache write has landed, so the row already counts g3 as done.
+    const vm = vmFor(items(['g1', 'g2', 'g3']));
+    methods.onItemCompleted.call(vm, { id: 'g3', body: 'Close duplicate findings', taskRef: 'sw' });
+    expect(pillText(vm)).toBe('Close duplicate findings · 1 left');
+  });
+
+  it('says "all done" only once the fourth is ticked', () => {
+    const vm = vmFor(items(['g1', 'g2', 'g3', 'g4']));
+    methods.onItemCompleted.call(vm, { id: 'g4', body: 'Draft triage summary', taskRef: 'sw' });
+    expect(pillText(vm)).toBe('Draft triage summary · all done');
+  });
+
+  // The count may not depend on whether the optimistic write has been applied
+  // yet — reading it off `doneCount` is what let it drift by one.
+  it('counts the same before the tick’s cache write lands', () => {
+    const vm = vmFor(items(['g1', 'g2']));
+    methods.onItemCompleted.call(vm, { id: 'g3', body: 'Close duplicate findings', taskRef: 'sw' });
+    expect(pillText(vm)).toBe('Close duplicate findings · 1 left');
+  });
+
+  it('is unmoved by the routine’s slot count', () => {
+    const vm = vmFor(items(['g1', 'g2', 'g3']));
+    vm.rows[0].totalCount = 12;
+    methods.onItemCompleted.call(vm, { id: 'g3', body: 'Close duplicate findings', taskRef: 'sw' });
+    expect(pillText(vm)).toBe('Close duplicate findings · 1 left');
+  });
+
+  it('posts the same count for the chat’s complete_task', async () => {
+    const vm = vmFor(items(['g1', 'g2', 'g3']));
+    Object.assign(vm, {
+      date: '25-10-2026',
+      homeGoals: [],
+      // A cache with nothing read back makes the imperative K writes no-ops.
+      $apollo: { provider: { defaultClient: { readQuery: () => null } }, queries: {} },
+      $goals: { completeGoalItem: jest.fn(() => Promise.resolve()) },
+      onItemCompleted: methods.onItemCompleted,
+      toggleItem: methods.toggleItem,
+      notifyGeneric: jest.fn(),
+    });
+    methods.completeItemFromChat.call(vm, {
+      id: 'g3', body: 'Close duplicate findings', taskRef: 'sw', isComplete: false,
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(pillText(vm)).toBe('Close duplicate findings · 1 left');
+  });
+});
