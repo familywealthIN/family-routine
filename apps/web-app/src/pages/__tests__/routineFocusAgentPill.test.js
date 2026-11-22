@@ -136,3 +136,90 @@ describe('RoutineFocus agent pill — the chat run-again path', () => {
     });
   });
 });
+
+/**
+ * D-06: Start Agent on a PASSED routine is a redeem, and that path fired the
+ * agent without announcing it — the thread kept only the points receipt while
+ * /agents showed the run. It goes through the same helper now, so the record is
+ * posted from the start's outcome, once, and persisted like the tick path's.
+ */
+describe('RoutineFocus agent pill — the redeem path', () => {
+  /** A redeemable-routine context whose redeem resolves when `settle` is called. */
+  const redeemVmFor = (outcome) => {
+    let settle;
+    const vm = {
+      date: '12-11-2026',
+      did: 'doc-1',
+      showingPlaceholder: false,
+      routineDate: null, // no optimistic response to build
+      xpBalance: { available: 40, used: 0, entitled: false },
+      postChatEvent: jest.fn(),
+      $notify: jest.fn(),
+      $apollo: {
+        mutate: jest.fn(() => new Promise((resolve) => {
+          settle = () => resolve({
+            data: {
+              redeemRoutineItem: { balance: { available: 25, used: 15, entitled: false } },
+            },
+          });
+        })),
+      },
+      getRedeemCost: () => 15,
+      canAffordRedeem: () => true,
+      measureFly: jest.fn(),
+      clearFly: jest.fn(),
+      trackButtonClick: jest.fn(),
+      trackMutationPerformance: jest.fn(),
+      redeemWhenSettled: jest.fn(),
+      fireAgentWhenReady: jest.fn(() => Promise.resolve(outcome)),
+    };
+    vm.startAgentAndAnnounce = (ref, opts) => methods.startAgentAndAnnounce.call(vm, ref, opts);
+    return { vm, settle: () => settle() };
+  };
+
+  const redeem = (vm, opts) => methods.redeemRoutine
+    .call(vm, { id: 'sw', name: 'Start Work' }, opts);
+
+  // The Done when: posted after the redeem succeeds, and exactly once.
+  it('posts one Agent started once the redeem has resolved', async () => {
+    const { vm, settle } = redeemVmFor('fired');
+    redeem(vm, { fireAgent: true, agentImplicit: false });
+
+    // Nothing is claimed while the redeem is still on the wire.
+    expect(pills(vm)).toEqual([]);
+
+    settle();
+    await flush();
+
+    expect(vm.fireAgentWhenReady).toHaveBeenCalledWith('sw', { implicit: false });
+    expect(pills(vm)).toEqual(['Redeemed with 15 points · ticked', 'Agent started']);
+    expect(vm.postChatEvent).toHaveBeenCalledWith({
+      text: 'Agent started', tone: 'blue', icon: 'smart_toy', taskRef: 'sw',
+    });
+    // The points receipt the ticket leaves alone.
+    expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Agent started for 15 points',
+    }));
+  });
+
+  it('posts no Agent started when the redeem starts no agent', async () => {
+    const { vm, settle } = redeemVmFor('fired');
+    redeem(vm, { fireAgent: false });
+    settle();
+    await flush();
+
+    expect(vm.fireAgentWhenReady).not.toHaveBeenCalled();
+    expect(pills(vm)).toEqual(['Redeemed with 15 points · ticked']);
+  });
+
+  // Same rule as the tick path (D-08): no start event went out, so the thread
+  // must not claim one.
+  it('posts no Agent started when the queued start times out', async () => {
+    const { vm, settle } = redeemVmFor('timeout');
+    redeem(vm, { fireAgent: true, agentImplicit: false });
+    settle();
+    await flush();
+
+    expect(pills(vm)).toEqual(['Redeemed with 15 points · ticked']);
+  });
+});
