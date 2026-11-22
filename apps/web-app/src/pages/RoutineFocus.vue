@@ -2374,7 +2374,9 @@ export default {
             taskRef: task.id,
           });
 
-          if (fireAgent) this.fireAgentWhenReady(task.id, { implicit: agentImplicit });
+          // Same announce as the tick path: a redeem that starts the agent has
+          // to leave the same 'Agent started' record in the day's log (D-06).
+          if (fireAgent) this.startAgentAndAnnounce(task.id, { implicit: agentImplicit });
 
           const newBalance = payload
             && payload.redeemRoutineItem
