@@ -450,6 +450,8 @@ import { routinePassWaitMixin } from '../mixins/routinePassWaitMixin';
 import { dashboardContextMixin } from '../mixins/dashboardContextMixin';
 import { pendingMutations } from '../utils/pendingMutations';
 import { guardFields, releaseEntity } from '../utils/cacheGuard';
+import * as tickTelemetry from '../utils/tickTelemetry';
+
 import { startAgentWhenReady } from '../utils/agentStart';
 import { runNewDayReset } from '../utils/newDay';
 import {
@@ -464,6 +466,25 @@ import {
   buildRoutineRows, findCurrentRoutine, focusWindow, buildCascade, pickCascadeItem,
   earnedDeltas, TICK_STIMULUS,
 } from '../utils/routineFocusModel';
+
+/** The fields every tick event carries (utils/tickTelemetry.js). */
+const tickInfo = (vm, task, kind, extra = {}) => ({
+  kind,
+  taskId: task && task.id,
+  date: vm.date,
+  routineId: vm.did,
+  placeholder: !!vm.showingPlaceholder,
+  ...extra,
+});
+/** The server's day against the ticks this device asked for (tick_lost). */
+const checkTicks = (vm) => {
+  const doc = vm.liveRoutine;
+  if (doc) tickTelemetry.checkServerDay({ date: doc.date, routineId: doc.id, tasklist: doc.tasklist });
+};
+const refetchDay = (vm) => {
+  const query = vm.$apollo && vm.$apollo.queries && vm.$apollo.queries.routineDate;
+  if (query) query.refetch().catch(() => {});
+};
 
 // How long the fly ghost lives (keyframes run 0.8s).
 const FLY_MS = 820;
@@ -1377,6 +1398,10 @@ export default {
     },
   },
   watch: {
+    liveRoutine() {
+      checkTicks(this);
+    },
+
     'routineDate.tasklist': {
       handler(tasklist) {
         this.$currentTask.setTasklist(tasklist || []);
@@ -1412,8 +1437,16 @@ export default {
       });
     },
     rows: {
-      handler() {
+      handler(rows) {
         this.maybeDispatchRouteAction();
+        // A routine on screen going ticked -> unticked is reported (tickTelemetry).
+        this.tickRowsSeen = tickTelemetry.watchRows({
+          date: this.date,
+          routineId: this.did,
+          prev: this.tickRowsSeen,
+          rows,
+          fromPlaceholder: this.showingPlaceholder,
+        });
       },
       immediate: true,
     },
@@ -1460,6 +1493,7 @@ export default {
     // balance without the mutation ever returning it.
     eventBus.$on(EVENTS.ROUTINE_TICKED, this.refetchXpBalance);
     eventBus.$on(EVENTS.XP_REDEEMED, this.refetchXpBalance);
+    document.addEventListener('visibilitychange', this.onTickVisibility);
 
     this.startIntelligentRefresh({
       interval: 30 * 1000,
@@ -1481,6 +1515,7 @@ export default {
     eventBus.$off(EVENTS.AGENT_STATUS_CHANGED, this.onAgentStatusChanged);
     eventBus.$off(EVENTS.ROUTINE_TICKED, this.refetchXpBalance);
     eventBus.$off(EVENTS.XP_REDEEMED, this.refetchXpBalance);
+    document.removeEventListener('visibilitychange', this.onTickVisibility);
     this.stopIntelligentRefresh();
     if (this.nowTimerId) clearInterval(this.nowTimerId);
     if (this.flyTimer) clearTimeout(this.flyTimer);
@@ -1865,13 +1900,23 @@ export default {
         this.onMiniClick();
         return;
       }
-      if (row.buttonDisabled) return;
-      if (this.blockedBySkip()) return;
+      const kind = row.redeemable ? 'redeem' : 'tick';
+      if (row.buttonDisabled) {
+        tickTelemetry.tickDropped(tickInfo(this, row, kind, {
+          reason: row.wait ? 'ring_wait' : 'ring_passed',
+        }));
+        return;
+      }
+      if (this.blockedBySkip()) {
+        tickTelemetry.tickDropped(tickInfo(this, row, kind, { reason: 'skip_day' }));
+        return;
+      }
       // Affordability BEFORE the sheet, as the dashboard had it: Start Task can
       // create a goal item and only then redeem, so an unaffordable redeem must
       // be stopped here or the failure strands an orphan item on an unticked
       // routine — and takes its Build Agent path with it.
       if (row.redeemable && !this.canAffordRedeem(row)) {
+        tickTelemetry.tickDropped(tickInfo(this, row, kind, { reason: 'unaffordable' }));
         this.paywallCost = this.getRedeemCost(row);
         this.paywallDrawerOpen = true;
         return;
@@ -1983,12 +2028,21 @@ export default {
         this.redeemRoutine(task, { fireAgent, agentImplicit });
         return;
       }
-      if (task.passed || task.wait || task.ticked) return;
+      tickTelemetry.tickTapped(tickInfo(this, task, 'tick'));
+      if (task.passed || task.wait || task.ticked) {
+        tickTelemetry.tickDropped(tickInfo(this, task, 'tick', {
+          reason: (task.ticked && 'already_ticked') || (task.passed && 'passed') || 'wait',
+        }));
+        return;
+      }
 
       const pendingKey = `routine:${task.id}`;
       // Per-item coalescing — the tick is monotonic, so a second tap has
       // nothing to correct.
-      if (pendingMutations.has(pendingKey)) return;
+      if (pendingMutations.has(pendingKey)) {
+        tickTelemetry.tickDropped(tickInfo(this, task, 'tick', { reason: 'pending' }));
+        return;
+      }
       pendingMutations.add(pendingKey);
 
       // Tapped on the placeholder (the server's day has not arrived yet): the
@@ -2022,6 +2076,7 @@ export default {
         pendingMutations.remove(pendingKey);
         dropLocalTick();
         this.clearFly();
+        tickTelemetry.tickDropped(tickInfo(this, task, 'tick', { reason: 'no_routine_id' }));
         this.$notify({
           title: 'Error',
           text: "Couldn't load today's routine. Check your connection and try again.",
@@ -2042,6 +2097,14 @@ export default {
           pendingMutations.remove(pendingKey);
           dropLocalTick();
           this.clearFly();
+          // A redeem picks up its own telemetry; anything else ends here.
+          if (!(settled && settled.redeemable)) {
+            tickTelemetry.tickDropped(tickInfo(this, task, 'tick', {
+              placeholder: true,
+              reason: (!settled && 'settled_missing') || (settled.ticked && 'settled_ticked')
+                || (settled.passed && 'settled_passed') || 'settled_wait',
+            }));
+          }
           if (settled && settled.redeemable) this.redeemWhenSettled(settled, { fireAgent, agentImplicit });
           else if (settled && !settled.ticked) this.notifyRouteRefused(settled);
           return;
@@ -2049,12 +2112,14 @@ export default {
         stimuliBefore = (settled.stimuli || []).map((st) => ({ name: st.name, earned: st.earned }));
       }
 
+      tickTelemetry.tickSent(tickInfo(this, task, 'tick', { routineId: did }));
       await this.$apollo
         .mutate({
           mutation: gql`
             mutation tickRoutineItem($id: ID!, $taskId: String!, $ticked: Boolean!) {
               tickRoutineItem(id: $id, taskId: $taskId, ticked: $ticked) {
                 id
+                date
                 tasklist {
                   id
                   name
@@ -2076,6 +2141,7 @@ export default {
             tickRoutineItem: {
               __typename: 'Routine',
               id: did,
+              date: this.date,
               tasklist: this.tasklist.map((t) => {
                 if (t.id !== task.id) return { ...t, __typename: 'RoutineItem' };
                 const stimuli = (t.stimuli || []).map((s) => {
@@ -2091,6 +2157,9 @@ export default {
           update: (cache, { data: payload }) => {
             const result = payload && payload.tickRoutineItem;
             if (!result) return;
+            // Another day's document answered (see .then): it must not be
+            // written over the viewed day's.
+            if (result.date && result.date !== this.date) return;
             try {
               cache.writeQuery({
                 query: ROUTINE_DATE_QUERY,
@@ -2121,17 +2190,47 @@ export default {
           eventBus.$emit(EVENTS.ROUTINE_TICKED);
           const result = (payload && payload.tickRoutineItem) || {};
           const saved = (result.tasklist || []).find((t) => t && t.id === task.id);
+          // The server looks the routine up by `did` alone and answers an
+          // already-ticked task with the document unchanged. A `did` still
+          // naming another day (yesterday's, ticked) therefore came back as a
+          // success: green, "done", and today never saved (25 Nov 2026). The
+          // reply is the day as stored, so it is checked, not trusted.
+          if (result.date && result.date !== this.date) {
+            throw Object.assign(new Error('wrong_day'), { notSaved: 'wrong_day' });
+          }
+          if (!saved || saved.ticked === false) {
+            throw Object.assign(new Error('not_saved'), { notSaved: 'server_unticked' });
+          }
+          tickTelemetry.tickSaved(tickInfo(this, task, 'tick', { routineId: did }));
           this.onRoutineTicked(task, {
             fireAgent,
             agentImplicit,
             credited: earnedDeltas(stimuliBefore, saved && saved.stimuli),
           });
         })
-        .catch(() => {
+        .catch((error) => {
+          tickTelemetry.tickFailed(tickInfo(this, task, 'tick', {
+            routineId: did, error: (error && error.notSaved) || error,
+          }));
           // Apollo rolls the optimistic write back; drop the guard too, or it
           // would keep pinning a tick that was never saved.
           releaseEntity('RoutineItem', task.id);
           this.clearFly();
+          if (error && error.notSaved) {
+            // The reply's tasks normalised over the viewed day's (tasks share
+            // their id across days), so re-read the day from the server, and
+            // let the next tap resolve the document id afresh.
+            if (error.notSaved === 'wrong_day') this.did = '';
+            refetchDay(this);
+            this.$notify({
+              title: `${task.name} wasn't saved`,
+              text: 'Home was out of date. It has refreshed — tap again to tick.',
+              group: 'notify',
+              type: 'error',
+              duration: 5000,
+            });
+            return;
+          }
           this.notifyGeneric();
         })
         .finally(() => {
@@ -2200,7 +2299,11 @@ export default {
         } catch (e) {
           did = '';
         }
+        const drop = (reason) => tickTelemetry.tickDropped(tickInfo(this, task, 'redeem', {
+          reason, placeholder: true,
+        }));
         if (!did) {
+          drop('no_routine_id');
           this.$notify({
             title: 'Error',
             text: "Couldn't load today's routine. Check your connection and try again.",
@@ -2211,10 +2314,17 @@ export default {
           return;
         }
         const settled = this.settledTask(task.id);
-        if (!settled || settled.ticked) return;
+        if (!settled || settled.ticked) {
+          drop(settled ? 'settled_ticked' : 'settled_missing');
+          return;
+        }
         if (!settled.redeemable) {
-          if (!settled.passed && !settled.wait) this.tickRoutine(settled, opts);
-          else this.notifyRouteRefused(settled);
+          if (!settled.passed && !settled.wait) {
+            this.tickRoutine(settled, opts);
+          } else {
+            drop('settled_refused');
+            this.notifyRouteRefused(settled);
+          }
           return;
         }
         await this.untilServerTask(task.id, (raw) => raw.passed || raw.ticked);
@@ -2222,6 +2332,7 @@ export default {
         if (row && row.redeemable) {
           this.redeemRoutine(row, opts);
         } else if (row && !row.ticked) {
+          drop('not_ready');
           this.$notify({
             title: `${row.name} isn't ready to redeem yet`,
             text: 'Try again in a moment.',
@@ -2275,6 +2386,7 @@ export default {
     /** Spend points to rescue a passed routine. Ported from redeemClick. */
     redeemRoutine(task, { fireAgent = true, agentImplicit = true } = {}) {
       this.actionSheetOpen = false;
+      tickTelemetry.tickTapped(tickInfo(this, task, 'redeem'));
       // Placeholder: there is no document id to redeem against yet.
       if (this.showingPlaceholder || !this.did) {
         this.redeemWhenSettled(task, { fireAgent, agentImplicit });
@@ -2291,14 +2403,19 @@ export default {
       // Local affordability check — the server re-validates authoritatively.
       // Same rule the ring's pre-flight runs, so the two cannot disagree.
       if (!this.canAffordRedeem(task)) {
+        tickTelemetry.tickDropped(tickInfo(this, task, 'redeem', { reason: 'unaffordable' }));
         this.paywallCost = cost;
         this.paywallDrawerOpen = true;
         return;
       }
 
       const pendingKey = `redeem:${task.id}`;
-      if (pendingMutations.has(pendingKey)) return;
+      if (pendingMutations.has(pendingKey)) {
+        tickTelemetry.tickDropped(tickInfo(this, task, 'redeem', { reason: 'pending' }));
+        return;
+      }
       pendingMutations.add(pendingKey);
+      tickTelemetry.tickSent(tickInfo(this, task, 'redeem'));
 
       const redeemedAt = Date.now();
       this.measureFly(task);
@@ -2368,6 +2485,7 @@ export default {
           this.trackMutationPerformance('redeemRoutineItem', {
             id: this.did, taskId: task.id,
           }, redeemedAt);
+          tickTelemetry.tickSaved(tickInfo(this, task, 'redeem'));
           eventBus.$emit(EVENTS.ROUTINE_TICKED);
           eventBus.$emit(EVENTS.XP_REDEEMED);
 
@@ -2397,6 +2515,7 @@ export default {
           }
         })
         .catch((error) => {
+          tickTelemetry.tickFailed(tickInfo(this, task, 'redeem', { error }));
           this.clearFly();
           const message = (error && error.message) || '';
           if (message.includes('402')) {
@@ -3000,7 +3119,12 @@ export default {
       this.goalsFirstLoad = true;
       this.addNewDayRoutine();
     },
+    onTickVisibility() {
+      if (typeof document === 'undefined' || document.visibilityState !== 'hidden') return;
+      tickTelemetry.appHidden({ date: this.date, routineId: this.did });
+    },
     handleRoutineItemCheck() {
+      checkTicks(this);
       if (this.canMaintainPassWait) this.setPassedWait();
       // An agent that is live today writes its contribution on its own clock,
       // not on any event this page hears — keep the list fresh while one runs.
