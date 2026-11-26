@@ -123,13 +123,14 @@
                 :period.sync="toolbarPeriod"
                 :date.sync="toolbarDate"
                 :taskRef.sync="toolbarTaskRef"
-                :goalRef.sync="toolbarGoalRef"
+                :goalRef="toolbarGoalRef"
                 :tasklist="routines"
                 :goalItemsRef="goalItemsRef"
                 :minDate="toolbarMinDate"
                 :task-mode="isTaskMode"
                 :search-mode="isSearchMode"
                 class="prompt-toolbar"
+                @update:goalRef="selectToolbarGoalRef"
               />
               <div class="prompt-send-group">
                 <!-- Settings Button (opens sub-drawer on mobile) -->
@@ -383,13 +384,14 @@
                 :period.sync="toolbarPeriod"
                 :date.sync="toolbarDate"
                 :taskRef.sync="toolbarTaskRef"
-                :goalRef.sync="toolbarGoalRef"
+                :goalRef="toolbarGoalRef"
                 :tasklist="routines"
                 :goalItemsRef="goalItemsRef"
                 :minDate="toolbarMinDate"
                 :task-mode="isTaskMode"
                 :search-mode="isSearchMode"
                 class="prompt-toolbar"
+                @update:goalRef="selectToolbarGoalRef"
               />
               <div class="prompt-send-group">
                 <!-- Settings Dropdown -->
@@ -776,6 +778,9 @@ export default {
       toolbarDate: '',
       toolbarTaskRef: null,
       toolbarGoalRef: null,
+      // "— No Goal Task —" picks null, the same value as "nothing picked
+      // yet", so the choice itself has to be remembered (D-01)
+      toolbarGoalRefNone: false,
       goalRefNotice: '', // Shown when a parent goal is dropped as out of period
       // Tags
       promptTags: [],
@@ -1193,7 +1198,11 @@ export default {
           return;
         }
 
-        if (newVal && newVal.length > 0 && !this.toolbarGoalRef) {
+        // Preselect only while the user has made no choice. "— No Goal Task —"
+        // is a null toolbarGoalRef too, and generating a plan refetches this
+        // list — which handed the first goal of the period above to a plan
+        // whose parent the user had declined (D-01).
+        if (newVal && newVal.length > 0 && !this.toolbarGoalRef && !this.toolbarGoalRefNone) {
           // If there's a current task, try to find a goal that matches its taskRef
           if (this.$currentTaskData && this.$currentTaskData.id) {
             const matchingGoal = newVal.find((goal) => goal.taskRef === this.$currentTaskData.id);
@@ -1284,6 +1293,8 @@ export default {
       // Initialize with today's date
       this.toolbarDate = this.todayFormatted;
       this.toolbarPeriod = 'day';
+      // A freshly opened sheet carries no parent choice to honour
+      this.toolbarGoalRefNone = false;
 
       // Preselect the routine the opener is showing, else the current one
       if (this.preselectTaskRef) {
@@ -1322,6 +1333,17 @@ export default {
       // (watcher won't fire if toolbarTaskRef value didn't change after reset)
       this.populateRoutineTags();
       this.loadSettings(this.toolbarTaskRef);
+    },
+
+    /**
+     * Take a parent goal picked in the toolbar. "— No Goal Task —" sends null,
+     * so record that it was chosen: the goalItemsRef watcher cannot otherwise
+     * tell a declined parent from one not picked yet, and would preselect over
+     * it when the period above is refetched.
+     */
+    selectToolbarGoalRef(goalRef) {
+      this.toolbarGoalRefNone = !goalRef;
+      this.toolbarGoalRef = goalRef || null;
     },
 
     /**

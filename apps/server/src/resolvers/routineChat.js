@@ -130,6 +130,94 @@ const query = {
   },
 };
 
+/** The one row a thread's coach card may occupy, for a day and a routine. */
+const insightKey = (email, date, taskRef) => ({
+  email, date, taskRef, from: 'routine', kind: 'text', icon: INSIGHT_ICON,
+});
+
+/**
+ * Coach cards being composed right now, by `email|date|taskRef`.
+ *
+ * The client's tick fires the insight twice — once on the optimistic write and
+ * again when the server's re-read of the day flips `ticked` back to true (D-05)
+ * — and the model takes about a second to answer, so the second call arrived
+ * while the first was still waiting and the read-then-create wrote a second
+ * card. A call that finds its thread already being written joins that call
+ * instead of starting a new one.
+ */
+const insightsInFlight = new Map();
+
+/**
+ * Compose today's coach card and write it, exactly once per thread.
+ *
+ * The write is an upsert on the card's own identity rather than a plain
+ * `save()`: two processes can still reach it together, and whichever gets there
+ * first owns the card — the other one gets that card back and persists nothing.
+ * A duplicate-key error means the unique index caught the same race a moment
+ * later, so the answer is the same: read what won. That index —
+ * `{ email: 1, date: 1, taskRef: 1 }`, unique, partial on `icon: INSIGHT_ICON`
+ * — is a migration against an existing collection, so it is not declared on the
+ * schema; this path is correct with or without it.
+ */
+const writeRoutineInsight = async (email, args) => {
+  const {
+    date, taskRef, routineName, brief, tickedAt, windowEnd, minutesLeft,
+  } = args;
+  const criteria = insightKey(email, date, taskRef);
+
+  // Today is included so the run of check-ins counts the tick that asked.
+  const dates = [date, ...previousDates(date)];
+  const { week, month } = periodDates(date);
+  const [routines, goals, earlier, periodGoals] = await Promise.all([
+    RoutineModel.find({ email, date: { $in: dates } }).lean().exec(),
+    GoalModel.find({ email, period: 'day', date: { $in: dates } }).exec(),
+    // Past insights, so tomorrow's idea is never yesterday's again.
+    RoutineChatMessageModel.find({
+      email, taskRef, from: 'routine', kind: 'text', icon: INSIGHT_ICON, date: { $in: dates },
+    }).sort({ _id: -1 }).limit(5).exec(),
+    GoalModel.find({
+      email,
+      $or: [{ period: 'week', date: week }, { period: 'month', date: month }],
+    }).exec(),
+  ]);
+  const hhmm = (v) => (/^\d{1,2}:\d{2}$/.test(String(v || '')) ? String(v) : null);
+  const summary = summariseRoutineHistory({
+    routines,
+    goals,
+    taskRef,
+    today: date,
+    periodGoals,
+    moment: {
+      tickedAt: hhmm(tickedAt),
+      windowEnd: hhmm(windowEnd),
+      minutesLeft: Number.isInteger(minutesLeft) ? Math.max(0, Math.min(minutesLeft, 24 * 60)) : null,
+    },
+  });
+  const { text, model } = await generateRoutineInsight({
+    summary,
+    routineName: cap(String(routineName || ''), 120),
+    brief: cap(String(brief || ''), BRIEF_MAX),
+    previous: earlier.map((m) => m.text),
+  });
+
+  // `findOneAndUpdate` skips `pre('save')`, so the body is encrypted here by the
+  // schema's own cipher; the post-read hook decrypts what comes back.
+  try {
+    return await RoutineChatMessageModel
+      .findOneAndUpdate(
+        criteria,
+        { $setOnInsert: { text: encryptText(cap(text, TEXT_MAX)), model: model || null } },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      )
+      .exec();
+  } catch (error) {
+    if (error && error.code === 11000) {
+      return RoutineChatMessageModel.findOne(criteria).exec();
+    }
+    throw error;
+  }
+};
+
 const mutation = {
   sendRoutineChat: {
     type: RoutineChatReplyType,
@@ -232,7 +320,8 @@ const mutation = {
    * (utils/insightStrategy: diagnose the last month, pick one hook and one
    * lever); the model only writes it, and is validated against the facts. The
    * area/project description + next steps the client caches (`brief`) feed
-   * both. Idempotent: a thread that already holds today's card gets it back.
+   * both. Idempotent: a thread that already holds today's card gets it back,
+   * and two calls that race for the same thread share one card (D-05).
    */
   routineInsight: {
     type: RoutineChatMessageType,
@@ -249,62 +338,23 @@ const mutation = {
     },
     resolve: async (root, args, ctx) => {
       const email = getEmailfromSession(ctx);
-      const {
-        date, taskRef, routineName, brief, tickedAt, windowEnd, minutesLeft,
-      } = args;
+      const { date, taskRef } = args;
 
       const existing = await RoutineChatMessageModel
-        .findOne({
-          email, date, taskRef, from: 'routine', kind: 'text', icon: INSIGHT_ICON,
-        })
+        .findOne(insightKey(email, date, taskRef))
         .exec();
       if (existing) return existing;
 
-      // Today is included so the run of check-ins counts the tick that asked.
-      const dates = [date, ...previousDates(date)];
-      const { week, month } = periodDates(date);
-      const [routines, goals, earlier, periodGoals] = await Promise.all([
-        RoutineModel.find({ email, date: { $in: dates } }).lean().exec(),
-        GoalModel.find({ email, period: 'day', date: { $in: dates } }).exec(),
-        // Past insights, so tomorrow's idea is never yesterday's again.
-        RoutineChatMessageModel.find({
-          email, taskRef, from: 'routine', kind: 'text', icon: INSIGHT_ICON, date: { $in: dates },
-        }).sort({ _id: -1 }).limit(5).exec(),
-        GoalModel.find({
-          email,
-          $or: [{ period: 'week', date: week }, { period: 'month', date: month }],
-        }).exec(),
-      ]);
-      const hhmm = (v) => (/^\d{1,2}:\d{2}$/.test(String(v || '')) ? String(v) : null);
-      const summary = summariseRoutineHistory({
-        routines,
-        goals,
-        taskRef,
-        today: date,
-        periodGoals,
-        moment: {
-          tickedAt: hhmm(tickedAt),
-          windowEnd: hhmm(windowEnd),
-          minutesLeft: Number.isInteger(minutesLeft) ? Math.max(0, Math.min(minutesLeft, 24 * 60)) : null,
-        },
-      });
-      const { text, model } = await generateRoutineInsight({
-        summary,
-        routineName: cap(String(routineName || ''), 120),
-        brief: cap(String(brief || ''), BRIEF_MAX),
-        previous: earlier.map((m) => m.text),
-      });
-
-      return decryptSaved(await new RoutineChatMessageModel({
-        email,
-        date,
-        taskRef,
-        from: 'routine',
-        kind: 'text',
-        text: cap(text, TEXT_MAX),
-        icon: INSIGHT_ICON,
-        model: model || null,
-      }).save());
+      // The read above only settles it for a card that is already written. A
+      // card still being composed is answered by joining its call.
+      const key = `${email}|${date}|${taskRef}`;
+      if (!insightsInFlight.has(key)) {
+        insightsInFlight.set(
+          key,
+          writeRoutineInsight(email, args).finally(() => insightsInFlight.delete(key)),
+        );
+      }
+      return insightsInFlight.get(key);
     },
   },
 

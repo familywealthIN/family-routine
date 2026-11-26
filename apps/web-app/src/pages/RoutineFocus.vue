@@ -462,7 +462,7 @@ import { threshold } from '../utils/getDates';
 import refuseAgentWithoutPoints from '../utils/agentPointsGuard';
 import {
   buildRoutineRows, findCurrentRoutine, focusWindow, buildCascade, pickCascadeItem,
-  earnedDeltas, TICK_STIMULUS,
+  earnedDeltas, openItemsLeft, TICK_STIMULUS,
 } from '../utils/routineFocusModel';
 
 // How long the fly ghost lives (keyframes run 0.8s).
@@ -1781,7 +1781,13 @@ export default {
     },
     onItemCompleted(item) {
       const row = this.rows.find((r) => r.id === item.taskRef);
-      const left = row ? Math.max(row.totalCount - row.doneCount - 1, 0) : 0;
+      // One source of truth for the pill's number: the routine's own checklist,
+      // read here, with this item taken as done. It used to be
+      // `totalCount - doneCount - 1`, and by the time this runs the tick's cache
+      // write has already moved `doneCount`, so the item was subtracted twice
+      // (D-04). `totalCount` was the wrong total for a goal-item count anyway —
+      // it is the routine's slot count (D-20), which the agent's end event uses.
+      const left = openItemsLeft(row && row.items, item.id);
       this.postChatEvent({
         text: `${item.body} · ${left ? `${left} left` : 'all done'}`,
         tone: 'green',
@@ -2259,17 +2265,7 @@ export default {
         duration: 3000,
       });
 
-      if (fireAgent) {
-        this.fireAgentWhenReady(task.id, { implicit: agentImplicit });
-        if (this.$agent.getByTaskRef(task.id)) {
-          this.postChatEvent({
-            text: 'Agent started',
-            tone: 'blue',
-            icon: 'smart_toy',
-            taskRef: task.id,
-          });
-        }
-      }
+      if (fireAgent) this.startAgentAndAnnounce(task.id, { implicit: agentImplicit });
     },
 
     /** Spend points to rescue a passed routine. Ported from redeemClick. */
@@ -2378,7 +2374,9 @@ export default {
             taskRef: task.id,
           });
 
-          if (fireAgent) this.fireAgentWhenReady(task.id, { implicit: agentImplicit });
+          // Same announce as the tick path: a redeem that starts the agent has
+          // to leave the same 'Agent started' record in the day's log (D-06).
+          if (fireAgent) this.startAgentAndAnnounce(task.id, { implicit: agentImplicit });
 
           const newBalance = payload
             && payload.redeemRoutineItem
@@ -2548,6 +2546,36 @@ export default {
       });
     },
     /**
+     * Start the agent, and post the pill only once the start event actually
+     * went out.
+     *
+     * The pill used to go up on the mere existence of an agent, in the same
+     * tick as an un-awaited `fireAgentWhenReady` (D-08). A start that waits for
+     * its goal item and never gets one ends in 'timeout' — nothing is
+     * dispatched, the explicit press says 'Agent not started' — and yet the
+     * thread kept a persisted 'Agent started' contradicting it. Announcing
+     * after the outcome is what keeps the two in step; a posted-then-deleted
+     * pill would not, since the thread is server-side.
+     *
+     * @returns {Promise<string|null>} the `startAgentWhenReady` outcome, or
+     *   null when the start was refused outright (no points).
+     */
+    startAgentAndAnnounce(taskRef, { implicit = true, text = 'Agent started' } = {}) {
+      const started = this.fireAgentWhenReady(taskRef, { implicit });
+      if (!started) return Promise.resolve(null);
+      return Promise.resolve(started).then((outcome) => {
+        if (outcome === 'fired') {
+          this.postChatEvent({
+            text,
+            tone: 'blue',
+            icon: 'smart_toy',
+            taskRef,
+          });
+        }
+        return outcome;
+      });
+    },
+    /**
      * End-event rule: a listening agent completes when the routine task's
      * SLOT counter is full — a stimulus-derived total, not the checklist
      * length (D-20). The checklist is what the user sees; the slots are what
@@ -2611,8 +2639,17 @@ export default {
       if (this.endEventFiring[taskRef]) return;
       const gid = goalId || this.findFirstGoalIdForRoutine(taskRef);
       this.$set(this.endEventFiring, taskRef, true);
+      // What filled is the SLOT counter, which can be shorter than the
+      // checklist (D-20), so "All tasks complete" was written against a header
+      // still reading "2 of 3 done" (D-12). A pill names only what actually
+      // happened: claim the checklist only when nothing on it is left open,
+      // and otherwise name the counter and the items still outstanding.
+      const left = (this.dayGoalItems || [])
+        .filter((item) => item && item.taskRef === taskRef && !item.isComplete).length;
       this.postChatEvent({
-        text: 'All tasks complete — end event firing',
+        text: left
+          ? `Routine slots filled · ${left} left — end event firing`
+          : 'All tasks complete — end event firing',
         tone: 'blue',
         icon: 'bolt',
         taskRef,
@@ -2649,13 +2686,10 @@ export default {
         this.maybeFireAgentEndEvent(taskRef);
         return null;
       }
-      this.postChatEvent({
-        text: (status || ranToday(agent)) ? 'Agent started again' : 'Agent started',
-        tone: 'blue',
-        icon: 'smart_toy',
-        taskRef,
-      });
-      return Promise.resolve(this.fireAgentWhenReady(taskRef, { implicit: false }))
+      // Read before the dispatch — the status this reports on is the one the
+      // message was sent against — but announced after it (D-08).
+      const text = (status || ranToday(agent)) ? 'Agent started again' : 'Agent started';
+      return this.startAgentAndAnnounce(taskRef, { implicit: false, text })
         .then(() => {
           // Only a start that opened a run has an end event to send.
           if (this.$agent.canFireEndEvent(taskRef)) this.maybeFireAgentEndEvent(taskRef);
