@@ -76,6 +76,14 @@
             old fixed 96-unit viewBox scaled a 6-unit stroke to 2.9px on the
             ticked tablet ring (and 7.5px on the phone) and let the button
             overlap its inner edge — a lopsided, sub-pixel donut.
+
+            The button's disc is drawn here too, not as the button's own
+            background. A CSS circle is snapped to the pixel grid and an SVG
+            stroke is not, so on a ring at a fractional position (any centred
+            or wrapped layout) the two drifted up to a pixel apart and the gap
+            between them went lopsided (26 Nov 2026, desktop). One coordinate
+            space keeps them concentric; the button on top is transparent and
+            only carries the glyph and the click.
           -->
           <svg
             :viewBox="`0 0 ${ringPx} ${ringPx}`"
@@ -93,7 +101,15 @@
               :stroke-dasharray="ringGeom.c"
               :stroke-dashoffset="ringGeom.c * ringRemaining"
               :stroke-linecap="ringRemaining > 0 ? 'round' : 'butt'"
+              :transform="`rotate(-90 ${ringPx / 2} ${ringPx / 2})`"
               class="rn-focus-card__ring-progress"
+            />
+            <circle
+              :cx="ringPx / 2" :cy="ringPx / 2" :r="ringPx / 2 - tickInset"
+              :fill="tickFill"
+              :style="{ animation: tickBreathe }"
+              class="rn-focus-card__tick-disc"
+              data-testid="routine-tick-disc"
             />
           </svg>
           <template v-if="agentRing">
@@ -420,16 +436,24 @@ export default {
       if (stage && stage.glyph) return stage.glyph;
       return this.routine.buttonGlyph || 'more_horiz';
     },
+    /** The button's colour, painted as the ring SVG's disc (see the template). */
+    tickFill() {
+      const stage = this.buttonStage;
+      return stage ? stage.color : (this.routine.buttonBg || '#f5f5f5');
+    },
+    tickBreathe() {
+      const stage = this.buttonStage;
+      return stage && stage.breathe
+        ? `rn-btn-breathe ${stage.ringMs}ms ease-in-out infinite`
+        : 'none';
+    },
     tickStyle() {
       const stage = this.buttonStage;
       const px = `${this.tickInset}px`;
       return {
         top: px, right: px, bottom: px, left: px,
-        background: stage ? stage.color : (this.routine.buttonBg || '#f5f5f5'),
         color: stage ? '#fff' : (this.routine.buttonFg || 'rgba(0,0,0,.87)'),
-        animation: stage && stage.breathe
-          ? `rn-btn-breathe ${stage.ringMs}ms ease-in-out infinite`
-          : 'none',
+        animation: this.tickBreathe,
       };
     },
     tickDisabled() {
@@ -739,11 +763,19 @@ export default {
   width: 100%;
   height: 100%;
   overflow: visible;
-  transform: rotate(-90deg);
 }
 
+/* The arc starts at 12 o'clock: rotated on its own (the transform attribute),
+   not the whole SVG, so the disc's drop shadow still falls downwards. */
 .rn-focus-card__ring-progress {
   transition: stroke-dashoffset .4s;
+}
+
+.rn-focus-card__tick-disc {
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 3px 2.5px rgba(0, 0, 0, .12));
+  transition: fill .3s;
 }
 
 .rn-focus-card__ring-breathe {
@@ -768,8 +800,8 @@ export default {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .12);
-  transition: background .3s, color .3s,
+  background: transparent;
+  transition: color .3s,
     top .55s cubic-bezier(.3, 1.3, .5, 1), right .55s cubic-bezier(.3, 1.3, .5, 1),
     bottom .55s cubic-bezier(.3, 1.3, .5, 1), left .55s cubic-bezier(.3, 1.3, .5, 1);
 }

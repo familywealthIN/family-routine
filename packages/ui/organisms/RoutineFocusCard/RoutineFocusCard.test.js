@@ -114,6 +114,12 @@ describe('OrganismRoutineFocusCard — Today tab', () => {
         // …and clear of the tick button by at least 2px.
         const buttonR = px / 2 - card.tickInset;
         expect(r - stroke / 2 - buttonR).toBeGreaterThanOrEqual(2);
+        // The disc is drawn in the same SVG, on the same centre as the ring, so
+        // the two cannot snap to the pixel grid apart (26 Nov 2026).
+        const disc = svg.querySelector('[data-testid="routine-tick-disc"]');
+        expect(Number(disc.getAttribute('cx'))).toBe(px / 2);
+        expect(Number(disc.getAttribute('cy'))).toBe(px / 2);
+        expect(Number(disc.getAttribute('r'))).toBe(buttonR);
       });
     });
 
@@ -313,7 +319,7 @@ describe('OrganismRoutineFocusCard — agent states', () => {
     const { card, el } = stageOf('stalled');
     expect(el.querySelectorAll('.rn-focus-card__ring-breathe')).toHaveLength(0);
     expect(card.tickGlyph).toBe('warning');
-    expect(card.tickStyle.background).toBe('#ef6c00');
+    expect(card.tickFill).toBe('#ef6c00');
     expect(card.tickTitle).toContain('stalled');
   });
 });
