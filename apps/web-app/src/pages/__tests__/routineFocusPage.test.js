@@ -626,6 +626,54 @@ describe('RoutineFocus tick credit', () => {
       credited: [{ name: 'D', label: 'Discipline', points: 12 }],
     }));
   });
+
+  it('does not take another day\'s reply as a saved tick (25 Nov 2026)', async () => {
+    // A `did` still naming yesterday: the server finds yesterday's routine,
+    // already ticked, and answers it unchanged.
+    const task = {
+      id: 'sw', name: 'Start Office Work', points: 30, stimuli: stims(),
+    };
+    const refetch = jest.fn(() => Promise.resolve());
+    const vm = {
+      date: '25-11-2026',
+      did: 'yesterday',
+      tasklist: [task],
+      showingPlaceholder: false,
+      localTicks: {},
+      isSkippedDay: false,
+      blockedBySkip: methods.blockedBySkip,
+      trackTaskEvent: jest.fn(),
+      trackMutationPerformance: jest.fn(),
+      measureFly: jest.fn(),
+      clearFly: jest.fn(),
+      notifyGeneric: jest.fn(),
+      ensureRoutineId: jest.fn(() => Promise.resolve('yesterday')),
+      onRoutineTicked: jest.fn(),
+      $notify: jest.fn(),
+      $apollo: {
+        queries: { routineDate: { refetch } },
+        mutate: jest.fn(() => Promise.resolve({
+          data: {
+            tickRoutineItem: {
+              id: 'yesterday',
+              date: '24-11-2026',
+              tasklist: [{ id: 'sw', ticked: true, stimuli: stims({ D: 30 }) }],
+            },
+          },
+        })),
+      },
+    };
+
+    await methods.tickRoutine.call(vm, task, { fireAgent: true });
+    await Promise.resolve();
+
+    expect(vm.onRoutineTicked).not.toHaveBeenCalled();
+    expect(vm.did).toBe('');
+    expect(refetch).toHaveBeenCalled();
+    expect(vm.$notify).toHaveBeenCalledWith(expect.objectContaining({
+      title: "Start Office Work wasn't saved", type: 'error',
+    }));
+  });
 });
 
 describe('RoutineFocus slot counters (the agent end-event rule)', () => {
