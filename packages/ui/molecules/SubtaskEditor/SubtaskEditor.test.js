@@ -158,3 +158,16 @@ describe('SubtaskEditor — move up and remove', () => {
     expect(events.toggle).toEqual([SUBTASKS[1]]);
   });
 });
+
+// iOS zooms the page into any focused field under 16px (27 Nov 2026: the goal
+// sheet stayed zoomed in after typing a subtask). jsdom applies no media
+// queries, so the rule is read from the component's own stylesheet.
+describe('SubtaskEditor — no iOS zoom', () => {
+  it('gives the subtask inputs 16px on phone widths', () => {
+    // eslint-disable-next-line global-require
+    const source = require('fs').readFileSync(require('path').join(__dirname, 'SubtaskEditor.vue'), 'utf8');
+    const phone = source.match(/@media \(max-width: 767px\) \{([\s\S]*?)\n\}/);
+    expect(phone).not.toBeNull();
+    expect(phone[1]).toMatch(/\.rn-subed__input\s*\{\s*font-size:\s*16px;/);
+  });
+});

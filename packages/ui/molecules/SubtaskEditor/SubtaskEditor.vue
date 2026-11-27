@@ -234,6 +234,15 @@ export default {
   padding: 6px 0;
 }
 
+/* iOS zooms the whole page into any field under 16px when it is focused,
+   which left the goal sheet zoomed in after editing a subtask. Phone widths
+   get 16px so typing a subtask keeps the sheet at its size. */
+@media (max-width: 767px) {
+  .rn-subed__input {
+    font-size: 16px;
+  }
+}
+
 .rn-subed__up,
 .rn-subed__del {
   width: 26px;
