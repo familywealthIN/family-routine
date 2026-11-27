@@ -1,0 +1,35 @@
+# The Android half of mobile-build.yml, as a local image: Node 20, JDK 21 and
+# the Android SDK the project compiles against. Built and run by
+# tools/local-pipeline/android.ps1 — see docs/local-pipeline.md.
+FROM eclipse-temurin:21-jdk-jammy
+
+ARG CMDLINE_TOOLS=11076708
+ARG ANDROID_PLATFORM=36
+ARG BUILD_TOOLS=36.0.0
+
+ENV ANDROID_HOME=/opt/android-sdk \
+    ANDROID_SDK_ROOT=/opt/android-sdk \
+    GRADLE_USER_HOME=/cache/gradle \
+    YARN_CACHE_FOLDER=/cache/yarn
+ENV PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl unzip git ca-certificates gnupg \
+ && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && npm install --global yarn@1 firebase-tools@13 \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p $ANDROID_HOME/cmdline-tools \
+ && curl -fsSL -o /tmp/tools.zip https://dl.google.com/android/repository/commandlinetools-linux-${CMDLINE_TOOLS}_latest.zip \
+ && unzip -q /tmp/tools.zip -d $ANDROID_HOME/cmdline-tools \
+ && mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest \
+ && rm /tmp/tools.zip \
+ && yes | sdkmanager --licenses > /dev/null \
+ && sdkmanager "platform-tools" "platforms;android-${ANDROID_PLATFORM}" "build-tools;${BUILD_TOOLS}"
+
+COPY android-build.sh /usr/local/bin/android-build
+RUN chmod +x /usr/local/bin/android-build
+
+WORKDIR /work
+ENTRYPOINT ["android-build"]
