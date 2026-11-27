@@ -1,3 +1,6 @@
 eol=lf
 # patch-package hunks must match node_modules byte for byte, so never CRLF them.
 *.patch text eol=lf
+# Shell scripts run on Linux (Docker) and macOS (Xcode Cloud): a CRLF checkout
+# on Windows would break them, so never CRLF them.
+*.sh text eol=lf
